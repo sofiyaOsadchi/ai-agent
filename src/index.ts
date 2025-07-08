@@ -33,7 +33,7 @@ const HOTELS = [
   
   
     
-    "Leonardo Royal Hotel Baden-Baden", 
+    
     "Hotel Berlin Potsdamer Platz by Leonardo Hotels",
 
 ];
