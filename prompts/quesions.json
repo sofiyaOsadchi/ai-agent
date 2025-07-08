@@ -1,0 +1,7 @@
+{
+  "id": "simple-test",
+  "name": "Simple Test",
+  "description": "בדיקה פשוטה של המערכת",
+  "template": "כתוב לי {{content_type}} קצר על {{topic}}",
+  "variables": ["content_type", "topic"]
+}
