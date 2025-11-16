@@ -1,18 +1,16 @@
-// src/index.ts - סוכן אוטומטי למלונות - 10 מלונות
-// ==============================================
-// תפקיד: רץ לכל מלון ברשימה ויוצר FAQ מלא
-// שלב 1: שאלות למלון
-// שלב 2: תשובות למלון (TSV)
-// ==============================================
-
 import { config } from "dotenv";
 import chalk from "chalk";
 import { existsSync, writeFileSync } from "fs";
 import { AIAgent } from "./core/agent.js";
 import { SafetyManager } from "./config/safety.js";
+
 import { SheetsService } from "./services/sheets.js";
-import { promptManager } from "./prompts/promptManager.js";
-import { DocsService }   from "./services/docs.js";
+import { TranslateFromSheetJob } from "./jobs/translate-from-sheet.js";
+import { RewriteFromSheetJob } from "./jobs/rewrite-from-sheet.js";
+import { ValidateLiteJob } from "./jobs/validate-lite.js";
+import { runAllHotelsResearch } from "./jobs/faq-from-scratch.js";
+import { MetaSchemaFromSheetJob } from "./jobs/meta-schema-from-sheet.js";
+import { FaqAuditFromWebJob } from "./jobs/faq-audit-from-web.js";
 
 
 
@@ -23,318 +21,329 @@ config();
 // יצירת מופעי המערכת
 const safetyManager = new SafetyManager('development');
 const agent = new AIAgent(safetyManager);
-const sheets = new SheetsService("asosadchi@gmail.com");
-const docs   = new DocsService("asosadchi@gmail.com");
+const sheets = new SheetsService("info@carmelon.co.il");
 
 /**
  * רשימת המלונות לעיבוד (נוודא שמות נכונים!)
  */
 const HOTELS = [
   
-  
-    
-    
-    "Hotel Berlin Potsdamer Platz by Leonardo Hotels",
+
+  "Leonardo Boutique Hotel Linz City Center",
 
 ];
 
-/**
- * שלב 1: הפרומפט ליצירת השאלות (ללא קיצורים!)
- */
-function createQuestionsPrompt(hotelName: string): string {
-  return `SEO & GEO FAQ Research Prompt for Questions
-Hotel Name: ${hotelName}
-
-1 Goal  
-Research and compile a list of real, high-frequency questions about **${hotelName}**. Each question must be suitable for the hotel's FAQ page; no answers are required.
-
-2 Approved Data Sources (use these ONLY, in this order of authority)  
-• Official Leonardo Hotels website – https://www.leonardo-hotels.com  
-• Booking.com – official hotel profile only  
-• Expedia – official hotel profile only (Facilities, Policies, Location, Amenities)  
-• Google Hotels / Google Travel – hotel knowledge panel  
-• TripAdvisor – official hotel profile only (NO user reviews)  
-• HolidayCheck.de – official hotel profile only (NO user reviews)  
-
-Do **NOT** use any other websites, social media, forums, or user-generated content.  
-If a detail is absent from the sources above, do not infer or invent it.
-
-3 Required columns (in this exact order)  
-Category | Question | Frequency Level  
-
-4 Guidelines  
-• Question – clear, complete, self-contained.  
-• Include the full hotel name (“${hotelName}”) in 100% of questions unless it is an immediate follow-up.  
-• Always use third person ("Does ${hotelName} …").  
-• Group logically: broad question first, then its follow-ups.  
-• **Frequency Level** – tag High / Medium / Low according to how often the question (or close variants) appears across the approved sources.  
-• Language: English, refined luxury-hotel tone, suitable for an international audience.  
-• Highlight features unique to this specific property (location, facilities, brand standards).
-• IMPORTANT - Don't ask questions that asked for the same information that was given in a previous answer.
-
-5 Categories  
-Provide **7–10 unique questions** per category, ordered from general to specific:  
-General Information  
-Accommodation & Room Services  
-Food & Beverage  
-Policies & Terms (pets, smoking, cancellation, check-in/out, etc.)  
-Location & Transportation  
-Activities & Entertainment  
-[Add an extra category only if truly necessary]
-
-6 Quality & Authenticity Rules  
-• Only questions that genuinely appear in the **approved sources**; wording may be polished for clarity but must remain factual.  
-• No duplicates or near-paraphrases.  
-• Do not include details that are not explicitly stated in the approved sources.  
-• Respect any limitations noted for each source (e.g., no user reviews).
-
-7 Delivery  
-Return the FAQ as a **Markdown table** with the three columns above. Do **NOT** include hyperlinks, citations, or external files.
-
-8 Scope  
-Aim for approximately **50–60 total questions** across all categories.
 
 
+  // ← התרגום
+const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
-In addition,
-I want to add a list of possible questions + their association with the correct category
-It is important for me to note - not all questions must appear, but it is advisable to check if they are relevant to the hotel and its style - There may also be many more questions unique to the current hotel that are not on the list because each hotel has its own audience and its own unique characteristics - Therefore - first, characterize this hotel and what is special about it and add questions that you see can only be asked about this hotel.
-
- 
-General Information – free Wi-Fi, 24-hour front desk, check-in/check-out times, family-friendly, accessible facilities, multilingual staff, on-site parking, meeting & conference facilities  
-Accommodation & Room Services – minibar / small fridge, tea & coffee facilities, iron & ironing board, hairdryer, air-conditioning & heating, USB charging sockets, complimentary toiletries, extra pillows / hypoallergenic bedding, 24-hour room service, laundry & dry-cleaning  
-Food & Beverage – buffet breakfast, breakfast hours, vegetarian & vegan options, rooftop bar with city views, bar access for non-residents, gluten-free menu, late-night snacks, children welcome at bar, lunch & dinner service, afternoon tea, children's menus  
-Policies & Terms – express check-in/out, security deposit, baggage storage, minimum age, pets policy, smoking policy, free cancellation, early check-in / late check-out, group booking conditions  
-Location & Transportation – proximity to landmarks, nearest transport stations, travel time to airports, airport shuttle, walking distance to attractions, taxi / car-hire services  
-Activities & Entertainment – indoor pool, children access to pool, spa treatments, fitness classes, sauna / steam room, rooftop terrace, guided city tours, evening entertainment / live music`;
-}
+    { spreadsheet: "https://docs.google.com/spreadsheets/d/1u5LykkVY3k1LbSLQjqbRv7NV0F91K-FS_hSrwDwJBns/edit?usp=sharing" },
 
 
-/**
- * שלב 2: הפרומפט ליצירת התשובות
- */
-function createAnswersPrompt(hotelName: string, questions: string): string {
-  return `SEO & GEO FAQ Research Prompt | Answers
-Hotel: ${hotelName}
+];
 
-1 Goal  
-Provide authoritative answers—based on the approved sources below—for each question in the list. Return the completed table with four columns:
-Category | Question | Answer | Frequency Level
-
-2 Approved Data Sources (use these ONLY, in this order of authority)  
-• Official Leonardo Hotels website – https://www.leonardo-hotels.com  
-• Booking.com – official hotel profile only  
-• Expedia – official hotel profile only (Facilities, Policies, Location, Amenities)  
-• Google Hotels / Google Travel – hotel knowledge panel  
-• TripAdvisor – official hotel profile only (NO user reviews)  
-• HolidayCheck.de – official hotel profile only (NO user reviews)  
-
-If a detail is absent from the sources above - please scan the approved sources again. If you still haven't found it, you can bring the answer from another source but mention which source and highlight the answer with [VERIFY].
-
-3 Answer Guidelines  
-• Begin each answer with "Yes, …", "No, …", "Currently, …", or a direct factual statement (for what/where/how questions).  
-• Do **not** repeat the hotel name in the answer.  
-• Always write in third person; tone: serious, welcoming, trustworthy.  
-• Keep answers clear, factual, and web-ready; avoid marketing fluff.  
-• If information is missing, and you couldn't find anywere online the answer (and you scanned the sources again!)- write exactly: "Information is currently not available. [VERIFY]".  
-• Preserve the original order of questions and their categories.  
- **IMPORTANT: Write complete, informative sentences as a caring and courteous hotel representative would - aim for at least 10-12 words per answer. Avoid one-word or overly brief responses.**
-- **Provide clear and decisive answers. When uncertain information requires verification, add [VERIFY] but maintain confident, definitive phrasing.**
-- **Don't use vague qualifiers like "generally", "usually", "typically", "normally", or "often" when it comes to facts. State facts directly and clearly.**
-- **MOST IMPORTANT: scan all the sources again - specially the hotel website and booking.com - to find the answers to the questions.**
-
-• Do not alter Category, Question, or Frequency Level values.
-
-4 AI Workflow Tips  
-• Search each **approved source** for the hotel name plus terms like "FAQ", "policies", "amenities", etc.  
-• Convert any second-person phrasing found into third person. 
-• If you find a duplicate question, add to the answer [duplicate].
-• Mark unknown details with [VERIFY] so they can be confirmed with the hotel.  
-
-5 Delivery  
-Return **only** the table data in pure TSV format—tab-separated values with NO Markdown, NO backticks, NO extra text.  
-Format: One header row, then data rows. Columns separated by actual tab characters.
-
-Example (format only—replace with real answers):  
-Category[TAB]Question[TAB]Answer[TAB]Frequency Level  
-General Information[TAB]Does ${hotelName} offer free Wi-Fi?[TAB]Yes, complimentary Wi-Fi is available throughout the property.[TAB]High
-
-Do not add any text before or after the table. Return only the raw TSV data that can be pasted into Google Sheets.
-
-QUESTION LIST:
-${questions}`;
-}
+/** שפות יעד קבועות (טאב נפרד ייווצר לכל שפה) */
+const LANGS = ["de", "es", "fr", "ru", "he", "ar"];
 
 
 
 
-/** שלב 3: פרומפט לבדיקת השאלון */
-function createAuditPrompt(hotelName: string, faqTable: string): string {
-  return `היי, צריכה שתעבור על שאלון שיצרתי
-מטרת השאלון לאסוף שאלות אמיתיות ונפוצות מאוד מרחבי האינטרנט על ${hotelName} ולספק תשובות מוסמכות ומוכנות לפרסום בעמוד FAQ של המלון.
-תעבור בדקדוק על כל השאלון והשאלות שלי כאן ותענה ביסודיות:
+type RewriteSheetItem = {
+  spreadsheet: string;
+  tab?: string;       // אם לא מצוין, ניקח את הטאב הראשון
+  commentCol?: string; // ברירת מחדל: "E" (הערות)
+  answerCol?: string;  // ברירת מחדל: "C" (תשובה מקורית)
+  targetCol?: string;  // ברירת מחדל: "F" (עמודה חדשה לפלט)
+  header?: string;     // ברירת מחדל: "Agent Final Answer"
+};
 
- -  חלק ראשון והחשוב ביותר - אם אתה מוצא בעיות תצרף בסוף הבדיקה של חלק זה במרוכז - את השאלה / התשובה הבעייתית ומתחת תציע פתרון חליפי מלא באנגלית:
-שים לב להתייחס לכל השאלות /תשבות שמצאת בהם טעות 
-
-האם כל השאלות מותאמות לתשובות?
-האם יש בעיות של תחביר או של שגיאת כתיב?
-על כל השאלות והתשובות להיכתב בגוף שלישי - האם חלק מהשאלות או חלק מהתשובות כתובות בגוף שני או ראשון?
-על התשובות להתחיל בכן או לא 
-)("Yes, …", "No, …", "Currently, …", )
-(בהנחה שזה הגיוני, אם אלה לא שאלות של כן או לא אז - בכל מקרה על התשובה להיות מובנת וברורה בתחילתה כדי שהקורא יבין מיד מה התשובה למה שחיפש.
-בהנחיה המקורית ביקשתי שהשם של המלון יופיע ב90-100 אחוז מהשאלות ולא יופיע כלל בתשובות - האם ההנחיה בוצעה?
-האם יש שאלות מיותרות או לא קשורות? נגיד שאלת פולואפ שלא מותאמת לתשובה (כגון - האם יש בריכה התשובה - לא ואז שאלה האם ילדים יכולים להיכנס לבריכה
-)
-מאוד חשוב - האם יש שאלות שחוזרות על עצמן או דומות אחת לשניה? 
-
-
-חלק שני, בדיקות נוספות:
-האם יש שאלה שמנוסחת לא ברוח של בית מלון? אם כן איזו?
-תשובה שהיא לא וודאית מסומנת עם הסימון [verify]
-אם אין תשובה (כתוב שאין תשובה כרגע) - תחפש במקורות רשמיים של המלון האם כן ניתן למצוא תשובה ותכתוב מה מצאת באנגלית.
-• חשוב שתיתן רק הערות אמיתיות וכנות, ומה שמצאת כטעות – נא לספק פתרון מלא.
-
-==== FAQ TABLE (TSV) ====
-${faqTable}`;
-}
-/**
- * פונקציה ראשית - מבצעת מחקר מלא לכל המלונות
- */
-async function runAllHotelsResearch() {
-  try {
-    console.log(chalk.green(`🏨 Starting COMPLETE FAQ research for ${HOTELS.length} hotels...`));
-    console.log(chalk.yellow("📋 For each hotel: Step 1 (Questions) → Step 2 (Answers in TSV)"));
-    console.log(chalk.yellow("⏱️ This will take several minutes..."));
-    
-    const allResults: Array<{hotel: string, questions: string, answers: string}> = [];
-    
-    // עיבוד כל מלון
-    for (let i = 0; i < HOTELS.length; i++) {
-      const hotelName = HOTELS[i];
-      console.log(chalk.blue(`\n🏨 [${i+1}/${HOTELS.length}] Processing: ${hotelName}`));
-      
-      // 🔧 ניקוי משימות לפני מלון חדש
-      agent.clearTasks();
-      
-      // שלב 1: יצירת השאלות
-      console.log(chalk.yellow(`🔍 Step 1: Generating questions for ${hotelName}...`));
-      const questionsPrompt = createQuestionsPrompt(hotelName);
-      agent.addTask(questionsPrompt);
-      await agent.executeChain();
-      
-      const questionsResult = agent.getLastResult();
-      if (!questionsResult) {
-        console.log(chalk.red(`❌ Failed to generate questions for ${hotelName}`));
-        continue;
-      }
-      
-      console.log(chalk.green(`✅ Questions generated for ${hotelName}`));
-      
-      // 🔧 ניקוי משימות לפני שלב 2
-      agent.clearTasks();
-      
-      // שלב 2: יצירת התשובות בפורמט TSV
-      console.log(chalk.yellow(`💬 Step 2: Generating answers for ${hotelName}...`));
-      const answersPrompt = createAnswersPrompt(hotelName, questionsResult);
-      agent.addTask(answersPrompt);
-      await agent.executeChain();
-      
-      const answersResult = agent.getLastResult();
-      if (!answersResult) {
-        console.log(chalk.red(`❌ Failed to generate answers for ${hotelName}`));
-        continue;
-      }
-      
-      console.log(chalk.green(`✅ Complete FAQ generated for ${hotelName}`));
-      
-// 🔧 יצירת גיליון Google Sheets והעלאת הנתונים
-const sheetId = await sheets.createSpreadsheet(hotelName);
-await sheets.uploadTsv(sheetId, answersResult);
-console.log(chalk.green(`📊 Google Sheet created: https://docs.google.com/spreadsheets/d/${sheetId}`));
-await sheets.formatSheet(sheetId);
-console.log(chalk.cyan(`🎨 Sheet formatted`));
+const REWRITE_SHEETS: RewriteSheetItem[] = [
+  {
+    spreadsheet: "https://docs.google.com/spreadsheets/d/1AXobJoAQMpwCVNF4j_yTaH-XvFYJz6vo2J-A25kAk3c/edit?usp=sharing",
+    commentCol: "E",      // ההערות של המלון
+    answerCol: "C",       // התשובה המקורית
+    targetCol: "F",       // לעמודה החדשה
+    header: "Agent Final Answer"
+  },
 
 
 
-const auditPrompt = createAuditPrompt(hotelName, answersResult);
+];
 
-agent.clearTasks();
-agent.addTask(auditPrompt);
-await agent.executeChain();
+const REWRITE_FOLDER: string = process.env.REWRITE_FOLDER_ID ?? ""; 
 
-const auditResult = agent.getLastResult() || "לא התקבלה תוצאה";
 
-const docUrl = await docs.createDoc(`${hotelName} – FAQ Audit`, auditResult);
-console.log(chalk.magenta(`📑 Audit Doc: ${docUrl}`));
+// ← מטא+סכימה (קבצים/טאבים/שורה לכתיבה)
+const META_SCHEMA_SHEETS: Array<{
+  spreadsheet: string;   // לינק מלא של Google Sheets או רק ID
+  tab?: string;          // לא חובה (אם ריק – הטאב הראשון)
+  metaRow?: number;      // ברירת מחדל 70
+  schemaRow?: number;    // ברירת מחדל 70
+  metaStartCol?: string; // ברירת מחדל "A" → A70:C70
+  schemaCol?: string;    // ברירת מחדל "E"  → E70
+}> = [
+  {
+    spreadsheet: "https://docs.google.com/spreadsheets/d/1AXobJoAQMpwCVNF4j_yTaH-XvFYJz6vo2J-A25kAk3c/edit?usp=sharing",
+    tab: "FAQ",          // אופציונלי
+    metaRow: 70,
+    metaStartCol: "A",
+    schemaCol: "E",
+  },
+  
+];
 
-      // שמירת התוצאות
-      allResults.push({
-        hotel: hotelName,
-        questions: questionsResult,
-        answers: answersResult
-      });
-      
-      // 🔧 שמירה לקובץ נפרד לכל מלון עם וידוא
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const hotelFilename = hotelName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const filename = `${hotelFilename}_faq_tsv_${timestamp}.tsv`;
-      
+// ← מטא+סכימה (תיקייה בגוגל דרייב – ירוץ על כל הגיליונות בתיקייה)
+const META_SCHEMA_FOLDER: string =
+  "";
+
+
+// ← ולידציות
+
+type ValidateSheetItem = {
+  spreadsheet: string;        // URL או ID
+  tabs?: "ALL" | string[];    // ברירת מחדל: "ALL"
+  writeCol?: string;          // ברירת מחדל: "H"
+  verifyCol?: string;         // ברירת מחדל: "I"
+};
+
+const VALIDATE_SHEETS: ValidateSheetItem[] = [
+  { spreadsheet: "", tabs: "ALL" },
+];
+
+const VALIDATE_FOLDER: string = "https://drive.google.com/drive/folders/1sFU1sOqY0RIS1CmZMe6kjxlTzYpbywNL?usp=sharing"; 
+const VALIDATE_DEFAULT_TABS: "ALL" | string[] = "ALL";
+const VALIDATE_DEFAULT_WRITE_COL = "F";
+const VALIDATE_DEFAULT_VERIFY_COL = "G";
+
+
+
+
+// NEW – FAQ Audit config
+
+
+const FAQ_AUDIT_COUNTRY_URL = "https://www.leonardo-hotels.com/united-kingdom";
+const FAQ_AUDIT_SHEET_TITLE = "United Kingdom Hotels FAQ Audit";
+
+
+
+
+// מצב הפעלה: faq (ברירת מחדל) או translate
+const MODE = (process.env.MODE ?? "faq").toLowerCase();
+
+async function main() {
+  if (MODE === "translate") {
+    const job = new TranslateFromSheetJob(agent, sheets);
+
+    for (const item of SHEETS) {
       try {
-        writeFileSync(filename, answersResult, 'utf8');
-        console.log(chalk.blue(`📄 ${hotelName} TSV saved to: ${filename}`));
-        
-        // 🔧 וידוא שהקובץ נוצר
-       if (existsSync(filename)) {
-  console.log(chalk.green(`✅ File confirmed: ${filename}`));
-} else {
-  console.log(chalk.red(`❌ File NOT created: ${filename}`));
-}
-        
-      } catch (error) {
-        console.log(chalk.red(`❌ Failed to save file for ${hotelName}:`, error));
-      }
-      
-      // השהיה בין מלונות
-      if (i < HOTELS.length - 1) {
-        console.log(chalk.gray(`⏳ Brief pause before next hotel...`));
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const spreadsheetId = sheets.parseSpreadsheetId(item.spreadsheet);
+        await job.run({
+          spreadsheetId,
+          sourceTab: item.tab,
+          targetLangs: LANGS,
+          translateHeader: true, // מתרגם גם את שורת הכותרת
+        });
+    
+        console.log(chalk.green(`✅ Translated: ${item.spreadsheet} / tab "${item.tab}"`));
+      } catch (err) {
+        console.error(chalk.red("⚠️ Skipping sheet due to error:"), item, err);
+        continue;
       }
     }
-    
-    // יצירת קובץ סיכום
-    const summaryTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const summaryFilename = `all_hotels_summary_${summaryTimestamp}.txt`;
-    
-    const summaryContent = `Hotel FAQ Research Summary
-Generated: ${new Date().toLocaleString()}
-Total Hotels Processed: ${allResults.length}
-========================================================
 
-${allResults.map((result, index) => 
-  `${index + 1}. ${result.hotel}
-   - Questions: Generated ✅
-   - Answers: Generated ✅
-   - TSV File: ${result.hotel.toLowerCase().replace(/[^a-z0-9]/g, '_')}_faq_tsv_*.tsv
-`).join('\n')}
+    console.log(chalk.cyan("🎉 Translate run completed."));
 
-========================================================
-Generated by AI Agent - Hotel Research System`;
+} else if (MODE === "rewrite") {
+  const job = new RewriteFromSheetJob(agent, sheets);
 
-    writeFileSync(summaryFilename, summaryContent, 'utf8');
-    
-    console.log(chalk.green(`\n🎉 ALL HOTELS RESEARCH COMPLETED!`));
-    console.log(chalk.blue(`📄 Summary saved to: ${summaryFilename}`));
-    console.log(chalk.yellow(`📊 Total hotels processed: ${allResults.length}`));
-    console.log(chalk.cyan(`💾 Each hotel has its own TSV file ready for Google Sheets!`));
-    
-    // הצגת סטטוס סופי
-    safetyManager.showStatus();
-    
-  } catch (error) {
-    console.error(chalk.red("❌ Research failed:"), error);
+  // 1) מזהים קבצים מרשימת REWRITE_SHEETS
+  const fromList = [];
+  for (const item of REWRITE_SHEETS) {
+    try {
+      const spreadsheetId = sheets.parseSpreadsheetId(item.spreadsheet);
+      fromList.push({ spreadsheetId, item });
+    } catch (err) {
+      console.error(chalk.red("⚠️ Bad sheet link in REWRITE_SHEETS:"), item, err);
+    }
+  }
+
+  // 2) מזהים קבצים מתיקייה (אם סופקה)
+  let fromFolder: Array<{ spreadsheetId: string }> = [];
+  if (REWRITE_FOLDER.trim()) {
+    const folderId =
+      REWRITE_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+      REWRITE_FOLDER.trim();
+    try {
+      const ids = await sheets.listSpreadsheetIdsInFolder(folderId);
+      fromFolder = ids.map((spreadsheetId) => ({ spreadsheetId }));
+      console.log(chalk.cyan(`📂 Found ${ids.length} spreadsheets in folder`));
+    } catch (err) {
+      console.error(chalk.red("⚠️ Failed to list folder sheets:"), err);
+    }
+  }
+
+  // 3) מאחדים – קבצים ייחודיים בלבד
+  const seen = new Set<string>();
+  const targets = [...fromList, ...fromFolder].filter(({ spreadsheetId }) => {
+    if (seen.has(spreadsheetId)) return false;
+    seen.add(spreadsheetId);
+    return true;
+  });
+
+  // 4) ריצה
+  for (const t of targets) {
+    const conf = REWRITE_SHEETS.find(
+      x =>
+        t.spreadsheetId === ((): string => {
+          try { return sheets.parseSpreadsheetId(x.spreadsheet); } catch { return ""; }
+        })()
+    );
+
+    try {
+      await job.run({
+        spreadsheetId: t.spreadsheetId,
+        sourceTab: conf?.tab,
+        commentCol: conf?.commentCol ?? "E",
+        answerCol:  conf?.answerCol  ?? "C",
+        targetCol:  conf?.targetCol  ?? "F",
+        header:     conf?.header     ?? "Agent Final Answer",
+
+        // ✨ חדש: בדיקת דקדוק לתשובה המקורית
+        checkOriginalGrammar: true,
+        grammarFixCol: "G",
+        grammarFixHeader: "Answer Grammar Fix",
+      });
+
+      const title = await sheets.getSpreadsheetTitle(t.spreadsheetId);
+      console.log(chalk.green(`✅ Rewrote & grammar-checked: ${title}`));
+    } catch (err) {
+      console.error(chalk.red("⚠️ Skipping due to error:"), t, err);
+      continue;
+    }
+  }
+
+  console.log(chalk.cyan("🎉 Rewrite run completed."));
+
+} else if (MODE === "validate-lite") {
+  const job = new ValidateLiteJob(agent, sheets);
+
+  // מזהה IDs מרשימת הקבצים בראש הקובץ
+  const parsedIds = VALIDATE_SHEETS.map(item => {
+    try { return sheets.parseSpreadsheetId(item.spreadsheet); }
+    catch { return ""; }
+  }).filter(Boolean);
+
+  // מזהה ID לתיקייה (אם מולא לינק/ID ב-VALIDATE_FOLDER)
+  const folderId = VALIDATE_FOLDER.trim()
+    ? (VALIDATE_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ?? VALIDATE_FOLDER.trim())
+    : undefined;
+
+  // ריצה אחת שמכסה גם רשימת קבצים וגם תיקייה → דוח אחד מרכזי
+  await job.run({
+    spreadsheetIds: parsedIds.length ? parsedIds : undefined,
+    driveFolderId: folderId,
+    tabs: VALIDATE_DEFAULT_TABS,    // "ALL" או ["FAQ", ...]
+    writeCol: "G",                  // עמודת Issue
+    fixCol:   "H",                  // עמודת Fix (Suggested)
+    writeBack: true
+  });
+
+  console.log(chalk.cyan("🎉 Lite validation completed."));
+
+
+} else if (MODE === "meta-schema") {
+  const job = new MetaSchemaFromSheetJob(agent, sheets);
+
+  // 1) קבצים מהרשימה
+  const fromList: Array<{
+    spreadsheetId: string;
+    item: (typeof META_SCHEMA_SHEETS)[number];
+  }> = [];
+  for (const item of META_SCHEMA_SHEETS) {
+    if (!item.spreadsheet) continue;
+    try {
+      const spreadsheetId = sheets.parseSpreadsheetId(item.spreadsheet);
+      fromList.push({ spreadsheetId, item });
+    } catch (err) {
+      console.error(chalk.red("⚠️ Bad sheet link in META_SCHEMA_SHEETS:"), item, err);
+    }
+  }
+
+  // 2) גם מתיקייה (אם מולאה)
+  let fromFolder: Array<{ spreadsheetId: string }> = [];
+  if (META_SCHEMA_FOLDER.trim()) {
+    const folderId =
+      META_SCHEMA_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+      META_SCHEMA_FOLDER.trim();
+    try {
+      const ids = await sheets.listSpreadsheetIdsInFolder(folderId);
+      fromFolder = ids.map((spreadsheetId) => ({ spreadsheetId }));
+      console.log(chalk.cyan(`📂 Found ${ids.length} spreadsheets in folder for meta-schema`));
+    } catch (err) {
+      console.error(chalk.red("⚠️ Failed to list meta-schema folder sheets:"), err);
+    }
+  }
+
+  // 3) ייחוד
+  const seen = new Set<string>();
+  const targets = [
+    ...fromList.map(x => ({ spreadsheetId: x.spreadsheetId, item: x.item })),
+    ...fromFolder.map(x => ({ spreadsheetId: x.spreadsheetId, item: {} as any })),
+  ].filter(({ spreadsheetId }) => {
+    if (seen.has(spreadsheetId)) return false;
+    seen.add(spreadsheetId);
+    return true;
+  });
+
+  // 4) ריצה
+  for (const t of targets) {
+    const cfgItem = (t as any).item ?? {};
+    try {
+      await job.run({
+        spreadsheetId: t.spreadsheetId,
+        sourceTab: cfgItem.tab,                // אם לא סופק – הטאב הראשון
+        metaRow: cfgItem.metaRow ?? 70,
+        metaStartCol: cfgItem.metaStartCol ?? "A",
+        schemaCol: cfgItem.schemaCol ?? "E",
+                          // קודם F (Agent Final Answer), אחרת C
+      });
+      const title = await sheets.getSpreadsheetTitle(t.spreadsheetId);
+      console.log(chalk.green(`✅ Meta & Schema created for: ${title}`));
+    } catch (err) {
+      console.error(chalk.red("⚠️ Skipping due to error:"), t, err);
+      continue;
+    }
+  }
+
+  console.log(chalk.cyan("🎉 Meta & Schema run completed."));
+
+
+    } else if (MODE === "faq-audit") {                 // NEW
+  const job = new FaqAuditFromWebJob(agent, sheets);
+  const result = await job.run({
+    countryUrl: FAQ_AUDIT_COUNTRY_URL,
+    sheetTitle: FAQ_AUDIT_SHEET_TITLE,
+    shareResults: true,
+  });
+
+  // לינק ישיר לגיליון + סיכום
+  console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
+  console.log(
+    chalk.green(
+      `🧾 Hotels scanned: ${result.hotelsProcessed} | With FAQ: ${result.hotelsWithFaq} | Hotels with issues: ${result.hotelsWithProblems}`
+    )
+  );
+
+
+  } else {
+    await runAllHotelsResearch(agent, sheets, HOTELS);
   }
 }
 
-// הפעלת המחקר לכל המלונות
-runAllHotelsResearch();
+main().catch(err => {
+  console.error(chalk.red("❌ Run failed:"), err);
+  process.exit(1);
+});
+
+ 

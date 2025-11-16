@@ -20,6 +20,7 @@ interface Task {
   prompt: string;
   model?: string;
   response?: string;
+  system?: string;
 }
 
 export class AIAgent {
@@ -34,7 +35,7 @@ export class AIAgent {
     });
   }
 
-  addTask(prompt: string, model: string = "o1"): void {
+  addTask(prompt: string, model: string = "o3"): void {
     if (!this.safety.canAddTask(this.tasks.length)) return;
 
     this.taskCounter++;
@@ -51,6 +52,20 @@ export class AIAgent {
     );
   }
 
+  addTaskWithSystem(userPrompt: string, system?: string, model: string = "o3"): void {
+  if (!this.safety.canAddTask(this.tasks.length)) return;
+
+  this.taskCounter++;
+  this.tasks.push({
+    id: this.taskCounter,
+    prompt: userPrompt,
+    model,
+    system, // נשמר על המשימה
+  });
+
+  console.log(chalk.green(`➕ Task ${this.taskCounter} [${model}] (system+user)`));
+}
+
   async executeTask(task: Task): Promise<string> {
   if (!this.safety.canMakeCall()) throw new Error("Safety limit exceeded");
 
@@ -59,19 +74,27 @@ export class AIAgent {
   const spinner = ora(`🤔 Task ${task.id} (${status.calls + 1}/${status.maxCalls})`).start();
 
   try {
-    const isOseries = task.model?.startsWith("o");   // o1 / o3 / o4-mini
-    const completion = isOseries
-      ? await this.openai.responses.create({
-          model: task.model!,                         // o1 / o3-mini …
-          input: [{ role: "user", content: task.prompt }],
-          store: false
-        })
-      : await this.openai.chat.completions.create({
-          model: task.model ?? "gpt-4o",
-          messages: [{ role: "user", content: task.prompt }],
-          max_tokens: limits.maxTokens,
-          temperature: 0.7,
-        });
+   const isOseries = task.model?.startsWith("o");   // o1 / o3 / o4-mini
+
+const completion = isOseries
+  ? await this.openai.responses.create({
+      model: task.model!,
+      input: [
+        { role: "user" as const, content: task.prompt },
+      ],
+      // ← כאן ה-"system":
+      instructions: task.system,   // string | undefined
+      store: false,
+    })
+  : await this.openai.chat.completions.create({
+      model: task.model ?? "gpt-4o",
+      messages: [
+        ...(task.system ? [{ role: "system" as const, content: task.system }] : []),
+        { role: "user" as const, content: task.prompt },
+      ],
+      max_tokens: limits.maxTokens,
+      temperature: 0.7,
+    });
 
     const responseText = isOseries
       ? (completion as any).output_text             // responses API
@@ -163,4 +186,18 @@ export class AIAgent {
     const task = this.tasks.find(t => t.id === taskId);
     return task?.response || null;
   }
+
+
+  async run(prompt: string, model: string = "o3"): Promise<string> {
+  this.clearTasks();
+  this.addTask(prompt, model);
+  await this.executeChain();
+  return this.getLastResult() ?? "";
+}
+async runWithSystem(userPrompt: string, system?: string, model: string = "o3"): Promise<string> {
+  this.clearTasks();
+  this.addTaskWithSystem(userPrompt, system, model);
+  await this.executeChain();
+  return this.getLastResult() ?? "";
+}
 }

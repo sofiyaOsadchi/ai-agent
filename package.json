@@ -6,10 +6,18 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "translate": "MODE=translate tsx src/index.ts",
+    "rewrite": "MODE=rewrite tsx src/index.ts",
+    "validate-lite": "MODE=validate-lite tsx src/index.ts",
+    "meta-schema": "MODE=meta-schema tsx src/index.ts",
+    "faq-audit": "MODE=faq-audit tsx src/index.ts",
+    "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
+
   },
   "dependencies": {
     "chalk": "^5.4.1",
+    "cheerio": "^1.1.2",
     "dotenv": "^16.5.0",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
@@ -18,8 +26,11 @@
     "ora": "^8.2.0"
   },
   "devDependencies": {
+    "@types/cheerio": "^0.22.35",
     "@types/node": "^22.15.30",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.10",
+    "playwright": "^1.56.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
