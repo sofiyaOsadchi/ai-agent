@@ -56,22 +56,26 @@ type RewriteSheetItem = {
   answerCol?: string;  // ברירת מחדל: "C" (תשובה מקורית)
   targetCol?: string;  // ברירת מחדל: "F" (עמודה חדשה לפלט)
   header?: string;     // ברירת מחדל: "Agent Final Answer"
+   hotelName?: string;
 };
 
 const REWRITE_SHEETS: RewriteSheetItem[] = [
   {
-    spreadsheet: "https://docs.google.com/spreadsheets/d/1AXobJoAQMpwCVNF4j_yTaH-XvFYJz6vo2J-A25kAk3c/edit?usp=sharing",
+    spreadsheet: "",
     commentCol: "E",      // ההערות של המלון
     answerCol: "C",       // התשובה המקורית
     targetCol: "F",       // לעמודה החדשה
-    header: "Agent Final Answer"
+    header: "Agent Final Answer",
+    hotelName: "hotel name"
   },
 
 
 
 ];
 
-const REWRITE_FOLDER: string = process.env.REWRITE_FOLDER_ID ?? ""; 
+const REWRITE_FOLDER: string = process.env.REWRITE_FOLDER_ID ?? "https://drive.google.com/drive/folders/1aU7HXtgmijhreIy2663TjDk6xT3MmvaB?usp=sharing"; 
+
+
 
 
 // ← מטא+סכימה (קבצים/טאבים/שורה לכתיבה)
@@ -84,7 +88,7 @@ const META_SCHEMA_SHEETS: Array<{
   schemaCol?: string;    // ברירת מחדל "E"  → E70
 }> = [
   {
-    spreadsheet: "https://docs.google.com/spreadsheets/d/1AXobJoAQMpwCVNF4j_yTaH-XvFYJz6vo2J-A25kAk3c/edit?usp=sharing",
+    spreadsheet: "",
     tab: "FAQ",          // אופציונלי
     metaRow: 70,
     metaStartCol: "A",
@@ -95,7 +99,7 @@ const META_SCHEMA_SHEETS: Array<{
 
 // ← מטא+סכימה (תיקייה בגוגל דרייב – ירוץ על כל הגיליונות בתיקייה)
 const META_SCHEMA_FOLDER: string =
-  "";
+  "https://drive.google.com/drive/folders/1rvXcPCRy1gTkUzJ_ueAONVXOp5MX5uFG?usp=sharing";
 
 
 // ← ולידציות
@@ -122,8 +126,8 @@ const VALIDATE_DEFAULT_VERIFY_COL = "G";
 // NEW – FAQ Audit config
 
 
-const FAQ_AUDIT_COUNTRY_URL = "https://www.leonardo-hotels.com/united-kingdom";
-const FAQ_AUDIT_SHEET_TITLE = "United Kingdom Hotels FAQ Audit";
+const FAQ_AUDIT_COUNTRY_URL = "https://www.leonardo-hotels.com/germany";
+const FAQ_AUDIT_SHEET_TITLE = "Germany2 Hotels FAQ Audit";
 
 
 
@@ -213,6 +217,17 @@ async function main() {
         checkOriginalGrammar: true,
         grammarFixCol: "G",
         grammarFixHeader: "Answer Grammar Fix",
+
+        // NEW: question grammar
+        questionGrammarFixCol: "H",
+        questionGrammarFixHeader: "Question Grammar Fix",
+
+        // NEW: hotel name notes
+        hotelNameCol: "I",
+        hotelNameHeader: "Hotel Name Notes",
+
+        // NEW: hotel name for this sheet (if defined in REWRITE_SHEETS)
+        hotelName: conf?.hotelName
       });
 
       const title = await sheets.getSpreadsheetTitle(t.spreadsheetId);

@@ -16,7 +16,7 @@ type QA = { q: string; a: string };
 type HotelItem = { name: string; faqUrl: string | null };
 
 type RuleIssue = { kind: "rule"; q: string; a: string; reason: string; index: number };
-type GptIssue  = { kind: "gpt";  q: string; a: string; reason: string; index: number };
+type GptIssue = { kind: "gpt"; q: string; a: string; reason: string; index: number };
 type Issue = RuleIssue | GptIssue;
 
 const MAX_CALLS_PER_HOTEL = Math.max(
@@ -50,14 +50,14 @@ export class FaqAuditFromWebJob {
 
     const spreadsheetId = await this.sheets.createSpreadsheet(opts.sheetTitle);
     const firstTabTitle = await this.sheets.getFirstSheetTitle(spreadsheetId);
-    const firstSheetId  = await this.sheets.getSheetIdByTitle(spreadsheetId, firstTabTitle);
+    const firstSheetId = await this.sheets.getSheetIdByTitle(spreadsheetId, firstTabTitle);
     await this.sheets.duplicateSheet(spreadsheetId, firstSheetId, "Audit");
 
     console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
 
     const auditRows: string[][] = [
-  ["Hotel", "FAQ", "Status", "Kind", "#", "Question", "Answer", "Reason", "Meta title", "Meta description", "Schema"]
-];
+      ["Hotel", "FAQ", "Status", "Kind", "#", "Question", "Answer", "Reason", "Meta title", "Meta description", "Schema"]
+    ];
     let hotelsWithFaq = 0;
     let hotelsWithProblems = 0;
 
@@ -93,87 +93,87 @@ export class FaqAuditFromWebJob {
       }
 
       // SEO / Schema checks (Meta + FAQPage JSON-LD)
-const {
-  issues: seoIssues,
-  schemaQAs,
-  metaTitle,
-  metaDescription,
-} = validateMetaAndFaqSchema(html);
-// כרגע אנחנו רק מוסיפים את ה-seoIssues; schemaQAs שמורים אם נרצה בעתיד להשוות ל-DOM עם GPT
+      const {
+        issues: seoIssues,
+        schemaQAs,
+        metaTitle,
+        metaDescription,
+      } = validateMetaAndFaqSchema(html);
+      // כרגע אנחנו רק מוסיפים את ה-seoIssues; schemaQAs שמורים אם נרצה בעתיד להשוות ל-DOM עם GPT
 
-// כמה Q/A נמצאו בסכמה
-const schemaQCount = schemaQAs.length;
+      // כמה Q/A נמצאו בסכמה
+      const schemaQCount = schemaQAs.length;
 
-// Issues שקשורים לסכמה בלבד (ולא למטה טייטל/דסקריפשן)
-const schemaIssuesOnly = seoIssues.filter(it => it.reason.startsWith("[schema]"));
+      // Issues שקשורים לסכמה בלבד (ולא למטה טייטל/דסקריפשן)
+      const schemaIssuesOnly = seoIssues.filter(it => it.reason.startsWith("[schema]"));
 
-// טקסט מסוכם לעמודת "Schema" בדוח
-const schemaSummary =
-  schemaQCount === 0
-    ? "✗ No schema Q/A"
-    : schemaIssuesOnly.length > 0
-      ? `✗ ${schemaIssuesOnly.length} schema issues — ${schemaQCount} Qs`
-      : `V — ${schemaQCount} schema Qs`;
+      // טקסט מסוכם לעמודת "Schema" בדוח
+      const schemaSummary =
+        schemaQCount === 0
+          ? "✗ No schema Q/A"
+          : schemaIssuesOnly.length > 0
+            ? `✗ ${schemaIssuesOnly.length} schema issues — ${schemaQCount} Qs`
+            : `V — ${schemaQCount} schema Qs`;
 
       const ruleIssues = this.ruleChecks(allQAs);
-      const gptIssues  = await this.semanticChecksBatched(groups, allQAs);
+      const gptIssues = await this.semanticChecksBatched(groups, allQAs);
       const issues: Issue[] = [...ruleIssues, ...gptIssues, ...seoIssues];
 
-     if (issues.length === 0) {
-  auditRows.push([
-    h.name,
-    h.faqUrl,
-    `V — ${totalChecked} items checked`,
-    "",
-    "",
-    "",
-    "",
-    "",
-    metaTitle || "",
-    metaDescription || "",
-    schemaSummary,
-  ]);
-  
-} else {
-  hotelsWithProblems++;
-  // שורת סיכום למלון – עם meta + schema
-  auditRows.push([
-    h.name,
-    h.faqUrl,
-    `✗ Found ${issues.length} issues — ${totalChecked} items checked`,
-    "",
-    "",
-    "",
-    "",
-    "",
-    metaTitle || "",
-    metaDescription || "",
-    schemaSummary,
-  ]);
+      if (issues.length === 0) {
+        auditRows.push([
+          h.name,
+          h.faqUrl,
+          `V — ${totalChecked} items checked`,
+          "",
+          "",
+          "",
+          "",
+          "",
+          metaTitle || "",
+          metaDescription || "",
+          schemaSummary,
+        ]);
 
-  // שורות ה-issue עצמן – בלי שכפול של הטייטל/דסקריפשן
-  for (const it of issues) {
-    const qShort   = it.q.replace(/\s+/g, " ").slice(0, 500);
-    const aShort   = it.a.replace(/\s+/g, " ").slice(0, 500);
-    const idxStr   = Number.isFinite(it.index) ? String((it.index as number) + 1) : "";
-    const kind     = it.kind;
-    const reasonStr= (it.reason ?? "").toString().replace(/^ —\s*/, "");
+      } else {
+        hotelsWithProblems++;
+        // שורת סיכום למלון – עם meta + schema
+        auditRows.push([
+          h.name,
+          h.faqUrl,
+          `✗ Found ${issues.length} issues — ${totalChecked} items checked`,
+          "",
+          "",
+          "",
+          "",
+          "",
+          metaTitle || "",
+          metaDescription || "",
+          schemaSummary,
+        ]);
 
-    auditRows.push([
-      h.name,            // Hotel
-      h.faqUrl,          // FAQ
-      "✗ Issue",         // Status
-      kind,              // Kind (rule/gpt)
-      idxStr,            // #
-      qShort,            // Question
-      aShort,            // Answer
-      reasonStr,         // Reason
-      "",                // Meta title (ריק בשורות ה-issue)
-      "",                // Meta description
-      "",                // Schema flag
-    ]);
-  }
-}
+        // שורות ה-issue עצמן – בלי שכפול של הטייטל/דסקריפשן
+        for (const it of issues) {
+          const qShort = it.q.replace(/\s+/g, " ").slice(0, 500);
+          const aShort = it.a.replace(/\s+/g, " ").slice(0, 500);
+          const idxStr = Number.isFinite(it.index) ? String((it.index as number) + 1) : "";
+          const kind = it.kind;
+          const reasonStr = (it.reason ?? "").toString().replace(/^ —\s*/, "");
+
+          auditRows.push([
+            h.name,             // Hotel
+            h.faqUrl,           // FAQ
+            "✗ Issue",          // Status
+            kind,               // Kind (rule/gpt)
+            idxStr,             // #
+            qShort,             // Question
+            aShort,             // Answer
+            reasonStr,          // Reason
+            "",                 // Meta title (ריק בשורות ה-issue)
+            "",                 // Meta description
+            "",                 // Schema flag
+          ]);
+        }
+      }
     }
 
     await this.sheets.writeValues(spreadsheetId, "Audit!A1", auditRows);
@@ -201,46 +201,101 @@ const schemaSummary =
       $scope.find("header, nav, footer, .site-header, .site-footer, [role='navigation']").remove();
     }
 
-    const hotelLinksInCountryPage = new Set<string>();
-    $scope.find("a[href]").each((_, el) => {
-      const hrefRaw = ($(el).attr("href") || "").trim();
-      if (!hrefRaw) return;
-      const href = this.makeAbsolute(countryUrl, hrefRaw);
-      if (!/^https?:\/\/www\.leonardo-hotels\.com\//i.test(href)) return;
+    const hotelLinks = new Set<string>();
+const cityLinks = new Set<string>();
 
-      // מסננים דפי מותג/מועדון/מדינה/קופונים וכו׳
+// 1) איסוף לינקים מעמוד המדינה: גם ערים וגם מלונות
+$scope.find("a[href]").each((_, el) => {
+  const hrefRaw = ($(el).attr("href") || "").trim();
+  if (!hrefRaw) return;
+
+  const href = this.makeAbsolute(countryUrl, hrefRaw);
+  if (!/^https?:\/\/www\.leonardo-hotels\.com\//i.test(href)) return;
+
+  // מסננים דפי מותג/מועדון/מדינה/קופונים וכו׳
+  if (/\/(brand|advantage|club|loyalty|offers?)\/?$/i.test(href)) return;
+
+  try {
+    const u = new URL(href);
+    const segs = u.pathname.split("/").filter(Boolean);
+    const clean = href.replace(/#.*$/, "").replace(/\/$/, "");
+
+    // מלון: /<city>/<hotel> (מנרמלים לבייס של 2 סגמנטים כדי להימנע מ-/reviews/ וכד')
+if (segs.length >= 2) {
+  const baseHotel = this.normalizeHotelBaseUrl(clean);
+  if (baseHotel) hotelLinks.add(baseHotel);
+  return;
+}
+
+    // עיר: /<city> (אבל לא העמוד של המדינה עצמו)
+    if (segs.length === 1) {
+      const countrySeg = new URL(countryUrl).pathname.split("/").filter(Boolean)[0]?.toLowerCase();
+      if (countrySeg && segs[0].toLowerCase() === countrySeg) return;
+
+      cityLinks.add(clean);
+    }
+  } catch {
+    /* ignore */
+  }
+});
+
+// 2) כניסה לכל עמוד עיר ואיסוף לינקי מלונות מתוכו (מכסה את ה-See all)
+for (const cityUrl of cityLinks) {
+  try {
+    const cityHtml = await this.fetchText(cityUrl);
+    const $$ = cheerio.load(cityHtml);
+
+    let $cityScope = $$("main");
+    if ($cityScope.length === 0) $cityScope = $$("body");
+
+    $cityScope.find("a[href]").each((_, a) => {
+      const hrefRaw = ($$(a).attr("href") || "").trim();
+      if (!hrefRaw) return;
+
+      const href = this.makeAbsolute(cityUrl, hrefRaw);
+      if (!/^https?:\/\/www\.leonardo-hotels\.com\//i.test(href)) return;
       if (/\/(brand|advantage|club|loyalty|offers?)\/?$/i.test(href)) return;
 
-      // דפי מלון = לפחות שני סגמנטים אחרי הדומיין: /<city>/<hotel-slug>
       try {
         const u = new URL(href);
         const segs = u.pathname.split("/").filter(Boolean);
-        if (segs.length >= 2) {
-          hotelLinksInCountryPage.add(href.replace(/#.*$/, "").replace(/\/$/, ""));
-        }
-      } catch {/* ignore */}
+       if (segs.length >= 2) {
+  const cleanHotel = href.replace(/#.*$/, "").replace(/\/$/, "");
+  const baseHotel = this.normalizeHotelBaseUrl(cleanHotel);
+  if (baseHotel) hotelLinks.add(baseHotel);
+}
+
+      } catch {
+        /* ignore */
+      }
     });
+  } catch {
+    /* ignore */
+  }
+}
 
-    // ערים מתוך הלינקים (הסגמנט הראשון)
-    const countryCities = new Set<string>();
-    for (const url of hotelLinksInCountryPage) {
-      try {
-        const seg = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
-        if (seg) countryCities.add(seg.toLowerCase());
-      } catch {/* ignore */}
-    }
+// 3) ערים שזוהו מתוך כל המלונות שמצאנו (בשביל validateHotelByCities כמו קודם)
+const countryCities = new Set<string>();
+for (const url of hotelLinks) {
+  try {
+    const seg = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
+    if (seg) countryCities.add(seg.toLowerCase());
+  } catch {
+    /* ignore */
+  }
+}
 
-    console.log("🏙️ Country cities detected:", [...countryCities].join(", ") || "(none)");
-    console.log("🔎 Hotel links found in country page (main):", hotelLinksInCountryPage.size);
+console.log("🏙️ City pages found:", cityLinks.size);
+console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
 
     const hotels: HotelItem[] = [];
-    for (const url of hotelLinksInCountryPage) {
+    for (const url of hotelLinks) {
       const belongs = await this.validateHotelByCities(url, countryCities);
       if (!belongs) continue;
 
       const faqUrlCandidate = `${url}/faq`;
       const ok = await this.headOk(faqUrlCandidate);
-      console.log(`   • ${faqUrlCandidate} ${ok ? "✅" : "❌"}`);
+      console.log(`    • ${faqUrlCandidate} ${ok ? "✅" : "❌"}`);
       hotels.push({
         name: this.prettyNameFromUrl(url),
         faqUrl: ok ? faqUrlCandidate : null,
@@ -362,9 +417,9 @@ const schemaSummary =
           const ctrl = trigger.attr("aria-controls");
           const panel = ctrl ? $(`#${ctrl}`) : $("<div/>");
           q = trigger.text().trim() ||
-              $el.find("summary, h2, h3, h4, .question, [data-question], [role=button]").first().text().trim();
+            $el.find("summary, h2, h3, h4, .question, [data-question], [role=button]").first().text().trim();
           a = panel.text().trim() ||
-              $el.find(".answer, .accordion-panel, .accordion-body, [data-answer]").first().text().trim();
+            $el.find(".answer, .accordion-panel, .accordion-body, [data-answer]").first().text().trim();
           if (!a) {
             a = $el
               .clone()
@@ -509,21 +564,21 @@ const schemaSummary =
 
     const system = [
       "You are a strict FAQ validator.",
-  "Given a list of Q&A items scraped from a hotel's FAQ page (raw DOM content),",
-  "Identify material issues that a typical end-user would notice in the Q&A pairs ONLY (ignore the rest of the page).",
-  "",
-  "Flag BOTH:",
-  "- semantic mismatch (answer doesn't address the question), and",
-  "- obvious spelling/grammar issues (clear, non-stylistic errors).",
-  "",
-  "For each issue, return ONLY valid JSON with entries shaped as:",
-  '{"issues":[{"index":number,"reason":string}]}',
-  "The 'index' is 0-based within this batch.",
-  "",
-  "Prefix 'reason' with a category tag so parsing stays simple, e.g.:",
-  "- [mismatch] answer talks about parking but the question is about check-in",
-  "- [spelling] accomodation -> accommodation",
-  "- [grammar] missing verb in the sentence",
+      "Given a list of Q&A items scraped from a hotel's FAQ page (raw DOM content),",
+      "Identify material issues that a typical end-user would notice in the Q&A pairs ONLY (ignore the rest of the page).",
+      "",
+      "Flag BOTH:",
+      "- semantic mismatch (answer doesn't address the question), and",
+      "- obvious spelling/grammar issues (clear, non-stylistic errors).",
+      "",
+      "For each issue, return ONLY valid JSON with entries shaped as:",
+      '{"issues":[{"index":number,"reason":string}]}',
+      "The 'index' is 0-based within this batch.",
+      "",
+      "Prefix 'reason' with a category tag so parsing stays simple, e.g.:",
+      "- [mismatch] answer talks about parking but the question is about check-in",
+      "- [spelling] accomodation -> accommodation",
+      "- [grammar] missing verb in the sentence",
     ].join(" ");
 
     const user = `List:\n${list}\n\nReturn ONLY JSON as specified.`;
@@ -569,14 +624,14 @@ const schemaSummary =
       const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
       const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
-const page = await browser.newPage();
+      const page = await browser.newPage();
 
-// ⬇️ הוספה קריטית
-await page.addInitScript({
-  content: "window.__name = (o, n) => o;"
-});
+      // ⬇️ הוספה קריטית
+      await page.addInitScript({
+        content: "window.__name = (o, n) => o;"
+      });
 
-await page.goto(url, { waitUntil: "networkidle" });
+      await page.goto(url, { waitUntil: "networkidle" });
       // 1) לפתוח טאבס
       const tabSelectors = [
         "[role=tab]",
@@ -591,7 +646,7 @@ await page.goto(url, { waitUntil: "networkidle" });
         const loc = page.locator(sel);
         const count = await loc.count().catch(() => 0);
         for (let i = 0; i < count; i++) {
-          try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(CLICK_PAUSE_MS); } catch {}
+          try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(CLICK_PAUSE_MS); } catch { }
         }
       }
 
@@ -610,7 +665,7 @@ await page.goto(url, { waitUntil: "networkidle" });
         const loc = page.locator(sel);
         const count = await loc.count().catch(() => 0);
         for (let i = 0; i < count; i++) {
-          try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(Math.max(60, CLICK_PAUSE_MS/2)); } catch {}
+          try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(Math.max(60, CLICK_PAUSE_MS / 2)); } catch { }
         }
       }
 
@@ -653,7 +708,7 @@ await page.goto(url, { waitUntil: "networkidle" });
             await el.click({ force: true });
             await page.waitForLoadState("networkidle", { timeout: 5000 });
             await page.waitForTimeout(250);
-          } catch {}
+          } catch { }
         }
       }
       for (let y = 0; y < SCROLL_STEPS; y++) { await page.mouse.wheel(0, SCROLL_DELTA); await page.waitForTimeout(100); }
@@ -764,7 +819,7 @@ await page.goto(url, { waitUntil: "networkidle" });
           const clone = det.cloneNode(true) as any;
           const sum = clone.querySelector("summary"); if (sum) sum.remove();
           const a = norm(clone.innerText);
-          if (q && a) { const k=(q+"||"+a).toLowerCase(); if(!seen.has(k)){seen.add(k); out.push({q,a});} }
+          if (q && a) { const k = (q + "||" + a).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ q, a }); } }
         });
 
         (document.querySelectorAll("[aria-controls]") as any).forEach((trig: any) => {
@@ -773,7 +828,7 @@ await page.goto(url, { waitUntil: "networkidle" });
           const panel = document.getElementById(id);
           const q = text(trig);
           const a = text(panel || undefined);
-          if (q && a) { const k=(q+"||"+a).toLowerCase(); if(!seen.has(k)){seen.add(k); out.push({q,a});} }
+          if (q && a) { const k = (q + "||" + a).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ q, a }); } }
         });
 
         const sel = "[data-bs-target],[data-target],a[href^='#']";
@@ -784,7 +839,7 @@ await page.goto(url, { waitUntil: "networkidle" });
           const panel = document.getElementById(id);
           const q = text(trig);
           const a = text(panel || undefined);
-          if (q && a) { const k=(q+"||"+a).toLowerCase(); if(!seen.has(k)){seen.add(k); out.push({q,a});} }
+          if (q && a) { const k = (q + "||" + a).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ q, a }); } }
         });
 
         const itemSel = [
@@ -805,7 +860,7 @@ await page.goto(url, { waitUntil: "networkidle" });
           }
           const q = text(qEl as any);
           const a = text(aEl as any);
-          if (q && a) { const k=(q+"||"+a).toLowerCase(); if(!seen.has(k)){seen.add(k); out.push({q,a});} }
+          if (q && a) { const k = (q + "||" + a).toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ q, a }); } }
         });
 
         return out
@@ -816,7 +871,7 @@ await page.goto(url, { waitUntil: "networkidle" });
       const html = await page.content();
       await browser.close();
 
-      const merged = this.dedupeQAs([ ...visibleQAs, ...accessibleQAs ]);
+      const merged = this.dedupeQAs([...visibleQAs, ...accessibleQAs]);
       return { html, qas: merged };
     }
 
@@ -830,16 +885,16 @@ await page.goto(url, { waitUntil: "networkidle" });
     if (process.env.FAQ_AUDIT_RENDER === "1") {
       const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
-     const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
-const page = await browser.newPage();
+      const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
+      const page = await browser.newPage();
 
-// ⬇️ הוספה קריטית
-await page.addInitScript({
-  content: "window.__name = (o, n) => o;"
-});
+      // ⬇️ הוספה קריטית
+      await page.addInitScript({
+        content: "window.__name = (o, n) => o;"
+      });
 
-console.log("🧭 Render mode: Playwright", channel ? `(channel: ${channel})` : "");
-await page.goto(url, { waitUntil: "networkidle" });
+      console.log("🧭 Render mode: Playwright", channel ? `(channel: ${channel})` : "");
+      await page.goto(url, { waitUntil: "networkidle" });
 
 
       if (isFaq) {
@@ -853,7 +908,7 @@ await page.goto(url, { waitUntil: "networkidle" });
           const loc = page.locator(sel);
           const count = await loc.count().catch(() => 0);
           for (let i = 0; i < count; i++) {
-            try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(CLICK_PAUSE_MS); } catch {}
+            try { await loc.nth(i).click({ force: true }); await page.waitForTimeout(CLICK_PAUSE_MS); } catch { }
           }
         }
 
@@ -866,7 +921,7 @@ await page.goto(url, { waitUntil: "networkidle" });
             (n as any).setAttribute("aria-expanded", "true");
             (p as any).hidden = false;
             (p as any).style.display = "block";
-            (p as any).classList.add("open","show","is-open");
+            (p as any).classList.add("open", "show", "is-open");
           });
         });
 
@@ -939,4 +994,25 @@ await page.goto(url, { waitUntil: "networkidle" });
     }
     return null;
   }
+
+  private normalizeHotelBaseUrl(rawUrl: string): string | null {
+  try {
+    const u = new URL(rawUrl);
+    if (!/^www\.leonardo-hotels\.com$/i.test(u.host)) return null;
+
+    const segs = u.pathname.split("/").filter(Boolean);
+    if (segs.length < 2) return null;
+
+    const city = segs[0];
+    const hotel = segs[1];
+
+    // Guard בסיסי נגד דפים לא רלוונטיים שמופיעים לפעמים בתור "סגמנט שני"
+    if (/^(reviews|offers?|brand|advantage|club|loyalty)$/i.test(hotel)) return null;
+
+    return `${u.origin}/${city}/${hotel}`;
+  } catch {
+    return null;
+  }
+}
+
 }
