@@ -1,10 +1,10 @@
 // src/jobs/faq-audit-from-web.ts
 // -------------------------------------------------------------
-// DOM-only (מתעלם מ-JSON-LD). אוסף מלונות מתוך עמוד המדינה (main בלבד),
-// תומך במלונות שאין להם "leonardo" ב-slug (למשל the-g-hotel),
-// טוען דפים דינמיים עם Playwright (אופציונלי) ופותח אקורדיונים/Load more,
-// מחלץ הרבה יותר Q/A (כולל dl/dt/dd ו-aria-controls), ועושה ולידציות.
-// דוח: Hotel | FAQ | Result / Issue (עם N items checked).
+// גרסה סופית בהחלט:
+// 1. Scraping מלא (Playwright/Cheerio) מהקוד המקורי.
+// 2. דוח מפוצל: Critical Issues (רק שגיאות חמורות) + Full Report (הכל).
+// 3. מניעת הצפה: שגיאות סכמה מאוחדות לשורה אחת.
+// 4. עמודת H1 ועמודות מספרים (DOM/Schema/Gap).
 // -------------------------------------------------------------
 
 import * as cheerio from "cheerio";
@@ -24,11 +24,64 @@ const MAX_CALLS_PER_HOTEL = Math.max(
   Math.min(6, Number(process.env.FAQ_AUDIT_MAX_CALLS_PER_HOTEL ?? "1") || 1)
 );
 
-// טיימאאוטים ושאר פרמטרים שניתנים לכיוון דרך ENV
+// טיימאאוטים ושאר פרמטרים
 const CLICK_PAUSE_MS = Number(process.env.FAQ_AUDIT_CLICK_PAUSE_MS ?? "120");
 const LOADMORE_CYCLES = Number(process.env.FAQ_AUDIT_LOADMORE_CYCLES ?? "8");
 const SCROLL_STEPS = Number(process.env.FAQ_AUDIT_SCROLL_STEPS ?? "12");
 const SCROLL_DELTA = Number(process.env.FAQ_AUDIT_SCROLL_DELTA ?? "1400");
+
+type SiteLocale = "en" | "he" | "de"; // תרחיבי ל-10 שפות אצלך
+
+type SiteConfig = {
+  locale: SiteLocale;
+  allowedHosts: string[];
+  acceptLanguage: string;
+};
+
+const SITE_CONFIG: Record<SiteLocale, SiteConfig> = {
+  en: {
+    locale: "en",
+    allowedHosts: ["www.leonardo-hotels.com"],
+    acceptLanguage: "en-GB,en;q=0.9",
+  },
+  he: {
+    locale: "he",
+    allowedHosts: ["www.leonardo-hotels.co.il"],
+    acceptLanguage: "he-IL,he;q=0.9,en;q=0.8",
+  },
+  de: {
+    locale: "de",
+    allowedHosts: ["www.leonardo-hotels.de"],
+    acceptLanguage: "de-DE,de;q=0.9,en;q=0.8",
+  },
+};
+
+// --- פונקציית חומרה (מחוץ למחלקה) - סיווג קפדני ---
+function getSeverity(issue: Issue): "Critical" | "Warning" {
+  const r = (issue.reason || "").toLowerCase();
+  const k = issue.kind;
+    // 2.5 Critical: indexing blocked
+  if (r.includes("[indexing]") || r.includes("blocks indexing")) return "Critical";
+
+  // 1. Critical: page not found / fetch / inference
+  if (r.includes("page not found") || r.includes("fetch failed") || r.includes("inference_error")) return "Critical";
+
+  // 2. Critical: missing meta title (SEO)
+  if (r.includes("missing <title>")) return "Critical";
+
+  // 3. GPT-based severity
+  if (k === "gpt") {
+    // New tags
+    if (r.includes("[unrelated]") || r.includes("[contradiction]") || r.includes("[grammar-hard]")) return "Critical";
+    if (r.includes("[partial]")) return "Warning";
+
+    // Backward compatibility (older outputs)
+    if (r.includes("[mismatch]")) return "Critical";
+  }
+
+  // Everything else -> Warning
+  return "Warning";
+}
 
 export class FaqAuditFromWebJob {
   constructor(private agent: AIAgent, private sheets: SheetsService) {}
@@ -37,147 +90,306 @@ export class FaqAuditFromWebJob {
   // ENTRY
   // -----------------------------------------------------------
   async run(opts: {
-    countryUrl: string;
-    sheetTitle: string;
-    shareResults?: boolean;
-  }): Promise<{
+  countryUrl: string;
+  sheetTitle: string;
+  locale: SiteLocale;
+  shareResults?: boolean;
+}): Promise<{
     spreadsheetId: string;
     hotelsProcessed: number;
     hotelsWithFaq: number;
     hotelsWithProblems: number;
   }> {
-    const hotels = await this.collectHotels(opts.countryUrl);
+const cfg = SITE_CONFIG[opts.locale];
+const hotels = await this.collectHotels(opts.countryUrl, cfg);
 
     const spreadsheetId = await this.sheets.createSpreadsheet(opts.sheetTitle);
+    
+    // הגדרת שני הגליונות: Critical ו-Full Report
     const firstTabTitle = await this.sheets.getFirstSheetTitle(spreadsheetId);
-    const firstSheetId = await this.sheets.getSheetIdByTitle(spreadsheetId, firstTabTitle);
-    await this.sheets.duplicateSheet(spreadsheetId, firstSheetId, "Audit");
+    await this.sheets.renameSheet(spreadsheetId, firstTabTitle, "Critical Issues");
+    await this.sheets.duplicateSheet(spreadsheetId, 0, "Full Audit Report"); 
+    await this.sheets.duplicateSheet(spreadsheetId, 0, "Hotels Summary");
 
     console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
 
-    const auditRows: string[][] = [
-      ["Hotel", "FAQ", "Status", "Kind", "#", "Question", "Answer", "Reason", "Meta title", "Meta description", "Schema"]
-    ];
+    // כותרות מעודכנות (כולל H1 ועמודות מספרים)
+    const headers = [
+  "Hotel", "FAQ Link", "Status", "Severity", "Kind",
+  "DOM Items", "Schema Items", "Gap Diff",
+  "Schema-only Questions (not in DOM)",
+  "Schema-only Answers (not in DOM)",
+  "Question", "Answer", "Reason",
+  "H1 Tag", "Meta title", "Meta description"
+];
+    
+    const criticalRows: string[][] = [headers];
+    const fullReportRows: string[][] = [headers];
+    const summaryHeaders = [
+  "Hotel",
+  "FAQ Link",
+  "Status",
+  "DOM Items",
+  "Schema Items",
+  "Gap Diff",
+  "H1 Tag",
+  "Meta title",
+  "Meta description",
+  "Notes",
+];
+
+const summaryRows: string[][] = [summaryHeaders]; 
+
     let hotelsWithFaq = 0;
     let hotelsWithProblems = 0;
 
     for (const h of hotels) {
+      // 1. בדיקת לינק
       if (!h.faqUrl) {
-        auditRows.push([h.name, "", "✗ FAQ page not found", "", "", "", "", "", "", "", ""]);
+const row = [h.name, "", "✗ FAQ page not found", "Critical", "link",
+  "0", "0", "0",
+  "", "",
+  "", "", "Page not found",
+  "", "", ""
+];
+        criticalRows.push(row);
+        fullReportRows.push(row);
+        summaryRows.push([
+  h.name, "",
+  "✗ FAQ page not found",
+  "0", "0", "0",
+  "", "", "",
+  "Page not found",
+]);
         continue;
       }
       hotelsWithFaq++;
 
+      // 2. שליפת תוכן (משתמש בלוגיקה המקורית)
       let html = "";
       let collected: QA[] = [];
       try {
-        const res = await this.fetchFaqDomAndQAs(h.faqUrl);
+const res = await this.fetchFaqDomAndQAs(h.faqUrl, cfg);
         html = res.html;
         collected = res.qas;
       } catch (e) {
-        auditRows.push([h.name, h.faqUrl, `✗ FAQ fetch failed (${(e as Error).message})`, "", "", "", "", "", "", "", ""]);
+const row = [
+  h.name, h.faqUrl, "✗ Fetch failed", "Critical", "network",
+  "0", "0", "0",
+  "", "",          // Schema-only Questions/Answers
+  "", "",          // Question/Answer
+  (e as Error).message,
+  "", "", ""
+];        criticalRows.push(row);
+        fullReportRows.push(row);
+        summaryRows.push([
+  h.name, h.faqUrl,
+  "✗ Fetch failed",
+  "0", "0", "0",
+  "", "", "",
+  (e as Error).message,
+]);
         continue;
       }
 
-      // אם אספנו מתוך הדפדפן — עדיף. אחרת ניפול ל־Cheerio.
+      // 3. חילוץ H1
+      const $ = cheerio.load(html);
+      const h1Text = $("h1").first().text().trim() || "(Missing H1)";
+
+      // 4. חילוץ שאלות מה-DOM
       const groups = collected.length
-        ? [{ label: "FAQ (DOM-accessible)", items: collected }]
+        ? [{ label: "FAQ (DOM)", items: collected }]
         : this.extractFAQFromDOM(html);
-
       const allQAs = groups.flatMap(g => g.items);
-      const totalChecked = allQAs.length;
+      const domCount = allQAs.length;
 
-      if (!totalChecked) {
-        auditRows.push([h.name, h.faqUrl, "✗ No Q/A items found in page", "", "", "", "", "", "", "", ""]);
+      // אם הדף ריק משאלות
+      if (domCount === 0) {
+const row = [
+  h.name, h.faqUrl, "✗ No Q/A found", "Critical", "content",
+  "0", "0", "0",
+  "", "",          // Schema-only Questions/Answers
+  "", "",          // Question/Answer
+  "Parse error / Empty",
+  h1Text, "", ""
+];        criticalRows.push(row);
+        fullReportRows.push(row);
+        summaryRows.push([
+  h.name, h.faqUrl,
+  "✗ No Q/A found",
+  "0", "0", "0",
+  h1Text, "", "",
+  "Parse error / Empty",
+]);
         continue;
       }
 
-      // SEO / Schema checks (Meta + FAQPage JSON-LD)
-      const {
-        issues: seoIssues,
-        schemaQAs,
-        metaTitle,
-        metaDescription,
-      } = validateMetaAndFaqSchema(html);
-      // כרגע אנחנו רק מוסיפים את ה-seoIssues; schemaQAs שמורים אם נרצה בעתיד להשוות ל-DOM עם GPT
+      // 5. בדיקות סכמה ו-SEO
+      const { issues: seoIssues, schemaQAs, metaTitle, metaDescription } = validateMetaAndFaqSchema(html);
+      const normQ = (s: string) => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
 
-      // כמה Q/A נמצאו בסכמה
-      const schemaQCount = schemaQAs.length;
+const domQSet = new Set(allQAs.map(x => normQ(x.q)));
+const schemaOnly = schemaQAs.filter(x => !domQSet.has(normQ(x.q)));
 
-      // Issues שקשורים לסכמה בלבד (ולא למטה טייטל/דסקריפשן)
-      const schemaIssuesOnly = seoIssues.filter(it => it.reason.startsWith("[schema]"));
+const schemaOnlyQuestions = schemaOnly
+  .map((x, i) => `${i + 1}. ${x.q}`)
+  .join("\n");
 
-      // טקסט מסוכם לעמודת "Schema" בדוח
-      const schemaSummary =
-        schemaQCount === 0
-          ? "✗ No schema Q/A"
-          : schemaIssuesOnly.length > 0
-            ? `✗ ${schemaIssuesOnly.length} schema issues — ${schemaQCount} Qs`
-            : `V — ${schemaQCount} schema Qs`;
+const schemaOnlyAnswers = schemaOnly
+  .map((x, i) => `${i + 1}. ${x.a}`)
+  .join("\n");
+      const schemaCount = schemaQAs.length;
+      
+      // חישוב הפער (מספרים)
+      const gapDiff = schemaCount - domCount; 
 
+      if (schemaOnly.length > 0) {
+  const gapFixRow = [
+    h.name,
+    h.faqUrl,
+    "✗ Issue",
+    "Critical",
+    "rule",
+    String(domCount),
+    String(schemaCount),
+    String(gapDiff),
+
+    schemaOnlyQuestions || "",
+    schemaOnlyAnswers || "",
+
+    "--- Schema-only (Missing in DOM) ---",
+    "",
+    `[schema-gap] ${schemaOnly.length} questions exist in Schema but NOT in DOM`,
+    h1Text,
+    metaTitle || "",
+    metaDescription || ""
+  ];
+
+  // נכנס גם ל-Critical וגם ל-Full (כדי שיהיה עקבי)
+  criticalRows.push(gapFixRow);
+  fullReportRows.push(gapFixRow);
+}
+      
+      // ניתוח הפערים
+      const gapIssues = this.analyzeSchemaGap(allQAs, schemaQAs);
+
+      // איחוד פערים לשורת סיכום אחת (Anti-Spam)
+      const aggregatedIssues: Issue[] = [];
+
+      // סיכום חסרים בסכמה
+      const missingInSchema = gapIssues.filter(i => i.reason.includes("MISSING in Schema"));
+      if (missingInSchema.length > 0) {
+        // מציג עד 3 דוגמאות בתוך ה-Reason
+        const examples = missingInSchema.slice(0, 3).map(i => `"${i.q}"`).join(", ");
+        aggregatedIssues.push({
+          kind: "rule",
+          q: "--- Gap Summary ---",
+          a: "",
+          reason: `[schema-gap] ${missingInSchema.length} questions visible on page but MISSING in Schema. Examples: ${examples}...`,
+          index: -1
+        });
+      }
+
+      // סיכום חסרים בדף (Ghost)
+      const missingInDom = gapIssues.filter(i => i.reason.includes("NOT found in DOM"));
+      if (missingInDom.length > 0) {
+        aggregatedIssues.push({
+          kind: "rule",
+          q: "--- Gap Summary ---",
+          a: "",
+          reason: `[schema-gap] ${missingInDom.length} questions in Schema but NOT on page (Hidden?).`,
+          index: -1
+        });
+      }
+
+      // אם חסר H1 - נוסיף ISSUE כדי שיופיע ברשימה (בנוסף לעמודה)
+      if (h1Text === "(Missing H1)") {
+        aggregatedIssues.push({ kind: "rule", q: "", a: "", reason: "[meta] Missing <h1> tag", index: -1 });
+      }
+
+      // 6. בדיקות חוקים ו-GPT
       const ruleIssues = this.ruleChecks(allQAs);
       const gptIssues = await this.semanticChecksBatched(groups, allQAs);
-      const issues: Issue[] = [...ruleIssues, ...gptIssues, ...seoIssues];
 
-      if (issues.length === 0) {
-        auditRows.push([
-          h.name,
-          h.faqUrl,
-          `V — ${totalChecked} items checked`,
-          "",
-          "",
-          "",
-          "",
-          "",
-          metaTitle || "",
-          metaDescription || "",
-          schemaSummary,
-        ]);
+      // איחוד הכל (מסננים את הפערים המפורטים שמציפים את הדוח, משאירים רק את המסוכמים)
+      const filteredSeoIssues = seoIssues.filter(i => !i.reason.startsWith("[schema-gap]"));
+      const allIssues = [...filteredSeoIssues, ...aggregatedIssues, ...ruleIssues, ...gptIssues];
 
+      // 7. בניית השורות לטבלה
+      const hasIssues = allIssues.length > 0;
+      if (hasIssues) hotelsWithProblems++;
+
+      summaryRows.push([
+  h.name,
+  h.faqUrl,
+  hasIssues ? "✗ Issues found" : "V Clean",
+  String(domCount),
+  String(schemaCount),
+  String(gapDiff),
+  h1Text,
+  metaTitle || "",
+  metaDescription || "",
+  hasIssues ? "See Full Audit Report for details" : "No issues found",
+]);
+
+      // שורה למלון תקין (Clean Row) - נכנסת תמיד לדוח המלא!
+      if (!hasIssues) {
+        fullReportRows.push([
+  h.name, h.faqUrl, "V Clean", "Info", "",
+  String(domCount), String(schemaCount), String(gapDiff),
+  schemaOnlyQuestions || "",
+  schemaOnlyAnswers || "",
+  "", "", "No issues found",
+  h1Text, metaTitle || "", metaDescription || ""
+]);
       } else {
-        hotelsWithProblems++;
-        // שורת סיכום למלון – עם meta + schema
-        auditRows.push([
-          h.name,
-          h.faqUrl,
-          `✗ Found ${issues.length} issues — ${totalChecked} items checked`,
-          "",
-          "",
-          "",
-          "",
-          "",
-          metaTitle || "",
-          metaDescription || "",
-          schemaSummary,
-        ]);
+        // אם יש בעיות, עוברים עליהן
+        for (const it of allIssues) {
+          const severity = getSeverity(it);
+          
+          let qShort = it.q.replace(/\s+/g, " ").slice(0, 500);
+          let aShort = it.a.replace(/\s+/g, " ").slice(0, 500);
+          const reasonStr = (it.reason ?? "").replace(/^ —\s*/, "");
 
-        // שורות ה-issue עצמן – בלי שכפול של הטייטל/דסקריפשן
-        for (const it of issues) {
-          const qShort = it.q.replace(/\s+/g, " ").slice(0, 500);
-          const aShort = it.a.replace(/\s+/g, " ").slice(0, 500);
-          const idxStr = Number.isFinite(it.index) ? String((it.index as number) + 1) : "";
-          const kind = it.kind;
-          const reasonStr = (it.reason ?? "").toString().replace(/^ —\s*/, "");
+          const row = [
+            h.name,
+            h.faqUrl,
+            "✗ Issue",
+            severity,
+            it.kind,
+            String(domCount),    // עמודה חדשה: כמה בדף
+            String(schemaCount), // עמודה חדשה: כמה בסכמה
+            String(gapDiff),     // עמודה חדשה: הפער
+schemaOnlyQuestions || "",
+  schemaOnlyAnswers || "",
 
-          auditRows.push([
-            h.name,             // Hotel
-            h.faqUrl,           // FAQ
-            "✗ Issue",          // Status
-            kind,               // Kind (rule/gpt)
-            idxStr,             // #
-            qShort,             // Question
-            aShort,             // Answer
-            reasonStr,          // Reason
-            "",                 // Meta title (ריק בשורות ה-issue)
-            "",                 // Meta description
-            "",                 // Schema flag
-          ]);
+            qShort,
+            aShort,
+            reasonStr,
+            h1Text,              // עמודה חדשה: H1
+            (it.kind === "rule" && it.reason.startsWith("[meta]")) ? "" : (metaTitle || ""),
+            (it.kind === "rule" && it.reason.startsWith("[meta]")) ? "" : (metaDescription || "")
+          ];
+
+          // הכל הולך לדוח המלא
+          fullReportRows.push(row);
+
+          // רק קריטי הולך לדוח הקריטי
+          if (severity === "Critical") {
+            criticalRows.push(row);
+          }
         }
       }
-    }
+    } // סיום לולאת המלונות
 
-    await this.sheets.writeValues(spreadsheetId, "Audit!A1", auditRows);
-    await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Audit");
+    // כתיבה לשיטס
+    await this.sheets.writeValues(spreadsheetId, "Critical Issues!A1", criticalRows);
+    await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Critical Issues");
+    
+    await this.sheets.writeValues(spreadsheetId, "Full Audit Report!A1", fullReportRows);
+    await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Full Audit Report");
+    await this.sheets.writeValues(spreadsheetId, "Hotels Summary!A1", summaryRows);
+await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Hotels Summary");
 
     return {
       spreadsheetId,
@@ -187,14 +399,52 @@ export class FaqAuditFromWebJob {
     };
   }
 
+  // בדיקה משווה בין מה שנמצא בדף (DOM) לבין מה שבסכמה
+  private analyzeSchemaGap(domQAs: QA[], schemaQAs: QA[]): Issue[] {
+    const issues: Issue[] = [];
+    
+    // מנרמלים להשוואה קלה
+    const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+    
+    const domSet = new Set(domQAs.map(i => norm(i.q)));
+    const schemaSet = new Set(schemaQAs.map(i => norm(i.q)));
+
+    // 1. מה יש בדף אבל חסר בסכמה?
+    for (const d of domQAs) {
+      if (!schemaSet.has(norm(d.q))) {
+        issues.push({
+          kind: "rule",
+          q: d.q,
+          a: "(Exists in DOM)",
+          reason: "[schema-gap] Question visible on page but MISSING in Schema",
+          index: -1
+        });
+      }
+    }
+
+    // 2. מה יש בסכמה אבל לא נמצא בדף (Ghost)?
+    for (const s of schemaQAs) {
+      if (!domSet.has(norm(s.q))) {
+        issues.push({
+          kind: "rule",
+          q: s.q,
+          a: "(Exists in Schema)",
+          reason: "[schema-gap] Question in Schema but NOT found in DOM content",
+          index: -1
+        });
+      }
+    }
+
+    return issues;
+  }
+  
   // -----------------------------------------------------------
-  // איסוף מלונות מעמוד מדינה + וידוא שיוך לעיר
+  // איסוף מלונות מעמוד מדינה + וידוא שיוך לעיר (לוגיקה מקורית)
   // -----------------------------------------------------------
-  private async collectHotels(countryUrl: string): Promise<HotelItem[]> {
-    const html = await this.fetchText(countryUrl);
+private async collectHotels(countryUrl: string, cfg: SiteConfig): Promise<HotelItem[]> {  
+    const html = await this.fetchText(countryUrl, false, cfg);
     const $ = cheerio.load(html);
 
-    // עובדים על <main> אם יש, אחרת body בלי ניווטים/פוטר
     let $scope = $("main");
     if ($scope.length === 0) {
       $scope = $("body").clone();
@@ -202,115 +452,111 @@ export class FaqAuditFromWebJob {
     }
 
     const hotelLinks = new Set<string>();
-const cityLinks = new Set<string>();
+    const cityLinks = new Set<string>();
 
-// 1) איסוף לינקים מעמוד המדינה: גם ערים וגם מלונות
-$scope.find("a[href]").each((_, el) => {
-  const hrefRaw = ($(el).attr("href") || "").trim();
-  if (!hrefRaw) return;
-
-  const href = this.makeAbsolute(countryUrl, hrefRaw);
-  if (!/^https?:\/\/www\.leonardo-hotels\.com\//i.test(href)) return;
-
-  // מסננים דפי מותג/מועדון/מדינה/קופונים וכו׳
-  if (/\/(brand|advantage|club|loyalty|offers?)\/?$/i.test(href)) return;
-
-  try {
-    const u = new URL(href);
-    const segs = u.pathname.split("/").filter(Boolean);
-    const clean = href.replace(/#.*$/, "").replace(/\/$/, "");
-
-    // מלון: /<city>/<hotel> (מנרמלים לבייס של 2 סגמנטים כדי להימנע מ-/reviews/ וכד')
-if (segs.length >= 2) {
-  const baseHotel = this.normalizeHotelBaseUrl(clean);
-  if (baseHotel) hotelLinks.add(baseHotel);
-  return;
-}
-
-    // עיר: /<city> (אבל לא העמוד של המדינה עצמו)
-    if (segs.length === 1) {
-      const countrySeg = new URL(countryUrl).pathname.split("/").filter(Boolean)[0]?.toLowerCase();
-      if (countrySeg && segs[0].toLowerCase() === countrySeg) return;
-
-      cityLinks.add(clean);
-    }
-  } catch {
-    /* ignore */
-  }
-});
-
-// 2) כניסה לכל עמוד עיר ואיסוף לינקי מלונות מתוכו (מכסה את ה-See all)
-for (const cityUrl of cityLinks) {
-  try {
-    const cityHtml = await this.fetchText(cityUrl);
-    const $$ = cheerio.load(cityHtml);
-
-    let $cityScope = $$("main");
-    if ($cityScope.length === 0) $cityScope = $$("body");
-
-    $cityScope.find("a[href]").each((_, a) => {
-      const hrefRaw = ($$(a).attr("href") || "").trim();
+    // 1) איסוף לינקים מעמוד המדינה
+    $scope.find("a[href]").each((_, el) => {
+      const hrefRaw = ($(el).attr("href") || "").trim();
       if (!hrefRaw) return;
 
-      const href = this.makeAbsolute(cityUrl, hrefRaw);
-      if (!/^https?:\/\/www\.leonardo-hotels\.com\//i.test(href)) return;
+      const href = this.makeAbsolute(countryUrl, hrefRaw);
+try {
+  const host = new URL(href).host;
+  if (!cfg.allowedHosts.includes(host)) return;
+} catch {
+  return;
+}
       if (/\/(brand|advantage|club|loyalty|offers?)\/?$/i.test(href)) return;
 
       try {
         const u = new URL(href);
         const segs = u.pathname.split("/").filter(Boolean);
-       if (segs.length >= 2) {
-  const cleanHotel = href.replace(/#.*$/, "").replace(/\/$/, "");
-  const baseHotel = this.normalizeHotelBaseUrl(cleanHotel);
-  if (baseHotel) hotelLinks.add(baseHotel);
-}
+        const clean = href.replace(/#.*$/, "").replace(/\/$/, "");
 
-      } catch {
-        /* ignore */
-      }
+        if (segs.length >= 2) {
+const baseHotel = this.normalizeHotelBaseUrl(clean, cfg);
+          if (baseHotel) hotelLinks.add(baseHotel);
+          return;
+        }
+
+        if (segs.length === 1) {
+          const countrySeg = new URL(countryUrl).pathname.split("/").filter(Boolean)[0]?.toLowerCase();
+          if (countrySeg && segs[0].toLowerCase() === countrySeg) return;
+          cityLinks.add(clean);
+        }
+      } catch { /* ignore */ }
     });
-  } catch {
-    /* ignore */
-  }
-}
 
-// 3) ערים שזוהו מתוך כל המלונות שמצאנו (בשביל validateHotelByCities כמו קודם)
-const countryCities = new Set<string>();
-for (const url of hotelLinks) {
-  try {
-    const seg = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
-    if (seg) countryCities.add(seg.toLowerCase());
-  } catch {
-    /* ignore */
-  }
-}
+    // 2) כניסה לכל עמוד עיר
+    for (const cityUrl of cityLinks) {
+      try {
+        const cityHtml = await this.fetchText(cityUrl, false, cfg);
+        const $$ = cheerio.load(cityHtml);
 
-console.log("🏙️ City pages found:", cityLinks.size);
-console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
+        let $cityScope = $$("main");
+        if ($cityScope.length === 0) $cityScope = $$("body");
+
+        $cityScope.find("a[href]").each((_, a) => {
+          const hrefRaw = ($$(a).attr("href") || "").trim();
+          if (!hrefRaw) return;
+
+          const href = this.makeAbsolute(cityUrl, hrefRaw);
+try {
+  const host = new URL(href).host;
+  if (!cfg.allowedHosts.includes(host)) return;
+} catch {
+  return;
+}
+          if (/\/(brand|advantage|club|loyalty|offers?)\/?$/i.test(href)) return;
+
+          try {
+            const u = new URL(href);
+            const segs = u.pathname.split("/").filter(Boolean);
+            if (segs.length >= 2) {
+                const cleanHotel = href.replace(/#.*$/, "").replace(/\/$/, "");
+const baseHotel = this.normalizeHotelBaseUrl(cleanHotel, cfg);
+                if (baseHotel) hotelLinks.add(baseHotel);
+            }
+          } catch { /* ignore */ }
+        });
+      } catch { /* ignore */ }
+    }
+
+    // 3) וידוא ערים
+    const countryCities = new Set<string>();
+    for (const url of hotelLinks) {
+      try {
+        const seg = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
+        if (seg) countryCities.add(seg.toLowerCase());
+      } catch { /* ignore */ }
+    }
+
+    console.log("🏙️ City pages found:", cityLinks.size);
+    console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
 
     const hotels: HotelItem[] = [];
     for (const url of hotelLinks) {
-      const belongs = await this.validateHotelByCities(url, countryCities);
+      const belongs = await this.validateHotelByCities(url, countryCities, cfg);
       if (!belongs) continue;
 
       const faqUrlCandidate = `${url}/faq`;
-      const ok = await this.headOk(faqUrlCandidate);
-      console.log(`    • ${faqUrlCandidate} ${ok ? "✅" : "❌"}`);
-      hotels.push({
-        name: this.prettyNameFromUrl(url),
-        faqUrl: ok ? faqUrlCandidate : null,
-      });
+const ok = await this.headOk(faqUrlCandidate);
+console.log(`    • ${faqUrlCandidate} ${ok ? "✅" : "❌"}`);
+hotels.push({
+  name: this.prettyNameFromUrl(url),
+  faqUrl: ok ? faqUrlCandidate : null,
+});
     }
 
     return hotels.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  private async validateHotelByCities(hotelUrl: string, cities: Set<string>): Promise<boolean> {
-    try {
+private async validateHotelByCities(hotelUrl: string, cities: Set<string>, cfg: SiteConfig): Promise<boolean> {
+      try {
       const segs = new URL(hotelUrl).pathname.split("/").filter(Boolean);
       if (segs.length > 0 && cities.has(segs[0].toLowerCase())) return true;
 
-      const html = await this.fetchText(hotelUrl);
+     const html = await this.fetchText(hotelUrl, false, cfg);
       const $ = cheerio.load(html);
 
       const crumb = $("[aria-label='breadcrumb'], nav.breadcrumb, .breadcrumb").text().toLowerCase();
@@ -330,8 +576,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
   // -----------------------------------------------------------
   private extractFAQFromDOM(html: string): Array<{ label: string; items: QA[] }> {
     const $ = cheerio.load(html);
-
-    // 1) נסיון לזהות קבוצות לפי כותרות
     const sections: Array<{ label: string; el: cheerio.Cheerio }> = [];
     $("h2, h3").each((_, h) => {
       const t = $(h).text().trim();
@@ -342,7 +586,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
     });
 
     const groups: Array<{ label: string; items: QA[] }> = [];
-
     if (sections.length) {
       for (let i = 0; i < sections.length; i++) {
         const { label, el } = sections[i];
@@ -352,29 +595,19 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
         if (items.length) groups.push({ label, items });
       }
     }
-
-    // 2) fallback: הדף כולו
     if (!groups.length) {
       const items = this.collectQAItemsFromScope($, $("body"));
       if (items.length) groups.push({ label: "FAQ", items });
     }
-
     return groups;
   }
 
   private collectQAItemsFromScope($: cheerio.Root, $scope: cheerio.Cheerio): QA[] {
     const out: QA[] = [];
-
     const items = $scope
       .find([
-        ".accordion-item",
-        ".accordion__item",
-        ".faq-item",
-        ".faq__item",
-        "[data-faq-item]",
-        "[data-accordion-item]",
-        "details",
-        "dl",
+        ".accordion-item", ".accordion__item", ".faq-item", ".faq__item",
+        "[data-faq-item]", "[data-accordion-item]", "details", "dl",
       ].join(", "))
       .addBack(".accordion-item, .accordion__item, .faq-item, .faq__item, [data-faq-item], [data-accordion-item], details, dl");
 
@@ -407,7 +640,7 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
 
         const $el = $(el);
 
-        // 3) aria-controls mapping (button/summary -> panel#id)
+        // 3) aria-controls mapping
         const trigger =
           $el.find("[aria-controls]").first().length
             ? $el.find("[aria-controls]").first()
@@ -421,33 +654,23 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           a = panel.text().trim() ||
             $el.find(".answer, .accordion-panel, .accordion-body, [data-answer]").first().text().trim();
           if (!a) {
-            a = $el
-              .clone()
+            a = $el.clone()
               .find("summary, h1, h2, h3, h4, h5, h6, button, .question, [data-question], [role=button]")
-              .remove()
-              .end()
-              .text()
-              .trim();
+              .remove().end().text().trim();
           }
           if (q && a) { out.push({ q, a }); return; }
         }
 
-        // 4) גנרי: כותרת/כפתור כשאלה, תוכן לא-כותרתי כתשובה
-        q =
-          $el.find("summary, h2, h3, h4, button, .question, [data-question]").first().text().trim() ||
-          $el.find("[role=button]").first().text().trim();
+        // 4) גנרי
+        q = $el.find("summary, h2, h3, h4, button, .question, [data-question]").first().text().trim() ||
+            $el.find("[role=button]").first().text().trim();
 
-        a =
-          $el.find(".answer, .accordion-body, .accordion__panel, [data-answer]").first().text().trim();
+        a = $el.find(".answer, .accordion-body, .accordion__panel, [data-answer]").first().text().trim();
 
         if (!a) {
-          a = $el
-            .clone()
+          a = $el.clone()
             .find("summary, h1, h2, h3, h4, h5, h6, button, .question, [data-question], [role=button]")
-            .remove()
-            .end()
-            .text()
-            .trim();
+            .remove().end().text().trim();
         }
 
         if (q && a) out.push({ q, a });
@@ -456,7 +679,7 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
       if (out.length) return out;
     }
 
-    // fallback: H3/H4 + הבלוקים שאחריהם
+    // fallback: H3/H4
     $scope.find("h3, h4").each((_, h) => {
       const q = $(h).text().trim();
       if (!q) return;
@@ -562,24 +785,32 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
   private async semanticCheckBatch(qas: QA[], baseIndex: number): Promise<GptIssue[]> {
     const list = qas.map((x, i) => `${i + 1}. Q: ${x.q}\nA: ${x.a}`).join("\n\n");
 
-    const system = [
-      "You are a strict FAQ validator.",
-      "Given a list of Q&A items scraped from a hotel's FAQ page (raw DOM content),",
-      "Identify material issues that a typical end-user would notice in the Q&A pairs ONLY (ignore the rest of the page).",
-      "",
-      "Flag BOTH:",
-      "- semantic mismatch (answer doesn't address the question), and",
-      "- obvious spelling/grammar issues (clear, non-stylistic errors).",
-      "",
-      "For each issue, return ONLY valid JSON with entries shaped as:",
-      '{"issues":[{"index":number,"reason":string}]}',
-      "The 'index' is 0-based within this batch.",
-      "",
-      "Prefix 'reason' with a category tag so parsing stays simple, e.g.:",
-      "- [mismatch] answer talks about parking but the question is about check-in",
-      "- [spelling] accomodation -> accommodation",
-      "- [grammar] missing verb in the sentence",
-    ].join(" ");
+   const system = [
+  "You are a strict FAQ validator.",
+  "Given a list of Q&A items scraped from a hotel's FAQ page (raw DOM content),",
+  "Identify material issues that a typical end-user would notice in the Q&A pairs ONLY (ignore the rest of the page).",
+  "",
+  "Flag issues with clear CATEGORY TAGS so we can classify severity:",
+  "",
+  "1) [unrelated] - the answer does not address the question at all (different topic).",
+  "2) [partial] - the answer is relevant but misses a key required detail explicitly asked in the question (e.g., asks price but answer doesn't include price).",
+  "3) [contradiction] - the answer contradicts the question's premise or contains a direct contradiction.",
+  "4) [grammar-hard] - severe grammar issues that make the answer hard to understand.",
+  "5) [spelling] - obvious spelling mistakes.",
+  "6) [grammar] - minor grammar mistakes (not severe).",
+  "",
+  "Return ONLY valid JSON with entries shaped as:",
+  '{"issues":[{"index":number,"reason":string}]}',
+  "The 'index' is 0-based within this batch.",
+  "",
+  "Examples of reason:",
+  "- [unrelated] answer talks about check-in but the question is about parking cost",
+  "- [partial] mentions parking exists but does not mention the cost",
+  "- [contradiction] says pets are allowed but also says pets are not allowed",
+  "- [grammar-hard] sentence is broken and hard to understand",
+  "- [spelling] accomodation -> accommodation",
+  "- [grammar] minor verb agreement issue",
+].join(" ");
 
     const user = `List:\n${list}\n\nReturn ONLY JSON as specified.`;
 
@@ -587,7 +818,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
     try {
       raw = await this.agent.runWithSystem(user, system, "o3");
     } catch {
-      // אם יש כשל — אל נפיל את הריצה; נחזיר הודעת שגיאה לכל הפריטים בקבוצת הבדיקה הזו
       return qas.map((x, i) => ({
         kind: "gpt",
         q: x.q,
@@ -618,9 +848,8 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
   // -----------------------------------------------------------
   // DOM-render: פתיחה/איסוף חכם (Playwright) + סטטי (fetch)
   // -----------------------------------------------------------
-  /** דף FAQ: מחזיר גם HTML וגם Q/A שנאספו מתוך הדפדפן (אם רינדור דולק). */
-  private async fetchFaqDomAndQAs(url: string): Promise<{ html: string; qas: QA[] }> {
-    if (process.env.FAQ_AUDIT_RENDER === "1") {
+private async fetchFaqDomAndQAs(url: string, cfg: SiteConfig): Promise<{ html: string; qas: QA[] }> {
+      if (process.env.FAQ_AUDIT_RENDER === "1") {
       const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
       const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
@@ -631,16 +860,22 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
         content: "window.__name = (o, n) => o;"
       });
 
-      await page.goto(url, { waitUntil: "networkidle" });
+page.setDefaultNavigationTimeout(60_000);
+page.setDefaultTimeout(60_000);
+
+await page.setExtraHTTPHeaders({ "accept-language": cfg.acceptLanguage });
+await page.setViewportSize({ width: 1365, height: 900 });
+
+await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+
+// Anchor on stable DOM, not on "networkidle"
+await page.waitForSelector("main, body", { timeout: 30_000 }).catch(() => {});
+await page.waitForTimeout(250);
+
       // 1) לפתוח טאבס
       const tabSelectors = [
-        "[role=tab]",
-        "[data-bs-toggle='tab']",
-        "[data-toggle='tab']",
-        ".nav-tabs a[href^='#']",
-        ".tabs a[href^='#']",
-        ".c-tabs a[href^='#']",
-        ".faq__tabs a[href^='#']",
+        "[role=tab]", "[data-bs-toggle='tab']", "[data-toggle='tab']",
+        ".nav-tabs a[href^='#']", ".tabs a[href^='#']", ".c-tabs a[href^='#']", ".faq__tabs a[href^='#']",
       ];
       for (const sel of tabSelectors) {
         const loc = page.locator(sel);
@@ -652,14 +887,9 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
 
       // 2) לפתוח אקורדיונים/summary
       const accSelectors = [
-        "summary",
-        ".accordion-button",
-        ".accordion__button",
-        ".accordion__header button",
-        ".accordion-header button",
-        "[data-accordion-trigger]",
-        "[data-faq-item] button",
-        "[aria-controls]",
+        "summary", ".accordion-button", ".accordion__button",
+        ".accordion__header button", ".accordion-header button",
+        "[data-accordion-trigger]", "[data-faq-item] button", "[aria-controls]",
       ];
       for (const sel of accSelectors) {
         const loc = page.locator(sel);
@@ -669,7 +899,7 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
         }
       }
 
-      // 3) להכריח פתיחה של פאנלים שמקושרים נגישותית (גם אם CSS עדיין מסתיר)
+      // 3) להכריח פתיחה של פאנלים
       await page.locator("[aria-controls]").evaluateAll((nodes: any[]) => {
         nodes.forEach((n: any) => {
           const ctrl = n.getAttribute("aria-controls");
@@ -689,16 +919,11 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
         nodes.forEach((d: any) => { (d as any).open = true; });
       });
 
-      // 5) לנסות "Load more" + lazy load באמצעות גלילות
+      // 5) לנסות "Load more"
       const moreSelectors = [
-        "button:has-text('Load more')",
-        "button:has-text('Show more')",
-        "button:has-text('View all')",
-        "button:has-text('See more')",
-        "a:has-text('Load more')",
-        "a:has-text('Show more')",
-        "[data-load-more]",
-        ".load-more, .js-load-more",
+        "button:has-text('Load more')", "button:has-text('Show more')", "button:has-text('View all')",
+        "button:has-text('See more')", "a:has-text('Load more')", "a:has-text('Show more')",
+        "[data-load-more]", ".load-more, .js-load-more",
       ];
       for (const sel of moreSelectors) {
         for (let i = 0; i < LOADMORE_CYCLES; i++) {
@@ -706,13 +931,13 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           if (!(await el.isVisible().catch(() => false))) break;
           try {
             await el.click({ force: true });
-            await page.waitForLoadState("networkidle", { timeout: 5000 });
+            await page.waitForTimeout(500);
             await page.waitForTimeout(250);
           } catch { }
         }
       }
       for (let y = 0; y < SCROLL_STEPS; y++) { await page.mouse.wheel(0, SCROLL_DELTA); await page.waitForTimeout(100); }
-      await page.waitForLoadState("networkidle", { timeout: 5000 });
+      await page.waitForTimeout(500);
 
       // 6) איסוף “נראה לעין”
       const visibleQAs: QA[] = await page.evaluate(() => {
@@ -730,7 +955,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
         const out: { q: string; a: string }[] = [];
         const seen = new Set<string>();
 
-        // details/summary
         (document.querySelectorAll("details") as any).forEach((det: any) => {
           const q = text(det.querySelector("summary"));
           const clone = det.cloneNode(true) as any;
@@ -743,7 +967,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           }
         });
 
-        // aria-controls → panel (שניהם נראים)
         (document.querySelectorAll("[aria-controls]") as any).forEach((trig: any) => {
           const id = trig.getAttribute("aria-controls") || "";
           if (!id) return;
@@ -756,7 +979,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           }
         });
 
-        // בלוקים שכיחים
         const itemSel = [
           ".accordion-item", ".accordion__item", ".faq-item", ".faq__item",
           "[data-faq-item]", "[data-accordion-item]"
@@ -782,7 +1004,6 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           }
         });
 
-        // H3/H4 + רצף הבלוקים שאחריהם
         (document.querySelectorAll("h3, h4") as any).forEach((h: any) => {
           if (!isVisible(h)) return;
           const q = text(h);
@@ -807,7 +1028,7 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
           .filter(({ q, a }) => a && a.length >= 5 && a.toLowerCase() !== q.toLowerCase());
       });
 
-      // 7) איסוף “נגיש” — גם אם הפאנל עדיין מוסתר CSS-ית
+      // 7) איסוף “נגיש”
       const accessibleQAs: QA[] = await page.evaluate(() => {
         const norm = (s: string) => (s || "").replace(/\s+/g, " ").trim();
         const text = (el: any) => el ? norm((el as any).innerText) : "";
@@ -876,33 +1097,37 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
     }
 
     // בלי רינדור — נחזיר רק HTML ונחלץ עם Cheerio
-    const html = await this.fetchText(url, true);
+    const html = await this.fetchText(url, true, cfg);
     return { html, qas: [] };
   }
 
-  /** בקשה פשוטה לטקסט (עם אופציית רינדור מלא עבור דפי FAQ במקרה הצורך). */
-  private async fetchText(url: string, isFaq = false): Promise<string> {
+ private async fetchText(url: string, isFaq = false, cfg?: SiteConfig): Promise<string> {
     if (process.env.FAQ_AUDIT_RENDER === "1") {
       const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
       const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
       const page = await browser.newPage();
 
-      // ⬇️ הוספה קריטית
       await page.addInitScript({
         content: "window.__name = (o, n) => o;"
       });
 
       console.log("🧭 Render mode: Playwright", channel ? `(channel: ${channel})` : "");
-      await page.goto(url, { waitUntil: "networkidle" });
+page.setDefaultNavigationTimeout(60_000);
+page.setDefaultTimeout(60_000);
 
+// Make the browser look more like a real user session
+await page.setExtraHTTPHeaders({ "accept-language": (cfg?.acceptLanguage ?? "en-GB,en;q=0.9") });
+await page.setViewportSize({ width: 1365, height: 900 });
 
+await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
+
+// Anchor on a stable element instead of networkidle
+await page.waitForSelector("main, body", { timeout: 30_000 }).catch(() => {});
+await page.waitForTimeout(250);
       if (isFaq) {
-        // פתיחה מינימלית (כמו למעלה אבל קצר יותר – כאן אוספים רק HTML, לא Q/A)
         const tabSelectors = [
-          "[role=tab]",
-          "[data-bs-toggle='tab']",
-          ".nav-tabs a[href^='#']",
+          "[role=tab]", "[data-bs-toggle='tab']", ".nav-tabs a[href^='#']",
         ];
         for (const sel of tabSelectors) {
           const loc = page.locator(sel);
@@ -941,7 +1166,7 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
 
     // --- מצב בלי רינדור (מהיר) ---
     const r = await fetch(url, {
-      headers: { "user-agent": "Mozilla/5.0 FaqAuditBot", "accept-language": "en-GB,en;q=0.9" },
+      headers: { "user-agent": "Mozilla/5.0 FaqAuditBot", "accept-language": (cfg?.acceptLanguage ?? "en-GB,en;q=0.9") },
     });
     if (!r.ok) throw new Error(`GET ${url} -> ${r.status}`);
     return await r.text();
@@ -995,24 +1220,22 @@ console.log("🔎 Hotel links found (country + cities):", hotelLinks.size);
     return null;
   }
 
-  private normalizeHotelBaseUrl(rawUrl: string): string | null {
-  try {
-    const u = new URL(rawUrl);
-    if (!/^www\.leonardo-hotels\.com$/i.test(u.host)) return null;
+private normalizeHotelBaseUrl(rawUrl: string, cfg: SiteConfig): string | null {
+      try {
+      const u = new URL(rawUrl);
+if (!cfg.allowedHosts.includes(u.host)) return null;
+      const segs = u.pathname.split("/").filter(Boolean);
+      if (segs.length < 2) return null;
 
-    const segs = u.pathname.split("/").filter(Boolean);
-    if (segs.length < 2) return null;
+      const city = segs[0];
+      const hotel = segs[1];
 
-    const city = segs[0];
-    const hotel = segs[1];
+      // Guard בסיסי
+      if (/^(reviews|offers?|brand|advantage|club|loyalty)$/i.test(hotel)) return null;
 
-    // Guard בסיסי נגד דפים לא רלוונטיים שמופיעים לפעמים בתור "סגמנט שני"
-    if (/^(reviews|offers?|brand|advantage|club|loyalty)$/i.test(hotel)) return null;
-
-    return `${u.origin}/${city}/${hotel}`;
-  } catch {
-    return null;
+      return `${u.origin}/${city}/${hotel}`;
+    } catch {
+      return null;
+    }
   }
-}
-
 }

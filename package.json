@@ -12,21 +12,41 @@
     "validate-lite": "MODE=validate-lite tsx src/index.ts",
     "meta-schema": "MODE=meta-schema tsx src/index.ts",
     "faq-audit": "MODE=faq-audit tsx src/index.ts",
-    "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
+    "match-hotels": "MODE=match-hotels tsx src/index.ts",
+    "filter-country": "MODE=filter-country tsx src/index.ts",
+    "cross-check": "MODE=cross-check tsx src/index.ts",
+    "translate-master": "MODE=translate-master tsx src/index.ts",
+    "inject-hebrew": "MODE=inject-hebrew tsx src/index.ts",
+    "duplicate-rewrite-hebrew": "MODE=duplicate-rewrite-hebrew tsx src/index.ts",
+    "hotels-catalog": "MODE=hotels-catalog tsx src/index.ts",
+    "semantic-match-unmatched": "MODE=semantic-match-unmatched tsx src/index.ts",
+    "inject-hebrew-from-unmatched": "MODE=inject-hebrew-from-unmatched tsx src/index.ts",
+"vlookup-hebrew-from-unmatched": "MODE=vlookup-hebrew tsx src/index.ts",
+"qa-hebrew-injection": "MODE=qa-hebrew-injection tsx src/index.ts",
+    "import-hebrew-meta-tags": "cross-env MODE=import-hebrew-meta-tags tsx src/index.ts",
+"fattal-faq": "cross-env MODE=fattal-faq tsx src/index.ts",
+    "faq-petal-israel": "cross-env MODE=faq-petal-israel tsx src/index.ts",
+"translate-demo": "cross-env MODE=translate-demo tsx src/index.ts",
+"demo-ui": "tsx watch src/server-demo.ts",
 
+    "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
   },
   "dependencies": {
     "chalk": "^5.4.1",
     "cheerio": "^1.1.2",
     "dotenv": "^16.5.0",
+    "express": "^5.2.1",
     "google-auth-library": "^10.1.0",
     "googleapis": "^150.0.1",
     "inquirer": "^12.6.3",
+    "open": "^11.0.0",
     "openai": "^4.104.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.35",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.15.30",
     "cross-env": "^10.1.0",
     "nodemon": "^3.1.10",

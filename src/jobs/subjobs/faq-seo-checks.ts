@@ -40,6 +40,14 @@ export function validateMetaAndFaqSchema(html: string): SeoCheckResult {
     issues.push(makeIssue("[meta] <title> is very short (less than 10 chars)"));
   }
 
+  // ---------- 1.5) בדיקת <h1> ----------
+  const h1 = $("h1").text().trim();
+  if (!h1) {
+    issues.push(makeIssue("[meta] Missing <h1> tag"));
+  } else if (h1.length < 5) {
+    issues.push(makeIssue("[meta] <h1> is extremely short"));
+  }
+
   // ---------- 2) meta description ----------
   const desc = ($('head meta[name="description"]').attr("content") || "").trim();
   if (!desc) {
@@ -88,6 +96,33 @@ export function validateMetaAndFaqSchema(html: string): SeoCheckResult {
       metaDescription: desc,
       schemaOk: false,
     };
+  }
+
+    // ---------- 2.5) Indexing (robots meta) ----------
+  const robotNames = ["robots", "googlebot", "bingbot"];
+  const robotDirectives: Array<{ name: string; content: string }> = [];
+
+  for (const name of robotNames) {
+    const content = ($(`head meta[name="${name}"]`).attr("content") || "").trim();
+    if (content) robotDirectives.push({ name, content });
+  }
+
+  for (const { name, content } of robotDirectives) {
+    const lc = content.toLowerCase();
+
+    // "none" implies noindex,nofollow
+    const hasNoIndex = lc.includes("noindex") || lc.includes("none");
+    const hasNoFollow = lc.includes("nofollow") || lc.includes("none");
+
+    if (hasNoIndex || hasNoFollow) {
+      const parts: string[] = [];
+      if (hasNoIndex) parts.push("noindex");
+      if (hasNoFollow) parts.push("nofollow");
+
+      issues.push(
+        makeIssue(`[indexing] meta name="${name}" blocks indexing: ${parts.join(", ")} (content="${content}")`)
+      );
+    }
   }
 
   // ---------- 4) איתור FAQPage ----------

@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Translation Engine - Live Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root {
+  /* Figma-like neutrals */
+  --bg: #1f2123;
+  --surface: #2b2d30;
+  --surface-2: #313438;
+
+  --border: rgba(255,255,255,0.08);
+  --border-active: rgba(255,255,255,0.14);
+
+  --text: rgba(255,255,255,0.92);
+  --text-dim: rgba(255,255,255,0.72);
+  --text-muted: rgba(255,255,255,0.52);
+
+  /* Keep your brand accent for CTAs */
+  --accent: #00B3A4;
+  --accent-dim: rgba(0,179,164,0.14);
+--accent-glow: rgba(0,179,164,0.22);
+
+  --green: #34d399;
+  --green-dim: rgba(52,211,153,0.16);
+  --red: #f87171;
+
+  /* Make "info" less neon-blue */
+  --blue: #7aa2ff;
+  --blue-dim: rgba(122,162,255,0.14);
+
+  --radius: 10px;
+  --font: 'latto', -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .demo-header {
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(0,179,164,0.04) 0%, transparent 100%);
+    }
+    .demo-header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .demo-header h1 span.icon {
+      width: 32px; height: 32px;
+      background: var(--accent-dim);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(0,179,164,0.2);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 73px);
+    }
+
+    .config-panel {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+   .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: visible;
+  transition: border-color 0.2s, background 0.2s;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+}
+.card:hover { border-color: var(--border-active); }
+
+   .card-head {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+    .card-body {
+      border-bottom-left-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+    }
+    .card-head {
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .card-head h3 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-head .chevron {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      transition: transform 0.2s;
+    }
+    .card-head.collapsed .chevron { transform: rotate(-90deg); }
+    .card-body { padding: 16px 18px; }
+    .card-body.hidden { display: none; }
+
+    .field-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .field-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+   input[type="text"], textarea, select {
+  width: 100%;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 0 rgba(0,0,0,0.25);
+}
+
+input[type="text"]:focus, textarea:focus, select:focus {
+  border-color: rgba(255,255,255,0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 0 0 3px rgba(122,162,255,0.16);
+  background: rgba(255,255,255,0.06);
+}
+    textarea {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 130px;
+    }
+    #langNotesContainer textarea {
+      min-height: 110px;
+    }
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .input-group { margin-bottom: 14px; }
+    .input-group:last-child { margin-bottom: 0; }
+
+    .lang-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .lang-chip {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+    .lang-chip:hover { border-color: var(--border-active); }
+    .lang-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .lang-chip .flag { font-size: 1rem; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    .toggle-label { font-size: 0.82rem; font-weight: 500; }
+    .toggle {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: var(--border);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: '';
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(18px); }
+
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 0;
+      flex-wrap: wrap;
+    }
+    .pipeline-step {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pipeline-step.active {
+      background: var(--blue-dim);
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+    .pipeline-step.done {
+      background: var(--green-dim);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .pipeline-arrow { color: var(--text-muted); font-size: 0.7rem; }
+
+    .run-btn {
+      width: 100%;
+      padding: 16px;
+      border: 1px solid rgba(0,0,0,0.25);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, #00B3A4 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 24px var(--accent-glow);
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+    .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 32px var(--accent-glow); }
+    .run-btn:active { transform: translateY(0); }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.terminal-panel {
+  display: flex;
+  flex-direction: column;
+  background: #1b1c1f;
+}
+    .terminal-bar {
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .terminal-dots { display: flex; gap: 6px; }
+    .terminal-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal-dots .r { background: #ef4444; }
+    .terminal-dots .y { background: #eab308; }
+    .terminal-dots .g { background: #22c55e; }
+    .terminal-title { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); }
+    .terminal-clear {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: var(--font);
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .terminal-clear:hover { color: var(--text); background: var(--surface-2); }
+
+   .terminal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.72);
+}
+
+    .log-line { white-space: pre-wrap; word-break: break-word; }
+    .log-line.error { color: var(--red); }
+    .log-line.info { color: var(--blue); }
+    .log-line.success { color: var(--green); }
+    .log-line.warn { color: var(--accent); }
+    .log-line.dim { color: var(--text-muted); }
+
+    .stats-bar {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 20px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      align-items: center;
+    }
+    .stat { display: flex; align-items: center; gap: 5px; }
+    .stat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+    .stat-dot.live { background: var(--green); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 12px;
+    }
+    .tab {
+      flex: 1;
+      padding: 7px 12px;
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: transparent;
+      font-family: var(--font);
+    }
+    .tab.active { background: var(--surface-2); color: var(--text); }
+    .tab:hover:not(.active) { color: var(--text-dim); }
+
+    .var-tag {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,179,164,0.05);
+    }
+    .terminal-summary{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,179,164,0.05) 0%, rgba(10,12,16,0.0) 100%);
+}
+
+.summary-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.summary-title{
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.summary-pill{
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  background: rgba(255,255,255,0.02);
+  white-space: nowrap;
+}
+
+.summary-main{
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.summary-steps{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.s-step{
+  display:flex;
+  align-items:center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.s-step .dot{
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.7;
+}
+
+.s-step.active{
+  border-color: rgba(96,165,250,0.35);
+  background: var(--blue-dim);
+  color: var(--blue);
+}
+.s-step.active .dot{
+  background: var(--blue);
+  opacity: 1;
+}
+
+.s-step.done{
+  border-color: rgba(52,211,153,0.35);
+  background: var(--green-dim);
+  color: var(--green);
+}
+.s-step.done .dot{
+  background: var(--green);
+  opacity: 1;
+}
+
+.s-step.error{
+  border-color: rgba(248,113,113,0.35);
+  background: rgba(248,113,113,0.10);
+  color: var(--red);
+}
+.s-step.error .dot{
+  background: var(--red);
+  opacity: 1;
+}
+
+.summary-meta{
+  display:flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.meta-val{
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}
+
+  </style>
+</head>
+
+<body>
+<header class="demo-header">
+  <h1><span class="icon">🌐</span> AI Translation Engine</h1>
+  <span class="badge">Live Demo</span>
+</header>
+
+<div class="main-grid">
+  <div class="config-panel">
+    <div class="card">
+      <div class="card-head" onclick="toggleCard(this)">
+        <h3>📄 Source Configuration</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="input-group">
+          <label class="field-label">Google Spreadsheet ID</label>
+          <input type="text" id="spreadsheetId" placeholder="e.g. 1aBcDeFgHiJkLmNoPqRsTuVwXyZ" />
+          <p class="field-hint">The ID from the Google Sheets URL</p>
+        </div>
+
+        <div class="input-row">
+          <div>
+            <label class="field-label">Source Tab</label>
+            <input type="text" id="sourceTab" placeholder="Auto-detect first tab" />
+          </div>
+          <div>
+            <div class="toggle-row">
+              <span class="toggle-label">Translate Header Row</span>
+              <div class="toggle on" id="translateHeader" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="toggle-row" style="border-top:1px solid var(--border); margin-top:12px; padding-top:12px;">
+          <span class="toggle-label">Split sheet into 2 parts (like production)</span>
+          <div class="toggle on" id="splitIntoTwo" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head" onclick="toggleCard(this)">
+        <h3>🎯 Target Languages</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="lang-grid" id="langGrid"></div>
+        <p class="field-hint" style="margin-top:10px;">Tip: For the demo, pick 1-2 languages to keep the live run fast.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>⚡ Translation Pipeline</h3>
+      </div>
+      <div class="card-body">
+        <div class="pipeline" id="pipeline">
+          <div class="pipeline-step" id="step-read">📥 Read</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step" id="step-draft">✍️ Draft</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step" id="step-terms">📖 Terms</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step" id="step-polish">✨ Polish</div>
+          <span class="pipeline-arrow">→</span>
+          <div class="pipeline-step" id="step-write">📤 Write</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head" onclick="toggleCard(this)">
+        <h3>🧠 Prompts (Editable)</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('draft', this)">Draft</button>
+          <button class="tab" onclick="switchTab('polish', this)">Polish</button>
+        </div>
+
+        <div id="tab-draft">
+          <label class="field-label">Draft - System Prompt</label>
+          <textarea id="draftSystem" rows="8"></textarea>
+          <p class="field-hint">Vars: <span class="var-tag">{{lang}}</span> <span class="var-tag">{{hotelName}}</span></p>
+
+          <div style="height:12px"></div>
+
+          <label class="field-label">Draft - User Prompt</label>
+          <textarea id="draftUser" rows="10"></textarea>
+          <p class="field-hint">Vars: <span class="var-tag">{{lang}}</span> <span class="var-tag">{{hotelName}}</span> <span class="var-tag">{{rows}}</span> <span class="var-tag">{{translateHeader}}</span></p>
+        </div>
+
+        <div id="tab-polish" style="display:none">
+          <label class="field-label">Polish - System Prompt</label>
+          <textarea id="polishSystem" rows="8"></textarea>
+          <p class="field-hint">Vars: <span class="var-tag">{{lang}}</span> <span class="var-tag">{{hotelName}}</span></p>
+
+          <div style="height:12px"></div>
+
+          <label class="field-label">Polish - User Prompt</label>
+          <textarea id="polishUser" rows="14"></textarea>
+          <p class="field-hint">
+            Vars:
+            <span class="var-tag">{{lang}}</span>
+            <span class="var-tag">{{hotelName}}</span>
+            <span class="var-tag">{{translateHeader}}</span>
+            <span class="var-tag">{{languageNotes}}</span>
+            <span class="var-tag">{{strictTerminology}}</span>
+            <span class="var-tag">{{sourceRows}}</span>
+            <span class="var-tag">{{draftJson}}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head collapsed" onclick="toggleCard(this)">
+        <h3>📝 Language Notes (Per Language)</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body hidden" id="langNotesBody">
+        <p class="field-hint" style="margin-bottom: 12px;">Injected in the polish step per language.</p>
+        <div id="langNotesContainer"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head collapsed" onclick="toggleCard(this)">
+        <h3>📖 Terminology (Per Language)</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body hidden">
+        <p class="field-hint" style="margin-bottom: 12px;">
+          This is your terminology profile. The backend will run the same selective filtering logic based on draft hits.
+          You can edit per language (mappings + examples).
+        </p>
+
+        <div class="input-group">
+          <label class="field-label">Edit language</label>
+          <select id="termsLang" onchange="renderTermsEditor()"></select>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label">Terminology JSON (mappings + examples)</label>
+          <textarea id="termsJson" rows="14"></textarea>
+          <p class="field-hint">Schema: {"mappings":[{forbidden,preferred,reason?}], "examples":[{draft,polish,note?}]}</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="run-btn" id="runBtn" onclick="runTranslation()"> Run Translation</button>
+  </div>
+
+  <div class="terminal-panel">
+    <div class="terminal-bar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="terminal-dots">
+          <span class="r"></span><span class="y"></span><span class="g"></span>
+        </div>
+        <span class="terminal-title">Translation Agent - Live Output</span>
+      </div>
+      <button class="terminal-clear" onclick="clearTerminal()">Clear</button>
+    </div>
+
+<div class="terminal-summary" id="summaryCard">
+  <div class="summary-top">
+    <div class="summary-title">What’s happening</div>
+    <div class="summary-pill" id="summaryPill">Idle</div>
+  </div>
+
+  <div class="summary-main" id="summaryMain">
+    Enter a Spreadsheet ID, choose languages, then click "Run Translation".
+  </div>
+
+  <div class="summary-steps" id="summarySteps">
+    <div class="s-step" id="s-read"><span class="dot"></span>Reading sheet</div>
+    <div class="s-step" id="s-draft"><span class="dot"></span>Creating draft</div>
+    <div class="s-step" id="s-terms"><span class="dot"></span>Applying terminology</div>
+    <div class="s-step" id="s-polish"><span class="dot"></span>Polishing</div>
+    <div class="s-step" id="s-write"><span class="dot"></span>Writing back</div>
+  </div>
+
+  <div class="summary-meta">
+  <div class="meta-item">Language: <span class="meta-val" id="summaryLang">-</span></div>
+  <div class="meta-item">Part: <span class="meta-val" id="summaryPart">-</span></div>
+  <div class="meta-item">Time: <span class="meta-val" id="summaryTime">0s</span></div>
+</div>
+</div>
+
+<div class="terminal-body" id="logs"></div>
+
+
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-dot" id="statusDot"></span>
+        <span id="statusText">Idle</span>
+      </div>
+      <div class="stat" id="timerStat" style="display:none">
+        ⏱️ <span id="elapsedTime">0s</span>
+      </div>
+      <div class="stat" id="langStat" style="display:none">
+        🌐 <span id="currentLang">-</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const socket = io();
+  const logsEl = document.getElementById('logs');
+const summaryMainEl = document.getElementById('summaryMain');
+const summaryPillEl = document.getElementById('summaryPill');
+const summaryLangEl = document.getElementById('summaryLang');
+const summaryTimeEl = document.getElementById('summaryTime');
+
+const summaryPartEl = document.getElementById('summaryPart');
+
+let totalParts = 1;
+let currentPart = 1;
+
+function setSummary(step, text, pillText = null) {
+  if (text) summaryMainEl.textContent = text;
+  if (pillText) summaryPillEl.textContent = pillText;
+
+  const steps = ['read','draft','terms','polish','write'];
+  const idx = steps.indexOf(step);
+
+  steps.forEach((s, i) => {
+    const el = document.getElementById(`s-${s}`);
+    if (!el) return;
+
+    el.classList.remove('active','done','error');
+
+    if (idx === -1) return;
+
+    if (i < idx) el.classList.add('done');
+    else if (i === idx) el.classList.add('active');
+  });
+}
+
+function setSummaryError(text) {
+  summaryMainEl.textContent = text || 'Something went wrong. Please check the logs below.';
+  summaryPillEl.textContent = 'Error';
+
+  // mark current active as error (best effort)
+  const active = document.querySelector('.s-step.active');
+  if (active) {
+    active.classList.remove('active');
+    active.classList.add('error');
+  } else {
+    document.getElementById('s-read')?.classList.add('error');
+  }
+}
+
+function resetSummary() {
+  summaryPillEl.textContent = 'Idle';
+  summaryMainEl.textContent = 'Enter a Spreadsheet ID, choose languages, then click "Run Translation".';
+  ['read','draft','terms','polish','write'].forEach(s => {
+    const el = document.getElementById(`s-${s}`);
+    if (el) el.classList.remove('active','done','error');
+  });
+  summaryLangEl.textContent = '-';
+  summaryTimeEl.textContent = '0s';
+}
+
+  const LANGUAGES = [
+    { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'de', label: 'German', flag: '🇩🇪' },
+    { code: 'fr', label: 'French', flag: '🇫🇷' },
+    { code: 'es', label: 'Spanish', flag: '🇪🇸' },
+    { code: 'it', label: 'Italian', flag: '🇮🇹' },
+    { code: 'nl', label: 'Dutch', flag: '🇳🇱' },
+    { code: 'pl', label: 'Polish', flag: '🇵🇱' },
+    { code: 'ru', label: 'Russian', flag: '🇷🇺' },
+    { code: 'he', label: 'Hebrew', flag: '🇮🇱' },
+    { code: 'zh', label: 'Chinese', flag: '🇨🇳' },
+    { code: 'ar', label: 'Arabic', flag: '🇸🇦' },
+  ];
+
+  const selectedLangs = new Set(['de']);
+
+  const DEFAULT_NOTES = {
+    en: "Style: Professional International English (prefer US spelling 'color/center' unless British specified). Tone: Welcoming, warm, upscale. Vocabulary: hospitality standards. Use 24-hour clock.",
+    de: "Use formal, neutral German (3rd person). Avoid 'Haus'. Prefer natural questions. Use standard hotel terms. Ensure Q and A match semantically.",
+    fr: "Français formel, poli, fluide (3e personne). Questions naturelles. Respect exact de la marque.",
+    es: "Neutral, polite Spanish (3rd person). Avoid Spanglish. Keep brand names.",
+    it: "Formale, cortese (3a persona). Evita anglicismi inutili.",
+    nl: "Polite, clear Dutch. Avoid English unless standard.",
+    pl: "Polite, neutral Polish. Avoid English remnants.",
+    ru: "Формальный, нейтральный стиль; 3-е лицо. Термины гостиницы.",
+    he: "עברית רשמית, ברורה וזורמת; ניסוח ניטרלי מגדרית.",
+    zh: "简体中文，正式专业、自然流畅（第三人称）。",
+    ar: "عربية فصحى حديثة، رسمية وواضحة.",
+  };
+
+  const DEFAULT_TERMS = {
+    en: {
+      mappings: [
+        { forbidden: "Free", preferred: "Complimentary", reason: "Hospitality standard phrasing." },
+        { forbidden: "Reception", preferred: "Front Desk", reason: "Hospitality standard in EN-US." }
+      ],
+      examples: [
+        { draft: "Yes, there is a pool.", polish: "Yes, the hotel offers a pool.", note: "Avoid robotic 'There is'." }
+      ]
+    },
+    de: {
+      mappings: [
+        { forbidden: "Haus", preferred: "Hotel", reason: "Do not refer to the property as 'Haus'." },
+        { forbidden: "Hausgäste", preferred: "Hotelgäste", reason: "Avoid 'Hausgäste'." },
+        { forbidden: "in ca.", preferred: "in etwa", reason: "Prefer natural German." },
+        { forbidden: "auf Wunsch", preferred: "auf Anfrage", reason: "Standard hospitality phrasing." }
+      ],
+      examples: [
+        { draft: "Gibt es im Haus kostenloses WLAN?", polish: "Bietet das Hotel kostenloses WLAN?", note: "Avoid 'Haus'." }
+      ]
+    },
+    fr: { mappings: [], examples: [] },
+    es: { mappings: [], examples: [] },
+    it: { mappings: [], examples: [] },
+    nl: { mappings: [], examples: [] },
+    pl: { mappings: [], examples: [] },
+    ru: { mappings: [], examples: [] },
+    he: { mappings: [], examples: [] },
+    zh: { mappings: [], examples: [] },
+    ar: { mappings: [], examples: [] },
+  };
+
+  const DEFAULT_DRAFT_SYSTEM =
+`ROLE: You are an expert Hospitality Copywriter & Localization Specialist translating to {{lang}}.
+GOAL: Create natural, flowing content that sounds like it was originally written in {{lang}}, NOT translated.
+TONE: Warm, professional, helpful, and upscale (3rd person).
+
+CRITICAL RULES:
+1) HOTEL NAME INTEGRITY: Never remove the hotel name if it appears in source.
+2) OFFICIAL NAME: The official English name of the hotel is "{{hotelName}}".
+3) TECH SAFETY: Do NOT translate URLs, emails, codes, tokens.
+4) STRUCTURE: Preserve exact JSON matrix shape.
+5) ACCURACY: Keep prices, times, facts exactly as in source.`;
+
+  const DEFAULT_DRAFT_USER =
+`TASK: Translate EVERY cell in the provided matrix to {{lang}}.
+CONTEXT:
+- Domain: Hotel FAQ
+- Official Hotel Name: "{{hotelName}}"
+
+INSTRUCTIONS:
+- Translate ALL text content in the rows.
+- Treat each row as a connected context unit (Category + Question + Answer).
+- If source is brief ("Yes"/"No"), you may expand slightly by restating the proposition only. Do NOT add new facts.
+- Translate header row: {{translateHeader}}.
+- Preserve exact 2D matrix structure (same rows/cols).
+- If source mentions the hotel name, ensure the translation also includes "{{hotelName}}".
+
+INPUT DATA (JSON):
+{{rows}}`;
+
+  const DEFAULT_POLISH_SYSTEM =
+`ROLE: Senior Editor for a Luxury Hotel Brand ({{lang}}).
+GOAL: Polish translation to sound fully native and premium, with MINIMAL edits, without changing meaning.
+RULE: Output JSON only.`;
+
+  const DEFAULT_POLISH_USER =
+`TASK: Polish the DRAFT translation (minimal edits, no meaning changes).
+STRICT TERMINOLOGY (auto-selected based on draft hits):
+{{strictTerminology}}
+
+HARD CONSTRAINTS:
+1) Cell-by-cell mapping, same dimensions as SOURCE.
+2) Empty cells stay empty.
+3) No new facts.
+4) Preserve numbers, times, prices, addresses exactly.
+5) Preserve tokens: %s, {name}, {{x}}, URLs, emails, codes.
+6) HOTEL NAME RULE: if SOURCE contains hotel name or hotel reference, output must include exactly "{{hotelName}}".
+7) If SOURCE is a question, keep it as a natural question in {{lang}}.
+8) JSON ONLY: return {"rows":[...]}.
+
+LANGUAGE NOTES:
+{{languageNotes}}
+
+SOURCE ROWS:
+{{sourceRows}}
+
+DRAFT JSON:
+{{draftJson}}
+
+OUTPUT: return ONLY {"rows":[...]}`;
+
+  function renderLangGrid() {
+    const grid = document.getElementById('langGrid');
+    grid.innerHTML = LANGUAGES.map(l => `
+      <div class="lang-chip ${selectedLangs.has(l.code) ? 'active' : ''}"
+           onclick="toggleLang('${l.code}', this)">
+        <span class="flag">${l.flag}</span> ${l.label}
+      </div>
+    `).join('');
+  }
+
+  function toggleLang(code, el) {
+    if (selectedLangs.has(code)) {
+      selectedLangs.delete(code);
+      el.classList.remove('active');
+    } else {
+      selectedLangs.add(code);
+      el.classList.add('active');
+    }
+  }
+
+  function renderLangNotes() {
+    const container = document.getElementById('langNotesContainer');
+    container.innerHTML = LANGUAGES.map(l => `
+      <div class="input-group">
+        <label class="field-label">${l.flag} ${l.label} (${l.code})</label>
+        <textarea id="langNote-${l.code}" rows="3">${DEFAULT_NOTES[l.code] || ''}</textarea>
+      </div>
+    `).join('');
+  }
+
+  function renderTermsLangSelect() {
+    const sel = document.getElementById('termsLang');
+    sel.innerHTML = LANGUAGES.map(l => `<option value="${l.code}">${l.label} (${l.code})</option>`).join('');
+    sel.value = 'de';
+  }
+
+  function renderTermsEditor() {
+    const lang = document.getElementById('termsLang').value;
+    const obj = DEFAULT_TERMS[lang] || { mappings: [], examples: [] };
+    document.getElementById('termsJson').value = JSON.stringify(obj, null, 2);
+  }
+
+  function toggleCard(headEl) {
+    headEl.classList.toggle('collapsed');
+    const body = headEl.nextElementSibling;
+    body.classList.toggle('hidden');
+  }
+
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-draft').style.display = (tab === 'draft') ? '' : 'none';
+    document.getElementById('tab-polish').style.display = (tab === 'polish') ? '' : 'none';
+  }
+
+function clearTerminal() {
+  logsEl.innerHTML = '';
+  resetSummary();
+}
+
+  function addLog(text, cls = '') {
+    const clean = text.replace(/\x1B\[\d+m/g, '');
+    clean.split('\n').forEach(line => {
+      if (!line.trim()) return;
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.textContent = line;
+
+      if (cls) div.classList.add(cls);
+      else if (line.includes('❌') || line.includes('Failed') || line.includes('Error')) div.classList.add('error');
+      else if (line.includes('✅') || line.includes('Success') || line.includes('created')) div.classList.add('success');
+      else if (line.includes('🚀') || line.includes('ℹ️')) div.classList.add('info');
+      else if (line.includes('⏳') || line.includes('✨') || line.includes('🏨')) div.classList.add('warn');
+      else if (line.includes('[TERMS]')) div.classList.add('dim');
+
+      logsEl.appendChild(div);
+    });
+    logsEl.scrollTop = logsEl.scrollHeight;
+  }
+
+  function setPipelineStep(stepId) {
+    const steps = ['step-read','step-draft','step-terms','step-polish','step-write'];
+    const idx = steps.indexOf(stepId);
+    steps.forEach((s,i) => {
+      const el = document.getElementById(s);
+      el.classList.remove('active','done');
+      if (i < idx) el.classList.add('done');
+      else if (i === idx) el.classList.add('active');
+    });
+  }
+
+  let timerInterval = null;
+  let timerStart = 0;
+  function startTimer() {
+  timerStart = Date.now();
+  document.getElementById('timerStat').style.display = '';
+  summaryTimeEl.textContent = '0s';
+
+  timerInterval = setInterval(() => {
+    const s = Math.round((Date.now() - timerStart) / 1000);
+    const m = Math.floor(s / 60);
+    const label = m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+
+    document.getElementById('elapsedTime').textContent = label;
+    summaryTimeEl.textContent = label;
+  }, 1000);
+}
+
+  function stopTimer() { clearInterval(timerInterval); }
+
+  function collectNotes() {
+    const notes = {};
+    LANGUAGES.forEach(l => {
+      const el = document.getElementById(`langNote-${l.code}`);
+      if (el) notes[l.code] = el.value || "";
+    });
+    return notes;
+  }
+
+  function collectTerminologyByLang() {
+    const out = {};
+    LANGUAGES.forEach(l => {
+      out[l.code] = DEFAULT_TERMS[l.code] || { mappings: [], examples: [] };
+    });
+
+    const currentLang = document.getElementById('termsLang').value;
+    const raw = document.getElementById('termsJson').value;
+
+    try {
+      const parsed = JSON.parse(raw);
+      out[currentLang] = parsed;
+    } catch (e) {
+      throw new Error("Invalid Terminology JSON for language: " + currentLang);
+    }
+
+    return out;
+  }
+
+  function runTranslation() {
+const rawSpreadsheet = document.getElementById('spreadsheetId').value.trim();
+
+const spreadsheetId =
+  rawSpreadsheet.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] ||
+  rawSpreadsheet.match(/^([a-zA-Z0-9-_]{20,})$/)?.[1] ||
+  "";
+      if (!spreadsheetId) {
+      addLog('❌ Please enter a Spreadsheet ID.', 'error');
+      return;
+    }
+    if (selectedLangs.size === 0) {
+      addLog('❌ Please select at least one target language.', 'error');
+      return;
+    }
+
+    let terminologyByLang = null;
+    try {
+      terminologyByLang = collectTerminologyByLang();
+    } catch (e) {
+      addLog('❌ ' + e.message, 'error');
+      return;
+    }
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Translation Running...';
+
+    const payload = {
+      mode: 'translate-demo',
+      spreadsheetId,
+      sourceTab: document.getElementById('sourceTab').value.trim(),
+      targetLangs: Array.from(selectedLangs),
+      translateHeader: document.getElementById('translateHeader').classList.contains('on'),
+      splitIntoTwo: document.getElementById('splitIntoTwo').classList.contains('on'),
+      prompts: {
+        draftSystem: document.getElementById('draftSystem').value,
+        draftUser: document.getElementById('draftUser').value,
+        polishSystem: document.getElementById('polishSystem').value,
+        polishUser: document.getElementById('polishUser').value,
+      },
+      languageNotes: collectNotes(),
+      terminologyByLang,
+    };
+
+    addLog(`\n🚀 Starting translation: ${payload.targetLangs.join(', ').toUpperCase()}`, 'info');
+    addLog(`📄 Spreadsheet: ${spreadsheetId}`, 'dim');
+
+    document.getElementById('statusDot').classList.add('live');
+    document.getElementById('statusText').textContent = 'Running';
+    document.getElementById('langStat').style.display = '';
+    startTimer();
+    setPipelineStep('step-read');
+    setSummary('read', 'Reading the spreadsheet and preparing the data...', 'Running');
+summaryLangEl.textContent = Array.from(selectedLangs).join(', ').toUpperCase();
+
+totalParts = document.getElementById('splitIntoTwo').classList.contains('on') ? 2 : 1;
+currentPart = 1;
+summaryPartEl.textContent = `${currentPart}/${totalParts}`;
+
+    socket.emit('start-agent', payload);
+  }
+
+  function withPart(text) {
+  return totalParts > 1
+    ? `Part ${currentPart}/${totalParts}: ${text}`
+    : text;
+}
+
+  socket.on('log', (msg) => {
+    addLog(msg);
+
+    // Detect part changes (Part 1 / Part 2)
+const partMatch =
+  msg.match(/Processing Part\s*(\d+)\s*\/\s*(\d+)/i) ||
+  msg.match(/Processing Part\s*(\d+)/i);
+
+if (partMatch) {
+  currentPart = Number(partMatch[1]);
+  if (partMatch[2]) {
+    totalParts = Number(partMatch[2]);
+  }
+
+  summaryPartEl.textContent = `${currentPart}/${totalParts}`;
+
+  setSummary(
+    'draft',
+    `Part ${currentPart}/${totalParts}: Creating a first draft translation...`,
+    'Running'
+  );
+}
+
+    if (msg.includes('Split info') || msg.includes('Official Hotel Name detected')) setPipelineStep('step-draft');
+    if (msg.includes('Processing Part')) setPipelineStep('step-draft');
+    if (msg.includes('[TERMS]')) setPipelineStep('step-terms');
+    if (msg.includes('Polishing')) setPipelineStep('step-polish');
+    if (msg.includes('Success') || msg.includes('created with')) setPipelineStep('step-write');
+
+    // Friendly summary mapping (best-effort)
+if (msg.includes('Starting translation') || msg.includes('Starting Hotel Research Agent')) {
+  setSummary('read', 'Reading the spreadsheet and preparing the data...', 'Running');
+}
+
+if (msg.includes('Split info') || msg.includes('Official Hotel Name detected') || msg.includes('Processing Part')) {
+  setSummary('draft', 'Creating a first draft translation...', 'Running');
+}
+
+if (msg.includes('[TERMS]')) {
+  setSummary('terms', 'Applying your terminology rules...', 'Running');
+}
+
+if (msg.toLowerCase().includes('polishing')) {
+setSummary('polish', withPart('Improving the language to sound natural and professional...'), 'Running');
+}
+
+if (msg.includes('created with') || msg.toLowerCase().includes('writing') || msg.toLowerCase().includes('write')) {
+  setSummary('write', 'Writing the results back to the spreadsheet...', 'Running');
+}
+
+if (msg.includes('❌') || msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error')) {
+  setSummaryError('Translation failed. Please verify the Spreadsheet ID, permissions, and try again.');
+}
+
+const langMatch2 = msg.match(/translation chain for (\w+)/i);
+if (langMatch2) summaryLangEl.textContent = (langMatch2[1] || '').toUpperCase();
+
+    const langMatch = msg.match(/translation chain for (\w+)/i);
+    if (langMatch) document.getElementById('currentLang').textContent = (langMatch[1] || '').toUpperCase();
+  });
+
+  socket.on('done', () => {
+    const btn = document.getElementById('runBtn');
+    btn.disabled = false;
+    btn.innerHTML = '🚀 Run Translation';
+    document.getElementById('statusDot').classList.remove('live');
+    document.getElementById('statusText').textContent = 'Finished';
+    stopTimer();
+    setSummary('write', 'Done. Your spreadsheet should now contain the translated content.', 'Finished');
+['read','draft','terms','polish','write'].forEach(s => {
+  const el = document.getElementById(`s-${s}`);
+  if (el) {
+    el.classList.remove('active');
+    el.classList.add('done');
+  }
+});
+    addLog('\n✅ All translations complete!', 'success');
+  });
+
+  // init
+  document.getElementById('draftSystem').value = DEFAULT_DRAFT_SYSTEM;
+  document.getElementById('draftUser').value = DEFAULT_DRAFT_USER;
+  document.getElementById('polishSystem').value = DEFAULT_POLISH_SYSTEM;
+  document.getElementById('polishUser').value = DEFAULT_POLISH_USER;
+
+  renderLangGrid();
+  renderLangNotes();
+  renderTermsLangSelect();
+  renderTermsEditor();
+</script>
+</body>
+</html>

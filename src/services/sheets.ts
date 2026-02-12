@@ -1,6 +1,7 @@
 import { google, sheets_v4, drive_v3 } from "googleapis";
 import dotenv from "dotenv";
 import serviceAccount from "../credentials/service-account.json";
+
 dotenv.config();
 
 /**
@@ -11,6 +12,10 @@ export class SheetsService {
   private sheets: sheets_v4.Sheets;
   private drive: drive_v3.Drive;
   private shareWith: string | null;
+
+  // New: per-run cache for spreadsheet metadata
+  private spreadsheetMetaCache = new Map<string, sheets_v4.Schema$Spreadsheet>();
+  
 
  constructor(emailToShare?: string) {
     const auth = new google.auth.JWT({
@@ -29,6 +34,276 @@ export class SheetsService {
     this.shareWith = emailToShare ?? null;
   }
 
+
+// services/sheets.ts
+
+async batchWriteValues(
+  spreadsheetId: string,
+  data: Array<{ range: string; values: string[][] }>,
+  valueInputOption: "RAW" | "USER_ENTERED" = "RAW"
+): Promise<void> {
+  if (!data.length) return;
+
+  await this.sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      valueInputOption,
+      data,
+    },
+  });
+}
+
+async listSpreadsheetsInFolderWithNames(
+  folderId: string
+): Promise<Array<{ id: string; name: string }>> {
+  const q = [
+    `'${folderId}' in parents`,
+    "(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.google-apps.shortcut')",
+    "trashed = false",
+  ].join(" and ");
+
+  const out: Array<{ id: string; name: string }> = [];
+  let pageToken: string | undefined = undefined;
+
+  do {
+    const res = await this.drive.files.list({
+      q,
+      pageSize: 1000,
+      pageToken,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: "nextPageToken, files(id, name, mimeType, shortcutDetails(targetId))",
+    });
+
+    const data: drive_v3.Schema$FileList = res.data as drive_v3.Schema$FileList;
+    const files: drive_v3.Schema$File[] = (data.files ?? []) as drive_v3.Schema$File[];
+
+    for (const f of files) {
+      if (!f?.id) continue;
+
+      if (f.mimeType === "application/vnd.google-apps.shortcut") {
+        const targetId = f.shortcutDetails?.targetId;
+        if (targetId) out.push({ id: targetId, name: String(f.name ?? targetId) });
+        continue;
+      }
+
+      if (f.mimeType === "application/vnd.google-apps.spreadsheet") {
+        out.push({ id: f.id, name: String(f.name ?? f.id) });
+      }
+    }
+
+    pageToken = data.nextPageToken ?? undefined;
+  } while (pageToken);
+
+  return out;
+}
+
+
+
+  // Finds sheetId by exact tab title (normalized). Returns null if not found.
+private async findSheetIdExact(spreadsheetId: string, title: string): Promise<number | null> {
+  const normalize = (s: string) =>
+    (s ?? "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+
+  const target = normalize(title);
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  const sheets = meta.sheets ?? [];
+
+  const match = sheets.find(s => normalize(s.properties?.title ?? "") === target);
+  return match?.properties?.sheetId ?? null;
+}
+
+// Ensures a tab exists; creates it if missing.
+async ensureTab(spreadsheetId: string, tabTitle: string): Promise<void> {
+  const existingId = await this.findSheetIdExact(spreadsheetId, tabTitle);
+  if (existingId != null) return;
+
+  await this.withBackoff(async () => {
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: tabTitle } } }],
+      },
+    });
+  });
+}
+
+// Clears values in a tab (keeps formatting).
+async clearTabValues(spreadsheetId: string, tabTitle: string): Promise<void> {
+  await this.withBackoff(async () => {
+    await this.sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: `${tabTitle}!A:Z`,
+    });
+  });
+}
+
+  private async withBackoff<T>(fn: () => Promise<T>, maxRetries = 8): Promise<T> {
+  let attempt = 0;
+
+  const sleep = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
+
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const status = err?.code ?? err?.response?.status;
+      if (status !== 429 || attempt >= maxRetries) throw err;
+
+      const base = 1000; // 1s
+      const delay = Math.min(60000, base * Math.pow(2, attempt));
+      const jitter = Math.floor(Math.random() * 250);
+      await sleep(delay + jitter);
+
+      attempt++;
+    }
+  }
+}
+
+private clearMetaCache(spreadsheetId: string) {
+    // spreadsheetMetaCache exists in your file
+    this.spreadsheetMetaCache.delete(spreadsheetId);
+  }
+
+  async deleteSheetByTitle(spreadsheetId: string, title: string): Promise<void> {
+    const sheetId = await this.getSheetIdByTitle(spreadsheetId, title);
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests: [{ deleteSheet: { sheetId } }] },
+    });
+    this.clearMetaCache(spreadsheetId);
+  }
+
+  // Duplicates a styled template tab into targetTitle (keeps formatting 1:1)
+  async recreateTabFromTemplate(
+    spreadsheetId: string,
+    targetTitle: string,
+    templateTitle: string
+  ): Promise<void> {
+    const titles = await this.listSheetTitles(spreadsheetId);
+    const norm = (s: string) => String(s ?? "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+    const templateExists = titles.some(t => norm(t) === norm(templateTitle));
+    if (!templateExists) {
+      // fallback: just ensure target exists (no styling)
+      await this.ensureTab(spreadsheetId, targetTitle);
+      return;
+    }
+
+    const templateSheetId = await this.getSheetIdByTitle(spreadsheetId, templateTitle);
+
+    const targetExists = titles.some(t => norm(t) === norm(targetTitle));
+    if (targetExists) {
+      await this.deleteSheetByTitle(spreadsheetId, targetTitle);
+    }
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            duplicateSheet: {
+              sourceSheetId: templateSheetId,
+              newSheetName: targetTitle,
+            },
+          },
+        ],
+      },
+    });
+
+    this.clearMetaCache(spreadsheetId);
+  }
+
+
+private async getSpreadsheetMeta(spreadsheetId: string): Promise<sheets_v4.Schema$Spreadsheet> {
+  const cached = this.spreadsheetMetaCache.get(spreadsheetId);
+  if (cached) return cached;
+
+  const meta = await this.withBackoff(async () => {
+    const res = await this.sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: "properties(title),sheets(properties(sheetId,title))",
+    });
+    return res.data;
+  }, 12); // allow more retries on 429
+
+  this.spreadsheetMetaCache.set(spreadsheetId, meta);
+  return meta;
+}
+
+  // Returns the first parent folder ID for a file (Spreadsheet)
+  async getParentFolderId(fileId: string): Promise<string> {
+    const res = await this.drive.files.get({
+      fileId,
+      fields: "parents",
+      supportsAllDrives: true,
+    });
+    const parents = res.data.parents ?? [];
+    if (!parents[0]) throw new Error(`No parent folder found for file: ${fileId}`);
+    return parents[0];
+  }
+
+  // Copy a spreadsheet file into a specific folder with an optional new name
+  async copySpreadsheetToFolder(sourceSpreadsheetId: string, folderId: string, newName?: string): Promise<string> {
+    const res = await this.drive.files.copy({
+      fileId: sourceSpreadsheetId,
+      supportsAllDrives: true,
+      requestBody: {
+        name: newName,
+        parents: [folderId],
+      },
+      fields: "id",
+    });
+    if (!res.data.id) throw new Error("Drive copy did not return file id");
+    return res.data.id;
+  }
+
+  // Create a folder under a parent folder
+  async createFolder(name: string, parentId: string): Promise<string> {
+    const res = await this.drive.files.create({
+      supportsAllDrives: true,
+      requestBody: {
+        name,
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [parentId],
+      },
+      fields: "id",
+    });
+    if (!res.data.id) throw new Error("Drive folder create did not return id");
+    return res.data.id;
+  }
+
+  // Delete all sheets except a specific tab title
+  async deleteAllSheetsExcept(spreadsheetId: string, keepTabTitle: string): Promise<void> {
+    const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
+    const sheets = meta.data.sheets ?? [];
+
+    const normalize = (s: string) => (s ?? "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+    const keepTitleNorm = normalize(keepTabTitle);
+
+    const keep = sheets.find((s) => normalize(s.properties?.title ?? "") === keepTitleNorm);
+    if (!keep?.properties?.sheetId) {
+      const titles = sheets.map((s) => s.properties?.title).filter(Boolean).join(", ");
+      throw new Error(`keepTabTitle "${keepTabTitle}" not found in copied sheet. Tabs: ${titles}`);
+    }
+
+    const keepId = keep.properties.sheetId;
+    const requests: any[] = [];
+
+    for (const sh of sheets) {
+      const id = sh.properties?.sheetId;
+      if (id != null && id !== keepId) {
+        requests.push({ deleteSheet: { sheetId: id } });
+      }
+    }
+
+    if (!requests.length) return;
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests },
+    });
+  }
   /** יוצר גיליון חדש בשם המלון, משתף (אם צריך) ומחזיר את ה‑ID */
   async createSpreadsheet(title: string): Promise<string> {
     const { data } = await this.sheets.spreadsheets.create({
@@ -54,7 +329,40 @@ export class SheetsService {
     return data.spreadsheetId;
   }
 
-  
+  // Delete all sheets except the one at a given index (0-based)
+// This avoids issues with hidden unicode characters in tab titles.
+async deleteAllSheetsExceptByIndex(spreadsheetId: string, keepIndex0: number): Promise<string> {
+  const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
+  const all = meta.data.sheets ?? [];
+  if (!all.length) throw new Error(`No sheets found in ${spreadsheetId}`);
+
+  const keep = all[keepIndex0];
+  if (!keep?.properties?.sheetId) {
+    const titles = all.map(s => s.properties?.title).filter(Boolean).join(", ");
+    throw new Error(`keepIndex ${keepIndex0} out of range. Tabs: ${titles}`);
+  }
+
+  const keepId = keep.properties.sheetId;
+  const keepTitle = keep.properties.title ?? "Sheet1";
+
+  const requests: any[] = [];
+  for (const sh of all) {
+    const id = sh.properties?.sheetId;
+    if (id != null && id !== keepId) {
+      requests.push({ deleteSheet: { sheetId: id } });
+    }
+  }
+
+  if (requests.length) {
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests },
+    });
+  }
+
+  // Return the kept tab title (useful for ranges later)
+  return keepTitle;
+}
 
   /** ממיר מחרוזת TSV לרשימת מערכים דו‑ממדית */
   private tsvToRows(tsv: string): string[][] {
@@ -87,26 +395,22 @@ export class SheetsService {
 
  /** Get a sheet's numeric ID by its tab title (normalize spaces/NBSP; fallback to first tab) */
 async getSheetIdByTitle(spreadsheetId: string, title: string): Promise<number> {
-  // נירמול רווחים/‏NBSP כדי לתפוס "Sheet1" גם אם יש תווים סמויים
   const normalize = (s: string) =>
     (s ?? "").replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
 
   const target = normalize(title);
-  const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
-  const sheets = meta.data.sheets ?? [];
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  const sheets = meta.sheets ?? [];
 
-  // ניסיון התאמה מדויקת (אחרי נירמול)
   const match = sheets.find(s => normalize(s.properties?.title ?? "") === target);
-  if (match?.properties?.sheetId != null) {
-    return match.properties.sheetId!;
-  }
+  if (match?.properties?.sheetId != null) return match.properties.sheetId!;
 
-  // Fallback: אם אין התאמה — לא מפילים ריצה, פשוט חוזרים לטאב הראשון
   const first = sheets[0]?.properties;
   const titles = sheets.map(s => s.properties?.title).filter(Boolean).join(", ");
   console.warn(
     `getSheetIdByTitle: "${title}" not found. Falling back to first tab: "${first?.title}". Available: [${titles}]`
   );
+
   if (first?.sheetId == null) throw new Error(`No sheets found in ${spreadsheetId}`);
   return first.sheetId!;
 }
@@ -127,41 +431,72 @@ async getSheetIdByTitle(spreadsheetId: string, title: string): Promise<number> {
     });
   }
 
-  /** Read values (2D array) from an A1 range */
-  async readValues(spreadsheetId: string, rangeA1: string): Promise<string[][]> {
-    const res = await this.sheets.spreadsheets.values.get({ spreadsheetId, range: rangeA1 });
-    return res.data.values ?? [];
+  /** Rename an existing tab */
+  async renameSheet(spreadsheetId: string, oldTitle: string, newTitle: string): Promise<void> {
+    const sheetId = await this.getSheetIdByTitle(spreadsheetId, oldTitle);
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            updateSheetProperties: {
+              properties: {
+                sheetId: sheetId,
+                title: newTitle,
+              },
+              fields: "title",
+            },
+          },
+        ],
+      },
+    });
   }
 
+  /** Read values (2D array) from an A1 range */
+ /** Read values (2D array) from an A1 range (with 429 backoff) */
+async readValues(spreadsheetId: string, rangeA1: string): Promise<string[][]> {
+  return this.withBackoff(async () => {
+    const res = await this.sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: rangeA1,
+    });
+    return res.data.values ?? [];
+  });
+}
+
   /** Write values (2D array) to an A1 range with RAW input */
-  async writeValues(spreadsheetId: string, rangeA1: string, values: string[][]): Promise<void> {
+ /** Write values (2D array) to an A1 range with RAW input (with 429 backoff) */
+async writeValues(spreadsheetId: string, rangeA1: string, values: string[][]): Promise<void> {
+  await this.withBackoff(async () => {
     await this.sheets.spreadsheets.values.update({
       spreadsheetId,
       range: rangeA1,
       valueInputOption: "RAW",
-      requestBody: { values }
+      requestBody: { values },
     });
-  }
+  });
+}
 
   /** Return the first tab title (fallback if source tab not provided or missing) */
   async getFirstSheetTitle(spreadsheetId: string): Promise<string> {
-    const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
-    const first = meta.data.sheets?.[0]?.properties?.title;
-    if (!first) throw new Error(`No sheets found in ${spreadsheetId}`);
-    return first;
-  }
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  const first = meta.sheets?.[0]?.properties?.title;
+  if (!first) throw new Error(`No sheets found in ${spreadsheetId}`);
+  return first;
+}
 
     /** שם הקובץ (Spreadsheet title) */
-  async getSpreadsheetTitle(spreadsheetId: string): Promise<string> {
-    const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
-    return meta.data.properties?.title ?? spreadsheetId;
-  }
+async getSpreadsheetTitle(spreadsheetId: string): Promise<string> {
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  return meta.properties?.title ?? spreadsheetId;
+}
 
   /** כל קבצי ה-Sheets שבתיקייה */
 async listSpreadsheetIdsInFolder(folderId: string): Promise<string[]> {
   const q = [
     `'${folderId}' in parents`,
-    "mimeType = 'application/vnd.google-apps.spreadsheet'",
+    "(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.google-apps.shortcut')",
     "trashed = false",
   ].join(" and ");
 
@@ -169,20 +504,31 @@ async listSpreadsheetIdsInFolder(folderId: string): Promise<string[]> {
   let pageToken: string | undefined = undefined;
 
   do {
-    // לא לעשות destructuring ל-data — זה גרם לשגיאת ts7022
     const res = await this.drive.files.list({
       q,
       pageSize: 1000,
       pageToken,
-      fields: "nextPageToken, files(id, name)",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: "nextPageToken, files(id, name, mimeType, shortcutDetails(targetId))",
     });
 
-    // טיפוס מפורש – פותר ts7022/ts7006
     const data: drive_v3.Schema$FileList = res.data;
     const files: drive_v3.Schema$File[] = data.files ?? [];
 
     for (const f of files) {
-      if (f.id) ids.push(f.id);
+      if (!f.id) continue;
+
+      // Resolve shortcuts to their target spreadsheet id
+      if (f.mimeType === "application/vnd.google-apps.shortcut") {
+        const targetId = (f as any).shortcutDetails?.targetId as string | undefined;
+        if (targetId) ids.push(targetId);
+        continue;
+      }
+
+      if (f.mimeType === "application/vnd.google-apps.spreadsheet") {
+        ids.push(f.id);
+      }
     }
 
     pageToken = data.nextPageToken ?? undefined;
@@ -192,12 +538,12 @@ async listSpreadsheetIdsInFolder(folderId: string): Promise<string[]> {
 }
 
   /** רשימת כל הטאבים בגיליון */
-  async listSheetTitles(spreadsheetId: string): Promise<string[]> {
-    const meta = await this.sheets.spreadsheets.get({ spreadsheetId });
-    return (meta.data.sheets ?? [])
-      .map(s => s.properties?.title)
-      .filter((t): t is string => !!t);
-  }
+ async listSheetTitles(spreadsheetId: string): Promise<string[]> {
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  return (meta.sheets ?? [])
+    .map(s => s.properties?.title)
+    .filter((t): t is string => !!t);
+}
 
   /** מעצב את הגיליון לפי כללים קבועים (A‑G) */
 async formatSheet(spreadsheetId: string): Promise<void> {

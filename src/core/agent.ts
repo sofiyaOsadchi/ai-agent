@@ -21,6 +21,8 @@ interface Task {
   model?: string;
   response?: string;
   system?: string;
+   usedWebSearch?: boolean;
+  webSearchCallsCount?: number;
 }
 
 export class AIAgent {
@@ -60,6 +62,7 @@ export class AIAgent {
     id: this.taskCounter,
     prompt: userPrompt,
     model,
+    
     system, // נשמר על המשימה
   });
 
@@ -79,6 +82,8 @@ export class AIAgent {
 const completion = isOseries
   ? await this.openai.responses.create({
       model: task.model!,
+      tools: [{ type: "web_search_preview" as const }],
+      tool_choice: "auto",             // (optional but recommended)
       input: [
         { role: "user" as const, content: task.prompt },
       ],
@@ -99,6 +104,19 @@ const completion = isOseries
     const responseText = isOseries
       ? (completion as any).output_text             // responses API
       : (completion as any).choices[0].message.content;
+
+ if (isOseries) {
+      const outputItems = Array.isArray((completion as any).output)
+        ? (completion as any).output
+        : [];
+
+      const webCalls = outputItems.filter((x: any) => x?.type === "web_search_call");
+      task.usedWebSearch = webCalls.length > 0;
+      task.webSearchCallsCount = webCalls.length;
+
+      const badge = task.usedWebSearch ? "🌐 web_search: YES" : "🌐 web_search: NO";
+      console.log(chalk.magenta(`   ${badge} (calls: ${task.webSearchCallsCount})`));
+    }
 
     const tokens = isOseries
       ? (completion as any).usage.total_tokens ?? 0

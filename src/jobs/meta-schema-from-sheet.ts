@@ -1,14 +1,26 @@
 // src/jobs/meta-schema-from-sheet.ts
-import { AIAgent } from "../core/agent.js";   // נשמר לתאימות (לא בשימוש)
+import { AIAgent } from "../core/agent.js"; // kept for compatibility (not used)
 import { SheetsService } from "../services/sheets.js";
+
+type HotelNameMapConfig = {
+  spreadsheetId: string; // ID (not URL)
+  tabName?: string; // default: first tab
+  rangeA1?: string; // default: "A:B"
+  englishColIndex?: number; // default: 0 (A)
+  localizedColIndex?: number; // default: 1 (B)
+  headerRows?: number; // default: 1
+};
 
 type MetaSchemaJobConfig = {
   spreadsheetId: string;
-  sourceTab?: string;      // נשמר לתאימות בלבד, לא נשתמש בו (כמו במקור)
-  metaRow?: number;        // default: 70
-  schemaRow?: number;      // default: metaRow + 3
-  metaStartCol?: string;   // default: "A"
-  schemaCol?: string;      // default: "E"
+  sourceTab?: string; // NOW USED: which tab to read/write (Hebrew tab)
+  metaRow?: number; // default: 70
+  schemaRow?: number; // default: metaRow + 3
+  metaStartCol?: string; // default: "A"
+  schemaCol?: string; // default: "E"
+
+  lang?: string; // default: "en". Example: "he"
+  hotelNameMap?: HotelNameMapConfig; // required for he
 };
 
 type QAItem = { q: string; a: string };
@@ -16,20 +28,36 @@ type QAItem = { q: string; a: string };
 export class MetaSchemaFromSheetJob {
   constructor(private _agent: AIAgent, private sheets: SheetsService) {}
 
-  // === Utilities (כמו במקור) ===
-  private extractJson(text: string): string {
-    const first = text.indexOf("{");
-    const last  = text.lastIndexOf("}");
-    if (first >= 0 && last > first) return text.slice(first, last + 1);
-    return text.trim();
-  }
-
   private sanitizeHotelTitle(raw: string): string {
     const s0 = (raw ?? "").trim();
+
+    // Remove trailing (...) / [...] / {...}
     let s = s0.replace(/\s*[\(\[\{](?:[^)\]\}]{0,40})[\)\]\}]\s*$/gi, "");
-    s = s.replace(/\s*[-_.–—]\s*(updated|edited|final|copy|duplicate|draft|temp|bak|backup|ver\s*\d+|v\d+)\s*$/gi, "");
+
+    // Remove trailing markers (supports hyphen, underscore, dot, and unicode dashes)
+    s = s.replace(
+      new RegExp(
+        String.raw`\s*[-_.\u2013\u2014]\s*(updated|edited|final|copy|duplicate|draft|temp|bak|backup|ver\s*\d+|v\d+)\s*$`,
+        "gi"
+      ),
+      ""
+    );
+
+    // Remove language/workflow suffixes like "- HE rewritten"
+s = s.replace(
+  new RegExp(
+    String.raw`\s*[-_.\u2013\u2014]\s*(he|heb|hebrew|en|eng|english)\s*(rewritten|rewrite|translated|translation)?\s*$`,
+    "gi"
+  ),
+  ""
+);
+
+    // Hebrew trailing markers
     s = s.replace(/\s*(נערך|מעודכן|עותק|העתק|מתוקן|טיוטה)\s*$/g, "");
+
+    // Remove empty trailing brackets
     s = s.replace(/\s*(\(\s*\)|\[\s*\]|\{\s*\})\s*$/g, "");
+
     return s.trim();
   }
 
@@ -41,10 +69,20 @@ export class MetaSchemaFromSheetJob {
     return `'${String(title).replace(/'/g, "''")}'`;
   }
 
+  private normalizeHotelKey(s: string): string {
+    return this.sanitizeHotelTitle(String(s ?? ""))
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
   private collectQA(rows: string[][]): QAItem[] {
     const Q_COL = 1; // B
     const A_COL = 2; // C
     const out: QAItem[] = [];
+
+    // Skip header row
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r] ?? [];
       const q = (row[Q_COL] ?? "").toString().trim();
@@ -52,6 +90,7 @@ export class MetaSchemaFromSheetJob {
       if (!q || !a) continue;
       out.push({ q, a });
     }
+
     return out;
   }
 
@@ -59,56 +98,214 @@ export class MetaSchemaFromSheetJob {
     return {
       "@context": "https://schema.org",
       "@type": "FAQPage",
-      "mainEntity": qa.map(item => ({
+      mainEntity: qa.map((item) => ({
         "@type": "Question",
-        "name": item.q,
-        "acceptedAnswer": { "@type": "Answer", "text": item.a }
-      }))
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      })),
     };
   }
 
-  // === Main ===
+  private enforceMaxMetaDescLenHebrew(desc: string, maxLen = 160): string {
+    let s = this.sanitizeOneLine(desc);
+
+    // Step 1: remove "Wi-Fi"
+    if (s.length > maxLen) {
+      s = s.replace(/,\s*Wi-Fi\s*,/g, ",");
+      s = s.replace(/\s*Wi-Fi\s*,/g, "");
+    }
+
+    // Step 2: remove "חניה"
+    if (s.length > maxLen) {
+      s = s.replace(/,\s*חניה\s*,/g, ",");
+      s = s.replace(/\s*חניה\s*,/g, "");
+    }
+
+    // Step 3: hard cut
+    if (s.length > maxLen) {
+      s = s.slice(0, maxLen).trim();
+    }
+
+    return s;
+  }
+
+  private enforceMaxMetaDescLenEnglish(desc: string, maxLen = 160): string {
+    let s = this.sanitizeOneLine(desc);
+
+    // Step 1: remove Wi-Fi
+    if (s.length > maxLen) {
+      s = s.replace(" Wi-Fi,", "");
+    }
+
+    // Step 2: remove parking
+    if (s.length > maxLen) {
+      s = s.replace(" parking,", "");
+    }
+
+    // Step 3: hard cut
+    if (s.length > maxLen) {
+      s = s.slice(0, maxLen).trim();
+    }
+
+    return s;
+  }
+
+  private async resolveHebrewHotelName(
+    englishHotelName: string,
+    mapCfg: HotelNameMapConfig
+  ): Promise<string | null> {
+    const rangeA1 = mapCfg.rangeA1 ?? "A:B";
+    const englishColIndex = mapCfg.englishColIndex ?? 0;
+    const localizedColIndex = mapCfg.localizedColIndex ?? 1;
+    const headerRows = mapCfg.headerRows ?? 1;
+
+    const mapTabTitle = mapCfg.tabName ?? (await this.sheets.getFirstSheetTitle(mapCfg.spreadsheetId));
+    const mapTabA1 = this.quoteA1Sheet(mapTabTitle);
+
+    const rows = await this.sheets.readValues(mapCfg.spreadsheetId, `${mapTabA1}!${rangeA1}`);
+    if (!rows.length) return null;
+
+    const targetKey = this.normalizeHotelKey(englishHotelName);
+
+    for (let i = headerRows; i < rows.length; i++) {
+      const row = rows[i] ?? [];
+      const en = (row[englishColIndex] ?? "").toString().trim();
+      const he = (row[localizedColIndex] ?? "").toString().trim();
+      if (!en || !he) continue;
+
+      if (this.normalizeHotelKey(en) === targetKey) {
+        return this.sanitizeOneLine(he);
+      }
+    }
+
+    return null;
+  }
+
+  private buildMetaByLang(params: {
+    lang: string;
+    hotelNameEn: string;
+    hotelNameHe?: string;
+  }): { metaTitle: string; metaDesc: string; h1: string } {
+    const lang = (params.lang ?? "en").toLowerCase();
+    const hotelNameEn = this.sanitizeOneLine(params.hotelNameEn);
+
+   if (lang.startsWith("he")) {
+  const hotelNameHe = this.sanitizeOneLine(params.hotelNameHe ?? "");
+  if (!hotelNameHe) {
+    throw new Error(`Missing Hebrew hotel name for lang="${lang}"`);
+  }
+
+  const metaTitle = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe} - פתאל`);
+
+  const metaDescRaw = this.sanitizeOneLine(
+    `שאלות נפוצות על ${hotelNameHe} עם מידע על חדרים, מתקנים, ארוחות, חניה, שעות צ׳ק-אין וצ׳ק-אאוט, מדיניות, נגישות, שירותים מיוחדים וטיפים לשהייה מושלמת`
+  );
+
+  const metaDesc = this.enforceMaxMetaDescLenHebrew(metaDescRaw, 160);
+
+  const h1 = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe}`);
+
+  return { metaTitle, metaDesc, h1 };
+}
+
+    // Default: English
+    const metaTitle = this.sanitizeOneLine(`FAQ | ${hotelNameEn}`);
+    const h1 = this.sanitizeOneLine(`FAQ about ${hotelNameEn}`);
+
+    const metaDescRaw =
+      `Find answers to frequently asked questions about ${hotelNameEn}. ` +
+      `Learn about check-in times, parking, Wi-Fi, location, amenities, and more.`;
+
+    const metaDesc = this.enforceMaxMetaDescLenEnglish(metaDescRaw, 160);
+
+    return { metaTitle, metaDesc, h1 };
+  }
+
+  private async resolveTargetTabTitle(cfg: MetaSchemaJobConfig, lang: string): Promise<string> {
+    const titles = await this.sheets.listSheetTitles(cfg.spreadsheetId);
+    if (!titles.length) throw new Error(`No sheets found in ${cfg.spreadsheetId}`);
+
+    // If user explicitly provided a tab, use it (and validate it exists)
+    if (cfg.sourceTab && cfg.sourceTab.trim()) {
+      const wanted = cfg.sourceTab.trim();
+      const exists = titles.includes(wanted);
+      if (!exists) {
+        throw new Error(
+          `sourceTab "${wanted}" not found. Available tabs: ${titles.join(", ")}`
+        );
+      }
+      return wanted;
+    }
+
+    // Default behavior by lang:
+    // - Hebrew: use SECOND tab (index 1) to avoid touching English tab
+    if (lang.startsWith("he")) {
+      if (titles.length < 2) {
+        throw new Error(
+          `lang="${lang}" expects Hebrew tab as second tab, but only found 1 tab: ${titles[0]}`
+        );
+      }
+      return titles[1];
+    }
+
+    // - English: first tab
+    return titles[0];
+  }
+
   async run(cfg: MetaSchemaJobConfig): Promise<void> {
-    const metaRow      = cfg.metaRow ?? 70;
-    const schemaRow    = cfg.schemaRow ?? (metaRow + 3);
+    const metaRow = cfg.metaRow ?? 70;
+    const schemaRow = cfg.schemaRow ?? metaRow + 3;
     const metaStartCol = cfg.metaStartCol ?? "A";
-    const schemaCol    = cfg.schemaCol ?? "E";
+    const schemaCol = cfg.schemaCol ?? "E";
+    const lang = (cfg.lang ?? "en").toLowerCase();
 
-    // ⚠️ כמו במקור: מתבססים על הטאב הראשון בלבד (לא משתמשים ב-sourceTab)
-    const firstTabTitle = await this.sheets.getFirstSheetTitle(cfg.spreadsheetId);
-    const tabA1 = this.quoteA1Sheet(firstTabTitle);
+    // Decide which tab we read/write (IMPORTANT)
+    const targetTabTitle = await this.resolveTargetTabTitle(cfg, lang);
+    const tabA1 = this.quoteA1Sheet(targetTabTitle);
 
-    // קריאה של כל השורות
+    // Read rows FROM THE TARGET TAB (not first tab)
     const rows = await this.sheets.readValues(cfg.spreadsheetId, `${tabA1}!A:Z`);
-    if (rows.length === 0) throw new Error(`Source tab "${firstTabTitle}" is empty`);
+    if (rows.length === 0) throw new Error(`Source tab "${targetTabTitle}" is empty`);
 
-    // שם המלון מנוקה מרעשים
-    const rawTitle  = await this.sheets.getSpreadsheetTitle(cfg.spreadsheetId);
-    const hotelName = this.sanitizeHotelTitle(rawTitle);
+    // English hotel name from spreadsheet title (file name)
+    const rawTitle = await this.sheets.getSpreadsheetTitle(cfg.spreadsheetId);
+    const hotelNameEn = this.sanitizeHotelTitle(rawTitle);
 
-    // Q/A עבור סכמת FAQ
+    // Collect Q/A FROM THE TARGET TAB
     const qa = this.collectQA(rows);
-    if (qa.length === 0) throw new Error(`No Q/A rows found in tab "${firstTabTitle}"`);
+    if (qa.length === 0) throw new Error(`No Q/A rows found in tab "${targetTabTitle}"`);
 
-    const metaTitle = this.sanitizeOneLine(`FAQ | ${hotelName}`);
-const h1        = this.sanitizeOneLine(`FAQ about ${hotelName}`);
-let   metaDesc  = this.sanitizeOneLine(
-  `Find answers to frequently asked questions about ${hotelName}. ` +
-  `Learn about check-in times, parking, Wi-Fi, location, amenities, and more.`
-);
+    // Resolve Hebrew name if needed
+    let hotelNameHe: string | undefined = undefined;
+    if (lang.startsWith("he")) {
+      if (!cfg.hotelNameMap?.spreadsheetId) {
+        throw new Error(`lang="${lang}" requires hotelNameMap (spreadsheetId)`);
+      }
 
-    // אופציונלי: לשמור על 160 תווים כמו שהיית רגילה
-    if (metaDesc.length > 160) metaDesc = metaDesc.slice(0, 160).trim();
+      hotelNameHe =
+        (await this.resolveHebrewHotelName(hotelNameEn, cfg.hotelNameMap)) ?? undefined;
 
-    // ✅ סכמת FAQ (ללא שינוי לוגיקה)
-    const schemaObj    = this.buildFaqJsonLd(qa);
+      if (!hotelNameHe) {
+        throw new Error(
+          `Hebrew hotel name not found in mapping sheet for: "${hotelNameEn}". ` +
+            `Check mapping sheet columns (A=English, B=Hebrew) and exact hotel name.`
+        );
+      }
+    }
+
+    // Build meta
+    const { metaTitle, metaDesc, h1 } = this.buildMetaByLang({
+      lang,
+      hotelNameEn,
+      hotelNameHe,
+    });
+
+    // Build schema
+    const schemaObj = this.buildFaqJsonLd(qa);
     const schemaPretty = JSON.stringify(schemaObj, null, 2);
-    const schemaWrapped =
-`<script type="application/ld+json">
-${schemaPretty}
-</script>`;
+    const schemaWrapped = `<script type="application/ld+json">\n${schemaPretty}\n</script>`;
 
-    // כתיבה ל-Sheet: מטא
+    // Write meta INTO THE TARGET TAB ONLY
     await this.sheets.writeValues(cfg.spreadsheetId, `${tabA1}!${metaStartCol}${metaRow}`, [
       ["Meta Title", "Meta Description", "H1"],
     ]);
@@ -116,10 +313,10 @@ ${schemaPretty}
       [metaTitle, metaDesc, h1],
     ]);
 
-    // ריווח
+    // Spacer
     await this.sheets.writeValues(cfg.spreadsheetId, `${tabA1}!${schemaCol}${schemaRow - 1}`, [[""]]);
 
-    // כתיבת סכמת FAQ
+    // Write schema INTO THE TARGET TAB ONLY
     await this.sheets.writeValues(cfg.spreadsheetId, `${tabA1}!${schemaCol}${schemaRow}`, [
       ["FAQ Schema (JSON-LD)"],
     ]);
@@ -127,7 +324,7 @@ ${schemaPretty}
       [schemaWrapped],
     ]);
 
-    // עיצוב כמו FAQ
-    await this.sheets.formatSheetLikeFAQ(cfg.spreadsheetId, firstTabTitle);
+    // Format ONLY THE TARGET TAB
+    await this.sheets.formatSheetLikeFAQ(cfg.spreadsheetId, targetTabTitle);
   }
 }

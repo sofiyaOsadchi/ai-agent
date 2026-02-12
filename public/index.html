@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmelon Agent Chain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .terminal { background: #1e1e1e; color: #10b981; font-family: monospace; height: 600px; overflow-y: auto; padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; font-size: 0.85rem; }
+        .task-card { border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; margin-bottom: 12px; transition: all 0.2s; }
+        .task-card.disabled { opacity: 0.6; background: #f8fafc; }
+        .task-header { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #f8fafc; border-radius: 8px 8px 0 0; }
+        .task-body { padding: 15px; }
+        .field-label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; display: block; }
+        .magic-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; transition: all 0.2s; }
+        .magic-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .var-badge { cursor: pointer; font-family: monospace; background: #eff6ff; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; border: 1px solid #dbeafe; display: inline-block; margin-right: 4px; }
+        .var-badge:hover { background: #dbeafe; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
+
+    <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <div class="lg:col-span-6 flex flex-col gap-4 h-[95vh] overflow-y-auto pr-2 pb-20">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                    ⛓️ FAQ Workflow Builder
+                </h1>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="field-label">Subject / Hotel Name</label>
+                        <input type="text" id="subjects" class="magic-input font-bold text-lg border-blue-300" 
+                               placeholder="e.g. Leonardo Royal Berlin">
+                        <p class="text-xs text-gray-500 mt-1">Tip: You can enter multiple hotels separated by commas.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tasksContainer">
+                </div>
+
+            <button id="runBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition transform active:scale-[0.99] flex justify-center items-center gap-2 text-lg">
+                🚀 Run Agent Chain
+            </button>
+        </div>
+
+        <div class="lg:col-span-6">
+            <div class="bg-gray-900 rounded-t-xl p-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="text-xs text-gray-400 font-mono ml-2">Agent Terminal</span>
+                </div>
+                <button onclick="document.getElementById('logs').innerHTML=''" class="text-xs text-gray-500 hover:text-white">Clear</button>
+            </div>
+            <div id="logs" class="terminal shadow-2xl"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const logsDiv = document.getElementById('logs');
+        const runBtn = document.getElementById('runBtn');
+        const container = document.getElementById('tasksContainer');
+
+        // === כאן הקסם: הפרומפטים הדיפולטיביים החכמים ===
+        // משימות 1, 2, 3 דלוקות כברירת מחדל כדי לייצר FAQ מושלם
+        const DEFAULT_TASKS = [
+            { 
+                id: 1, 
+                name: "Step 1: Research & Generate Questions", 
+                enabled: true, 
+                sys: "You are an expert SEO Researcher for hospitality.", 
+                // שימי לב: השתמשתי ב-{{subject}}
+                user: "Generate 20 high-value FAQ questions for {{subject}}.\nFocus on: Check-in, Amenities, Policies, Location, Breakfast.\nReturn ONLY a Markdown Table (Category | Question | Priority).", 
+                tone: "Professional, inquisitive, guest-focused.", 
+                src: "Official Hotel Website, Booking.com, TripAdvisor" 
+            },
+            { 
+                id: 2, 
+                name: "Step 2: Generate Answers", 
+                enabled: true, 
+                sys: "You are a Senior Hotel Concierge.", 
+                // שימי לב: השתמשתי ב-{{last}} כדי לקחת את השאלות משלב 1
+                user: "Provide authoritative answers for the questions below.\n\nINPUT QUESTIONS:\n{{last}}\n\nFormat: TSV (Tab Separated Values).\nColumns: Category, Question, Answer, Frequency.", 
+                tone: "Welcoming, luxury hospitality tone. Third-person.", 
+                src: "Official Website (Primary Source)" 
+            },
+            { 
+                id: 3, 
+                name: "Step 3: QA & Refine", 
+                enabled: true, 
+                sys: "You are a strict Content Editor.", 
+                // לוקח את התשובות משלב 2 ({{last}}) ומתקן אותן
+                user: "Review the following FAQ data for grammar, duplicates, and missing info.\n\nDATA TO CHECK:\n{{last}}\n\nOutput the final clean version in TSV format.", 
+                tone: "Precise and error-free.", 
+                src: "" 
+            },
+            { id: 4, name: "Step 4: Translate (Optional)", enabled: false, sys: "You are a translator.", user: "Translate this to German:\n{{last}}", tone: "", src: "" },
+            { id: 5, name: "Step 5: Final Export", enabled: false, sys: "", user: "{{last}}", tone: "", src: "" }
+        ];
+
+        function renderTasks() {
+            container.innerHTML = '';
+            DEFAULT_TASKS.forEach((task, index) => {
+                // תיקון: שימוש ב-${task.sys} בתוך הטקסט-אריאה ולא כ-value
+                const html = `
+                <div class="task-card ${!task.enabled ? 'disabled' : ''}" id="card-${task.id}">
+                    <div class="task-header" onclick="toggleTask(${task.id})">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" id="enable-${task.id}" ${task.enabled ? 'checked' : ''} 
+                                   class="w-5 h-5 accent-blue-600" onclick="event.stopPropagation(); toggleTaskState(${task.id})">
+                            <span class="font-bold text-slate-700">#${task.id}</span>
+                            <input type="text" id="name-${task.id}" value="${task.name}" 
+                                   class="bg-transparent border-none font-semibold text-sm w-64 focus:ring-0" 
+                                   onclick="event.stopPropagation()" placeholder="Task Name">
+                        </div>
+                        <span class="text-slate-400 text-xs">▼</span>
+                    </div>
+                    
+                    <div class="task-body ${!task.enabled ? 'hidden' : ''}" id="body-${task.id}">
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="field-label">Tone & Style</label>
+                                <input type="text" id="tone-${task.id}" value="${task.tone}" class="magic-input" placeholder="e.g. Professional">
+                            </div>
+                            <div>
+                                <label class="field-label">Sources / Search</label>
+                                <input type="text" id="src-${task.id}" value="${task.src}" class="magic-input" placeholder="e.g. Official Site">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="field-label">System Prompt (Role)</label>
+                            <textarea id="sys-${task.id}" rows="1" class="magic-input bg-slate-50">${task.sys}</textarea>
+                        </div>
+                        <div>
+                            <div class="flex justify-between">
+                                <label class="field-label">User Prompt (Instructions)</label>
+                                <div class="space-x-1">
+                                    <span class="var-badge" onclick="insertVar(${task.id}, '{{subject}}')">{{subject}}</span>
+                                    <span class="var-badge" onclick="insertVar(${task.id}, '{{last}}')">{{last}}</span>
+                                </div>
+                            </div>
+                            <textarea id="user-${task.id}" rows="6" class="magic-input font-mono text-xs">${task.user}</textarea>
+                        </div>
+                    </div>
+                </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // --- Logic Handlers ---
+        window.toggleTaskState = (id) => {
+            const isChecked = document.getElementById(`enable-${id}`).checked;
+            const card = document.getElementById(`card-${id}`);
+            const body = document.getElementById(`body-${id}`);
+            
+            if (isChecked) {
+                card.classList.remove('disabled');
+                body.classList.remove('hidden');
+            } else {
+                card.classList.add('disabled');
+                body.classList.add('hidden');
+            }
+        };
+
+        window.toggleTask = (id) => {
+            const body = document.getElementById(`body-${id}`);
+            body.classList.toggle('hidden');
+        };
+
+        window.insertVar = (id, text) => {
+            const el = document.getElementById(`user-${id}`);
+            const start = el.selectionStart;
+            const end = el.selectionEnd;
+            const val = el.value;
+            el.value = val.substring(0, start) + text + val.substring(end);
+            el.focus();
+        };
+
+        // --- Run ---
+        runBtn.addEventListener('click', () => {
+            const subjectsStr = document.getElementById('subjects').value;
+            if (!subjectsStr.trim()) return alert("Please enter at least one subject/hotel.");
+
+            const subjects = subjectsStr.split(',').map(s => s.trim()).filter(s => s);
+            
+            // איסוף המשימות
+            const tasks = [];
+            const TASK_COUNT = 5;
+            for(let i=1; i<=TASK_COUNT; i++) {
+                const enabled = document.getElementById(`enable-${i}`).checked;
+                
+                let userPrompt = document.getElementById(`user-${i}`).value;
+                const tone = document.getElementById(`tone-${i}`).value;
+                const sources = document.getElementById(`src-${i}`).value;
+
+                // שרשור שדות ה-Tone וה-Source לפרומפט שנשלח לשרת
+                if (tone && tone.trim()) userPrompt += `\n\nTONE & STYLE:\n${tone}`;
+                if (sources && sources.trim()) userPrompt += `\n\nAPPROVED SOURCES:\n${sources}`;
+
+                tasks.push({
+                    id: i,
+                    enabled: enabled,
+                    name: document.getElementById(`name-${i}`).value,
+                    system: document.getElementById(`sys-${i}`).value,
+                    user: userPrompt
+                });
+            }
+
+            const payload = {
+                mode: 'faq-playground',
+                subjects: subjects,
+                tasks: tasks
+            };
+
+            runBtn.disabled = true;
+            runBtn.innerHTML = '⏳ Agent Running...';
+            logsDiv.innerHTML += `\n<div style="color:cyan">> Starting Job for ${subjects.length} subjects...</div>`;
+
+            socket.emit('start-agent', payload);
+        });
+
+        socket.on('log', (msg) => {
+            const line = document.createElement('div');
+            line.textContent = msg.replace(/\x1B\[\d+m/g, ''); 
+            if (msg.includes("Failed")) line.style.color = "#ef4444";
+            if (msg.includes("Success") || msg.includes("Created")) line.style.color = "#3b82f6";
+            logsDiv.appendChild(line);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        });
+
+        socket.on('done', () => {
+            runBtn.disabled = false;
+            runBtn.innerHTML = '🚀 Run Agent Chain';
+        });
+
+        // Start
+        renderTasks();
+
+    </script>
+</body>
+</html>

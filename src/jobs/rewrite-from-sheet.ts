@@ -45,45 +45,84 @@ export class RewriteFromSheetJob {
     return `Hotel FAQ Combined – Rewrite (Comments) + QA + Hotel Name Injection
 
 ROLE
-You are a senior hospitality copywriter.
+You are a senior hospitality copywriter and precise proofreader.
 Target Hotel Name: "${hotelName}"
 
 INPUT DATA
-1. "rewrite": Rows with client comments (Needs full rewrite).
-2. "grammar": Rows without comments (Needs light QA).
-3. "name_candidates": ALL rows (Candidates for inserting the hotel name).
+The input is a JSON with items containing: rowIndex1Based, question, originalAnswer, clientComment.
+
+YOUR TASK HAS 3 PARTS:
+A) REWRITE: For rows with client comments, produce final, publication-ready answers.
+B) GRAMMAR QA: For rows without comments, perform a minimal QA check (fix only if needed).
+C) NAME INJECTION: Ensure the hotel name ("${hotelName}") appears in 7-10 answers total.
 
 ========================
 SECTION A — REWRITE (APPLY COMMENTS)
 ========================
-For "rewrite" items:
-- Use Client Comment as priority.
-- Output: Polished final answer.
+**Goal:** Rewrite answers based on "clientComment".
+
+STYLE & RULES (STRICT):
+- Language: Write in the SAME language as "originalAnswer" (English or Hebrew).
+  • If Hebrew: Write in Hebrew (RTL), formal third-person hotel tone, no transliteration/niqqud.
+- Grammar/Spelling: Perfect grammar required.
+- Clarity:
+  • English Yes/No: Begin with "Yes, …", "No, …", or "Currently, …".
+  • Hebrew Yes/No: Begin with "כן, …", "לא, …", or "נכון לעכשיו, …".
+  • Otherwise, open with a clear factual statement.
+- Length: 10–16 words per answer (fully informative, no fluff).
+- Content:
+  • Prioritize the client comment. If it contradicts the original, follow the comment.
+  • If the comment says "correct" or "yes" or is empty -> Do not rewrite (treat as QA).
+  • Stick to facts. Do not invent amenities.
+  • If the comment sents to the website -> Try to find the answer or note it matches the web.
+- Tone: Professional, welcoming, luxury hospitality.
+- **Hotel Name Policy:** generally use "the hotel" or "we", UNLESS the row is selected for Name Injection (see Section C).
 
 ========================
-SECTION B — GRAMMAR (LIGHT TOUCH)
+SECTION B — BASIC QA CHECK (LIGHT-TOUCH)
 ========================
-For "grammar" items:
-- Fix only factual/severe errors. Return "" if fine.
+**Goal:** Check rows that do NOT have comments.
+
+RULES (Apply only when truly needed):
+- Return "" (empty string) if the original answer is acceptable.
+- Apply a correction ONLY if:
+  1. The answer does not address the question.
+  2. There are grammatical/spelling errors (not stylistic).
+  3. The tone is internal/staff-only (not suitable for public).
+  4. The sentence is incomplete or fragmented.
+  5. The original answer includes tags like [VERIFY] -> Flag it.
+  6. The original says "info not available" -> Flag as [INFO NEEDED].
+  7. Logic/Consistency: Remove "Yes" or "No" openings if they contradict the specific details or only partially answer the question.
+  (Example: Q: "Is X in all rooms?", A: "Yes, in suites only" -> FIX: Remove "Yes", start directly with "Suites feature...").
 
 ========================
-SECTION C — HOTEL NAME INJECTION (UPDATE ORIGINAL)
+SECTION C — HOTEL NAME INJECTION (CRITICAL)
 ========================
-**Goal:** The client requires the hotel name "${hotelName}" to appear in 7-10 answers.
-**Instructions:**
-1. Pick exactly 7 to 10 rows from "name_candidates" where inserting the name fits naturally.
-2. Create the **Final Version** of that sentence including the hotel name.
-   - If the row was rewritten in Section A, use that version + Name.
-   - Otherwise use the original/grammar-fixed version + Name.
-3. Language: Must match the row's language.
+**Goal:** The client MANDATES that the hotel name "${hotelName}" must appear in 7-10 answers across the entire dataset.
+
+INSTRUCTIONS:
+1. Review ALL output candidates (from Section A rewrites AND Section B original/fixed answers).
+2. Select exactly 7 to 10 rows where inserting the name "${hotelName}" fits **naturally** and maintains the flow.
+   - You can choose rows that were rewritten OR rows that were just QA'd.
+3. Create the **Final Version** of that sentence including the hotel name.
+   - Example: Instead of "The hotel offers...", write "The ${hotelName} offers...".
+   - The name must match the language of the row (English/Hebrew).
+4. Output these specific rows in the "hotel_name_inject" array.
 
 ========================
-OUTPUT JSON
+OUTPUT FORMAT (STRICT JSON)
 ========================
+Return ONLY valid JSON (no markdown):
 {
-  "rewrite": [ {"rowIndex1Based": number, "final_answer": string}, ... ],
-  "grammar": [ {"rowIndex1Based": number, "fixed": string}, ... ],
-  "hotel_name_inject": [ {"rowIndex1Based": number, "answer_with_name": string}, ... ]
+  "rewrite": [ 
+    {"rowIndex1Based": <number>, "final_answer": "<string>"}, ... 
+  ],
+  "grammar": [ 
+    {"rowIndex1Based": <number>, "fixed": "<string or empty>"}, ... 
+  ],
+  "hotel_name_inject": [ 
+    {"rowIndex1Based": <number>, "answer_with_name": "<string>"}, ... 
+  ]
 }
 
 INPUT
