@@ -5,21 +5,27 @@ import { SheetsService } from "../services/sheets.js";
 type RewriteFromSheetConfig = {
   spreadsheetId: string;
   sourceTab?: string;
-  commentCol?: string;  // default "E"
-  answerCol?: string;   // default "C" (This is where we will inject the name now!)
-  targetCol?: string;   // default "F" (Final Answer)
-  header?: string;      // default "Agent Final Answer"
 
-  checkOriginalGrammar?: boolean;      // default: false
-  grammarFixCol?: string;              // default: "G"
-  grammarFixHeader?: string;           // default: "Answer Grammar Fix"
+  // Master columns
+  categoryCol?: string;   // default "A"
+  questionCol?: string;   // default "B"
+  answerCol?: string;     // default "C"
+  commentCol?: string;    // default "D" (Corrected Answer)
+
+  targetCol?: string;     // default "F" (Final Answer)
+  header?: string;        // default "Agent Final Answer"
+
+  // NEW: question suitability + mismatch note
+  questionFixCol?: string;       // default "G"
+  questionFixHeader?: string;    // default "Question Correction"
+  qaNoteCol?: string;            // default "H"
+  qaNoteHeader?: string;         // default "QA Note"
+
+  checkOriginalGrammar?: boolean; // default: false (נשאר)
   
-  questionGrammarFixCol?: string;      // default: "H"
-  questionGrammarFixHeader?: string;   // default: "Question Grammar Fix"
-  
-  hotelNameCol?: string;               // default: "I"
-  hotelNameHeader?: string;            // default: "Hotel Name Status"
-  hotelName?: string;                  // Optional
+  hotelNameCol?: string;          // default: "I"
+  hotelNameHeader?: string;       // default: "Hotel Name Status"
+  hotelName?: string;
 };
 
 export class RewriteFromSheetJob {
@@ -35,134 +41,197 @@ export class RewriteFromSheetJob {
     return idx - 1; // 0-based
   }
 
-  private buildPromptCombined(
-    itemsForRewrite: Array<{ rowIndex1Based: number; question: string; originalAnswer: string; clientComment: string }>,
-    itemsForGrammar: Array<{ rowIndex1Based: number; question: string; originalAnswer: string }>,
-    allRowsForNameInjection: Array<{ rowIndex1Based: number; question: string; currentAnswer: string }>,
-    enableGrammar: boolean,
-    hotelName: string
-  ) {
-    return `Hotel FAQ Combined – Rewrite (Comments) + QA + Hotel Name Injection
+ private buildPromptCombined(
+  itemsForRewrite: Array<{ rowIndex1Based: number; category: string; question: string; originalAnswer: string; clientComment: string }>,
+  itemsForQA: Array<{ rowIndex1Based: number; category: string; question: string; originalAnswer: string }>,
+  allRowsForNameInjection: Array<{ rowIndex1Based: number; question: string; currentAnswer: string }>,
+  enableGrammar: boolean,
+  hotelName: string
+) {
+  return `Hotel FAQ Combined - Rewrite + QA + Question Check + Hotel Name Injection
 
 ROLE
-You are a senior hospitality copywriter and precise proofreader.
+You are a senior hospitality copywriter and a precise QA editor.
 Target Hotel Name: "${hotelName}"
 
 INPUT DATA
-The input is a JSON with items containing: rowIndex1Based, question, originalAnswer, clientComment.
+JSON items include: rowIndex1Based, category, question, originalAnswer, clientComment.
 
-YOUR TASK HAS 3 PARTS:
-A) REWRITE: For rows with client comments, produce final, publication-ready answers.
-B) GRAMMAR QA: For rows without comments, perform a minimal QA check (fix only if needed).
+YOUR TASK HAS 5 PARTS:
+A) REWRITE: For rows with a meaningful clientComment, produce final, publication-ready answers.
+B) QA (LIGHT-TOUCH): For rows without a meaningful clientComment, fix answers only if needed.
 C) NAME INJECTION: Ensure the hotel name ("${hotelName}") appears in 7-10 answers total.
+D) QUESTION FIX: If the question is not suitable, propose a corrected question (write it to column G).
+E) QA NOTE: If the question and answer are mismatched, write a short note (write it to column H).
 
 ========================
-SECTION A — REWRITE (APPLY COMMENTS)
+SECTION A - REWRITE (APPLY CLIENT COMMENT AS PREFERRED)
 ========================
-**Goal:** Rewrite answers based on "clientComment".
+Rules:
+- Language: same as originalAnswer (English or Hebrew).
+Prioritize clientComment over originalAnswer if they conflict.
+If the clientComment is already suitable for publication, keep it unchanged.
+- If clientComment is effectively "correct", "ok", "yes", "no change", "looks good" or empty -> do NOT rewrite; handle in QA instead.
+- Stick to facts. Do not invent amenities.
+- Length: Prefer 10-16 words, BUT clientComment requirements override length.
+  If needed to include all comment details, you may exceed 16 words.
+- Tone: professional, welcoming, luxury hospitality.
+- If the answer is Yes/No:
+  English: start with "Yes, ...", "No, ...", or "Currently, ...".
+  Hebrew: start with "כן, ...", "לא, ...", or "נכון לעכשיו, ...".
 
-STYLE & RULES (STRICT):
-- Language: Write in the SAME language as "originalAnswer" (English or Hebrew).
-  • If Hebrew: Write in Hebrew (RTL), formal third-person hotel tone, no transliteration/niqqud.
-- Grammar/Spelling: Perfect grammar required.
-- Clarity:
-  • English Yes/No: Begin with "Yes, …", "No, …", or "Currently, …".
-  • Hebrew Yes/No: Begin with "כן, …", "לא, …", or "נכון לעכשיו, …".
-  • Otherwise, open with a clear factual statement.
-- Length: 10–16 words per answer (fully informative, no fluff).
-- Content:
-  • Prioritize the client comment. If it contradicts the original, follow the comment.
-  • If the comment says "correct" or "yes" or is empty -> Do not rewrite (treat as QA).
-  • Stick to facts. Do not invent amenities.
-  • If the comment sents to the website -> Try to find the answer or note it matches the web.
-- Tone: Professional, welcoming, luxury hospitality.
-- **Hotel Name Policy:** generally use "the hotel" or "we", UNLESS the row is selected for Name Injection (see Section C).
+  Client Comment Preservation Rule:
+If the clientComment already:
+- correctly answers the question
+- follows the FAQ tone
+- has proper grammar
+- complies with the length and style rules
+
+Then DO NOT rewrite it.
+Return the clientComment exactly as written.
+
+Only rewrite when:
+- the comment contains grammar issues
+- the comment is unclear
+- the comment does not fully answer the question
+- the comment violates the FAQ style rules.
+
+Client Comment is the Source of Truth (Strict):
+- Treat clientComment as a REQUIREMENTS LIST.
+- Every concrete instruction in clientComment must be reflected in the final answer.
+- Do not drop small details (numbers, times, conditions, exceptions, wording like "only", "except", "must", "not available", etc.).
+- If clientComment contradicts originalAnswer, ALWAYS follow clientComment.
+- If you cannot comply with a detail because it is unclear, keep the detail and add "[INFO NEEDED]" at the end.
 
 ========================
-SECTION B — BASIC QA CHECK (LIGHT-TOUCH)
+SECTION B - QA (LIGHT-TOUCH)
 ========================
-**Goal:** Check rows that do NOT have comments.
+Goal: only fix when truly needed.
+Return "" (empty string) if no fix is needed.
 
-RULES (Apply only when truly needed):
-- Return "" (empty string) if the original answer is acceptable.
-- Apply a correction ONLY if:
-  1. The answer does not address the question.
-  2. There are grammatical/spelling errors (not stylistic).
-  3. The tone is internal/staff-only (not suitable for public).
-  4. The sentence is incomplete or fragmented.
-  5. The original answer includes tags like [VERIFY] -> Flag it.
-  6. The original says "info not available" -> Flag as [INFO NEEDED].
-  7. Logic/Consistency: Remove "Yes" or "No" openings if they contradict the specific details or only partially answer the question.
-  (Example: Q: "Is X in all rooms?", A: "Yes, in suites only" -> FIX: Remove "Yes", start directly with "Suites feature...").
+Fix ONLY if:
+1) The answer does not address the question.
+2) Grammar/spelling errors exist (not stylistic).
+3) Tone is internal/staff-only.
+4) Incomplete/fragmented sentence.
+5) Contains tags like [VERIFY] -> keep but add [INFO NEEDED].
+6) Says "info not available" -> use [INFO NEEDED].
+7) Logic: remove wrong "Yes/No" openings if they contradict the details.
+8) The answer starts with Yes/No but the question is not a Yes/No question - remove the Yes/No opening.
+9( dont use — em dash; 
 
 ========================
-SECTION C — HOTEL NAME INJECTION (CRITICAL)
+SECTION D - QUESTION FIX (COLUMN G)
 ========================
-**Goal:** The client MANDATES that the hotel name "${hotelName}" must appear in 7-10 answers across the entire dataset.
+Goal: fix the question ONLY if it is not suitable for a hotel FAQ.
+Examples of "not suitable":
+- Not a real question / unclear wording
+- Not about the hotel guest experience (internal ops)
+- Duplicated/misalabeled category context (question clearly about different topic)
+- Includes wrong hotel name / wrong property
+Return "" if the question is acceptable.
+If you propose a fix:
+- Keep language consistent with the question.
+- Keep it short and clear, as a real FAQ question.
 
-INSTRUCTIONS:
-1. Review ALL output candidates (from Section A rewrites AND Section B original/fixed answers).
-2. Select exactly 7 to 10 rows where inserting the name "${hotelName}" fits **naturally** and maintains the flow.
-   - You can choose rows that were rewritten OR rows that were just QA'd.
-3. Create the **Final Version** of that sentence including the hotel name.
-   - Example: Instead of "The hotel offers...", write "The ${hotelName} offers...".
-   - The name must match the language of the row (English/Hebrew).
-4. Output these specific rows in the "hotel_name_inject" array.
+========================
+SECTION E - QA NOTE (COLUMN H)
+========================
+Write a short note ONLY if there is a mismatch between question and answer.
+Examples:
+- Answer discusses different topic than the question
+- Answer partially answers but misses key requirement
+- Answer contradicts the question framing (Yes/No inconsistency)
+Return "" if no mismatch.
+Keep note concise (max ~12 words).
+
+========================
+SECTION C - HOTEL NAME INJECTION (CRITICAL)
+========================
+Goal: name "${hotelName}" must appear in exactly 7-10 answers across the entire dataset.
+Select rows where it fits naturally.
+Output those rows in "hotel_name_inject".
 
 ========================
 OUTPUT FORMAT (STRICT JSON)
 ========================
-Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON:
 {
-  "rewrite": [ 
-    {"rowIndex1Based": <number>, "final_answer": "<string>"}, ... 
+  "rewrite": [
+    {"rowIndex1Based": <number>, "final_answer": "<string>"}
   ],
-  "grammar": [ 
-    {"rowIndex1Based": <number>, "fixed": "<string or empty>"}, ... 
+  "qa": [
+    {"rowIndex1Based": <number>, "fixed": "<string or empty>"}
   ],
-  "hotel_name_inject": [ 
-    {"rowIndex1Based": <number>, "answer_with_name": "<string>"}, ... 
+  "question_fix": [
+    {"rowIndex1Based": <number>, "fixed_question": "<string or empty>"}
+  ],
+  "qa_note": [
+    {"rowIndex1Based": <number>, "note": "<string or empty>"}
+  ],
+  "hotel_name_inject": [
+    {"rowIndex1Based": <number>, "answer_with_name": "<string>"}
   ]
 }
 
 INPUT
-${JSON.stringify({
-  rewrite: itemsForRewrite,
-  grammar: enableGrammar ? itemsForGrammar : [],
-  name_candidates: allRowsForNameInjection
-}, null, 2)}`;
+${JSON.stringify(
+  {
+    rewrite: itemsForRewrite,
+    qa: enableGrammar ? itemsForQA : [],
+    name_candidates: allRowsForNameInjection
+  },
+  null,
+  2
+)}`;
   }
 
-  private parseCombinedOutputOrThrow(text: string): {
-    rewrite: Array<{ rowIndex1Based: number; final_answer: string }>;
-    grammar: Array<{ rowIndex1Based: number; fixed: string }>;
-    hotel_name_inject: Array<{ rowIndex1Based: number; answer_with_name: string }>;
-  } {
-    const first = text.indexOf("{");
-    const last  = text.lastIndexOf("}");
-    const slice = (first >= 0 && last > first) ? text.slice(first, last + 1) : text;
-    let obj: any;
-    try { obj = JSON.parse(slice); } catch {
-      throw new Error("Model did not return valid JSON");
-    }
-    obj.rewrite = Array.isArray(obj.rewrite) ? obj.rewrite : [];
-    obj.grammar = Array.isArray(obj.grammar) ? obj.grammar : [];
-    obj.hotel_name_inject = Array.isArray(obj.hotel_name_inject) ? obj.hotel_name_inject : [];
-    return obj;
+ private parseCombinedOutputOrThrow(text: string): {
+  rewrite: Array<{ rowIndex1Based: number; final_answer: string }>;
+  qa: Array<{ rowIndex1Based: number; fixed: string }>;
+  question_fix: Array<{ rowIndex1Based: number; fixed_question: string }>;
+  qa_note: Array<{ rowIndex1Based: number; note: string }>;
+  hotel_name_inject: Array<{ rowIndex1Based: number; answer_with_name: string }>;
+} {
+  const first = text.indexOf("{");
+  const last = text.lastIndexOf("}");
+  const slice = first >= 0 && last > first ? text.slice(first, last + 1) : text;
+
+  let obj: any;
+  try {
+    obj = JSON.parse(slice);
+  } catch {
+    throw new Error("Model did not return valid JSON");
   }
 
-  async run(cfg: RewriteFromSheetConfig): Promise<void> {
-    const commentCol = cfg.commentCol ?? "E";
-    const answerCol  = cfg.answerCol  ?? "C"; // Target for Name Injection updates!
-    const targetCol  = cfg.targetCol  ?? "F";
-    const header     = cfg.header     ?? "Agent Final Answer";
+  obj.rewrite = Array.isArray(obj.rewrite) ? obj.rewrite : [];
+  obj.qa = Array.isArray(obj.qa) ? obj.qa : [];
+  obj.question_fix = Array.isArray(obj.question_fix) ? obj.question_fix : [];
+  obj.qa_note = Array.isArray(obj.qa_note) ? obj.qa_note : [];
+  obj.hotel_name_inject = Array.isArray(obj.hotel_name_inject) ? obj.hotel_name_inject : [];
 
-    const enableGrammar     = cfg.checkOriginalGrammar ?? false;
-    const grammarFixCol     = cfg.grammarFixCol ?? "G";
-    const grammarFixHeader  = cfg.grammarFixHeader ?? "Answer Grammar Fix";
+  return obj;
+}
 
-    const hotelNameCol    = cfg.hotelNameCol ?? "I";
-    const hotelNameHeader = cfg.hotelNameHeader ?? "Hotel Name Status";
+ async run(cfg: RewriteFromSheetConfig): Promise<void> {
+  const categoryCol = cfg.categoryCol ?? "A";
+  const questionCol = cfg.questionCol ?? "B";
+  const answerCol = cfg.answerCol ?? "C";
+  const commentCol = cfg.commentCol ?? "D";
+
+  const targetCol = cfg.targetCol ?? "F";
+  const header = cfg.header ?? "Agent Final Answer";
+
+  const questionFixCol = cfg.questionFixCol ?? "G";
+  const questionFixHeader = cfg.questionFixHeader ?? "Question Correction";
+
+  const qaNoteCol = cfg.qaNoteCol ?? "H";
+  const qaNoteHeader = cfg.qaNoteHeader ?? "QA Note";
+
+  const enableGrammar = cfg.checkOriginalGrammar ?? false;
+
+  const hotelNameCol = cfg.hotelNameCol ?? "I";
+  const hotelNameHeader = cfg.hotelNameHeader ?? "Hotel Name Status";
 
     // 1. זיהוי שם המלון
     let targetHotelName = cfg.hotelName;
@@ -180,119 +249,143 @@ ${JSON.stringify({
     if (!sourceTab) sourceTab = await this.sheets.getFirstSheetTitle(cfg.spreadsheetId);
     
     // קריאת הנתונים (כולל כותרות בשורה 1)
-    const rows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!A:Z`);
-    const h = rows.length;
-    const dataRowCount = Math.max(0, h - 1);
-    
-    const qColIdx = 1; 
-    const ansIdx  = this.letterToIndex(answerCol);
-    const cmtIdx  = this.letterToIndex(commentCol);
+   const rows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!A:Z`);
+  const h = rows.length;
+  const dataRowCount = Math.max(0, h - 1);
 
-    const itemsForRewrite: any[] = [];
-    const itemsForGrammar: any[] = [];
-    const allRowsForNameInjection: any[] = [];
+  const catIdx = this.letterToIndex(categoryCol);
+  const qIdx = this.letterToIndex(questionCol);
+  const ansIdx = this.letterToIndex(answerCol);
+  const cmtIdx = this.letterToIndex(commentCol);
 
-    for (let r = 2; r <= h; r++) {
-      const row = rows[r - 1] ?? [];
-      const question       = (row[qColIdx] ?? "").toString().trim();
-      const originalAnswer = (row[ansIdx]  ?? "").toString().trim();
-      const clientComment  = (row[cmtIdx]  ?? "").toString().trim();
+    const itemsForRewrite: Array<{ rowIndex1Based: number; category: string; question: string; originalAnswer: string; clientComment: string }> = [];
+const itemsForQA: Array<{ rowIndex1Based: number; category: string; question: string; originalAnswer: string }> = [];
+const allRowsForNameInjection: Array<{ rowIndex1Based: number; question: string; currentAnswer: string }> = [];
 
-      if (clientComment) {
-        itemsForRewrite.push({ rowIndex1Based: r, question, originalAnswer, clientComment });
-      }
-      
-      // ✅ בדיקת דקדוק נשמרת כמו שהייתה
-      if (enableGrammar && originalAnswer && !clientComment) {
-        itemsForGrammar.push({ rowIndex1Based: r, question, originalAnswer });
-      }
-      
-      if (originalAnswer || clientComment) {
-          allRowsForNameInjection.push({ 
-              rowIndex1Based: r, 
-              question, 
-              currentAnswer: clientComment ? `(Pending Rewrite: ${clientComment})` : originalAnswer 
-          });
-      }
-    }
+for (let r = 2; r <= h; r++) {
+  const row = rows[r - 1] ?? [];
+
+  const category = (row[catIdx] ?? "").toString().trim();
+  const question = (row[qIdx] ?? "").toString().trim();
+  const originalAnswer = (row[ansIdx] ?? "").toString().trim();
+  const clientComment = (row[cmtIdx] ?? "").toString().trim(); // Corrected Answer
+
+  if (clientComment) {
+    itemsForRewrite.push({ rowIndex1Based: r, category, question, originalAnswer, clientComment });
+  }
+
+  // QA only if enabled and no client comment
+  if (enableGrammar && originalAnswer && !clientComment) {
+    itemsForQA.push({ rowIndex1Based: r, category, question, originalAnswer });
+  }
+
+  if (originalAnswer || clientComment) {
+    allRowsForNameInjection.push({
+      rowIndex1Based: r,
+      question,
+      currentAnswer: clientComment ? `(Pending Rewrite: ${clientComment})` : originalAnswer
+    });
+  }
+}
 
     // AI
-    const prompt = this.buildPromptCombined(itemsForRewrite, itemsForGrammar, allRowsForNameInjection, enableGrammar, targetHotelName);
-    const json   = await this.agent.run(prompt);
-    const out    = this.parseCombinedOutputOrThrow(json);
+  const prompt = this.buildPromptCombined(
+  itemsForRewrite,
+  itemsForQA,
+  allRowsForNameInjection,
+  enableGrammar,
+  targetHotelName
+);
 
-    // === מיפוי התוצאות ===
-    
-    // 1. הכנת הנתונים לכתיבה רגילה (F + G)
-    const rewriteMap = new Map<number, string>();
-    for (const r of out.rewrite) rewriteMap.set(r.rowIndex1Based, r.final_answer);
+const json = await this.agent.run(prompt);
+const out = this.parseCombinedOutputOrThrow(json);
 
-    const grammarMap = new Map<number, string>();
-    if (enableGrammar) {
-        for (const g of out.grammar) grammarMap.set(g.rowIndex1Based, g.fixed);
-    }
+const rewriteMap = new Map<number, string>();
+for (const r of out.rewrite) rewriteMap.set(r.rowIndex1Based, r.final_answer);
 
-    // 2. הכנת הנתונים לעדכון עמודה C (שם המלון)
-    const nameInjectionMap = new Map<number, string>();
-    for (const item of out.hotel_name_inject) {
-        nameInjectionMap.set(item.rowIndex1Based, item.answer_with_name);
-    }
+const qaMap = new Map<number, string>();
+for (const q of out.qa) qaMap.set(q.rowIndex1Based, q.fixed);
+
+const questionFixMap = new Map<number, string>();
+for (const q of out.question_fix) questionFixMap.set(q.rowIndex1Based, q.fixed_question);
+
+const qaNoteMap = new Map<number, string>();
+for (const n of out.qa_note) qaNoteMap.set(n.rowIndex1Based, n.note);
+
+const nameInjectionMap = new Map<number, string>();
+for (const item of out.hotel_name_inject) {
+  nameInjectionMap.set(item.rowIndex1Based, item.answer_with_name);
+}
 
     // === בניית העמודות לכתיבה ===
 
-    const rewriteValues: string[] = [];      // F
-    const grammarValues: string[] = [];      // G
-    const nameStatusValues: string[] = [];   // I (Status)
-    const newOriginalAnswers: string[] = []; // C (Updated Original)
+  const finalAnswerValues: string[] = [];   // F
+const questionFixValues: string[] = [];   // G
+const qaNoteValues: string[] = [];        // H
 
-    for (let i = 0; i < dataRowCount; i++) {
-      const sheetRow = i + 2;
-      
-      // --- טיפול בעמודה C (המקורית) ---
-      // אנו לוקחים את הערך הקיים, אלא אם ה-AI החליט להזריק שם
-      const existingAnswer = (rows[sheetRow - 1] && rows[sheetRow - 1][ansIdx]) 
-                             ? rows[sheetRow - 1][ansIdx].toString() 
-                             : "";
-      
-      if (nameInjectionMap.has(sheetRow)) {
-          // דריסה! ה-AI הוסיף שם, נעדכן את עמודה C
-          newOriginalAnswers.push(nameInjectionMap.get(sheetRow)!);
-          nameStatusValues.push("✅ Name Added to Original"); // סימון בעמודה I
-      } else {
-          // שמירה על הקיים
-          newOriginalAnswers.push(existingAnswer);
-          nameStatusValues.push(""); // אין סימון
-      }
+const nameStatusValues: string[] = [];    // I
+const newOriginalAnswers: string[] = [];  // C
 
-      // --- טיפול בשאר העמודות (רגיל) ---
-      rewriteValues.push(rewriteMap.get(sheetRow) ?? "");
-      grammarValues.push(grammarMap.get(sheetRow) ?? "");
-    }
+for (let i = 0; i < dataRowCount; i++) {
+  const sheetRow = i + 2;
+
+  // Column C - keep existing unless name injected
+  const existingAnswer =
+    rows[sheetRow - 1] && rows[sheetRow - 1][ansIdx]
+      ? rows[sheetRow - 1][ansIdx].toString()
+      : "";
+
+  if (nameInjectionMap.has(sheetRow)) {
+    newOriginalAnswers.push(nameInjectionMap.get(sheetRow)!);
+    nameStatusValues.push("✅ Name Added to Original");
+  } else {
+    newOriginalAnswers.push(existingAnswer);
+    nameStatusValues.push("");
+  }
+
+  // Column F - Final Answer: rewrite has priority, then QA fix, else empty
+  const rewritten = rewriteMap.get(sheetRow) ?? "";
+  const qaFixed = qaMap.get(sheetRow) ?? "";
+  finalAnswerValues.push(rewritten || qaFixed || "");
+
+  // Column G - Question correction
+  questionFixValues.push(questionFixMap.get(sheetRow) ?? "");
+
+  // Column H - QA mismatch note
+  qaNoteValues.push(qaNoteMap.get(sheetRow) ?? "");
+}
 
     // ביצוע הכתיבה
     
     // 1. עדכון עמודה C (התשובה המקורית)
     // הערה: כדי לא לדרוס את הכותרת של C, אנו לוקחים אותה מהקובץ הקיים
-    const originalHeader = (rows[0] && rows[0][ansIdx]) ? rows[0][ansIdx].toString() : "Answer";
-    await this.sheets.writeColumn(cfg.spreadsheetId, answerCol, originalHeader, newOriginalAnswers);
+   const originalHeader =
+  rows[0] && rows[0][ansIdx] ? rows[0][ansIdx].toString() : "Answer";
 
-    // 2. כתיבת עמודת הסטטוס (I)
-    await this.sheets.writeColumn(cfg.spreadsheetId, hotelNameCol, hotelNameHeader, nameStatusValues);
+// 1) Update column C (original answer) only for name injection rows
+await this.sheets.writeColumn(cfg.spreadsheetId, answerCol, originalHeader, newOriginalAnswers);
 
-    // 3. כתיבת עמודת השכתוב (F)
-    await this.sheets.writeColumn(cfg.spreadsheetId, targetCol, header, rewriteValues);
+// 2) Status in column I
+await this.sheets.writeColumn(cfg.spreadsheetId, hotelNameCol, hotelNameHeader, nameStatusValues);
 
-    // 4. כתיבת עמודת דקדוק (G)
-    if (enableGrammar) {
-        await this.sheets.writeColumn(cfg.spreadsheetId, grammarFixCol, grammarFixHeader, grammarValues);
-    }
+// 3) Final Answer in column F
+await this.sheets.writeColumn(cfg.spreadsheetId, targetCol, header, finalAnswerValues);
 
-    // עיצוב
-    await this.sheets.formatSheetLikeFAQ(cfg.spreadsheetId, sourceTab!);
+// 4) Question Fix in column G
+await this.sheets.writeColumn(cfg.spreadsheetId, questionFixCol, questionFixHeader, questionFixValues);
 
-    console.log(`✅ Completed for "${targetHotelName}":
-    - Updated Original Answers (Col ${answerCol}) with ${out.hotel_name_inject.length} name injections.
-    - Marked Status in Col ${hotelNameCol}.
-    - Standard Rewrite (Col ${targetCol}) & Grammar (Col ${grammarFixCol}) preserved.`);
+// 5) QA Note in column H
+await this.sheets.writeColumn(cfg.spreadsheetId, qaNoteCol, qaNoteHeader, qaNoteValues);
+
+// format
+await this.sheets.formatSheetLikeFAQ(cfg.spreadsheetId, sourceTab!);
+
+console.log(`✅ Completed for "${targetHotelName}":
+- Updated Original Answers (Col ${answerCol}) with ${out.hotel_name_inject.length} name injections.
+- Marked Status in Col ${hotelNameCol}.
+- Final Answer written to Col ${targetCol}.
+- Question correction written to Col ${questionFixCol}.
+- QA note written to Col ${qaNoteCol}.`);
+
   }
 }

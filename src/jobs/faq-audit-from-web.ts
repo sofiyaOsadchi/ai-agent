@@ -69,14 +69,13 @@ function getSeverity(issue: Issue): "Critical" | "Warning" {
   // 2. Critical: missing meta title (SEO)
   if (r.includes("missing <title>")) return "Critical";
 
+  if (r.startsWith("[schema-gap]")) return "Critical";
+    if (r.startsWith("[meta-mismatch]")) return "Critical";
+
+
   // 3. GPT-based severity
   if (k === "gpt") {
-    // New tags
-    if (r.includes("[unrelated]") || r.includes("[contradiction]") || r.includes("[grammar-hard]")) return "Critical";
-    if (r.includes("[partial]")) return "Warning";
-
-    // Backward compatibility (older outputs)
-    if (r.includes("[mismatch]")) return "Critical";
+    if (r.includes("missing in schema") || r.includes("not found in dom")) return "Critical";
   }
 
   // Everything else -> Warning
@@ -102,23 +101,26 @@ export class FaqAuditFromWebJob {
   }> {
 const cfg = SITE_CONFIG[opts.locale];
 const hotels = await this.collectHotels(opts.countryUrl, cfg);
+console.log("DEBUG hotels:", hotels.map(h => ({ name: h.name, faqUrl: h.faqUrl })));
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
     const spreadsheetId = await this.sheets.createSpreadsheet(opts.sheetTitle);
     
     // הגדרת שני הגליונות: Critical ו-Full Report
     const firstTabTitle = await this.sheets.getFirstSheetTitle(spreadsheetId);
     await this.sheets.renameSheet(spreadsheetId, firstTabTitle, "Critical Issues");
-    await this.sheets.duplicateSheet(spreadsheetId, 0, "Full Audit Report"); 
     await this.sheets.duplicateSheet(spreadsheetId, 0, "Hotels Summary");
 
     console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`);
 
     // כותרות מעודכנות (כולל H1 ועמודות מספרים)
-    const headers = [
+ const headers = [
   "Hotel", "FAQ Link", "Status", "Severity", "Kind",
   "DOM Items", "Schema Items", "Gap Diff",
   "Schema-only Questions (not in DOM)",
   "Schema-only Answers (not in DOM)",
+  "DOM-only Questions (not in Schema)",
+  "DOM-only Answers (not in Schema)",
   "Question", "Answer", "Reason",
   "H1 Tag", "Meta title", "Meta description"
 ];
@@ -145,53 +147,72 @@ const summaryRows: string[][] = [summaryHeaders];
 
     for (const h of hotels) {
       // 1. בדיקת לינק
-      if (!h.faqUrl) {
-const row = [h.name, "", "✗ FAQ page not found", "Critical", "link",
-  "0", "0", "0",
-  "", "",
-  "", "", "Page not found",
-  "", "", ""
-];
-        criticalRows.push(row);
-        fullReportRows.push(row);
-        summaryRows.push([
-  h.name, "",
-  "✗ FAQ page not found",
-  "0", "0", "0",
-  "", "", "",
-  "Page not found",
-]);
-        continue;
-      }
+  if (!h.faqUrl) {
+  const row = [
+    h.name, "", "✗ FAQ page not found", "Critical", "link",
+    "0", "0", "0",
+    "", "", // Schema-only Q/A
+    "", "", // DOM-only Q/A
+    "", "", // Question/Answer
+    "Page not found",
+    "", "", ""
+  ];
+
+  criticalRows.push(row);
+  fullReportRows.push(row);
+
+  summaryRows.push([
+    h.name, "",
+    "✗ FAQ page not found",
+    "0", "0", "0",
+    "", "", "",
+    "Page not found",
+  ]);
+
+  continue;
+}
       hotelsWithFaq++;
 
       // 2. שליפת תוכן (משתמש בלוגיקה המקורית)
       let html = "";
       let collected: QA[] = [];
       try {
+        console.log(`➡️ START fetch FAQ: ${h.name}`);
 const res = await this.fetchFaqDomAndQAs(h.faqUrl, cfg);
+console.log(`✅ DONE fetch FAQ: ${h.name} | QAs: ${res.qas.length}`);
         html = res.html;
         collected = res.qas;
       } catch (e) {
+         console.error("❌ Fetch failed for:", h.name);
+  console.error("   URL:", h.faqUrl);
+  console.error("   ERROR:", e);
+  console.error("   MSG:", errMsg(e));
+  if (e instanceof Error && e.stack) {
+    console.error("   STACK:", e.stack);
+  }
 const row = [
-  h.name, h.faqUrl, "✗ Fetch failed", "Critical", "network",
-  "0", "0", "0",
-  "", "",          // Schema-only Questions/Answers
-  "", "",          // Question/Answer
-  (e as Error).message,
-  "", "", ""
-];        criticalRows.push(row);
-        fullReportRows.push(row);
-        summaryRows.push([
-  h.name, h.faqUrl,
-  "✗ Fetch failed",
-  "0", "0", "0",
-  "", "", "",
-  (e as Error).message,
-]);
-        continue;
-      }
+    h.name, h.faqUrl ?? "", "✗ Fetch failed", "Critical", "network",
+    "0", "0", "0",
+    "", "", // Schema-only Q/A
+    "", "", // DOM-only Q/A
+    "", "", // Question/Answer
+    errMsg(e),
+    "", "", ""
+  ];
+      criticalRows.push(row);
+  fullReportRows.push(row);
 
+  summaryRows.push([
+    h.name, h.faqUrl ?? "",
+    "✗ Fetch failed",
+    "0", "0", "0",
+    "", "", "",
+    errMsg(e),
+  ]);
+
+  continue;
+}
+     
       // 3. חילוץ H1
       const $ = cheerio.load(html);
       const h1Text = $("h1").first().text().trim() || "(Missing H1)";
@@ -206,23 +227,27 @@ const row = [
       // אם הדף ריק משאלות
       if (domCount === 0) {
 const row = [
-  h.name, h.faqUrl, "✗ No Q/A found", "Critical", "content",
-  "0", "0", "0",
-  "", "",          // Schema-only Questions/Answers
-  "", "",          // Question/Answer
-  "Parse error / Empty",
-  h1Text, "", ""
-];        criticalRows.push(row);
-        fullReportRows.push(row);
-        summaryRows.push([
-  h.name, h.faqUrl,
-  "✗ No Q/A found",
-  "0", "0", "0",
-  h1Text, "", "",
-  "Parse error / Empty",
-]);
-        continue;
-      }
+    h.name, h.faqUrl ?? "", "✗ No Q/A found", "Critical", "content",
+    "0", "0", "0",
+    "", "", // Schema-only Q/A
+    "", "", // DOM-only Q/A
+    "", "", // Question/Answer
+    "Parse error / Empty",
+    h1Text, "", ""
+  ];
+        criticalRows.push(row);
+  fullReportRows.push(row);
+
+  summaryRows.push([
+    h.name, h.faqUrl ?? "",
+    "✗ No Q/A found",
+    "0", "0", "0",
+    h1Text, "", "",
+    "Parse error / Empty",
+  ]);
+
+  continue;
+}
 
       // 5. בדיקות סכמה ו-SEO
       const { issues: seoIssues, schemaQAs, metaTitle, metaDescription } = validateMetaAndFaqSchema(html);
@@ -230,45 +255,57 @@ const row = [
 
 const domQSet = new Set(allQAs.map(x => normQ(x.q)));
 const schemaOnly = schemaQAs.filter(x => !domQSet.has(normQ(x.q)));
+const schemaQSet = new Set(schemaQAs.map(x => normQ(x.q)));
+const domOnly = allQAs.filter(x => !schemaQSet.has(normQ(x.q)));
 
-const schemaOnlyQuestions = schemaOnly
-  .map((x, i) => `${i + 1}. ${x.q}`)
-  .join("\n");
 
-const schemaOnlyAnswers = schemaOnly
-  .map((x, i) => `${i + 1}. ${x.a}`)
-  .join("\n");
+const schemaOnlyQuestions = schemaOnly.map((x, i) => `${i + 1}. ${x.q}`).join("\n");
+const schemaOnlyAnswers = schemaOnly.map((x, i) => `${i + 1}. ${x.a}`).join("\n");
+
+const domOnlyQuestions = domOnly.map((x, i) => `${i + 1}. ${x.q}`).join("\n");
+const domOnlyAnswers = domOnly.map((x, i) => `${i + 1}. ${x.a}`).join("\n");
       const schemaCount = schemaQAs.length;
       
       // חישוב הפער (מספרים)
       const gapDiff = schemaCount - domCount; 
 
-      if (schemaOnly.length > 0) {
-  const gapFixRow = [
-    h.name,
-    h.faqUrl,
-    "✗ Issue",
-    "Critical",
-    "rule",
-    String(domCount),
-    String(schemaCount),
-    String(gapDiff),
+      const schemaOnlyCount = schemaOnly.length;
+const domOnlyCount = domOnly.length;
 
-    schemaOnlyQuestions || "",
-    schemaOnlyAnswers || "",
+if (schemaOnlyCount > 0 || domOnlyCount > 0) {
+  const examplesSchemaOnly = schemaOnly.slice(0, 3).map(x => `"${x.q}"`).join(", ");
+  const examplesDomOnly = domOnly.slice(0, 3).map(x => `"${x.q}"`).join(", ");
 
-    "--- Schema-only (Missing in DOM) ---",
-    "",
-    `[schema-gap] ${schemaOnly.length} questions exist in Schema but NOT in DOM`,
-    h1Text,
-    metaTitle || "",
-    metaDescription || ""
-  ];
+const row = [
+  h.name,
+  h.faqUrl,
+  "✗ Issue",
+  "Critical",
+  "rule",
+  String(domCount),
+  String(schemaCount),
+  String(schemaCount - domCount),
 
-  // נכנס גם ל-Critical וגם ל-Full (כדי שיהיה עקבי)
-  criticalRows.push(gapFixRow);
-  fullReportRows.push(gapFixRow);
+  schemaOnlyQuestions || "",
+  schemaOnlyAnswers || "",
+
+  domOnlyQuestions || "",
+  domOnlyAnswers || "",
+
+  "",  // Question
+  "",  // Answer
+  `[schema-gap] schemaOnly=${schemaOnlyCount} (examples: ${examplesSchemaOnly || "n/a"}), domOnly=${domOnlyCount} (examples: ${examplesDomOnly || "n/a"})`,
+  h1Text,
+  metaTitle || "",
+  metaDescription || ""
+];
+
+criticalRows.push(row);
+fullReportRows.push(row);
+
 }
+
+  
       
       // ניתוח הפערים
       const gapIssues = this.analyzeSchemaGap(allQAs, schemaQAs);
@@ -307,17 +344,11 @@ const schemaOnlyAnswers = schemaOnly
         aggregatedIssues.push({ kind: "rule", q: "", a: "", reason: "[meta] Missing <h1> tag", index: -1 });
       }
 
-      // 6. בדיקות חוקים ו-GPT
-      const ruleIssues = this.ruleChecks(allQAs);
-      const gptIssues = await this.semanticChecksBatched(groups, allQAs);
+      
 
-      // איחוד הכל (מסננים את הפערים המפורטים שמציפים את הדוח, משאירים רק את המסוכמים)
-      const filteredSeoIssues = seoIssues.filter(i => !i.reason.startsWith("[schema-gap]"));
-      const allIssues = [...filteredSeoIssues, ...aggregatedIssues, ...ruleIssues, ...gptIssues];
-
-      // 7. בניית השורות לטבלה
-      const hasIssues = allIssues.length > 0;
-      if (hasIssues) hotelsWithProblems++;
+     const hasCriticalGap = (schemaOnly.length > 0 || domOnly.length > 0);
+// אם יש לך meta mismatch - תשלבי גם אותו כאן
+const hasIssues = hasCriticalGap;
 
       summaryRows.push([
   h.name,
@@ -343,6 +374,7 @@ const schemaOnlyAnswers = schemaOnly
   h1Text, metaTitle || "", metaDescription || ""
 ]);
       } else {
+        const allIssues: Issue[] = [];
         // אם יש בעיות, עוברים עליהן
         for (const it of allIssues) {
           const severity = getSeverity(it);
@@ -362,7 +394,11 @@ const schemaOnlyAnswers = schemaOnly
             String(gapDiff),     // עמודה חדשה: הפער
 schemaOnlyQuestions || "",
   schemaOnlyAnswers || "",
+  // Question
+  domOnlyQuestions ? `--- DOM-only (Missing in Schema) ---\n${domOnlyQuestions}` : "--- DOM-only (Missing in Schema) ---",
 
+  // Answer
+  domOnlyAnswers ? `--- DOM-only Answers ---\n${domOnlyAnswers}` : "",
             qShort,
             aShort,
             reasonStr,
@@ -386,8 +422,7 @@ schemaOnlyQuestions || "",
     await this.sheets.writeValues(spreadsheetId, "Critical Issues!A1", criticalRows);
     await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Critical Issues");
     
-    await this.sheets.writeValues(spreadsheetId, "Full Audit Report!A1", fullReportRows);
-    await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Full Audit Report");
+   
     await this.sheets.writeValues(spreadsheetId, "Hotels Summary!A1", summaryRows);
 await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Hotels Summary");
 
@@ -850,7 +885,8 @@ private async validateHotelByCities(hotelUrl: string, cities: Set<string>, cfg: 
   // -----------------------------------------------------------
 private async fetchFaqDomAndQAs(url: string, cfg: SiteConfig): Promise<{ html: string; qas: QA[] }> {
       if (process.env.FAQ_AUDIT_RENDER === "1") {
-      const mod: any = await (Function("return import('playwright')")() as Promise<any>);
+      console.log(`   🌐 Opening page: ${url}`);
+        const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
       const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
       const page = await browser.newPage();
@@ -867,7 +903,7 @@ await page.setExtraHTTPHeaders({ "accept-language": cfg.acceptLanguage });
 await page.setViewportSize({ width: 1365, height: 900 });
 
 await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60_000 });
-
+console.log(`   📄 Page loaded: ${url}`);
 // Anchor on stable DOM, not on "networkidle"
 await page.waitForSelector("main, body", { timeout: 30_000 }).catch(() => {});
 await page.waitForTimeout(250);

@@ -9,6 +9,15 @@ dotenv.config();
  * If an e‑mail is provided, the sheet is automatically shared with that user.
  */
 export class SheetsService {
+  async clearValuesRange(spreadsheetId: string, rangeA1: string): Promise<void> {
+  await this.withBackoff(async () => {
+    await this.sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: rangeA1,
+    });
+  });
+
+  }
   private sheets: sheets_v4.Sheets;
   private drive: drive_v3.Drive;
   private shareWith: string | null;
@@ -98,7 +107,60 @@ async listSpreadsheetsInFolderWithNames(
   return out;
 }
 
+async listSpreadsheetsInFolderWithNamesRecursive(
+  rootFolderId: string
+): Promise<Array<{ id: string; name: string }>> {
+  const MIME_FOLDER = "application/vnd.google-apps.folder";
+  const MIME_SHEET = "application/vnd.google-apps.spreadsheet";
 
+  const visitedFolders = new Set<string>();
+  const out: Array<{ id: string; name: string }> = [];
+  const queue: string[] = [rootFolderId];
+
+  while (queue.length > 0) {
+    const folderId = queue.shift()!;
+    if (visitedFolders.has(folderId)) continue;
+    visitedFolders.add(folderId);
+
+    let pageToken: string | undefined = undefined;
+
+    do {
+      const res: { data: drive_v3.Schema$FileList } = await this.drive.files.list({
+  q: [
+    `'${folderId}' in parents`,
+    "(mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/vnd.google-apps.spreadsheet')",
+    "trashed = false",
+  ].join(" and "),
+  pageSize: 1000,
+  pageToken,
+  supportsAllDrives: true,
+  includeItemsFromAllDrives: true,
+  fields: "nextPageToken, files(id, name, mimeType)",
+});
+
+const files: drive_v3.Schema$File[] = (res.data.files ?? []) as drive_v3.Schema$File[];
+
+
+      for (const f of files) {
+        if (!f?.id || !f?.mimeType) continue;
+
+        if (f.mimeType === MIME_SHEET) {
+          out.push({ id: f.id, name: String(f.name ?? f.id) });
+          continue;
+        }
+
+        if (f.mimeType === MIME_FOLDER) {
+          queue.push(f.id);
+          continue;
+        }
+      }
+
+      pageToken = res.data.nextPageToken ?? undefined;
+    } while (pageToken);
+  }
+
+  return out;
+}
 
   // Finds sheetId by exact tab title (normalized). Returns null if not found.
 private async findSheetIdExact(spreadsheetId: string, title: string): Promise<number | null> {
@@ -229,6 +291,11 @@ private async getSpreadsheetMeta(spreadsheetId: string): Promise<sheets_v4.Schem
 
   this.spreadsheetMetaCache.set(spreadsheetId, meta);
   return meta;
+}
+async getSheetTitles(spreadsheetId: string): Promise<string[]> {
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  const sheets = meta.sheets ?? [];
+  return sheets.map(s => String(s.properties?.title ?? "")).filter(Boolean);
 }
 
   // Returns the first parent folder ID for a file (Spreadsheet)
@@ -535,6 +602,51 @@ async listSpreadsheetIdsInFolder(folderId: string): Promise<string[]> {
   } while (pageToken);
 
   return ids;
+}
+
+
+async listSpreadsheetIdsInFolderRecursive(rootFolderId: string): Promise<string[]> {
+  const MIME_FOLDER = "application/vnd.google-apps.folder";
+  const MIME_SHEET = "application/vnd.google-apps.spreadsheet";
+
+  const visitedFolders = new Set<string>();
+  const resultSheetIds = new Set<string>();
+  const queue: string[] = [rootFolderId];
+
+  while (queue.length > 0) {
+    const folderId = queue.shift()!;
+    if (visitedFolders.has(folderId)) continue;
+    visitedFolders.add(folderId);
+
+    let pageToken: string | undefined = undefined;
+
+    do {
+      // הערה: this.drive צריך להיות ה-Drive client שלך (googleapis)
+      const res: any = await this.drive.files.list({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: "nextPageToken, files(id, mimeType)",
+        pageSize: 1000,
+        pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      });
+
+      const files = res.data.files ?? [];
+      for (const f of files) {
+        if (!f.id || !f.mimeType) continue;
+
+        if (f.mimeType === MIME_SHEET) {
+          resultSheetIds.add(f.id);
+        } else if (f.mimeType === MIME_FOLDER) {
+          queue.push(f.id);
+        }
+      }
+
+      pageToken = res.data.nextPageToken ?? undefined;
+    } while (pageToken);
+  }
+
+  return Array.from(resultSheetIds);
 }
 
   /** רשימת כל הטאבים בגיליון */
@@ -851,9 +963,11 @@ async formatSheet(spreadsheetId: string): Promise<void> {
       });
     }
 
-    await this.sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      requestBody: { requests },
-    });
+   await this.withBackoff(async () => {
+  await this.sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: { requests },
+  });
+}, 12);
   }
 }

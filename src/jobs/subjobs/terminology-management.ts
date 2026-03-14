@@ -45,6 +45,129 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
         ],
     },
 
+    es: { mappings: [
+      {
+  forbidden: "Grammar mismatch after term replacement",
+  preferred: "Gender and number agreement",
+  reason: "In Spanish, if a term is replaced (e.g., 'propiedad' to 'hotel'), you must update the surrounding articles (el/la) and adjectives to match the new gender (masculine/feminine). Always ensure 'el hotel' or 'las instalaciones' instead of keeping feminine articles for masculine nouns."
+},
+    {
+      forbidden: "propiedad",
+      preferred: "hotel / establecimiento / instalaciones",
+      reason: "While 'property' is standard in English hospitality, 'propiedad' in Spanish sounds overly legal or related to real estate. 'Hotel' or 'Instalaciones' is much warmer."
+    },
+    {
+      forbidden: "debe efectuarse antes de / debe realizarse",
+      preferred: "es hasta las / se hace antes de",
+      reason: "Verbs like 'efectuarse' sound like a formal contract. 'El check-out es hasta las 12:00' is friendlier and matches how people actually speak."
+    },
+    {
+      forbidden: "facilidades para preparar café y té",
+      preferred: "set de café y té / hervidor de agua",
+      reason: "'Facilidades' is a false friend (anglicism). In Spanish, it refers to 'ease'. For amenities, use 'set', 'kit', or the specific equipment name."
+    },
+    {
+      forbidden: "bolsa de desayuno",
+      preferred: "desayuno para llevar / picnic de desayuno",
+      reason: "Literal translation of 'breakfast bag'. 'Desayuno para llevar' is the standard term used by travelers and hotel staff."
+    },
+    {
+      forbidden: "cash-free",
+      preferred: "no acepta efectivo / solo pagos con tarjeta",
+      reason: "'No acepta efectivo' is more direct and natural for a traveler than the corporate buzzword 'cash-free'."
+    },
+    {
+      forbidden: "cortinas opacas",
+      preferred: "cortinas blackout / cortinas de oscurecimiento",
+      reason: "'Blackout' is the widely accepted industry standard in Spanish-speaking markets to guarantee total darkness."
+    },
+    {
+      forbidden: "cargo moderado / cargo suplementario",
+      preferred: "suplemento / pequeño coste adicional",
+      reason: "'Suplemento' is the precise professional term for extra hotel fees. 'Cargo moderado' feels like an unnatural literal translation."
+    },
+    {
+      forbidden: "acceso sin escalones",
+      preferred: "acceso para personas con movilidad reducida / accesible",
+      reason: "'Sin escalones' is a literal translation. The professional term is 'accesibilidad' or 'movilidad reducida'."
+    },
+    {
+      forbidden: "tomar prestados paraguas",
+      preferred: "servicio de préstamo de paraguas / paraguas de cortesía",
+      reason: "'Tomar prestado' sounds slightly informal or childish. 'Servicio de préstamo' is professional, and 'de cortesía' adds a touch of hospitality."
+    },
+    {
+      forbidden: "proyecta / transmite eventos deportivos",
+      preferred: "televisa los partidos / pone los deportes",
+      reason: "Guests don't ask about 'broadcasting events'; they ask if the bar 'puts the match on' (pone el partido)."
+    },
+    {
+      forbidden: "identificación oficial con fotografía",
+      preferred: "DNI o pasaporte / identificación vigente",
+      reason: "Replaced bureaucratic language with terms guests actually use for their ID."
+    },
+    {
+      forbidden: "¿Se da la bienvenida a los niños...?",
+      preferred: "¿El hotel es apto para niños? / ¿Se admiten niños...?",
+      reason: "'Se da la bienvenida' is a literal translation of 'welcome'. In Spanish, it's more natural to ask about suitability or permission."
+    }
+
+    ], 
+    examples: [
+{
+      draft: "¿Leonardo Hotel Almere City Center ofrece Wi-Fi gratuito en todo el hotel?",
+      polish: "¿El hotel ofrece Wi-Fi gratuito en todas las instalaciones?",
+      note: "Simplified brand name and improved flow."
+    },
+    {
+      draft: "¿A qué hora es el check-out en Leonardo Hotel Almere City Center?",
+      polish: "¿Hasta qué hora puedo hacer el check-out?",
+      note: "Shifted focus to the guest's action for a more natural inquiry."
+    },
+    {
+      draft: "¿Las habitaciones incluyen facilidades para preparar café y té?",
+      polish: "¿Tienen las habitaciones hervidor de agua ו-set de café y té?",
+      note: "Removed the anglicism 'facilidades'."
+    },
+    {
+      draft: "¿Se exige un depósito de garantía al registrarse?",
+      polish: "¿Hay que dejar fianza o depósito al llegar?",
+      note: "Used common travel terms like 'fianza' instead of formal 'depósito de garantía'."
+    },
+    {
+      draft: "¿Leonardo Boutique Museumhotel Amsterdam City Center es un establecimiento cash-free?",
+      polish: "¿El hotel acepta pagos en efectivo?",
+      note: "Replaced business jargon with a practical question about cash."
+    },
+    {
+      draft: "¿Se da la bienvenida a los niños para comer en la Coffee Boutique?",
+      polish: "¿Pueden los niños comer en la Coffee Boutique?",
+      note: "Turned a stiff greeting into a natural question about permission."
+    },
+    {
+      draft: "¿El sports bar transmite eventos deportivos en directo?",
+      polish: "¿Ponen los partidos de fútbol o deportes en el bar?",
+      note: "Used conversational language ('ponen los partidos') instead of technical terms."
+    },
+    {
+      draft: "¿Hay un ascensor que ofrezca acceso sin escalones a todos los pisos?",
+      polish: "¿Es el hotel accesible para personas con movilidad reducida a través de ascensor?",
+      note: "Used professional hospitality terminology for accessibility."
+    },
+    {
+      draft: "¿Leonardo Hotel Almere City Center ofrece una bolsa de desayuno para llevar?",
+      polish: "¿Disponen de desayunos para llevar si salgo temprano?",
+      note: "Used the natural 'desayuno para llevar' and added conversational context."
+    },
+    {
+      draft: "¿Pueden los huéspedes tomar prestados paraguas?",
+      polish: "¿Disponen de paraguas de cortesía para los días de lluvia?",
+      note: "Polished the verb and added a hospitality touch ('de cortesía')."
+    }
+
+
+    ] },
+
     de: {
         mappings: [
             // === EXISTING MAPPINGS ===
@@ -180,6 +303,21 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
   forbidden: "auf dem Gelände",
   preferred: "vor Ort",
   reason: "More natural hotel phrasing."
+},
+{
+  forbidden: "viel Spaß bereiten",
+  preferred: "zur Unterhaltung",
+  reason: "Avoid overly colloquial phrases in marketing copy; use professional hospitality tone."
+},
+{
+  forbidden: "Kaffee-und-Kuchen-Pause",
+  preferred: "Kaffee- und Kuchenpause",
+  reason: "Avoid excessive hyphenation (hyphen monsters) for better readability."
+},
+{
+  forbidden: "nachmittägliche",
+  preferred: "am Nachmittag",
+  reason: "Avoid clunky adjectives like 'nachmittägliche'. Prefer adding 'am Nachmittag' at the end of the phrase."
 }
         ],
         examples: [
@@ -363,13 +501,208 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
                 polish: "Bügeleisen und Bügelbrett sind auf Anfrage erhältlich.",
                 note: "Fix missing compound noun; keep capitalization consistent.",
             },
+            {
+  draft: "… können ohne Aufpreis ein Babybett, eine Babywanne und einen Flaschenwärmer angefordert werden.",
+  polish: "… können ohne Aufpreis ein Babybett, eine Babywanne und ein Flaschenwärmer angefordert werden.",
+  note: "Grammar fix: In passive sentences ('können ... angefordert werden'), enumerated subjects must remain in the nominative case ('ein Flaschenwärmer', not accusative 'einen')."
+},
+{
+  draft: "Die All-Inclusive-Plus-Gäste genießen eine nachmittägliche Kaffee-und-Kuchen-Pause.",
+  polish: "Die All-Inclusive-Plus-Gäste genießen eine Kaffee- und Kuchenpause am Nachmittag.",
+  note: "Avoid excessive hyphenation and clunky adjectives. Rephrase for a more elegant, natural flow."
+},
+{
+  draft: "Im Games Room gibt es Videospiele, die Kindern viel Spaß bereiten.",
+  polish: "Im Games Room stehen Videospiele zur Unterhaltung der Kinder zur Verfügung.",
+  note: "Replace colloquial phrases like 'viel Spaß bereiten' with upscale, professional hotel phrasing ('zur Unterhaltung ... zur Verfügung')."
+}
         ],
     },
 
-    es: { mappings: [], examples: [] },
-    nl: { mappings: [], examples: [] },
-    it: { mappings: [], examples: [] },
-    fr: { mappings: [], examples: [] },
+    it:
+    { mappings: [
+  {
+    "forbidden": "Quante camere dispone...",
+    "preferred": "Di quante camere dispone... / Quante camere ha...",
+    "reason": "The verb 'disporre' requires the preposition 'di'. In a question, use 'Di quante...' or the more natural 'Quante camere ha...'."
+  },
+  {
+    "forbidden": "Articoli da toeletta",
+    "preferred": "Set di cortesia / Prodotti da bagno",
+    "reason": "'Set di cortesia' is the specific luxury hospitality term for guest amenities; 'articoli da toeletta' sounds dated or generic."
+  },
+  {
+    "forbidden": "Accesso senza gradini",
+    "preferred": "Accesso facilitato / Senza barriere architettoniche",
+    "reason": "'Senza gradini' is a literal translation. The professional Italian standard for accessibility is 'senza barriere architettoniche'."
+  },
+  {
+    "forbidden": "Consegnare le camere",
+    "preferred": "Camere disponibili / Disponibilità delle camere",
+    "reason": "'Consegnare' (to hand over) sounds transactional. Using 'disponibilità' or 'a disposizione' creates a more welcoming guest experience."
+  },
+  {
+    "forbidden": "Aria condizionata autonoma / individuale",
+    "preferred": "Climatizzazione regolabile individualmente",
+    "reason": "For central systems, 'climatizzazione' is more precise and sounds higher-end than the basic 'aria condizionata'."
+  },
+  {
+    "forbidden": "Il sports bar",
+    "preferred": "Lo sports bar",
+    "reason": "Grammatical accuracy: Words starting with 's + consonant' must take the article 'Lo' instead of 'Il'."
+  },
+  {
+    "forbidden": "Sacchetto colazione",
+    "preferred": "Colazione al sacco / Breakfast box",
+    "reason": "'Sacchetto' sounds like a grocery bag. 'Colazione al sacco' is the proper Italian term for a packed meal."
+  },
+  {
+    "forbidden": "Presso [Hotel Name]",
+    "preferred": "Al / All' [Hotel Name]",
+    "reason": "Using 'Al' (at the) feels like a destination. Use 'All'' if the name starts with a vowel, and 'Al' if it starts with a consonant."
+  },
+  {
+    "forbidden": "Aliquota della tassa di soggiorno",
+    "preferred": "Tassa di soggiorno",
+    "reason": "Guests ask 'how much is the tax', not for the 'tax percentage'. Avoid bureaucratic terms like 'aliquota'."
+  },
+  {
+    "forbidden": "Cani educati / Cani ben comportati",
+    "preferred": "Cani ben educati / Animali domestici",
+    "reason": "Avoid literal translations of 'well-behaved'. 'Ben educati' is the correct Italian expression for pets."
+  },
+  {
+    "forbidden": "Pasti leggeri",
+    "preferred": "Snack veloci / Light meal",
+    "reason": "'Pasti leggeri' sounds like a clinical diet. 'Snack' or the international 'Light meal' is much more elegant in a lounge context."
+  },
+  {
+    "forbidden": "Punti di ricarica",
+    "preferred": "Stazioni di ricarica / Colonnine",
+    "reason": "The professional term for EV charging infrastructure is 'stazioni' or 'colonnine', not 'punti'."
+  }
+
+    ], 
+    examples: [
+      {
+                draft: "Quante camere dispone in totale il Leonardo Boutique Museumhotel?",
+                polish: "Di quante camere dispone in totale il Leonardo Boutique Museumhotel?",
+                note: "Corrects the grammatical omission of the preposition 'di' with the verb 'disporre'."
+            },
+            {
+                draft: "Il Leonardo Boutique Museumhotel fornisce articoli da toeletta ecologici?",
+                polish: "Il Leonardo Boutique Museumhotel offre un set di cortesia ecologico in omaggio?",
+                note: "Uses 'set di cortesia' for guest amenities and 'in omaggio' for a more premium tone."
+            },
+            {
+                draft: "Jan Luyken Amsterdam dispone di un ascensore che garantisce accesso senza gradini?",
+                polish: "Il Jan Luyken Amsterdam dispone di un ascensore che garantisce un accesso privo di barriere?",
+                note: "Upgrades 'step-free' to the professional 'privo di barriere'."
+            },
+            {
+                draft: "Le camere vengono consegnate dalle 15:00.",
+                polish: "Le camere sono a disposizione degli ospiti dalle 15:00.",
+                note: "Replaces the transactional 'delivered/released' with a welcoming guest-centric phrase."
+            },
+            {
+                draft: "Le camere non dispongono di aria condizionata autonoma.",
+                polish: "Le camere dispongono di un sistema di climatizzazione centralizzato.",
+                note: "Uses 'climatizzazione' for a more sophisticated description of climate control."
+            },
+            {
+                draft: "Il sports bar del Leonardo Hotel Almere...",
+                polish: "Lo sports bar del Leonardo Hotel Almere...",
+                note: "Corrects the article 'Lo' for words starting with 's + consonant'."
+            },
+            {
+                draft: "È possibile richiedere un sacchetto colazione?",
+                polish: "È possibile richiedere una colazione al sacco?",
+                note: "Corrects the literal translation of 'breakfast bag'."
+            },
+            {
+                draft: "Presso Jan Luyken Amsterdam il check-in inizia alle 15:00.",
+                polish: "Al Jan Luyken Amsterdam il check-in inizia alle 15:00.",
+                note: "Uses the destination-oriented 'Al' instead of the bureaucratic 'Presso'."
+            },
+            {
+                draft: "Qual è l'aliquota della tassa di soggiorno?",
+                polish: "A quanto ammonta la tassa di soggiorno?",
+                note: "Uses natural phrasing for inquiring about costs."
+            },
+            {
+                draft: "I cani educati sono i benvenuti.",
+                polish: "I cani ben educati sono i benvenuti.",
+                note: "Fixes the literal translation of 'well-behaved'."
+            }
+    ] },
+
+ nl: { mappings: [], examples: [] },
+    fr: {
+  mappings: [
+    {
+      forbidden: "L'enregistrement officiel au... commence à",
+      preferred: "Les arrivées s'effectuent à partir de",
+      reason: "In French hospitality, referring to 'Les arrivées' is more elegant and guest-centric than the technical 'L'enregistrement'."
+    },
+    {
+      forbidden: "Le check-out doit s’effectuer",
+      preferred: "Les chambres doivent être libérées",
+      reason: "Using the English loanword 'check-out' in a French response is considered low-tier. 'Libérer la chambre' is the professional standard for high-end hotels."
+    },
+    {
+      forbidden: "Offrant un départ détendu",
+      preferred: "Pour un départ en toute sérénité",
+      reason: "'Détendu' is too casual/literal. 'En toute sérénité' is the standard luxury phrasing for a relaxed experience."
+    },
+    {
+      forbidden: "Garantissant une assistance à tout moment",
+      preferred: "Pour vous accompagner à chaque instant",
+      reason: "As noted before, 'assistance' implies a problem. 'Accompagner' or 'À votre entière disposition' sounds like proactive service."
+    },
+    {
+      forbidden: "Ventilateurs portatifs",
+      preferred: "Ventilateurs d'appoint",
+      reason: "'Portatifs' sounds like a gadget (like a phone). 'D'appoint' is the correct professional term for extra equipment provided by a hotel."
+    },
+    {
+      forbidden: "Facilement sollicité via l’application",
+      preferred: "Disponible sur simple demande via l’application",
+      reason: "The phrase 'sur simple demande' is a staple of French hospitality, making the service sound effortless for the guest."
+    },
+    {
+      forbidden: "Propose des options végétariennes",
+      preferred: "Propose une sélection de mets végétariens",
+      reason: "Using 'Mets' (dishes) and 'Sélection' adds a culinary, upscale feel compared to the generic 'options'."
+    },
+    {
+      forbidden: "Un environnement maîtrisé en matière d'allergènes",
+      preferred: "Un environnement préservé de tout allergène",
+      reason: "'Maîtrisé' sounds like a laboratory report. 'Préservé' sounds like a guest benefit and a clean, luxury space."
+    }
+  ],
+  examples: [
+    {
+      draft: "Le check-out doit s’effectuer avant 12h00, offrant un départ détendu avant midi.",
+      polish: "Au Leonardo Hotel Almere City Center, les chambres doivent être libérées avant 12h00, vous permettant un départ en toute sérénité.",
+      note: "Replacing anglicisms and literal translations with professional French hospitality idioms."
+    },
+    {
+      draft: "L'enregistrement officiel au Leonardo Hotel Almere City Center commence à 15h00...",
+      polish: "Les arrivées au Leonardo Hotel Almere City Center s'effectuent à partir de 15h00...",
+      note: "Standardizing the welcome process phrasing."
+    },
+    {
+      draft: "Oui, le Wi-Fi haut débit est offert gratuitement dans l’ensemble des chambres...",
+      polish: "Oui, une connexion Wi-Fi haut débit est gracieusement mise à votre disposition dans l'ensemble des chambres du Leonardo Hotel Almere City Center...",
+      note: "Using 'gracieusement mise à disposition' instead of just 'offert' for a more prestigious tone."
+    },
+    {
+      draft: "Les clients non résidents peuvent-ils dîner au Bierfabriek Almere...",
+      polish: "La clientèle non-résidente peut-elle déjeuner ou dîner au Bierfabriek Almere...",
+      note: "Specifying the type of guest (clientèle) and the meals (déjeuner/dîner) for a more complete response."
+    }
+  ]
+},
     pl: { mappings: [], examples: [] },
     ru: { mappings: [], examples: [] },
     he: { mappings: [], examples: [] },

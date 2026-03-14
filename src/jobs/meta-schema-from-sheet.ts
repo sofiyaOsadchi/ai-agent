@@ -13,13 +13,13 @@ type HotelNameMapConfig = {
 
 type MetaSchemaJobConfig = {
   spreadsheetId: string;
-  sourceTab?: string; // NOW USED: which tab to read/write (Hebrew tab)
+  sourceTab?: string; // which tab to read/write
   metaRow?: number; // default: 70
   schemaRow?: number; // default: metaRow + 3
   metaStartCol?: string; // default: "A"
   schemaCol?: string; // default: "E"
 
-  lang?: string; // default: "en". Example: "he"
+  lang?: string; // default: "en". Example: "he", "de"
   hotelNameMap?: HotelNameMapConfig; // required for he
 };
 
@@ -43,14 +43,14 @@ export class MetaSchemaFromSheetJob {
       ""
     );
 
-    // Remove language/workflow suffixes like "- HE rewritten"
-s = s.replace(
-  new RegExp(
-    String.raw`\s*[-_.\u2013\u2014]\s*(he|heb|hebrew|en|eng|english)\s*(rewritten|rewrite|translated|translation)?\s*$`,
-    "gi"
-  ),
-  ""
-);
+    // Remove language/workflow suffixes like "- DE", "- he rewritten", "- english translation"
+    s = s.replace(
+      new RegExp(
+        String.raw`\s*[-_.\u2013\u2014]\s*((?:[a-z]{2,3})|hebrew|english|german|french|spanish|italian|polish|dutch|arabic|russian)\s*(rewritten|rewrite|translated|translation)?\s*$`,
+        "gi"
+      ),
+      ""
+    );
 
     // Hebrew trailing markers
     s = s.replace(/\s*(נערך|מעודכן|עותק|העתק|מתוקן|טיוטה)\s*$/g, "");
@@ -77,12 +77,28 @@ s = s.replace(
       .toLowerCase();
   }
 
+  private extractLangFromTabTitle(title: string): string | null {
+    const t = (title ?? "").trim();
+    const m = t.match(/[\s]*[-\u2013\u2014][\s]*([A-Za-z]{2,3})\s*$/);
+    return m?.[1]?.toLowerCase() ?? null;
+  }
+
+  private findTabByLangSuffix(titles: string[], lang: string): string | null {
+    const code = (lang ?? "").trim().toLowerCase();
+    if (!code) return null;
+
+    const codeUpper = code.toUpperCase();
+    const re = new RegExp(String.raw`[\s]*[-\u2013\u2014][\s]*${codeUpper}\s*$`, "i");
+
+    const match = titles.find((t) => re.test(t.trim()));
+    return match ?? null;
+  }
+
   private collectQA(rows: string[][]): QAItem[] {
     const Q_COL = 1; // B
     const A_COL = 2; // C
     const out: QAItem[] = [];
 
-    // Skip header row
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r] ?? [];
       const q = (row[Q_COL] ?? "").toString().trim();
@@ -159,7 +175,8 @@ s = s.replace(
     const localizedColIndex = mapCfg.localizedColIndex ?? 1;
     const headerRows = mapCfg.headerRows ?? 1;
 
-    const mapTabTitle = mapCfg.tabName ?? (await this.sheets.getFirstSheetTitle(mapCfg.spreadsheetId));
+    const mapTabTitle =
+      mapCfg.tabName ?? (await this.sheets.getFirstSheetTitle(mapCfg.spreadsheetId));
     const mapTabA1 = this.quoteA1Sheet(mapTabTitle);
 
     const rows = await this.sheets.readValues(mapCfg.spreadsheetId, `${mapTabA1}!${rangeA1}`);
@@ -189,21 +206,34 @@ s = s.replace(
     const lang = (params.lang ?? "en").toLowerCase();
     const hotelNameEn = this.sanitizeOneLine(params.hotelNameEn);
 
-   if (lang.startsWith("he")) {
-  const hotelNameHe = this.sanitizeOneLine(params.hotelNameHe ?? "");
-  if (!hotelNameHe) {
-    throw new Error(`Missing Hebrew hotel name for lang="${lang}"`);
-  }
+    if (lang.startsWith("he")) {
+      const hotelNameHe = this.sanitizeOneLine(params.hotelNameHe ?? "");
+      if (!hotelNameHe) {
+        throw new Error(`Missing Hebrew hotel name for lang="${lang}"`);
+      }
 
-  const metaTitle = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe} - פתאל`);
+      const metaTitle = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe} - פתאל`);
+
+      const metaDescRaw = this.sanitizeOneLine(
+        `שאלות נפוצות על ${hotelNameHe} עם מידע על חדרים, מתקנים, ארוחות, חניה, שעות צ׳ק-אין וצ׳ק-אאוט, מדיניות, נגישות, שירותים מיוחדים וטיפים לשהייה מושלמת`
+      );
+
+      const metaDesc = this.enforceMaxMetaDescLenHebrew(metaDescRaw, 160);
+      const h1 = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe}`);
+
+      return { metaTitle, metaDesc, h1 };
+    }
+
+    if (lang.startsWith("de")) {
+  const metaTitle = this.sanitizeOneLine(`FAQ | ${hotelNameEn}`);
 
   const metaDescRaw = this.sanitizeOneLine(
-    `שאלות נפוצות על ${hotelNameHe} עם מידע על חדרים, מתקנים, ארוחות, חניה, שעות צ׳ק-אין וצ׳ק-אאוט, מדיניות, נגישות, שירותים מיוחדים וטיפים לשהייה מושלמת`
+    `Antworten auf die wichtigsten Fragen zum ${hotelNameEn} - von Zimmern und Anreise bis zu Ausstattung und Serviceleistungen.`
   );
 
-  const metaDesc = this.enforceMaxMetaDescLenHebrew(metaDescRaw, 160);
+  const metaDesc = this.enforceMaxMetaDescLenEnglish(metaDescRaw, 160);
 
-  const h1 = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe}`);
+  const h1 = this.sanitizeOneLine(`FAQ zum ${hotelNameEn}`);
 
   return { metaTitle, metaDesc, h1 };
 }
@@ -230,25 +260,25 @@ s = s.replace(
       const wanted = cfg.sourceTab.trim();
       const exists = titles.includes(wanted);
       if (!exists) {
-        throw new Error(
-          `sourceTab "${wanted}" not found. Available tabs: ${titles.join(", ")}`
-        );
+        throw new Error(`sourceTab "${wanted}" not found. Available tabs: ${titles.join(", ")}`);
       }
       return wanted;
     }
 
-    // Default behavior by lang:
-    // - Hebrew: use SECOND tab (index 1) to avoid touching English tab
-    if (lang.startsWith("he")) {
-      if (titles.length < 2) {
-        throw new Error(
-          `lang="${lang}" expects Hebrew tab as second tab, but only found 1 tab: ${titles[0]}`
-        );
-      }
-      return titles[1];
+    const l = (lang ?? "en").toLowerCase();
+
+    // If lang is not EN, try to find a tab by suffix: " - DE", " - FR", etc.
+    if (!l.startsWith("en")) {
+      const bySuffix = this.findTabByLangSuffix(titles, l);
+      if (bySuffix) return bySuffix;
     }
 
-    // - English: first tab
+    // Backward compatibility: Hebrew used to be the second tab
+    if (l.startsWith("he")) {
+      if (titles.length >= 2) return titles[1];
+    }
+
+    // Default: first tab
     return titles[0];
   }
 
@@ -257,13 +287,24 @@ s = s.replace(
     const schemaRow = cfg.schemaRow ?? metaRow + 3;
     const metaStartCol = cfg.metaStartCol ?? "A";
     const schemaCol = cfg.schemaCol ?? "E";
-    const lang = (cfg.lang ?? "en").toLowerCase();
 
-    // Decide which tab we read/write (IMPORTANT)
+    let lang = (cfg.lang ?? "en").toLowerCase();
+
+    // Decide which tab we read/write
     const targetTabTitle = await this.resolveTargetTabTitle(cfg, lang);
     const tabA1 = this.quoteA1Sheet(targetTabTitle);
 
-    // Read rows FROM THE TARGET TAB (not first tab)
+    // If lang not provided explicitly and tab has suffix like " - DE", infer it
+    if (!cfg.lang) {
+      const inferred = this.extractLangFromTabTitle(targetTabTitle);
+      if (inferred) lang = inferred;
+    }
+
+    // IMPORTANT: if tab already has tags/schema, clear everything from metaRow and below
+    // This removes old Meta/Schema blocks before writing new ones
+    await this.sheets.clearValuesRange(cfg.spreadsheetId, `${tabA1}!A${metaRow}:Z`);
+
+    // Read rows FROM THE TARGET TAB
     const rows = await this.sheets.readValues(cfg.spreadsheetId, `${tabA1}!A:Z`);
     if (rows.length === 0) throw new Error(`Source tab "${targetTabTitle}" is empty`);
 

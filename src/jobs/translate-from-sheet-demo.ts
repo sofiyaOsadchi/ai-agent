@@ -157,6 +157,63 @@ const DEFAULT_POLISH_RULES: Partial<Record<LangKey, string>> = {
 export class TranslateFromSheetDemoJob {
   constructor(private agent: AIAgent, private sheets: SheetsService) {}
 
+
+    // === Matrix Shape Helpers (critical for keeping blank rows aligned) ===
+
+  private toRectMatrix(rows: string[][], width: number): string[][] {
+    const w = Math.max(1, width);
+    return (rows ?? []).map((r) => {
+      const row = Array.isArray(r) ? r.map((x) => (x == null ? "" : String(x))) : [];
+      if (row.length === w) return row;
+      if (row.length > w) return row.slice(0, w);
+      return [...row, ...Array(w - row.length).fill("")];
+    });
+  }
+
+  private enforceSameShape(source: string[][], out: string[][]): string[][] {
+    const src = source ?? [];
+    const outRows = out ?? [];
+
+    const height = src.length;
+    const width = src.reduce((m, r) => Math.max(m, (r ?? []).length), 0) || 1;
+
+    const fixed: string[][] = [];
+
+    for (let i = 0; i < height; i++) {
+      const srcRow = src[i] ?? [];
+      const outRow = outRows[i] ?? [];
+
+      // If SOURCE row is fully empty, keep it fully empty in output
+      const srcAllEmpty = srcRow.every((c) => String(c ?? "").trim() === "");
+      if (srcAllEmpty) {
+        fixed.push(Array(width).fill(""));
+        continue;
+      }
+
+      const normalizedOut = Array.isArray(outRow)
+        ? outRow.map((c) => (c == null ? "" : String(c)))
+        : [];
+
+      if (normalizedOut.length > width) fixed.push(normalizedOut.slice(0, width));
+      else if (normalizedOut.length < width)
+        fixed.push([...normalizedOut, ...Array(width - normalizedOut.length).fill("")]);
+      else fixed.push(normalizedOut);
+    }
+
+    return fixed;
+  }
+
+  private assertSameShapeOrThrow(source: string[][], out: string[][], ctx: string) {
+    const srcH = source.length;
+    const outH = out.length;
+    const srcW = source.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
+    const outW = out.reduce((m, r) => Math.max(m, r?.length ?? 0), 0);
+
+    if (srcH !== outH || srcW !== outW) {
+      throw new Error(`[${ctx}] Shape mismatch. source=${srcH}x${srcW} out=${outH}x${outW}`);
+    }
+  }
+
   // ---- Public entry for server-demo env wiring ----
   async runFromEnv(): Promise<void> {
     const rawPayload = process.env.DYNAMIC_PAYLOAD || "{}";
@@ -459,9 +516,24 @@ export class TranslateFromSheetDemoJob {
     }
 
     // 2) Read Source Data & Metadata
+    
+
     const sourceId = await this.sheets.getSheetIdByTitle(cfg.spreadsheetId, sourceTab);
-    const rows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!A:Z`);
-    if (rows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
+
+const MAX_TRANSLATE_ROW = 68; // כולל כותרת - לא מתרגמים מעבר
+const rawRows = await this.sheets.readValues(
+  cfg.spreadsheetId,
+  `${sourceTab}!A1:Z${MAX_TRANSLATE_ROW}`
+);
+
+if (rawRows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
+
+// Determine a stable width and make the matrix rectangular.
+// This is CRITICAL so blank rows are not represented as [] and get "dropped" by the model.
+const headerRowRaw = rawRows[0] ?? [];
+const width = Math.max(1, headerRowRaw.length, ...rawRows.map((r) => (r ?? []).length));
+const rows = this.toRectMatrix(rawRows, width);
+
 
     const docTitle = await this.sheets.getSpreadsheetTitle(cfg.spreadsheetId);
     console.log(chalk.cyan(`🏨 Official Hotel Name detected from file: "${docTitle}"`));
@@ -516,9 +588,14 @@ export class TranslateFromSheetDemoJob {
           })
         : this.defaultDraftUser(lang, chunkRows, translateHeader, docTitle);
 
-      const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, "o3");
-      const draftRows = this.parseJsonMatrixOrThrow(draftResult);
-      const draftJsonClean = JSON.stringify({ rows: draftRows });
+     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, "o3");
+
+let draftRows = this.parseJsonMatrixOrThrow(draftResult);
+draftRows = this.enforceSameShape(chunkRows, draftRows);
+// אם את רוצה לעצור מיד כשיש בעיה בזמן דיבוג:
+// this.assertSameShapeOrThrow(chunkRows, draftRows, `DRAFT ${lang} part${partNum}`);
+
+const draftJsonClean = JSON.stringify({ rows: draftRows });
 
       // Step B: Terminology selection (filtered)
       const profile = this.getTerminologyProfileWithOverride(
@@ -585,8 +662,15 @@ export class TranslateFromSheetDemoJob {
           });
 
       const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, "o3");
-      return this.parseJsonMatrixOrThrow(finalJson);
+
+let finalRows = this.parseJsonMatrixOrThrow(finalJson);
+finalRows = this.enforceSameShape(chunkRows, finalRows);
+// אם את רוצה לעצור מיד כשיש בעיה בזמן דיבוג:
+// this.assertSameShapeOrThrow(chunkRows, finalRows, `FINAL ${lang} part${partNum}`);
+
+return finalRows;
     };
+
 
     // 4) Process languages
     for (const lang of cfg.targetLangs) {

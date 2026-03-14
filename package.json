@@ -16,7 +16,8 @@
     "filter-country": "MODE=filter-country tsx src/index.ts",
     "cross-check": "MODE=cross-check tsx src/index.ts",
     "translate-master": "MODE=translate-master tsx src/index.ts",
-    "inject-hebrew": "MODE=inject-hebrew tsx src/index.ts",
+    "inject-lang": "cross-env MODE=inject-lang tsx src/index.ts",
+"inject-hebrew": "cross-env MODE=inject-lang TARGET_LANG=he tsx src/index.ts",
     "duplicate-rewrite-hebrew": "MODE=duplicate-rewrite-hebrew tsx src/index.ts",
     "hotels-catalog": "MODE=hotels-catalog tsx src/index.ts",
     "semantic-match-unmatched": "MODE=semantic-match-unmatched tsx src/index.ts",
@@ -28,8 +29,20 @@
     "faq-petal-israel": "cross-env MODE=faq-petal-israel tsx src/index.ts",
 "translate-demo": "cross-env MODE=translate-demo tsx src/index.ts",
 "demo-ui": "tsx watch src/server-demo.ts",
-
-    "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
+"qa-lang-master": "cross-env MODE=qa-lang-master tsx src/index.ts",
+"qa-master-triage": "MODE=qa-master-triage tsx src/index.ts",
+"qa-master-apply-fixes": "MODE=qa-master-apply-fixes tsx src/index.ts",
+    "inject-meta-schema": "cross-env MODE=inject-meta-schema tsx src/index.ts",
+      "wrap-p": "cross-env MODE=wrap-p tsx src/index.ts",
+     "faq-audit-structure": "cross-env MODE=faq-audit-structure FAQ_AUDIT_RENDER_FALLBACK=1 tsx src/index.ts",
+     "sync-fg": "cross-env MODE=sync-fg tsx src/index.ts",
+     "tid-crosscheck": "MODE=tid-crosscheck tsx src/index.ts",
+     "tid-hotel-in-question": "MODE=tid-hotel-in-question tsx src/index.ts",
+     "discover:questions": "cross-env MODE=discover-questions tsx src/index.ts",
+     "discover:forum-questions": "cross-env MODE=discover-forum-questions tsx src/index.ts",
+      "faq-audit-structure:render": "cross-env MODE=faq-audit-structure FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome tsx src/index.ts",
+   
+      "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
   },
   "dependencies": {
     "chalk": "^5.4.1",

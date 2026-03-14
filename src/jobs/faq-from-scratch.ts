@@ -8,132 +8,143 @@ import { SheetsService } from "../services/sheets.js";
  * שלב 1: הפרומפט ליצירת השאלות (ללא קיצורים!)
  */
 export function createQuestionsPrompt(hotelName: string): string {
-  return `SEO & GEO FAQ Research Prompt for Questions
-Hotel Name: ${hotelName}
+return `SEO & GEO FAQ Research Prompt for Questions
+Property Name: ${hotelName}
 
-1 Goal  
-Research and compile a list of real, high-frequency questions about **${hotelName}**. Each question must be suitable for the hotel's FAQ page; no answers are required.
+1 Goal
+Research and compile a list of real, high-frequency questions about ${hotelName}.
+Each question must be suitable for the property's FAQ page.
 
-2  Approved Data Sources (use these ONLY, in this order of authority)  
-• Official Leonardo website – https://www.leonardo-hotels.com/  
+2 Approved Data Sources (use ONLY these)
+
+• Official Staymaster website – https://www.stay-master.com  
 • Google Hotels / Google Travel – property knowledge panel  
-• Booking.com – official property profile only  
-• Expedia – official property profile only (Facilities, Policies, Location, Amenities)   
-• TripAdvisor – official property profile only (NO user reviews)  
+• Booking.com – official property profile  
+• Expedia – official property profile  
+• Airbnb – official listing (if available)  
+• TripAdvisor – official property profile only (NO user reviews)
 
-Do **NOT** use any other websites, social media, forums, or user-generated content.  
-If a detail is absent from the sources above, do not infer or invent it.
+If information does not appear in these sources, do not invent it.
 
-3 Required columns (in this exact order)  
-Category | Question | Frequency Level  
+3 Required columns (exact order)
 
-4 Guidelines  
-• Question – clear, complete, self-contained.  
-• Include the full hotel name (“${hotelName}”) in 100% of questions unless it is an immediate follow-up.  
-• Always use third person ("Does ${hotelName} …").  
-• Group logically: broad question first, then its follow-ups.  
-• **Frequency Level** – tag High / Medium / Low according to how often the question (or close variants) appears across the approved sources.  
-• Language: English, refined luxury-hotel tone, suitable for an international audience.  
-• Highlight features unique to this specific property (location, facilities, brand standards).
-• IMPORTANT - Don't ask questions that asked for the same information that was given in a previous answer.
-• Most IMPORTANT - write in English, refined luxury-hotel tone, suitable for an international audience.
+Category | Question | Frequency Level
 
-5 Categories  
-Provide **7–10 unique questions** per category, ordered from general to specific:  
+4 Guidelines
+
+• Question must be clear and self-contained  
+• Include the full property name "${hotelName}" in most questions  
+• Always use third person ("Does ${hotelName}…")  
+• Group logically from general → specific  
+• Frequency Level = High / Medium / Low  
+• Language: English, professional hospitality tone
+
+5 Categories (7-10 questions each)
+Aim for 45-50 total questions (hard limit: 50).
+
 General Information  
-Accommodation & Room Services  
-Food & Beverage  
-Policies & Terms (pets, cancellation, check-in/out, etc.)  
+Apartment & Facilities  
+Kitchen & Dining  
+Policies & Terms  
 Location & Transportation  
-Activities & Entertainment 
+Services & Guest Support  
+Local Area & Experiences  
 
+6 Authenticity Rules
 
-6 Quality & Authenticity Rules  
-• Only questions that genuinely appear in the **approved sources**; wording may be polished for clarity but must remain factual.  
-• No duplicates or near-paraphrases.  
-• Do not include details that are not explicitly stated in the approved sources.  
-• Respect any limitations noted for each source (e.g., no user reviews).
-• Very important - phrases the questions in a way that would be asked authentically by potential guests.
+• Questions must reflect real guest concerns
+• No duplicates or paraphrases
+• Focus on apartment-style stay experience
+• Consider property-specific features (neighborhood, design, building type)
 
+Example topics to consider:
 
-7 Delivery  
-Return the FAQ as a **Markdown table** with the three columns above. Do **NOT** include hyperlinks, citations, or external files.
+General Information – Wi-Fi, self check-in, accessibility, building entrance, staff availability  
+Apartment & Facilities – air-conditioning, heating, washing machine, balcony, workspace  
+Kitchen & Dining – fully equipped kitchen, coffee machine, utensils, supermarkets nearby  
+Policies & Terms – check-in process, cleaning schedule, security deposit, minimum stay  
+Location & Transportation – nearby metro stations, airport access, walking distance to attractions  
+Services & Guest Support – luggage storage, contact with host, cleaning service  
+Local Area & Experiences – restaurants nearby, cultural sites, nightlife, shopping streets
 
-8 Scope  
-Aim for approximately **50–60 total questions** across all categories.
+7 Delivery
 
-Very important - do not use the same question (or very similar) twice, even if it is in a different category.
+Return the FAQ as a Markdown table with the three columns above.
+No links or citations.
 
-In addition,
-I want to add a list of possible questions + their association with the correct category
-It is important for me to note - not all questions must appear, but it is advisable to check if they are relevant to the hotel and its style - There may also be many more questions unique to the current hotel that are not on the list because each hotel has its own audience and its own unique characteristics - Therefore - first, characterize this hotel and what is special about it and add questions that you see can only be asked about this hotel.
+8 Scope
 
- 
-General Information – free Wi-Fi, 24-hour front desk, check-in/check-out times, family-friendly, accessible facilities, multilingual staff, on-site parking, meeting & conference facilities  
-Accommodation & Room Services – minibar / small fridge, tea & coffee facilities, iron & ironing board, hairdryer, air-conditioning & heating, USB charging sockets, complimentary toiletries, extra pillows / hypoallergenic bedding, 24-hour room service, laundry & dry-cleaning  
-Food & Beverage – buffet breakfast, breakfast hours, vegetarian & vegan options, rooftop bar with city views, bar access for non-residents, gluten-free menu, children welcome at bar, lunch & dinner service, afternoon tea, children's menus  
-Policies & Terms – express check-in/out, security deposit, baggage storage, minimum age, pets policy, free cancellation, early check-in / late check-out, group booking conditions  
-Location & Transportation – proximity to landmarks, nearest transport stations, travel time to airports, airport shuttle, walking distance to attractions, taxi / car-hire services  
-Activities & Entertainment – indoor pool, children access to pool, spa treatments, fitness classes, sauna / steam room, rooftop terrace, guided city tours, evening entertainment / live music
+Aim for approximately 50-60 questions total.
 
-
-`;
+Do not repeat similar questions even across categories.`;
 }
 
 /**
  * שלב 2: הפרומפט ליצירת התשובות
  */
 export function createAnswersPrompt(hotelName: string, questions: string): string {
-  return `SEO & GEO FAQ Research Prompt | Answers
-Hotel: ${hotelName}
+return `SEO & GEO FAQ Research Prompt | Answers
+Property: ${hotelName}
 
-1 Goal  
-Provide authoritative answers—based on the approved sources below—for each question in the list. Return the completed table with four columns:
+1 Goal
+Provide authoritative answers for each question.
+
+Return table:
+
 Category | Question | Answer | Frequency Level
 
-2  Approved Data Sources (use these ONLY, in this order of authority)  
-• Official Leonardo website – https://www.leonardo-hotels.com/  
-• Google Hotels / Google Travel – property knowledge panel  
-• Booking.com – official property profile only  
-• Expedia – official property profile only (Facilities, Policies, Location, Amenities)  
-• TripAdvisor – official property profile only (NO user reviews)  
+2 Approved Data Sources
 
+• Official Staymaster website – https://www.stay-master.com  
+• Google Hotels / Google Travel  
+• Booking.com – official property profile  
+• Expedia – official property profile  
+• Airbnb – official listing (if exists)  
+• TripAdvisor – official property profile (NO user reviews)
 
-If a detail is absent from the sources above - please scan the approved sources again. If you still haven't found it, you can bring the answer from another source but mention which source and highlight the answer with [VERIFY].
+If information is missing:
+scan sources again.
 
-3 Answer Guidelines  
-• Begin each answer with "Yes, …", "No, …", "Currently, …", or a direct factual statement (for what/where/how questions).  
-• Do **not** repeat the hotel name in the answer.  
-• Always write in third person; tone: serious, welcoming, trustworthy.  
-• Keep answers clear, factual, and web-ready; avoid marketing fluff.  
-• If information is missing, and you couldn't find anywere online the answer (and you scanned the sources again!)- write exactly: "Information is currently not available. [VERIFY]".  
-• Preserve the original order of questions and their categories.  
-• Language: English, refined luxury-hotel tone, suitable for an international audience. 
- **IMPORTANT: Write complete, informative sentences as a caring and courteous hotel representative would - aim for at least 10-12 words per answer. Avoid one-word or overly brief responses.**
-- **Provide clear and decisive answers. When uncertain information requires verification, add [VERIFY] but maintain confident, definitive phrasing.**
-- **Don't use vague qualifiers like "generally", "usually", "typically", "normally", or "often" when it comes to facts. State facts directly and clearly.**
-- **MOST IMPORTANT: scan all the sources again - specially the hotel website and booking.com - to find the answers to the questions.**
+If still unavailable:
+use another reliable source and mark with [VERIFY].
 
-• Do not alter Category, Question, or Frequency Level values.
+3 Answer Guidelines
 
-4 AI Workflow Tips  
-• Search each **approved source** for the hotel name plus terms like "FAQ", "policies", "amenities", etc.  
-• Convert any second-person phrasing found into third person. 
-• If you find a duplicate question, add to the answer [duplicate].
-• Mark unknown details with [VERIFY] so they can be confirmed with the hotel.  
+• Start answers with:
+"Yes,"
+"No,"
+or direct factual statement.
 
-5 Delivery  
-Return **only** the table data in pure TSV format—tab-separated values with NO Markdown, NO backticks, NO extra text.  
-Format: One header row, then data rows. Columns separated by actual tab characters.
+• Third person
+• Clear hospitality tone
+• Minimum 10-12 words
 
+If information is unavailable:
 
+write exactly
 
-Example (format only—replace with real answers):  
-Category[TAB]Question[TAB]Answer[TAB]Frequency Level  
-General Information[TAB]Does ${hotelName} offer free Wi-Fi?[TAB]Yes, complimentary Wi-Fi is available throughout the property.[TAB]High
+Information is currently not available. [VERIFY]
 
-Do not add any text before or after the table. Return only the raw TSV data that can be pasted into Google Sheets.
-Dont add the links or sources, just the answers.
+4 Workflow
+
+Search each approved source for:
+
+${hotelName} policies amenities location facilities
+
+Convert second person phrasing to third person.
+
+Mark uncertain facts with [VERIFY].
+
+5 Delivery
+
+Do not add links or sources anywhere in the TSV.
+
+Return ONLY raw TSV format.
+
+Category[TAB]Question[TAB]Answer[TAB]Frequency Level
+
+No Markdown
+No additional text
 
 QUESTION LIST:
 ${questions}`;

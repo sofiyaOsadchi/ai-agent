@@ -2,6 +2,7 @@ import { AIAgent } from "../core/agent.js";
 import { SheetsService } from "../services/sheets.js";
 import { TERMINOLOGY_MANAGEMENT, type LangKey, type TerminologyProfile } from "../jobs/subjobs/terminology-management.js";
 import { selectTerminologyByDraftHits, formatStrictTerminologyFromSelection } from "../jobs/subjobs/utility-translate.js";
+import { HOTEL_NAME_HE_MAP } from "../jobs/subjobs/hotel-name-hebrew-map.js";
 import chalk from "chalk";
 
 
@@ -158,6 +159,34 @@ private getTerminologyProfile(lang: string): TerminologyProfile {
   return TERMINOLOGY_MANAGEMENT[k] ?? {};
 }
 
+private normalizeHotelKey(name: string): string {
+  return (name || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[–—]/g, "-");
+}
+
+private getOfficialHotelNameForTargetLang(docTitle: string, lang: string): string {
+  const normalizedLang = this.normalizeLang(lang);
+  const normalizedDocTitle = this.normalizeHotelKey(docTitle);
+
+  if (normalizedLang !== "he") {
+    return docTitle;
+  }
+
+  for (const [englishName, hebrewName] of Object.entries(HOTEL_NAME_HE_MAP)) {
+    if (this.normalizeHotelKey(englishName) === normalizedDocTitle) {
+      return hebrewName;
+    }
+  }
+
+  console.warn(
+    chalk.yellow(`[HOTEL_NAME_HE_MAP] Missing Hebrew mapping for hotel: "${docTitle}"`)
+  );
+
+  return docTitle;
+}
+
   // === JSON Parsing Helper ===
   // === JSON Parsing Helper (robust) ===
 private parseJsonMatrixOrThrow(text: string): string[][] {
@@ -244,9 +273,8 @@ private extractFirstJsonObject(text: string): string {
       ``,
       `=== CRITICAL RULES (ZERO TOLERANCE) ===`,
       `1. HOTEL NAME INTEGRITY: You must NEVER remove the hotel name from a question or answer if it appears in the source. If the source says "Does [Hotel] have a pool?", the target MUST say "Does [Hotel] have a pool?".`,
-      `2. OFFICIAL NAME: The official English name of the hotel is: "${hotelName}".`,
-      `3. HEBREW to ENGLISH: If the source is Hebrew and you see the hotel name (e.g., 'המלון', 'לאונרדו', etc.), you MUST replace it with "${hotelName}" in English.`,
-      `4. TECH SAFETY: Do NOT translate URLs, emails, codes, or tokens (e.g., %s, {name}).`,
+`2. OFFICIAL NAME: The official hotel name in the TARGET language is: "${hotelName}".`,
+`3. HOTEL NAME LOCALIZATION: If the source contains a hotel reference such as a hotel name, "the hotel", "the property", "המלון", or brand-only mention, you MUST use exactly "${hotelName}" when the output should explicitly mention the hotel name.`,      `4. TECH SAFETY: Do NOT translate URLs, emails, codes, or tokens (e.g., %s, {name}).`,
       `5. STRUCTURE: Preserve the exact JSON matrix shape.`,
       `6. ACCURACY: Keep prices, times, and facts exactly as they are.`,
     ].join("\n");
@@ -266,7 +294,7 @@ private extractFirstJsonObject(text: string): string {
 `- If the source is brief (e.g., "Yes"/"No"), you may expand it slightly ONLY by restating the proposition of the question. Use third person (e.g., "Yes, the hotel offers ..."). Do NOT add qualifiers or new facts.`,
       `- Translate header row: ${translateHeader ? "YES" : "NO"}.`,
       `- PRESERVE the exact 2D matrix structure (same number of rows and columns).`,
-      `- **IMPORTANT:** If the source text mentions the hotel name, ensure the translated text also includes "${hotelName}". Do not shorten it to "the hotel".`,
+`- **IMPORTANT:** If the source text mentions the hotel name or clearly refers to the hotel as a named entity, ensure the translated text also includes exactly "${hotelName}". Do not shorten it to "the hotel" / "המלון" when the source explicitly names the hotel.`,
       ``,
       `INPUT DATA (JSON):`,
       JSON.stringify({ rows })
@@ -303,8 +331,7 @@ private extractFirstJsonObject(text: string): string {
     `4) NO NEW FACTS: Do not add any facts, services, conditions, qualifiers, or availability notes not present in SOURCE.`,
     `5) PRESERVE DATA: Keep numbers, times, prices, addresses, distances exactly as in SOURCE.`,
     `6) PRESERVE TOKENS: Keep placeholders/tokens unchanged: %s, {name}, {{x}}, URLs, emails, codes.`,
-    `7) HOTEL NAME RULE: If the SOURCE cell contains the official hotel name OR a hotel reference (including Hebrew like "המלון" / "לאונרדו"), the output cell MUST include exactly "${hotelName}" (do not replace with "the hotel").`,
-    `8) QUESTION INTEGRITY: If SOURCE cell is a question, keep it as a natural question in ${label}. Do not turn questions into statements.`,
+`7) HOTEL NAME RULE: If the SOURCE cell contains the official hotel name, an English hotel name, or a hotel reference (including "the hotel", "the property", Hebrew like "המלון" / "לאונרדו", or brand-only mention), the output cell MUST use exactly "${hotelName}" whenever the hotel is explicitly named. Do not replace it with a generic term.`,    `8) QUESTION INTEGRITY: If SOURCE cell is a question, keep it as a natural question in ${label}. Do not turn questions into statements.`,
     `9) MINIMAL EDITS: Only fix unnatural phrasing, literal translation artifacts, grammar, and hospitality vocabulary. Do not rewrite aggressively.`,
     `10) JSON ONLY: Return ONLY valid JSON in the schema: {"rows":[...]} and nothing else.`,
     ``,
@@ -345,8 +372,10 @@ private extractFirstJsonObject(text: string): string {
 
     // 2. Read Source Data & Metadata
     const sourceId = await this.sheets.getSheetIdByTitle(cfg.spreadsheetId, sourceTab);
-    const rows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!A:Z`);
-    if (rows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
+const MAX_TRANSLATE_ROW = 68; // כולל כותרת
+const rows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!A1:Z${MAX_TRANSLATE_ROW}`);
+
+if (rows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
     
     // שליפת שם הקובץ כדי להשתמש בו כשם המלון הרשמי
     const docTitle = await this.sheets.getSpreadsheetTitle(cfg.spreadsheetId);
@@ -369,13 +398,18 @@ private extractFirstJsonObject(text: string): string {
     console.log(chalk.gray(`ℹ️ Split info: Total items: ${contentRows.length}. Part 1: ${part1Input.length - 1}, Part 2: ${part2Input.length - 1}.`));
 
     // Helper function to process a single chunk (Draft -> Polish)
-    const processChunk = async (chunkRows: string[][], lang: string, partNum: number) => {
+const processChunk = async (
+  chunkRows: string[][],
+  lang: string,
+  partNum: number,
+  officialHotelName: string
+) => {      
       console.log(chalk.yellow(`   ⏳ Processing Part ${partNum}/2 (${chunkRows.length} rows)...`));
       
       // Step A: Draft
       // We pass 'docTitle' as the hotelName to ensure consistency
-      const systemInstr = this.systemInstructions(lang, docTitle);
-      const draftPromptStr = this.draftPrompt(lang, chunkRows, translateHeader, docTitle);
+   const systemInstr = this.systemInstructions(lang, officialHotelName);
+const draftPromptStr = this.draftPrompt(lang, chunkRows, translateHeader, officialHotelName);
 const draftResult = await this.agent.runWithSystem(draftPromptStr, systemInstr, "o3");
 
       // Step B: Polish
@@ -422,10 +456,11 @@ const polishPromptStr = this.polishPrompt(
   lang,
   chunkRows,
   draftJsonClean,
-  docTitle,
+  officialHotelName,
   translateHeader,
   strictTerminology
-);const germanPolishRules =
+);
+const germanPolishRules =
   lang.toLowerCase() === "de"
     ? [
         "",
@@ -454,19 +489,22 @@ const finalJson = await this.agent.runWithSystem(polishPromptStr, systemInstrPol
 
     // 3. Process Each Target Language
     for (const lang of cfg.targetLangs) {
-      const newTitle = `${sourceTab} – ${lang.toUpperCase()}`;
+  const newTitle = `${sourceTab} – ${lang.toUpperCase()}`;
+        const officialHotelName = this.getOfficialHotelNameForTargetLang(docTitle, lang);
+
       
       console.log(chalk.blue(`🚀 Starting translation chain for ${lang} (${newTitle})...`));
+        console.log(chalk.cyan(`🏨 Official hotel name for ${lang}: "${officialHotelName}"`));
+
 
       try {
         // --- Process Part 1 ---
-        const part1Result = await processChunk(part1Input, lang, 1);
+const part1Result = await processChunk(part1Input, lang, 1, officialHotelName);
 
         // --- Process Part 2 (only if it has content beyond the header) ---
         let part2Result: string[][] = [];
         if (part2Input.length > 1) {
-            part2Result = await processChunk(part2Input, lang, 2);
-        }
+part2Result = await processChunk(part2Input, lang, 2, officialHotelName);        }
 
         // --- Merge Results ---
         // Part 1 is taken as is.
