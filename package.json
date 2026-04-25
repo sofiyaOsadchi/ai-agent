@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server-demo.js",
     "start:cloud": "node dist/server-demo.js",
     "translate": "MODE=translate tsx src/index.ts",
     "rewrite": "MODE=rewrite tsx src/index.ts",
