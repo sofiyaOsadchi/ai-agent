@@ -1,6 +1,6 @@
 import { google, sheets_v4, drive_v3 } from "googleapis";
 import dotenv from "dotenv";
-import serviceAccount from "../credentials/service-account.json";
+import fs from "fs";
 
 dotenv.config();
 
@@ -8,6 +8,20 @@ dotenv.config();
  * Google Sheets helper – creates a sheet and uploads TSV data.
  * If an e‑mail is provided, the sheet is automatically shared with that user.
  */
+
+type GoogleServiceAccount = {
+  client_email: string;
+  private_key: string;
+};
+
+function loadServiceAccount(): GoogleServiceAccount {
+  const credentialsPath =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS || "./src/credentials/service-account.json";
+
+  const raw = fs.readFileSync(credentialsPath, "utf8");
+  return JSON.parse(raw) as GoogleServiceAccount;
+}
+
 export class SheetsService {
   async clearValuesRange(spreadsheetId: string, rangeA1: string): Promise<void> {
   await this.withBackoff(async () => {
@@ -27,16 +41,18 @@ export class SheetsService {
   
 
  constructor(emailToShare?: string) {
-    const auth = new google.auth.JWT({
-      email:  serviceAccount.client_email,
-      key:    serviceAccount.private_key,
-      scopes: [
-        "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/documents",
-      ],
-      subject: process.env.OWNER_EMAIL,   // ← האימפרסונציה
-    });
+  const serviceAccount = loadServiceAccount();
+
+  const auth = new google.auth.JWT({
+    email: serviceAccount.client_email,
+    key: serviceAccount.private_key,
+    scopes: [
+      "https://www.googleapis.com/auth/drive",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/documents",
+    ],
+    subject: process.env.OWNER_EMAIL,
+  });
 
     this.sheets = google.sheets({ version: "v4", auth });
     this.drive = google.drive({ version: "v3", auth });
