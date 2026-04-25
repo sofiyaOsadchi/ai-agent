@@ -1,6 +1,7 @@
 // src/jobs/qa-lang-master.ts
 import chalk from "chalk";
 import { SheetsService } from "../services/sheets.js";
+import { HOTEL_NAME_HE_MAP } from "./subjobs/hotel-name-hebrew-map.js";
 
 export type QaLangMasterConfig = {
   spreadsheetId: string;
@@ -86,6 +87,18 @@ export class QaLangMasterJob {
     return null;
   }
 
+private getExpectedHotelNameForLang(hotelEn: string, lang: string): string {
+  const hotel = this.normCell(hotelEn);
+
+  if (!hotel) return "";
+
+  if (lang === "he") {
+    return this.normCell(HOTEL_NAME_HE_MAP[hotel] ?? "");
+  }
+
+  return hotel;
+}
+  
   private getCell(row: string[], col: number | null): string {
     if (col == null) return "";
     return this.normCell(String(row[col] ?? ""));
@@ -133,19 +146,87 @@ export class QaLangMasterJob {
       .toLowerCase();
   }
 
+private replaceNumberWords(text: string, lang: string): string {
+  let t = String(text ?? "");
+
+  if (lang === "en") {
+    const map: Record<string, string> = {
+     
+      two: "2",
+      three: "3",
+      four: "4",
+      five: "5",
+      six: "6",
+      seven: "7",
+      eight: "8",
+      nine: "9",
+      ten: "10",
+      eleven: "11",
+      twelve: "12",
+      
+    };
+
+    for (const [word, num] of Object.entries(map)) {
+      t = t.replace(new RegExp(`\\b${word}\\b`, "gi"), num);
+    }
+  }
+
+  if (lang === "he") {
+    const map: Record<string, string> = {
+    
+      "שניים": "2",
+      "שתיים": "2",
+      "שלושה": "3",
+      "שלוש": "3",
+      "ארבעה": "4",
+      "ארבע": "4",
+      "חמישה": "5",
+      "חמש": "5",
+      "שישה": "6",
+      "שש": "6",
+      "שבעה": "7",
+      "שבע": "7",
+      "שמונה": "8",
+      "תשעה": "9",
+      "תשע": "9",
+      "עשרה": "10",
+      "עשר": "10",
+      "אחת עשרה": "11",
+      "אחד עשר": "11",
+      "שתים עשרה": "12",
+      "שנים עשר": "12",
+     
+    };
+
+    const entries = Object.entries(map).sort((a, b) => b[0].length - a[0].length);
+
+    for (const [word, num] of entries) {
+      t = t.replace(new RegExp(word, "g"), num);
+    }
+  }
+
+  return t;
+}
+
   // --- Numbers/time normalization (reduce false positives) ---
 
-  private normalizeTextForNumbers(s: string): string {
-    return this.stripHtmlEntities(this.stripHtmlTags(String(s ?? "")))
-      .normalize("NFKC")
-      .replace(/\u00A0/g, " ")
-      .replace(/[’‘]/g, "'")
-      .replace(/[“”]/g, "\"")
-      .replace(/[–—−]/g, "-")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
+ private normalizeTextForNumbers(s: string, lang?: string): string {
+  let t = this.stripHtmlEntities(this.stripHtmlTags(String(s ?? "")))
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/[’‘]/g, "'")
+    .replace(/[“”]/g, "\"")
+    .replace(/[–—−]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+  if (lang) {
+    t = this.replaceNumberWords(t, lang).toLowerCase();
   }
+
+  return t;
+}
 
   private convert12hTo24h(text: string): string {
     // Examples:
@@ -180,33 +261,43 @@ export class QaLangMasterJob {
     return Number.isInteger(n) ? String(n) : String(n);
   }
 
-  private detect24hConcept(text: string, lang: string): boolean {
-    const t = this.normalizeTextForNumbers(text);
-    if (!t) return false;
+ private detect24hConcept(text: string, lang: string): boolean {
+  const t = this.normalizeTextForNumbers(text);
+  if (!t) return false;
 
-    if (lang === "en") {
-      if (/\b24\s*(?:hours?|hrs?)\b/.test(t)) return true;
-      if (/\b24-?hour\b/.test(t)) return true;
-      if (/\baround the clock\b/.test(t)) return true;
-      if (/\bround-?the-?clock\b/.test(t)) return true;
-      if (/\b24\/7\b/.test(t)) return true;
-      return false;
-    }
-
-    if (lang === "de") {
-      if (/\brund um die uhr\b/.test(t)) return true;
-      if (/\bdurchgehend\b/.test(t)) return true;
-      if (/\b24\s*stunden\b/.test(t)) return true;
-      if (/\b24-?stunden\b/.test(t)) return true;
-      if (/\b24\/7\b/.test(t)) return true;
-      return false;
-    }
-
-    // other langs: only explicit 24 or 24/7
+  if (lang === "en") {
+    if (/\b24\s*(?:hours?|hrs?)\b/.test(t)) return true;
+    if (/\b24-?hour\b/.test(t)) return true;
+    if (/\baround the clock\b/.test(t)) return true;
+    if (/\bround-?the-?clock\b/.test(t)) return true;
     if (/\b24\/7\b/.test(t)) return true;
-    if (/\b24\b/.test(t) && /\b(hour|hours|stunden)\b/.test(t)) return true;
     return false;
   }
+
+  if (lang === "de") {
+    if (/\brund um die uhr\b/.test(t)) return true;
+    if (/\bdurchgehend\b/.test(t)) return true;
+    if (/\b24\s*stunden\b/.test(t)) return true;
+    if (/\b24-?stunden\b/.test(t)) return true;
+    if (/\b24\/7\b/.test(t)) return true;
+    return false;
+  }
+
+ if (lang === "he") {
+  if (/24\s*שעות/.test(t)) return true;
+  if (/24\s*שעות\s*ביממה/.test(t)) return true;
+  if (/מסביב\s+לשעון/.test(t)) return true;
+  if (/בכל\s+עת/.test(t)) return true;
+  if (/בכל\s+שעה/.test(t)) return true;
+  if (/כל\s+שעות\s+היממה/.test(t)) return true;
+  if (/24\/7/.test(t)) return true;
+  return false;
+}
+
+  if (/\b24\/7\b/.test(t)) return true;
+  if (/\b24\b/.test(t) && /\b(hour|hours|stunden)\b/.test(t)) return true;
+  return false;
+}
 
   /**
    * Extract numeric tokens with reduced noise:
@@ -215,7 +306,7 @@ export class QaLangMasterJob {
    * - if 24h concept exists, remove standalone "24" (and "7" for 24/7) to avoid EN=[24|24h] vs DE=[24h]
    */
   private extractNumberTokens(s: string, lang: string): string[] {
-    let t = this.normalizeTextForNumbers(s);
+let t = this.normalizeTextForNumbers(s, lang);
     if (!t) return [];
 
     t = this.convert12hTo24h(t);
@@ -329,7 +420,7 @@ export class QaLangMasterJob {
     if (!raw.trim()) return [];
 
     const re =
-      /\b(?:[A-Z][A-Za-z0-9&.'-]*\s+){1,10}(?:Hotel|Resort|Apartments|Suites|Inn|Hostel|Villa|Lodge|Palace)\b/g;
+/\b(?:[A-Z][A-Za-z0-9&.'-]*\s+){1,10}(?:Hotel|Resort|Inn|Hostel|Villa|Lodge)\b/g
 
     const bannedFirst = new Set([
       "Do",
@@ -378,7 +469,7 @@ export class QaLangMasterJob {
 
       // Must still end with a hotel-type word
       const last = words[words.length - 1];
-      if (!/^(Hotel|Resort|Apartments|Suites|Inn|Hostel|Villa|Lodge|Palace)$/.test(last)) continue;
+if (!/^(Hotel|Resort|Inn|Hostel|Villa|Lodge)$/.test(last)) continue;
 
       const cand = words.join(" ");
       if (cand.length >= 6) cleaned.push(cand);
@@ -439,11 +530,26 @@ export class QaLangMasterJob {
     const aKeys = new Set(this.tokenizeKeywordsEn(aEn));
     if (aKeys.size === 0) return false;
 
+    if (/\bage\b/.test(q) && /\b18\b/.test(a)) return false;
+
+if (/\bcancellation|cancel\b/.test(q) &&
+    /\bflexible|non-refundable|free of charge|chargeable\b/.test(a)) {
+  return false;
+}
+
+if ((/\btravel time\b/.test(q) || /\bhow long\b/.test(q)) &&
+    (/\bminutes?\b/.test(a) || /\bhour\b/.test(a))) {
+  return false;
+}
+
+if (/\bclosest|nearest\b/.test(q) && /\bstation|stop\b/.test(a)) {
+  return false;
+}
     const overlap = qKeys.filter((w) => aKeys.has(w)).length;
     const ratio = overlap / qKeys.length;
 
     // Conservative threshold
-    return ratio < 0.15;
+    return ratio < 0.08;
   }
 
   /**
@@ -754,43 +860,54 @@ export class QaLangMasterJob {
       }
 
       if (checkHotelNameInTarget && hotel) {
-        const requireQ = this.shouldRequireHotelNameInTargetQuestion(qEn, hotel);
-        const requireA = this.shouldRequireHotelNameInTargetAnswer(aEn, hotel, requireHotelNameInAllAnswers);
+  const expectedHotelName = this.getExpectedHotelNameForLang(hotel, lang);
 
-        if (requireQ && qT && !this.containsHotelName(qT, hotel)) {
-          pushIssue({
-            severity: "WARN",
-            type: "HOTEL_NAME_MISSING_IN_TARGET_Q",
-            rowNumber,
-            hotel,
-            questionEn: qEn,
-            answerEn: aEn,
-            questionTarget: qT,
-            answerTarget: aT,
-            note: "Hotel name required because EN question contains it, but it was not found in target question",
-          });
-          rowHasIssue = true;
-        }
+  // אם זו עברית ואין מיפוי, עדיף לא להפיל סתם
+  const effectiveHotelName = expectedHotelName || hotel;
 
-        if (requireA && aT && !this.isGenericTargetAnswer(lang, aT) && !this.containsHotelName(aT, hotel)) {
-          // If this is only due to global requirement, downgrade to INFO to reduce noise
-          const sev: Issue["severity"] = requireHotelNameInAllAnswers ? "INFO" : "WARN";
-          pushIssue({
-            severity: sev,
-            type: "HOTEL_NAME_MISSING_IN_TARGET_A",
-            rowNumber,
-            hotel,
-            questionEn: qEn,
-            answerEn: aEn,
-            questionTarget: qT,
-            answerTarget: aT,
-            note: requireHotelNameInAllAnswers
-              ? "Hotel name missing in target answer (global requirement enabled). Consider deterministic post-process instead of QA issue."
-              : "Hotel name required because EN answer contains it, but it was not found in target answer",
-          });
-          rowHasIssue = true;
-        }
-      }
+  const requireQ = this.shouldRequireHotelNameInTargetQuestion(qEn, hotel);
+  const requireA = this.shouldRequireHotelNameInTargetAnswer(aEn, hotel, requireHotelNameInAllAnswers);
+
+  if (requireQ && qT && expectedHotelName && !this.containsHotelName(qT, effectiveHotelName)) {
+    pushIssue({
+      severity: "WARN",
+      type: "HOTEL_NAME_MISSING_IN_TARGET_Q",
+      rowNumber,
+      hotel,
+      questionEn: qEn,
+      answerEn: aEn,
+      questionTarget: qT,
+      answerTarget: aT,
+      note: `Expected hotel name in ${lang.toUpperCase()} target question: "${effectiveHotelName}"`,
+    });
+    rowHasIssue = true;
+  }
+
+  if (
+    requireA &&
+    aT &&
+    expectedHotelName &&
+    !this.isGenericTargetAnswer(lang, aT) &&
+    !this.containsHotelName(aT, effectiveHotelName)
+  ) {
+const sev: Issue["severity"] =
+  requireHotelNameInAllAnswers || lang === "he" ? "INFO" : "WARN";
+      pushIssue({
+      severity: sev,
+      type: "HOTEL_NAME_MISSING_IN_TARGET_A",
+      rowNumber,
+      hotel,
+      questionEn: qEn,
+      answerEn: aEn,
+      questionTarget: qT,
+      answerTarget: aT,
+      note: requireHotelNameInAllAnswers
+        ? `Hotel name missing in target answer. Expected ${lang.toUpperCase()} hotel name: "${effectiveHotelName}"`
+        : `Hotel name required because EN answer contains it. Expected ${lang.toUpperCase()} hotel name: "${effectiveHotelName}"`,
+    });
+    rowHasIssue = true;
+  }
+}
 
             // --- NEW: English checks ---
 
@@ -817,8 +934,8 @@ export class QaLangMasterJob {
 
         const aCandidates = this.extractHotelCandidatesEn(aEn);
         for (const cand of aCandidates) {
-          if (!this.containsHotelName(cand, hotel)) {
-            pushIssue({
+if (!this.containsHotelName(hotel, cand)) {
+              pushIssue({
               severity: "WARN",
               type: "HOTEL_NAME_MISMATCH_EN_A",
               rowNumber,

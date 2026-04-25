@@ -141,41 +141,45 @@ export class QaMasterTriageJob {
    * and if they match - it's noise -> drop.
    */
   private isNumbersMismatchNoise(issue: QaIssueRow, lang: string): boolean {
-    if (issue.type !== "NUMBERS_MISMATCH") return false;
+  if (issue.type !== "NUMBERS_MISMATCH") return false;
 
-    // Decide whether mismatch was in question or answer based on note string
-    const note = this.normalizeBase(issue.note);
-    const inQuestion = note.includes("question numbers differ");
-    const inAnswer = note.includes("answer numbers differ");
+  const note = this.normalizeBase(issue.note);
+  const inQuestion = note.includes("question numbers differ");
+  const inAnswer = note.includes("answer numbers differ");
 
-    const enText = inQuestion ? issue.questionEn : issue.answerEn;
-    const tgtText = inQuestion ? issue.questionTarget : issue.answerTarget;
-
-    if (!enText || !tgtText) return false;
-
-    const enTokens = this.extractNumberTokensNormalized(enText, "en");
-    const tgtTokens = this.extractNumberTokensNormalized(tgtText, lang);
-
-    // If identical -> noise (examples: zehn vs 10, four vs 4, noon vs 12:00, rund um die Uhr vs 24-hour)
-    if (this.tokensEqual(enTokens, tgtTokens)) return true;
-
-    // Additional noise pattern: EN contains both "24h" and "7" because of "7 days a week",
-    // DE says "sieben Tage die Woche" (words). If after normalization DE still lacks 7 token,
-    // it is also noise (we do not want to flag 7-days-a-week if written in words).
-    // Our words-to-number tries to catch "sieben", but keep a final safe check:
-    if (inAnswer || inQuestion) {
-      const enHas24h = enTokens.includes("24h");
-      const enHas7 = enTokens.includes("7");
-      const deHas24h = tgtTokens.includes("24h");
-      const deHas7 = tgtTokens.includes("7");
-      if (enHas24h && deHas24h && enHas7 && !deHas7) {
-        // likely "seven days a week" in words -> noise
-        return true;
-      }
-    }
-
-    return false;
+  if (inQuestion) {
+    const enTokens = this.extractNumberTokensNormalized(issue.questionEn, "en");
+    const tgtTokens = this.extractNumberTokensNormalized(issue.questionTarget, lang);
+    return this.tokensEqual(enTokens, tgtTokens);
   }
+
+  if (inAnswer) {
+    const enAnswerTokens = this.extractNumberTokensNormalized(issue.answerEn, "en");
+    const tgtAnswerTokens = this.extractNumberTokensNormalized(issue.answerTarget, lang);
+
+    if (this.tokensEqual(enAnswerTokens, tgtAnswerTokens)) return true;
+
+    // חדש: אם המספר קיים בשאלת המקור וה-target answer רק חוזר עליו,
+    // והתשובה באנגלית היא תשובת אישור, זה בדרך כלל לא issue אמיתי
+    const enQuestionTokens = this.extractNumberTokensNormalized(issue.questionEn, "en");
+
+    const targetOnlyTokens = tgtAnswerTokens.filter((t) => !enAnswerTokens.includes(t));
+    const allTargetOnlyComeFromQuestion =
+      targetOnlyTokens.length > 0 &&
+      targetOnlyTokens.every((t) => enQuestionTokens.includes(t));
+
+    if (allTargetOnlyComeFromQuestion && this.isAffirmativeAnswer(issue.answerEn)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+private isAffirmativeAnswer(text: string): boolean {
+  const t = this.normalizeBase(text);
+  return /^(yes|indeed|correct)\b/.test(t);
+}
 
   private tokensEqual(a: string[], b: string[]): boolean {
     if (a.length !== b.length) return false;
@@ -661,7 +665,8 @@ export class QaMasterTriageJob {
     console.log(chalk.cyan(`Parsed issues: ${issues.length} | After deterministic noise filter: ${candidates.length}`));
 
     // If deterministicOnly: just write the remaining candidates without AI fixes
-    const triagedRows: TriageResultRow[] = [];
+const triagedRows: TriageResultRow[] = [];
+const manualReviewRows: TriageResultRow[] = [];
 
     if (deterministicOnly) {
       for (const it of candidates) {
@@ -695,28 +700,27 @@ export class QaMasterTriageJob {
         const prompt = this.buildAiPrompt(batch, lang);
         const resp = await this.agent.runWithSystem(prompt, system, model);
 
-        const obj = this.parseAiJson(resp);
-        const items = obj?.items;
-        if (!Array.isArray(items)) {
-          // if model failed JSON, fallback: keep them as "needs manual review"
-          for (const { issue } of batch) {
-            triagedRows.push({
-              hotel: issue.hotel,
-              questionEn: issue.questionEn,
-              answerEn: issue.answerEn,
-              questionTarget: issue.questionTarget,
-              answerTarget: issue.answerTarget,
-              whyIssue: issue.note || "Needs manual review (AI JSON failed)",
-              fixQuestionTarget: "",
-              fixAnswerTarget: "",
-              sourceSeverity: issue.severity,
-              sourceType: issue.type,
-              sourceRow: issue.row,
-            });
-          }
-          idx += batchSize;
-          continue;
-        }
+       const obj = this.parseAiJson(resp);
+const items = obj?.items;
+if (!Array.isArray(items)) {
+  for (const { issue } of batch) {
+    manualReviewRows.push({
+      hotel: issue.hotel,
+      questionEn: issue.questionEn,
+      answerEn: issue.answerEn,
+      questionTarget: issue.questionTarget,
+      answerTarget: issue.answerTarget,
+      whyIssue: issue.note || "Needs manual review (AI JSON failed)",
+      fixQuestionTarget: "",
+      fixAnswerTarget: "",
+      sourceSeverity: issue.severity,
+      sourceType: issue.type,
+      sourceRow: issue.row,
+    });
+  }
+  idx += batchSize;
+  continue;
+}
 
         // Map AI outputs by key
         const map = new Map<string, any>();
@@ -728,22 +732,22 @@ export class QaMasterTriageJob {
           const ai = map.get(key);
 
           // If AI doesn't return it - keep as manual review
-          if (!ai) {
-            triagedRows.push({
-              hotel: issue.hotel,
-              questionEn: issue.questionEn,
-              answerEn: issue.answerEn,
-              questionTarget: issue.questionTarget,
-              answerTarget: issue.answerTarget,
-              whyIssue: issue.note || "Needs manual review (missing AI item)",
-              fixQuestionTarget: "",
-              fixAnswerTarget: "",
-              sourceSeverity: issue.severity,
-              sourceType: issue.type,
-              sourceRow: issue.row,
-            });
-            continue;
-          }
+         if (!ai) {
+  manualReviewRows.push({
+    hotel: issue.hotel,
+    questionEn: issue.questionEn,
+    answerEn: issue.answerEn,
+    questionTarget: issue.questionTarget,
+    answerTarget: issue.answerTarget,
+    whyIssue: issue.note || "Needs manual review (missing AI item)",
+    fixQuestionTarget: "",
+    fixAnswerTarget: "",
+    sourceSeverity: issue.severity,
+    sourceType: issue.type,
+    sourceRow: issue.row,
+  });
+  continue;
+}
 
           // Only keep REAL issues
           if (ai.isRealIssue !== true) continue;

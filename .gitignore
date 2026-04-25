@@ -1,3 +1,6 @@
 node_modules/
 .env
 src/credentials/service-account.json
+dist/
+all_hotels_summary_*.txt
+master_wola_faq_tsv_*.tsv

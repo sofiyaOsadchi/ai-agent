@@ -48,11 +48,25 @@ export class RewriteFromSheetJob {
   enableGrammar: boolean,
   hotelName: string
 ) {
-  return `Hotel FAQ Combined - Rewrite + QA + Question Check + Hotel Name Injection
+  const requiredFaqItems = [
+    {
+      category: "Check-in",
+      question: `How does check-in work at ${hotelName}?`,
+      answer:
+        "The property operates with a self-check-in system. Your unique apartment PIN code will be sent to you via WhatsApp and email at 9:00 AM on your arrival day. To ensure you receive your code on time, please confirm that your reservation is paid in full and your online registration is complete."
+    },
+    {
+      category: "Access",
+      question: `What is the procedure if my ${hotelName} access code does not work when I arrive at the door?`,
+      answer:
+        "Please contact the Guest Relations Team immediately via WhatsApp (+_____) or email (info@stay-master.com). A representative will verify your booking and assist."
+    }
+  ];
+
+  return `Hotel FAQ Combined - Rewrite + QA + Question Check
 
 ROLE
 You are a senior hospitality copywriter and a precise QA editor.
-Target Hotel Name: "${hotelName}"
 
 INPUT DATA
 JSON items include: rowIndex1Based, category, question, originalAnswer, clientComment.
@@ -60,27 +74,27 @@ JSON items include: rowIndex1Based, category, question, originalAnswer, clientCo
 YOUR TASK HAS 5 PARTS:
 A) REWRITE: For rows with a meaningful clientComment, produce final, publication-ready answers.
 B) QA (LIGHT-TOUCH): For rows without a meaningful clientComment, fix answers only if needed.
-C) NAME INJECTION: Ensure the hotel name ("${hotelName}") appears in 7-10 answers total.
-D) QUESTION FIX: If the question is not suitable, propose a corrected question (write it to column G).
-E) QA NOTE: If the question and answer are mismatched, write a short note (write it to column H).
+C) QUESTION FIX: If the question is not suitable, propose a corrected question (write it to column G).
+D) QA NOTE: If the question and answer are mismatched, write a short note (write it to column H).
+E) MISSING FAQ CHECK: Check whether required FAQ items are already covered by meaning. If not, return them for appending as new rows.
 
 ========================
 SECTION A - REWRITE (APPLY CLIENT COMMENT AS PREFERRED)
 ========================
 Rules:
 - Language: same as originalAnswer (English or Hebrew).
-Prioritize clientComment over originalAnswer if they conflict.
-If the clientComment is already suitable for publication, keep it unchanged.
+- Prioritize clientComment over originalAnswer if they conflict.
+- If the clientComment is already suitable for publication, keep it unchanged.
 - If clientComment is effectively "correct", "ok", "yes", "no change", "looks good" or empty -> do NOT rewrite; handle in QA instead.
 - Stick to facts. Do not invent amenities.
 - Length: Prefer 10-16 words, BUT clientComment requirements override length.
-  If needed to include all comment details, you may exceed 16 words.
+  If needed to include all comment details, you may exceed 30 words.
 - Tone: professional, welcoming, luxury hospitality.
 - If the answer is Yes/No:
   English: start with "Yes, ...", "No, ...", or "Currently, ...".
   Hebrew: start with "כן, ...", "לא, ...", or "נכון לעכשיו, ...".
 
-  Client Comment Preservation Rule:
+Client Comment Preservation Rule:
 If the clientComment already:
 - correctly answers the question
 - follows the FAQ tone
@@ -118,10 +132,10 @@ Fix ONLY if:
 6) Says "info not available" -> use [INFO NEEDED].
 7) Logic: remove wrong "Yes/No" openings if they contradict the details.
 8) The answer starts with Yes/No but the question is not a Yes/No question - remove the Yes/No opening.
-9( dont use — em dash; 
+9) Do not use an em dash.
 
 ========================
-SECTION D - QUESTION FIX (COLUMN G)
+SECTION C - QUESTION FIX (COLUMN G)
 ========================
 Goal: fix the question ONLY if it is not suitable for a hotel FAQ.
 Examples of "not suitable":
@@ -135,7 +149,7 @@ If you propose a fix:
 - Keep it short and clear, as a real FAQ question.
 
 ========================
-SECTION E - QA NOTE (COLUMN H)
+SECTION D - QA NOTE (COLUMN H)
 ========================
 Write a short note ONLY if there is a mismatch between question and answer.
 Examples:
@@ -146,11 +160,33 @@ Return "" if no mismatch.
 Keep note concise (max ~12 words).
 
 ========================
-SECTION C - HOTEL NAME INJECTION (CRITICAL)
+SECTION E - MISSING FAQ CHECK
 ========================
-Goal: name "${hotelName}" must appear in exactly 7-10 answers across the entire dataset.
-Select rows where it fits naturally.
-Output those rows in "hotel_name_inject".
+Check whether the sheet already contains FAQ items that cover the same guest intent, even if the wording is different.
+
+A required FAQ item should be added ONLY if there is no existing question in the sheet that already covers the same practical meaning.
+
+STRICT DEDUPLICATION RULES:
+- Compare by meaning, guest intent, and practical information need, not by exact wording.
+- Treat paraphrases as already covered.
+- Treat broader or slightly reworded versions as duplicates if the guest would receive the same practical answer.
+- If an existing question already covers the same topic and need, do NOT add another version.
+- Do NOT add near-duplicates.
+- Be conservative: when in doubt, treat the item as already existing.
+- Only add a required FAQ item if that guest need is clearly missing from the sheet.
+
+Examples of duplicate-by-meaning:
+- "How does check-in work at [Hotel Name]?" == "How do guests check-in at [Hotel Name]?"
+- "What should I do if my access code does not work?" == "What is the procedure if my access code does not work when I arrive at the door?"
+- "When will I receive my access code?" == "How and when do I get my entry code?"
+
+IMPORTANT:
+- Do not inject the hotel name into existing answers.
+- Use the hotel name only in newly added missing FAQ items.
+- "hotel_name_inject" must always be an empty array.
+- "missing_faq_to_add" should usually be empty unless an item is clearly missing.
+Required FAQ items:
+${JSON.stringify(requiredFaqItems, null, 2)}
 
 ========================
 OUTPUT FORMAT (STRICT JSON)
@@ -169,8 +205,13 @@ Return ONLY valid JSON:
   "qa_note": [
     {"rowIndex1Based": <number>, "note": "<string or empty>"}
   ],
-  "hotel_name_inject": [
-    {"rowIndex1Based": <number>, "answer_with_name": "<string>"}
+  "hotel_name_inject": [],
+  "missing_faq_to_add": [
+    {
+      "category": "<string>",
+      "question": "<string>",
+      "answer": "<string>"
+    }
   ]
 }
 
@@ -184,7 +225,7 @@ ${JSON.stringify(
   null,
   2
 )}`;
-  }
+}
 
  private parseCombinedOutputOrThrow(text: string): {
   rewrite: Array<{ rowIndex1Based: number; final_answer: string }>;
@@ -192,6 +233,7 @@ ${JSON.stringify(
   question_fix: Array<{ rowIndex1Based: number; fixed_question: string }>;
   qa_note: Array<{ rowIndex1Based: number; note: string }>;
   hotel_name_inject: Array<{ rowIndex1Based: number; answer_with_name: string }>;
+  missing_faq_to_add: Array<{ category: string; question: string; answer: string }>;
 } {
   const first = text.indexOf("{");
   const last = text.lastIndexOf("}");
@@ -209,6 +251,7 @@ ${JSON.stringify(
   obj.question_fix = Array.isArray(obj.question_fix) ? obj.question_fix : [];
   obj.qa_note = Array.isArray(obj.qa_note) ? obj.qa_note : [];
   obj.hotel_name_inject = Array.isArray(obj.hotel_name_inject) ? obj.hotel_name_inject : [];
+  obj.missing_faq_to_add = Array.isArray(obj.missing_faq_to_add) ? obj.missing_faq_to_add : [];
 
   return obj;
 }
@@ -317,6 +360,28 @@ for (const item of out.hotel_name_inject) {
   nameInjectionMap.set(item.rowIndex1Based, item.answer_with_name);
 }
 
+const missingFaqRowsToAppend = out.missing_faq_to_add
+  .filter(
+    (item) =>
+      item &&
+      typeof item.category === "string" &&
+      typeof item.question === "string" &&
+      typeof item.answer === "string" &&
+      item.question.trim() &&
+      item.answer.trim()
+  )
+  .map((item) => [
+    item.category.trim(),   // A - Category
+    item.question.trim(),   // B - Question
+    item.answer.trim(),     // C - Answer
+    "",                     // D - Corrected Answer / Comment
+    "",                     // E - keep empty
+    "",                     // F - Agent Final Answer
+    "",                     // G - Question Correction
+    "",                     // H - QA Note
+    ""                      // I - Hotel Name Status
+  ]);
+
     // === בניית העמודות לכתיבה ===
 
   const finalAnswerValues: string[] = [];   // F
@@ -377,6 +442,13 @@ await this.sheets.writeColumn(cfg.spreadsheetId, questionFixCol, questionFixHead
 // 5) QA Note in column H
 await this.sheets.writeColumn(cfg.spreadsheetId, qaNoteCol, qaNoteHeader, qaNoteValues);
 
+if (missingFaqRowsToAppend.length > 0) {
+  await this.sheets.appendRows(
+    cfg.spreadsheetId,
+    `${sourceTab}!A:I`,
+    missingFaqRowsToAppend
+  );
+}
 // format
 await this.sheets.formatSheetLikeFAQ(cfg.spreadsheetId, sourceTab!);
 
@@ -385,7 +457,8 @@ console.log(`✅ Completed for "${targetHotelName}":
 - Marked Status in Col ${hotelNameCol}.
 - Final Answer written to Col ${targetCol}.
 - Question correction written to Col ${questionFixCol}.
-- QA note written to Col ${qaNoteCol}.`);
+- QA note written to Col ${qaNoteCol}.
+- Missing FAQ rows appended: ${missingFaqRowsToAppend.length}.`);
 
   }
 }

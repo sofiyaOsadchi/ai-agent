@@ -69,10 +69,10 @@ io.on("connection", (socket) => {
   });
 });
 
-const PORT = 3000;
-
+const PORT = Number(process.env.PORT) || 3000;
 httpServer.listen(PORT, async () => {
   const url = `http://localhost:${PORT}/translate-demo.html`;
   console.log(`🚀 Server running at ${url}`);
+if (process.env.NODE_ENV !== "production") {
   try { await open(url); } catch (e) {}
-});
+}});

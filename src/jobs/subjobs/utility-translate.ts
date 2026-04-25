@@ -37,7 +37,7 @@ function extractDistinctiveTokens(text: string): string[] {
   return text
     .split(/[\s.,;:!?"()\[\]{}–—\/…]+/)
     .map(w => w.trim().toLowerCase())
-    .filter(w => w.length > 4 && !STOPWORDS.has(w));
+    .filter(w => w.length > 3 && !STOPWORDS.has(w));
 }
 
 /**

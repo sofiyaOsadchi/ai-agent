@@ -40,8 +40,9 @@ import { SyncFgFromSourcesJob, SyncFgFromSourcesConfig } from "./jobs/sync-fg-fr
 import { TranslatableIdCrossCheckJob, TranslatableIdCrossCheckConfig } from "./jobs/translatable-id-crosscheck.js";
 import { TidHotelInQuestionCrossCheckJob, TidHotelInQuestionCrossCheckConfig } from "./jobs/tid-hotel-in-question-crosscheck.js";
 import { HotelQuestionDiscoveryJob } from "./jobs/hotel-question-discovery.js";
-import { ForumQuestionDiscoveryJob } from "./jobs/forum-question-discovery.js";
-
+import { QnaConsistencyJob, QnaConsistencyConfig } from "./jobs/qna-consistency.js";
+import { QaMasterSyncOriginalsJob, QaMasterSyncOriginalsConfig } from "./jobs/qa-master-sync-originals.js";
+import { MasterCoverageFromSheetsJob, MasterCoverageFromSheetsConfig } from "./jobs/master-coverage-from-sheets.js";
 // טעינת משתני סביבה
 console.log(chalk.blue("🤖 Starting Hotel Research Agent..."));
 config();
@@ -64,19 +65,19 @@ const HOTELS = [
   // ← התרגום
 const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
-    { spreadsheet: "https://docs.google.com/spreadsheets/d/1hZVI9rRgf5fWU3DSl51DyzEDWwHTQ76jx9MI6KokDlI/edit?usp=sharing" },
+    { spreadsheet: "https://docs.google.com/spreadsheets/d/1auzgM9OZvQO5r1o_emNJ2QDEmqKhI7OcMTD0eueaxac/edit?usp=sharing" },
 
 
 ];
 
 const TRANSLATE_FOLDER: string = "";
 
-const LANGS = ["he"];
+const LANGS = ["it", ];
 
 
 
 const ENRICH_CONFIG: EnrichConfig = {
-  faqSpreadsheetId: "https://docs.google.com/spreadsheets/d/17EyPMlXyaMf8qXvEHPfNTNooUDQgznM6PznPQEBy-Gw/edit?usp=sharing",  // תכניסי את ה-ID מקובץ 1
+  faqSpreadsheetId: "https://docs.google.com/spreadsheets/d/1Uz-Kp-3U_kiDhUTMnKZaLzt5zmZjRTBGRdfGNUCKt14/edit?usp=sharing",  // תכניסי את ה-ID מקובץ 1
   faqTabName: "faq",                       // שם הטאב בקובץ השאלות
   
   hotelsSpreadsheetId: "https://docs.google.com/spreadsheets/d/1RHjrYtzsnFaHAO8kNvmAfeZCzr68KcjHH4l-ZkIM3dE/edit?usp=sharing", // תכניסי את ה-ID מקובץ 2
@@ -93,20 +94,20 @@ const FILTER_CONFIG = {
   // targetCountry: "Israel",
 
   // עכשיו אפשר כמה:
-  targetCountry: ["Belgium"],
+  targetCountry: ["Spain" ],
 
-  spreadsheetId: "https://docs.google.com/spreadsheets/d/17EyPMlXyaMf8qXvEHPfNTNooUDQgznM6PznPQEBy-Gw/edit?usp=sharing",
+  spreadsheetId: "https://docs.google.com/spreadsheets/d/1Uz-Kp-3U_kiDhUTMnKZaLzt5zmZjRTBGRdfGNUCKt14/edit?usp=sharing",
   sourceTabName: "faq",
   countryColIndex: 1,
   hotelColIndex: 0
 };
 const INJECT_LANG_CONFIG: InjectLangToMasterConfig = {
-  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/1GMX40xQOTY7hpkpZrTX6HO9y9ljWrWLo7YCcQy82lmw/edit?usp=sharing",
+  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/1LcrOpkKoGf3GPSdfIBzO_rhQ5WAiq6LM39xMmOg1pjk/edit?usp=sharing",
   masterTabName: "Sheet1",
-  hotelsFolderId: "https://drive.google.com/drive/folders/1l04dqxRuQbuPTZ_BImgofLJKQYDGYZ3T?usp=sharing",
+  hotelsFolderId: "https://drive.google.com/drive/folders/1_gfwmAf-WGMSw_WzQVk05aGILn8lcX9K?usp=sharing",
 
   // חדש
-  targetLang: "de", // למשל
+  targetLang: "it", // למשל
 
   // אופציונלי - אם הטאבים שלך הם בדיוק "Sheet1 - DE"
   hotelLangTabBaseName: "Sheet1",
@@ -117,11 +118,11 @@ const INJECT_LANG_CONFIG: InjectLangToMasterConfig = {
 };
 
 const QA_LANG_MASTER_CONFIG = {
-  spreadsheetId: "https://docs.google.com/spreadsheets/d/1GMX40xQOTY7hpkpZrTX6HO9y9ljWrWLo7YCcQy82lmw/edit?usp=sharing",
+  spreadsheetId: "https://docs.google.com/spreadsheets/d/1LcrOpkKoGf3GPSdfIBzO_rhQ5WAiq6LM39xMmOg1pjk/edit?usp=sharing",
   tabName: "Sheet1",
-  targetLang: "de",
+  targetLang: "it",
 
-  outputTabName: "QA - DE Master",
+  outputTabName: "QA - IT Master",
   templateTabName: "QA - TEMPLATE",
 
   maxIssuesInReport: 1500,
@@ -134,11 +135,11 @@ const QA_LANG_MASTER_CONFIG = {
 
 
 const QA_MASTER_TRIAGE_CONFIG: QaMasterTriageConfig = {
-  spreadsheetId: "1GMX40xQOTY7hpkpZrTX6HO9y9ljWrWLo7YCcQy82lmw",
-  sourceQaTabName: "QA - DE Master", // זה הטאב שהדטרמיניסטי מייצר
-  targetLang: "de",
+  spreadsheetId: "1LcrOpkKoGf3GPSdfIBzO_rhQ5WAiq6LM39xMmOg1pjk",
+  sourceQaTabName: "QA - IT Master", // זה הטאב שהדטרמיניסטי מייצר
+  targetLang: "it",
 
-  outputTabName: "QA - DE True Issues",
+  outputTabName: "QA - IT True Issues",
   // templateTabName: "QA - TEMPLATE", // אופציונלי אם יש לך
   model: "o3",
 
@@ -150,14 +151,35 @@ const QA_MASTER_TRIAGE_CONFIG: QaMasterTriageConfig = {
 };
 
 
+const QA_MASTER_SYNC_ORIGINALS_CONFIG: QaMasterSyncOriginalsConfig = {
+  spreadsheetId: "1B3Uarv9a1CerDSENC3_CCuHqAHPVAQnMwOa39sxjMLs",
+  triageTabName: "QA - IT True Issues",
+  targetLang: "it",
+
+  originalsRootFolderId: "1gm8IQdX_tmkSRYx8Tuf3sN2N2KwmiO3x",
+
+  originalEnglishTabName: "Sheet1",
+  originalTargetTabName: "Sheet1 – IT",
+
+  emptyCellMarker: "∅",
+  maxRowsToProcess: 500,
+
+  updateOriginalEnglish: true,
+  updateOriginalTarget: true,
+  updateMasterAfterSync: false,
+
+  // אם בעתיד תרצי גם לעדכן מאסטר מתוך אותו ג'וב
+  masterTabName: "Sheet1",
+};
+
 // Apply fixes back to master (VLOOKUP-like)
 const QA_MASTER_APPLY_FIXES_CONFIG = {
-  spreadsheetId: "1GMX40xQOTY7hpkpZrTX6HO9y9ljWrWLo7YCcQy82lmw",
+  spreadsheetId: "1B3Uarv9a1CerDSENC3_CCuHqAHPVAQnMwOa39sxjMLs",
 
-  targetLang: "de",
+  targetLang: "it",
 
   masterTabName: "Sheet1",          // או "QA - DE Master" אם זה הטאב שאת רוצה לעדכן בפועל
-  triageTabName: "QA - DE True Issues",
+  triageTabName: "QA - IT True Issues",
 
   // התנהגות מומלצת:
   // applyOnlyWhenFixExists: true,
@@ -165,6 +187,28 @@ const QA_MASTER_APPLY_FIXES_CONFIG = {
   // dryRun: false,
 };
 
+
+const MASTER_COVERAGE_CONFIG: MasterCoverageFromSheetsConfig = {
+  masterSpreadsheetId: "1xY2JkZuiT_W04NVWizeNVoG1kdv7KJPaEhOkJzG_04A",
+  masterTabName: "Sheet1",
+  masterHotelCol: 0,
+  masterQuestionCol: 4,
+
+  sourceFolderId: "https://drive.google.com/drive/folders/1_gfwmAf-WGMSw_WzQVk05aGILn8lcX9K?usp=sharing",
+  sourceFolderRecursive: true,
+  sourceSheets: [
+    // { spreadsheet: "https://docs.google.com/spreadsheets/d/.../edit", tab: "Sheet1", hotelNameExact: "Leonardo ..." },
+  ],
+  sourceTabName: "Sheet1 – IT",
+  sourceQuestionCol: 1,
+  // sourceHotelCol: 0,
+
+  reportTabName: "Master Coverage Report",
+  writeReport: true,
+  strictHotelNameMatch: false,
+  failIfMissing: true,
+  ignoreQuestionsContaining: [],
+};
 
 
 // ← מטא+סכימה (קבצים/טאבים/שורה לכתיבה)
@@ -188,38 +232,38 @@ const META_SCHEMA_SHEETS: Array<{
 }> = [
   {
     spreadsheet: "",
-    tab: "Sheet1",
+    tab: "Sheet1 – IT",
     metaRow: 70,
     metaStartCol: "A",
     schemaCol: "E",
 
     // NEW
-    lang: "en",
-    
+    lang: "it",
+
   },
 ];
 
 // ← מטא+סכימה (תיקייה בגוגל דרייב – ירוץ על כל הגיליונות בתיקייה)
 const META_SCHEMA_FOLDER: string =
-  "https://drive.google.com/drive/folders/13FYczbgqxrQp6lrWCJLEi2ujh_IaUSRS?usp=sharing";
+  "https://drive.google.com/drive/folders/1_zPQ1g2PJsplxAMQxtFNzTTYC35trNxT?usp=sharing";
 
 const META_SCHEMA_FOLDER_DEFAULTS: Partial<(typeof META_SCHEMA_SHEETS)[number]> = {
-  tab: "Sheet1",
+  tab: "Sheet1 – IT",
   metaRow: 70,
   metaStartCol: "A",
   schemaCol: "E",
-  lang: "en",
+  lang: "it",
   // אין hotelNameMap כאן בכלל, כי זה לא עברית
 };
 
 const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
-  masterSpreadsheetId: "1mpZf0T2ScjlEZlTQ7XUG0zDXCZJMHowxIP8WwFEJeyc",
+  masterSpreadsheetId: "1SMsvv3KUaj3fB4EkUw03ntMkSjINdtXTfK_FzmX5WKU",
   masterTabName: "Sheet1",
 
-  hotelsFolderId: "1l04dqxRuQbuPTZ_BImgofLJKQYDGYZ3T",
+  hotelsFolderId: "https://drive.google.com/drive/folders/1EOyF1SyKy9aYVSfCYE0LzuMHYBOSWi4u?usp=sharing",
 
-  targetLocale: "de",
-  sourceTabName: "Sheet1 – DE",
+  targetLocale: "he",
+  sourceTabName: "Sheet1 – IT",
 
   overwriteExisting: true,
   dryRun: false,
@@ -229,28 +273,31 @@ const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
 
 // Wrap-P (only column F) - single sheet (no folder)
 const WRAP_P_SHEET: string =
-  "https://docs.google.com/spreadsheets/d/1hB3Yc-c9v466n00GtfOTTwb3bLtEPy1pBZX0p8hhU6E/edit?usp=sharing";
+  "https://docs.google.com/spreadsheets/d/1hFMr-OGAiNZEWfhznoeSGHvJJWmT8XL9xPkYyzaJrSw/edit?usp=sharing";
 
 
 const FAQ_AUDIT_STRUCTURE_COUNTRY_URL =
-  "https://www.leonardo-hotels.de/israel";
+  "https://www.leonardo-hotels.com/spain";
 
 const FAQ_AUDIT_STRUCTURE_SHEET_TITLE =
-  "Israel Hotels FAQ Audit - Structure Only";
-
-
-
-
-
-  
-
+ "Spain Hotels FAQ Audit - Structure Only";
 
 // NEW – FAQ Audit config
 
-const FAQ_AUDIT_COUNTRY_URL = "https://www.leonardo-hotels.com/germany";
-const FAQ_AUDIT_SHEET_TITLE = "Germany Hotels FAQ Audit";
+//const FAQ_AUDIT_COUNTRY_URL = "https://www.leonardo-hotels.com/spain";
+//const FAQ_AUDIT_SHEET_TITLE = "Spain Hotels FAQ Audit";
 
+type SiteLocale = "en" | "he" | "de"  ;
 
+const FAQ_AUDIT_CONFIG: {
+  locale: SiteLocale;
+  countryUrl: string;
+  sheetTitle: string;
+} = {
+  locale: "he",
+  countryUrl: "https://www.leonardo-hotels.co.il/germany",
+  sheetTitle: "Germany Hotels FAQ Audit",
+};
 
 
   
@@ -269,12 +316,11 @@ type RewriteSheetItem = {
 
 const REWRITE_SHEETS: RewriteSheetItem[] = [
   {
-    spreadsheet: "https://docs.google.com/spreadsheets/d/1dOCibPEWTg4M1y5HmNUqZZtcWqdl6CjgVMAN9dlrh9o/edit?usp=sharing",
+    spreadsheet: "https://docs.google.com/spreadsheets/d/1mI6M7_2DLAOkZDfaNvNhCV0NOFyI6_B5cY_WccIt-Ts/edit?usp=sharing",
     commentCol: "D",      // ההערות של המלון
     answerCol: "C",       // התשובה המקורית
     targetCol: "F",       // לעמודה החדשה
-    header: "Agent Final Answer",
-    hotelName: "hotel name"
+    header: "Agent Final Answer"
   },
 
 
@@ -577,19 +623,26 @@ const DISCOVER = {
 };
 
 
-const FORUM_DISCOVER = {
-  hotelName: process.env.DISCOVER_HOTEL_NAME || "master St. Paul’s London",
-  locale: (process.env.DISCOVER_LOCALE || "en") as "en" | "he" | "de",
-  sheetTitle: process.env.DISCOVER_SHEET_TITLE || "Forum Question Discovery",
-sources: ["tripadvisor_forum", "reddit", "flyertalk"] as const,
-  usePlaywright: true,
+const QNA_CONSISTENCY_CONFIG = {
+  spreadsheet: "https://docs.google.com/spreadsheets/d/1pWyviz2bDZp-khUMnbZKd35IqOC8xC60telUYyT_4ic/edit?usp=sharing",
+  tab: "Sheet1",
+  mode: "ai-hybrid" as const,
 };
+
+
+
+
+
+
 
 
 // מצב הפעלה: faq (ברירת מחדל) או translate
 const MODE = (process.env.MODE ?? "faq").toLowerCase();
+console.log(chalk.yellow(`MODE = ${MODE}`));
 
 async function main() {if (MODE === "translate") {
+    console.log(chalk.magenta("Entered main()"));
+
     const job = new TranslateFromSheetJob(agent, sheets);
 
     // --- לוגיקה חדשה: תמיכה בממשק הוובי ---
@@ -610,15 +663,22 @@ async function main() {if (MODE === "translate") {
         console.log(chalk.magenta(`🎯 Dynamic Input: ${inputType} -> ${inputId}`));
 
         if (inputType === 'folder') {
-            // אם זו תיקייה - מביאים את כל הקבצים ממנה
-            try {
-                const folderId = inputId.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ?? inputId;
-                const ids = await sheets.listSpreadsheetIdsInFolder(folderId);
-                targets = ids.map(id => ({ spreadsheetId: id }));
-                console.log(chalk.cyan(`📂 Loaded ${ids.length} sheets from dynamic folder`));
-            } catch (err) {
-                console.error(chalk.red("❌ Failed to load folder:"), err);
-            }
+          if (inputType === "folder") {
+  try {
+    const folderId =
+      inputId.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ?? inputId.trim();
+
+    const ids = await sheets.listSpreadsheetIdsInFolderRecursive(folderId);
+
+    targets = ids.map((id) => ({ spreadsheetId: id }));
+
+    console.log(
+      chalk.cyan(`📂 Loaded ${ids.length} sheets from dynamic folder tree`)
+    );
+  } catch (err) {
+    console.error(chalk.red("❌ Failed to load folder tree:"), err);
+  }
+}
         } else {
             // אם זה קובץ בודד
             try {
@@ -641,12 +701,21 @@ async function main() {if (MODE === "translate") {
         }).filter(Boolean) as any[];
 
         // 2) קבצים מתיקייה קבועה
-        let fromFolder: any[] = [];
-        if (TRANSLATE_FOLDER.trim()) {
-            const fId = TRANSLATE_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ?? TRANSLATE_FOLDER;
-            const ids = await sheets.listSpreadsheetIdsInFolder(fId);
-            fromFolder = ids.map(spreadsheetId => ({ spreadsheetId }));
-        }
+       let fromFolder: Array<{ spreadsheetId: string }> = [];
+
+if (TRANSLATE_FOLDER.trim()) {
+  const folderId =
+    TRANSLATE_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+    TRANSLATE_FOLDER.trim();
+
+  const ids = await sheets.listSpreadsheetIdsInFolderRecursive(folderId);
+
+  fromFolder = ids.map((spreadsheetId) => ({ spreadsheetId }));
+
+  console.log(
+    chalk.cyan(`📂 Loaded ${ids.length} sheets from translate folder tree`)
+  );
+}
 
         // איחוד
         const seen = new Set<string>();
@@ -835,21 +904,29 @@ async function main() {if (MODE === "translate") {
     }
   }
 
-  // 2) גם מתיקייה (אם מולאה)
-  let fromFolder: Array<{ spreadsheetId: string }> = [];
-  if (META_SCHEMA_FOLDER.trim()) {
-    const folderId =
-      META_SCHEMA_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
-      META_SCHEMA_FOLDER.trim();
+  // 2) גם מתיקייה (אם מולאה), כולל תיקיות פנימיות
+let fromFolder: Array<{ spreadsheetId: string }> = [];
+if (META_SCHEMA_FOLDER.trim()) {
+  const folderId =
+    META_SCHEMA_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+    META_SCHEMA_FOLDER.trim();
 
-    try {
-     const ids = await sheets.listSpreadsheetIdsInFolderRecursive(folderId);
-      fromFolder = ids.map((spreadsheetId) => ({ spreadsheetId }));
-      console.log(chalk.cyan(`📂 Found ${ids.length} spreadsheets in folder for meta-schema`));
-    } catch (err) {
-      console.error(chalk.red("⚠️ Failed to list meta-schema folder sheets:"), err);
-    }
+  try {
+    const ids = await sheets.listSpreadsheetIdsInFolderRecursive(folderId);
+    fromFolder = ids.map((spreadsheetId) => ({ spreadsheetId }));
+
+    console.log(
+      chalk.cyan(
+        `📂 Found ${ids.length} spreadsheets in folder tree for meta-schema`
+      )
+    );
+  } catch (err) {
+    console.error(
+      chalk.red("⚠️ Failed to list recursive meta-schema folder sheets:"),
+      err
+    );
   }
+}
 
   // 3) ייחוד targets
   const seen = new Set<string>();
@@ -943,22 +1020,13 @@ async function main() {if (MODE === "translate") {
 
 
     } else if (MODE === "faq-audit") {                 // NEW
-  const job = new FaqAuditFromWebJob(agent, sheets);
-  type SiteLocale = "en" | "he" | "de";
-
-const LOCALE: SiteLocale = "de";
-
-const COUNTRY_URL_BY_LOCALE: Record<SiteLocale, string> = {
-  en: "https://www.leonardo-hotels.com/israel",
-  he: "https://www.leonardo-hotels.co.il/israel",
-  de: "https://www.leonardo-hotels.de/germany",
-};
+ const job = new FaqAuditFromWebJob(agent, sheets);
 
 const result = await job.run({
-  countryUrl: COUNTRY_URL_BY_LOCALE[LOCALE],
-  sheetTitle: FAQ_AUDIT_SHEET_TITLE,
+  countryUrl: FAQ_AUDIT_CONFIG.countryUrl,
+  sheetTitle: FAQ_AUDIT_CONFIG.sheetTitle,
   shareResults: true,
-  locale: LOCALE
+  locale: FAQ_AUDIT_CONFIG.locale
 });
 
   // לינק ישיר לגיליון + סיכום
@@ -1410,7 +1478,7 @@ aiMaxRows: 3000,
   try {
     await job.run({
       spreadsheetId,
-      targetCol: "D",    
+      targetCol: "f",    
       skipHeader: true,
     });
 
@@ -1488,32 +1556,37 @@ aiMaxRows: 3000,
     sheetTitle: DISCOVER.sheetTitle,
   });
 
-} else if (MODE === "discover-forum-questions") {
-  const job = new ForumQuestionDiscoveryJob(agent, sheets);
+} else if (MODE === "qna-consistency") {
+  try {
+    const { QnaConsistencyJob } = await import("./jobs/qna-consistency.js");
 
-  const res = await job.run({
-    hotelName: FORUM_DISCOVER.hotelName,
-    locale: FORUM_DISCOVER.locale,
-    sheetTitle: FORUM_DISCOVER.sheetTitle,
-    sources: (FORUM_DISCOVER.sources as any),
-        usePlaywright: FORUM_DISCOVER.usePlaywright,  // ← הוסיפי את זה
+    const job = new QnaConsistencyJob(agent, sheets);
+    await job.run(QNA_CONSISTENCY_CONFIG);
 
+    console.log(chalk.cyan("🎉 Q&A consistency completed."));
+  } catch (err) {
+    console.error(chalk.red("❌ Q&A consistency failed:"), err);
+  }
 
-    // optional limits from env
-    maxItems: Number(process.env.FORUM_DISCOVER_MAX_ITEMS || 80),
-    maxCalls: Number(process.env.FORUM_DISCOVER_MAX_CALLS || 100),
-    delayMinMs: Number(process.env.FORUM_DISCOVER_DELAY_MIN_MS || 500),
-    delayMaxMs: Number(process.env.FORUM_DISCOVER_DELAY_MAX_MS || 1200),
-    blockRetries: Number(process.env.FORUM_DISCOVER_BLOCK_RETRIES || 2),
-    cooldownMinMs: Number(process.env.FORUM_DISCOVER_COOLDOWN_MIN_MS || 60000),
-    cooldownMaxMs: Number(process.env.FORUM_DISCOVER_COOLDOWN_MAX_MS || 180000),
-  });
+  
+} else if (MODE === "qa-master-sync-originals") {
+  const job = new QaMasterSyncOriginalsJob(sheets);
+  await job.run(QA_MASTER_SYNC_ORIGINALS_CONFIG);
 
-  console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit`);
-  console.log(chalk.green(`✅ Raw: ${res.rawCount} | Deduped groups: ${res.dedupedCount} | Questions: ${res.questionsCount}`));
+  console.log(chalk.cyan("🎉 QA master sync originals completed."));
 
+  }
 
-  } else {
+  else if (MODE === "master-coverage") {
+  const job = new MasterCoverageFromSheetsJob(sheets);
+
+  await job.run(MASTER_COVERAGE_CONFIG);
+
+  console.log(chalk.cyan("🎉 Master coverage run completed."));
+
+   }
+
+  else {
     await runAllHotelsResearch(agent, sheets, HOTELS);
   }
 }

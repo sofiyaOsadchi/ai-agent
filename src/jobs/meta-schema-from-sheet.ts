@@ -1,6 +1,7 @@
 // src/jobs/meta-schema-from-sheet.ts
 import { AIAgent } from "../core/agent.js"; // kept for compatibility (not used)
 import { SheetsService } from "../services/sheets.js";
+import { HOTEL_NAME_HE_MAP } from "./subjobs/hotel-name-hebrew-map.js";
 
 type HotelNameMapConfig = {
   spreadsheetId: string; // ID (not URL)
@@ -69,13 +70,16 @@ export class MetaSchemaFromSheetJob {
     return `'${String(title).replace(/'/g, "''")}'`;
   }
 
-  private normalizeHotelKey(s: string): string {
-    return this.sanitizeHotelTitle(String(s ?? ""))
-      .replace(/\u00a0/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
+ private normalizeHotelKey(s: string): string {
+  return this.sanitizeHotelTitle(String(s ?? ""))
+    .normalize("NFC")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u2018\u2019\u0060\u00B4]/g, "'")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
 
   private extractLangFromTabTitle(title: string): string | null {
     const t = (title ?? "").trim();
@@ -166,32 +170,12 @@ export class MetaSchemaFromSheetJob {
     return s;
   }
 
-  private async resolveHebrewHotelName(
-    englishHotelName: string,
-    mapCfg: HotelNameMapConfig
-  ): Promise<string | null> {
-    const rangeA1 = mapCfg.rangeA1 ?? "A:B";
-    const englishColIndex = mapCfg.englishColIndex ?? 0;
-    const localizedColIndex = mapCfg.localizedColIndex ?? 1;
-    const headerRows = mapCfg.headerRows ?? 1;
-
-    const mapTabTitle =
-      mapCfg.tabName ?? (await this.sheets.getFirstSheetTitle(mapCfg.spreadsheetId));
-    const mapTabA1 = this.quoteA1Sheet(mapTabTitle);
-
-    const rows = await this.sheets.readValues(mapCfg.spreadsheetId, `${mapTabA1}!${rangeA1}`);
-    if (!rows.length) return null;
-
+  private resolveHebrewHotelName(englishHotelName: string): string | null {
     const targetKey = this.normalizeHotelKey(englishHotelName);
 
-    for (let i = headerRows; i < rows.length; i++) {
-      const row = rows[i] ?? [];
-      const en = (row[englishColIndex] ?? "").toString().trim();
-      const he = (row[localizedColIndex] ?? "").toString().trim();
-      if (!en || !he) continue;
-
-      if (this.normalizeHotelKey(en) === targetKey) {
-        return this.sanitizeOneLine(he);
+    for (const [enName, heName] of Object.entries(HOTEL_NAME_HE_MAP)) {
+      if (this.normalizeHotelKey(enName) === targetKey) {
+        return this.sanitizeOneLine(heName);
       }
     }
 
@@ -212,14 +196,15 @@ export class MetaSchemaFromSheetJob {
         throw new Error(`Missing Hebrew hotel name for lang="${lang}"`);
       }
 
-      const metaTitle = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe} - פתאל`);
+      const metaTitle = this.sanitizeOneLine(`שאלות נפוצות | ${hotelNameHe}`);
 
       const metaDescRaw = this.sanitizeOneLine(
-        `שאלות נפוצות על ${hotelNameHe} עם מידע על חדרים, מתקנים, ארוחות, חניה, שעות צ׳ק-אין וצ׳ק-אאוט, מדיניות, נגישות, שירותים מיוחדים וטיפים לשהייה מושלמת`
-      );
+    `מחפשים מידע לקראת החופשה ב${hotelNameHe}? ריכזנו עבורכם את כל השאלות הנפוצות: מידע על סוגי החדרים, המתקנים, החניה ושירותי המלון.`
+  );
+
 
       const metaDesc = this.enforceMaxMetaDescLenHebrew(metaDescRaw, 160);
-      const h1 = this.sanitizeOneLine(`שאלות נפוצות - ${hotelNameHe}`);
+      const h1 = this.sanitizeOneLine(`שאלות נפוצות על ${hotelNameHe}`);
 
       return { metaTitle, metaDesc, h1 };
     }
@@ -316,20 +301,13 @@ export class MetaSchemaFromSheetJob {
     const qa = this.collectQA(rows);
     if (qa.length === 0) throw new Error(`No Q/A rows found in tab "${targetTabTitle}"`);
 
-    // Resolve Hebrew name if needed
-    let hotelNameHe: string | undefined = undefined;
+     let hotelNameHe: string | undefined = undefined;
     if (lang.startsWith("he")) {
-      if (!cfg.hotelNameMap?.spreadsheetId) {
-        throw new Error(`lang="${lang}" requires hotelNameMap (spreadsheetId)`);
-      }
-
-      hotelNameHe =
-        (await this.resolveHebrewHotelName(hotelNameEn, cfg.hotelNameMap)) ?? undefined;
+      hotelNameHe = this.resolveHebrewHotelName(hotelNameEn) ?? undefined;
 
       if (!hotelNameHe) {
         throw new Error(
-          `Hebrew hotel name not found in mapping sheet for: "${hotelNameEn}". ` +
-            `Check mapping sheet columns (A=English, B=Hebrew) and exact hotel name.`
+          `Hebrew hotel name not found in HOTEL_NAME_HE_MAP for: "${hotelNameEn}".`
         );
       }
     }

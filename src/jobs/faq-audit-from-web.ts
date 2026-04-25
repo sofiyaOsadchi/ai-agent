@@ -54,6 +54,7 @@ const SITE_CONFIG: Record<SiteLocale, SiteConfig> = {
     allowedHosts: ["www.leonardo-hotels.de"],
     acceptLanguage: "de-DE,de;q=0.9,en;q=0.8",
   },
+
 };
 
 // --- פונקציית חומרה (מחוץ למחלקה) - סיווג קפדני ---
@@ -420,11 +421,11 @@ schemaOnlyQuestions || "",
 
     // כתיבה לשיטס
     await this.sheets.writeValues(spreadsheetId, "Critical Issues!A1", criticalRows);
-    await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Critical Issues");
+   // await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Critical Issues");
     
    
     await this.sheets.writeValues(spreadsheetId, "Hotels Summary!A1", summaryRows);
-await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Hotels Summary");
+//await this.sheets.formatSheetLikeFAQ(spreadsheetId, "Hotels Summary");
 
     return {
       spreadsheetId,

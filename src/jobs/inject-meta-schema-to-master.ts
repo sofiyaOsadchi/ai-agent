@@ -64,9 +64,17 @@ export class InjectMetaSchemaToMasterJob {
   }
 
   private hotelNameFromMasterSeoTitle(seoTitle: string): string {
-    const s = (seoTitle ?? "").replace(/\u00A0/g, " ").trim();
-    return s.replace(/^FAQ\s*\|\s*/i, "").trim();
-  }
+  const s = (seoTitle ?? "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return s
+    .replace(/^FAQ\s*\|\s*/i, "")
+    .replace(/^FAQ\s+about\s+/i, "")
+    .trim();
+}
 
   private findHeaderIndex(headers: string[], headerName: string): number {
     const norm = (x: string) =>

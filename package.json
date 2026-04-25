@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:cloud": "node dist/server-demo.js",
     "translate": "MODE=translate tsx src/index.ts",
     "rewrite": "MODE=rewrite tsx src/index.ts",
     "validate-lite": "MODE=validate-lite tsx src/index.ts",
@@ -39,7 +40,9 @@
      "tid-crosscheck": "MODE=tid-crosscheck tsx src/index.ts",
      "tid-hotel-in-question": "MODE=tid-hotel-in-question tsx src/index.ts",
      "discover:questions": "cross-env MODE=discover-questions tsx src/index.ts",
-     "discover:forum-questions": "cross-env MODE=discover-forum-questions tsx src/index.ts",
+    "qna-consistency": "cross-env MODE=qna-consistency tsx src/index.ts",
+    "qa-master-sync-originals": "cross-env MODE=qa-master-sync-originals tsx src/index.ts",
+    "master-coverage": "MODE=master-coverage tsx src/index.ts",
       "faq-audit-structure:render": "cross-env MODE=faq-audit-structure FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome tsx src/index.ts",
    
       "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"

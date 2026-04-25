@@ -62,6 +62,24 @@ async batchWriteValues(
   });
 }
 
+async appendRows(
+  spreadsheetId: string,
+  rangeA1: string,
+  values: string[][]
+): Promise<void> {
+  if (!values.length) return;
+
+  await this.withBackoff(async () => {
+    await this.sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: rangeA1,
+      valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values },
+    });
+  });
+}
+
 async listSpreadsheetsInFolderWithNames(
   folderId: string
 ): Promise<Array<{ id: string; name: string }>> {
@@ -284,14 +302,78 @@ private async getSpreadsheetMeta(spreadsheetId: string): Promise<sheets_v4.Schem
   const meta = await this.withBackoff(async () => {
     const res = await this.sheets.spreadsheets.get({
       spreadsheetId,
-      fields: "properties(title),sheets(properties(sheetId,title))",
+      fields: "properties(title),sheets(properties(sheetId,title,gridProperties(columnCount,rowCount)))",
     });
     return res.data;
-  }, 12); // allow more retries on 429
+  }, 12);
 
   this.spreadsheetMetaCache.set(spreadsheetId, meta);
   return meta;
 }
+
+private normalizeSheetText(s: string): string {
+  return String(s ?? "")
+    .normalize("NFC")
+    .replace(/\u00A0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+private async getSheetPropertiesByTitle(
+  spreadsheetId: string,
+  sheetTitle: string
+): Promise<sheets_v4.Schema$SheetProperties> {
+  const meta = await this.getSpreadsheetMeta(spreadsheetId);
+  const target = this.normalizeSheetText(sheetTitle);
+
+  const sheet = (meta.sheets ?? []).find(
+    (s) => this.normalizeSheetText(s.properties?.title ?? "") === target
+  );
+
+  if (!sheet?.properties) {
+    throw new Error(`Sheet "${sheetTitle}" not found in spreadsheet ${spreadsheetId}`);
+  }
+
+  return sheet.properties;
+}
+
+
+async ensureMinColumns(
+  spreadsheetId: string,
+  sheetTitle: string,
+  minColumnCount: number
+): Promise<void> {
+  const props = await this.getSheetPropertiesByTitle(spreadsheetId, sheetTitle);
+  const sheetId = props.sheetId;
+  const currentColumnCount = props.gridProperties?.columnCount ?? 0;
+
+  if (sheetId == null) {
+    throw new Error(`Missing sheetId for "${sheetTitle}" in spreadsheet ${spreadsheetId}`);
+  }
+
+  if (currentColumnCount >= minColumnCount) return;
+
+  await this.withBackoff(async () => {
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            appendDimension: {
+              sheetId,
+              dimension: "COLUMNS",
+              length: minColumnCount - currentColumnCount,
+            },
+          },
+        ],
+      },
+    });
+  }, 12);
+
+  this.clearMetaCache(spreadsheetId);
+}
+
 async getSheetTitles(spreadsheetId: string): Promise<string[]> {
   const meta = await this.getSpreadsheetMeta(spreadsheetId);
   const sheets = meta.sheets ?? [];
@@ -852,13 +934,14 @@ async formatSheet(spreadsheetId: string): Promise<void> {
    * כדי לא לשנות את מבנה הגיליון הקיים.
    */
   async formatSheetLikeFAQ(spreadsheetId: string, sheetTitle: string): Promise<void> {
-    const sheetId = await this.getSheetIdByTitle(spreadsheetId, sheetTitle);
+  const sheetId = await this.getSheetIdByTitle(spreadsheetId, sheetTitle);
 
-    // נקרא את הנתונים של הטאב הספציפי לצורך זיהוי קבוצות קטגוריה
-    const { data } = await this.sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${sheetTitle}!A:G`,
-    });
+  await this.ensureMinColumns(spreadsheetId, sheetTitle, 7);
+
+  const { data } = await this.sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetTitle}!A:G`,
+  });
     const rows = data.values ?? [];
     if (rows.length < 2) return;
 
