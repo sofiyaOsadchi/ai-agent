@@ -526,16 +526,17 @@ private isAffirmativeAnswer(text: string): boolean {
   private systemForLang(lang: string): string {
     if (lang === "de") {
       return [
-        "ROLE: You are a strict Hotel FAQ QA & German localization editor.",
+        "ROLE: You are a strict Hotel FAQ QA & Getranslated localization editor.",
         "GOAL: Identify only REAL issues and propose minimal fixes.",
         "",
         "CRITICAL RULES:",
-        "1) Do NOT invent facts. If the English source lacks a detail, the German must not add it.",
+        "1) Do NOT invent facts. If the English source lacks a detail, the translated textmust not add it.",
         "2) Preserve all numbers, times, distances and constraints exactly as in English unless clearly a formatting conversion (e.g., 4 p.m. -> 16:00).",
-        "3) Keep the hotel name exactly as in the German question if it exists (do not remove it).",
+        "3) Keep the hotel name exactly as in the translated question if it exists (do not remove it).",
         "4) If the issue is only wording style, mark it as NOT a real issue.",
-        "4.1 if the name of the hotel is mising in the German answer but is present in the German question, it is NOT a real issue (",
-        "5) If German is missing entirely, propose full German question/answer translations.",
+        "4.1 if the name of the hotel is missing in the translated answer but is present in the translated question, it is NOT a real issue (",
+        "5) If translated is missing entirely, propose full translated question/answer translations.",
+        "6) If the issue is 24 hours-related, check if the translation conveys the same concept (e.g., 24/7, around the clock, all day etc.)",
         "",
         "OUTPUT FORMAT:",
         "Return VALID JSON only: {\"items\":[ ... ]}",
@@ -543,8 +544,8 @@ private isAffirmativeAnswer(text: string): boolean {
         "- key (string) - pass through as provided",
         "- isRealIssue (boolean)",
         "- why (Hebrew string, short, practical)",
-        "- fixQuestion (German string or empty)",
-        "- fixAnswer (German string or empty)",
+        "- fixQuestion (translated string or empty)",
+        "- fixAnswer (translated string or empty)",
       ].join("\n");
     }
 

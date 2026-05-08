@@ -13,13 +13,18 @@ type TranslateSheetConfig = {
   sourceTab?: string;
   targetLangs: string[];
   translateHeader?: boolean;
+  
 };
 
 type ReviewRow = {
   questionFix: string;
   answerFix: string;
 };
+const DRAFT_MODEL = "o3";
 
+const POLISH_MODEL = "gpt-5.5";
+
+const REVIEW_MODEL = "o3";
 
 // === Language Notes Configuration ===
 const LANGUAGE_NOTES: Record<string, string> = {
@@ -197,6 +202,24 @@ private normalizeHotelKey(name: string): string {
     .trim()
     .replace(/\s+/g, " ")
     .replace(/[–—]/g, "-");
+}
+
+private normalizeTabTitle(title: string): string {
+  return String(title ?? "")
+    .normalize("NFKC")
+    .replace(/\u00A0/g, " ")
+    .replace(/[–—−]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+private tabTitleExists(existingTitles: string[], targetTitle: string): boolean {
+  const normalizedTarget = this.normalizeTabTitle(targetTitle);
+
+  return existingTitles.some(
+    title => this.normalizeTabTitle(title) === normalizedTarget
+  );
 }
 
 private getOfficialHotelNameForTargetLang(docTitle: string, lang: string): string {
@@ -617,8 +640,11 @@ const processChunk = async (
   // Step A: Draft
   const systemInstr = this.systemInstructions(lang, officialHotelName);
   const draftPromptStr = this.draftPrompt(lang, encodedChunkRows, translateHeader, officialHotelName);
-  const draftResult = await this.agent.runWithSystem(draftPromptStr, systemInstr, "o3");
-
+const draftResult = await this.agent.runWithSystem(
+  draftPromptStr,
+  systemInstr,
+  DRAFT_MODEL
+);
   const draftRowsRaw = this.parseJsonMatrixOrThrow(draftResult);
   const draftRows = this.decodeStructuralRows(draftRowsRaw, expectedWidth);
   this.assertSameShape(chunkRows, draftRows, `Draft part ${partNum}`);
@@ -692,25 +718,38 @@ const germanPolishRules =
 
 const systemInstrPolish = [systemInstr, germanPolishRules].join("\n");
 
-  const finalJson = await this.agent.runWithSystem(polishPromptStr, systemInstrPolish, "o3");
-  const finalRowsRaw = this.parseJsonMatrixOrThrow(finalJson);
+const finalJson = await this.agent.runWithSystem(
+
+  polishPromptStr,
+
+  systemInstrPolish,
+
+  POLISH_MODEL
+
+);  const finalRowsRaw = this.parseJsonMatrixOrThrow(finalJson);
   const finalRows = this.decodeStructuralRows(finalRowsRaw, expectedWidth);
   this.assertSameShape(chunkRows, finalRows, `Polish part ${partNum}`);
 return finalRows;
 };
 
-
+const existingTabTitles = await this.sheets.getSheetTitles(cfg.spreadsheetId);
     // 3. Process Each Target Language
-    for (const lang of cfg.targetLangs) {
+  for (const lang of cfg.targetLangs) {
   const newTitle = `${sourceTab} – ${lang.toUpperCase()}`;
-        const officialHotelName = this.getOfficialHotelNameForTargetLang(docTitle, lang);
 
-      
-      console.log(chalk.blue(`🚀 Starting translation chain for ${lang} (${newTitle})...`));
-        console.log(chalk.cyan(`🏨 Official hotel name for ${lang}: "${officialHotelName}"`));
+  if (this.tabTitleExists(existingTabTitles, newTitle)) {
+    console.log(
+      chalk.yellow(`⏭️ Skipping ${lang}: target tab already exists: "${newTitle}"`)
+    );
+    continue;
+  }
 
+  const officialHotelName = this.getOfficialHotelNameForTargetLang(docTitle, lang);
 
-      try {
+  console.log(chalk.blue(`🚀 Starting translation chain for ${lang} (${newTitle})...`));
+  console.log(chalk.cyan(`🏨 Official hotel name for ${lang}: "${officialHotelName}"`));
+
+  try {
         // --- Process Part 1 ---
 const part1Result = await processChunk(part1Input, lang, 1, officialHotelName);
 
@@ -771,7 +810,7 @@ part2Result = await processChunk(part2Input, lang, 2, officialHotelName);       
         await this.sheets.duplicateSheet(cfg.spreadsheetId, sourceId, newTitle);
         // Overwrite with translated data
         await this.sheets.writeValues(cfg.spreadsheetId, `${newTitle}!A1`, finalTranslatedMatrix);
-        
+        existingTabTitles.push(newTitle);
         console.log(chalk.green(`✅ Success: ${newTitle} created with ${finalTranslatedMatrix.length - 1} items!`));
 
       } catch (err) {

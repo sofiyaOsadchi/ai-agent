@@ -1,0 +1,3009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Carmelon Client Reports</title>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+  <style>
+    :root {
+      --bg: #15171a;
+      --surface: #23262a;
+      --surface-2: #2b2f34;
+      --surface-3: #1d2024;
+      --border: rgba(255,255,255,0.09);
+      --border-strong: rgba(255,255,255,0.18);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.58);
+      --soft: rgba(255,255,255,0.72);
+      --accent: #00B3A4;
+      --accent-soft: rgba(0,179,164,0.14);
+      --red: #f87171;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --blue: #8ab4ff;
+      --radius: 14px;
+      --font: Inter, Arial, sans-serif;
+      --mono: "JetBrains Mono", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    header {
+      min-height: 72px;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(0,179,164,0.08), rgba(0,0,0,0));
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(14px);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(0,179,164,0.25);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      height: calc(100vh - 72px);
+    }
+
+    aside {
+      border-right: 1px solid var(--border);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    main {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+    }
+
+    .card-head {
+      padding: 14px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      font-weight: 900;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    label,
+    .field-label {
+      display: block;
+      color: var(--soft);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      color: var(--text);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--border-strong);
+      box-shadow: 0 0 0 3px rgba(138,180,255,0.12);
+    }
+
+    input[type="color"] {
+      height: 42px;
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+      width: auto;
+      transform: scale(1.05);
+    }
+
+    textarea {
+      min-height: 80px;
+      font-family: var(--mono);
+      resize: vertical;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-weight: 900;
+      font-size: 13px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.16s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--border-strong);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .btn-primary {
+      width: 100%;
+      border: 0;
+      background: var(--accent);
+      color: #001f1d;
+      font-weight: 950;
+      font-size: 15px;
+      padding: 15px 16px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .checks {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--soft);
+      padding: 4px 0;
+    }
+
+    .multi-list {
+      display: grid;
+      gap: 8px;
+      max-height: 220px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .multi-list label {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 12px;
+      color: var(--soft);
+      font-weight: 800;
+    }
+
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-item {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 13px 14px;
+    }
+
+    .status-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .status-value {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi:before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 3px;
+      background: var(--accent);
+      opacity: 0.9;
+    }
+
+    .kpi-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .kpi-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .kpi-remove {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: 0.14s ease;
+    }
+
+    .kpi:hover .kpi-remove {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .client-view [contenteditable="true"],
+    .client-view [contenteditable="false"] {
+      pointer-events: none;
+      user-select: text;
+    }
+
+    .client-view .chart-title-edit:focus,
+    .client-view .editable-report-text:focus {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 16px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 360px;
+      height: 400px;
+      background: rgba(255,255,255,0.025);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .chart-wrap.tall {
+      height: 460px;
+    }
+
+    .table-toolbar {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 520px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      background: var(--surface-3);
+      z-index: 1;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      color: var(--soft);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      z-index: 2;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:first-child {
+      z-index: 3;
+    }
+
+    tbody tr:hover td {
+      background: rgba(255,255,255,0.035);
+    }
+
+    .summary {
+      color: var(--soft);
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .recommendations {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--soft);
+      line-height: 1.65;
+      font-size: 14px;
+    }
+
+    .logs {
+      height: 220px;
+      overflow-y: auto;
+      background: #101214;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      color: #b7f7d5;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .empty {
+      border: 1px dashed var(--border-strong);
+      color: var(--muted);
+      border-radius: var(--radius);
+      padding: 28px;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .client-view aside,
+    .client-view #logsCard,
+    .client-view .no-client-view {
+      display: none !important;
+    }
+
+    .client-view .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .client-view main {
+      max-width: 1480px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+
+
+    .setup-panel {
+      padding: 18px;
+    }
+
+    .setup-hero {
+      padding: 4px 2px 14px;
+    }
+
+    .setup-eyebrow,
+    .section-kicker {
+      display: block;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+
+    .setup-hero h2 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .setup-hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .setup-progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 2px 18px;
+    }
+
+    .step-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .step-dot.active {
+      color: #001f1d;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .step-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .setup-card {
+      margin-bottom: 12px;
+      border-radius: 18px;
+    }
+
+    .primary-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
+    }
+
+    .clean-head {
+      background: transparent;
+      align-items: flex-start;
+    }
+
+    .clean-head strong {
+      font-size: 15px;
+    }
+
+    .pill {
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(0,179,164,0.24);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .compact-field {
+      margin-top: 12px;
+    }
+
+    .template-summary {
+      display: grid;
+      gap: 4px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(0,179,164,0.09);
+      border: 1px solid rgba(0,179,164,0.18);
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .template-summary strong {
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .collapsed-ui {
+      display: none;
+    }
+
+    .collapsed-ui.is-open {
+      display: grid;
+    }
+
+    .mode-choice {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .choice-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.035);
+      cursor: pointer;
+      margin: 0;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .choice-card input {
+      margin-top: 2px;
+    }
+
+    .choice-card span {
+      display: grid;
+      gap: 3px;
+    }
+
+    .choice-card strong {
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .choice-card small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .active-choice {
+      border-color: rgba(0,179,164,0.35);
+      background: var(--accent-soft);
+    }
+
+    .ai-switches {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+
+    .mini-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--soft);
+      font-size: 12px;
+      text-transform: none;
+      letter-spacing: 0;
+      margin: 0;
+    }
+
+    .advanced-panel {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.025);
+      overflow: hidden;
+    }
+
+    .advanced-panel summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 15px 16px;
+      display: grid;
+      gap: 4px;
+      color: var(--text);
+      font-weight: 950;
+    }
+
+    .advanced-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-panel summary small {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .advanced-body {
+      padding: 0 12px 12px;
+    }
+
+    .nested-card {
+      background: rgba(0,0,0,0.12);
+      margin-bottom: 12px;
+    }
+
+    .toggle-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .toggle-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      margin: 0;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: 12px;
+      color: var(--soft);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .compact-list {
+      max-height: 170px;
+    }
+
+
+
+    .module-card-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .module-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.035);
+      margin: 0;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+    }
+
+    .module-card:has(input:checked) {
+      border-color: rgba(0,179,164,0.35);
+      background: var(--accent-soft);
+    }
+
+    .module-card strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .module-card small {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .chart-gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .chart-gallery .card {
+      margin-bottom: 0;
+    }
+
+    .chart-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chart-type-switch,
+    .module-chart-type-switch {
+      width: auto;
+      min-width: 138px;
+      padding: 7px 10px;
+      font-size: 12px;
+      margin-left: auto;
+      background: rgba(255,255,255,0.06);
+      border-color: var(--border-strong);
+    }
+
+    .module-chart-type-switch {
+      min-width: 126px;
+      margin-left: 0;
+    }
+
+    .mini-btn {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      color: var(--soft);
+      font-weight: 900;
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .mini-btn:hover {
+      color: var(--text);
+      border-color: var(--border-strong);
+    }
+
+
+
+    .inline-control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .module-options {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 6px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .module-options .field {
+      margin-bottom: 0;
+    }
+
+    .module-title-input,
+    .module-description-input {
+      width: 100%;
+      min-width: 0;
+      margin-top: 7px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .module-description-input {
+      min-height: 54px;
+      resize: vertical;
+      color: var(--soft);
+      line-height: 1.35;
+    }
+
+    .chart-card-large {
+      grid-column: span 2;
+    }
+
+    .chart-card-small .chart-wrap {
+      height: 260px;
+    }
+
+    .chart-card-medium .chart-wrap {
+      height: 340px;
+    }
+
+    .chart-card-large .chart-wrap {
+      height: 420px;
+    }
+
+    .chart-explanation {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin: 0 0 12px;
+      font-weight: 750;
+    }
+
+    .chart-title-edit {
+      min-width: 160px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 5px 7px;
+      outline: none;
+    }
+
+    .chart-title-edit:focus {
+      border-color: rgba(0,179,164,0.35);
+      background: rgba(0,179,164,0.08);
+    }
+
+    .editable-report-text {
+      min-height: 56px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 8px;
+      outline: none;
+    }
+
+    .editable-report-text:focus {
+      border-color: rgba(0,179,164,0.35);
+      background: rgba(0,179,164,0.08);
+    }
+
+    .report-notes-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .report-note {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,0.025);
+    }
+
+    .report-note-title {
+      font-size: 12px;
+      font-weight: 950;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #111;
+      }
+
+      header,
+      aside,
+      #logsCard,
+      .no-print,
+      .no-client-view {
+        display: none !important;
+      }
+
+      .layout {
+        display: block;
+        height: auto;
+      }
+
+      main {
+        padding: 0;
+        overflow: visible;
+      }
+
+      .card,
+      .kpi,
+      .status-item {
+        break-inside: avoid;
+        background: #fff;
+        border-color: #ddd;
+        color: #111;
+      }
+
+      .card-head {
+        background: #f5f5f5;
+        color: #111;
+      }
+
+      .chart-wrap {
+        background: #fff;
+      }
+
+      .table-wrap {
+        max-height: none;
+        overflow: visible;
+      }
+
+      th,
+      td,
+      th:first-child,
+      td:first-child {
+        background: #fff;
+        color: #111;
+        position: static;
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .dashboard-grid,
+      .chart-gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .status-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Carmelon Client Reports Dashboard</h1>
+
+    <div class="header-actions">
+      <span class="badge">Preview Module</span>
+      <button id="clientViewBtn" class="btn no-print">Client View</button>
+      <button id="printBtn" class="btn no-print">Print / Save PDF</button>
+      <button id="downloadHtmlBtn" class="btn no-print">Download HTML</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="setup-panel">
+      <div class="setup-hero">
+        <div class="setup-eyebrow">Report builder</div>
+        <h2>Create a client dashboard</h2>
+        <p>Choose the source, report goal and focus. Advanced controls stay hidden unless needed.</p>
+      </div>
+
+      <div class="setup-progress" aria-label="Report setup steps">
+        <span class="step-dot active">1</span>
+        <span class="step-line"></span>
+        <span class="step-dot">2</span>
+        <span class="step-line"></span>
+        <span class="step-dot">3</span>
+        <span class="step-line"></span>
+        <span class="step-dot">4</span>
+      </div>
+
+      <div class="card setup-card primary-card">
+        <div class="card-head clean-head">
+          <div>
+            <span class="section-kicker">Step 1</span>
+            <strong>Data source</strong>
+          </div>
+          <span class="pill">Required</span>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label for="spreadsheetId">Google Sheet ID / URL</label>
+            <input id="spreadsheetId" placeholder="Paste Google Sheet URL or ID" />
+            <div class="hint">For now the report reads data from a Google Sheet. Later this can be replaced by Analytics source selection.</div>
+          </div>
+
+          <div class="field compact-field">
+            <label for="sourceTab">Tab name</label>
+            <input id="sourceTab" placeholder="Auto-detect first tab if empty" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card setup-card primary-card">
+        <div class="card-head clean-head">
+          <div>
+            <span class="section-kicker">Step 2</span>
+            <strong>Report goal</strong>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label for="reportType">What should this report focus on?</label>
+            <select id="reportType">
+              <option value="campaign-performance-overview">Campaign Performance Overview</option>
+              <option value="monthly-client-report">Monthly Client Report</option>
+              <option value="channel-comparison-report">Channel Comparison Report</option>
+              <option value="budget-pacing-report">Budget Pacing Report</option>
+              <option value="leads-conversions-report">Leads / Conversions Report</option>
+              <option value="seo-traffic-report">SEO Traffic Report</option>
+              <option value="ecommerce-roas-report">Ecommerce ROAS Report</option>
+              <option value="anomaly-opportunities-report">Anomaly & Opportunities Report</option>
+              <option value="executive-summary-report">Executive Summary Report</option>
+              <option value="custom-metrics-dashboard">Custom Metrics Dashboard</option>
+            </select>
+            <div class="hint">The template automatically chooses KPI cards, charts, table columns and AI blocks.</div>
+          </div>
+
+          <div class="template-summary" id="templateSummary">
+            <strong>Recommended setup</strong>
+            <span>KPIs, trend chart, top breakdown, table, AI summary and recommendations.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card setup-card primary-card">
+        <div class="card-head clean-head">
+          <div>
+            <span class="section-kicker">Step 3</span>
+            <strong>Time range and focus</strong>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="field">
+            <label for="datePreset">Date range</label>
+            <select id="datePreset">
+              <option value="all">All available data</option>
+              <option value="last-7">Last 7 days</option>
+              <option value="last-30">Last 30 days</option>
+              <option value="this-month">This month</option>
+              <option value="previous-month">Previous month</option>
+              <option value="custom">Custom range</option>
+            </select>
+          </div>
+
+          <div id="customDateFields" class="grid-2 collapsed-ui">
+            <div class="field">
+              <label for="startDate">Start date</label>
+              <input id="startDate" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="endDate">End date</label>
+              <input id="endDate" type="date" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="primaryMetric">Main metric</label>
+              <select id="primaryMetric"></select>
+            </div>
+
+            <div class="field">
+              <label for="breakdown">Breakdown by</label>
+              <select id="breakdown">
+                <option value="campaign">Campaign</option>
+                <option value="channel">Channel</option>
+                <option value="country">Country</option>
+                <option value="month">Month</option>
+                <option value="none">No breakdown</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="inline-control-grid">
+            <div class="field">
+              <label for="trendChartType">Trend chart type</label>
+              <select id="trendChartType">
+                <option value="line">Line</option>
+                <option value="area">Area</option>
+                <option value="bar">Vertical bar</option>
+                <option value="stackedBar">Stacked bar</option>
+                <option value="steppedLine">Stepped line</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="breakdownChartType">Breakdown chart type</label>
+              <select id="breakdownChartType">
+                <option value="horizontalBar">Horizontal bar</option>
+                <option value="bar">Vertical bar</option>
+                <option value="doughnut">Doughnut</option>
+                <option value="pie">Pie</option>
+                <option value="line">Line</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="breakdownMetric">Data shown in breakdown</label>
+              <select id="breakdownMetric"></select>
+            </div>
+
+            <div class="field">
+              <label for="breakdownLimit">Rows shown</label>
+              <select id="breakdownLimit">
+                <option value="5">Top 5</option>
+                <option value="8" selected>Top 8</option>
+                <option value="10">Top 10</option>
+                <option value="15">Top 15</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card setup-card primary-card">
+        <div class="card-head clean-head">
+          <div>
+            <span class="section-kicker">Step 4</span>
+            <strong>Output</strong>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="mode-choice">
+            <label class="choice-card active-choice">
+              <input id="dryRun" type="checkbox" checked />
+              <span>
+                <strong>Preview dashboard</strong>
+                <small>Fast preview inside the UI</small>
+              </span>
+            </label>
+
+            <label class="choice-card">
+              <input id="exportToSheet" type="checkbox" />
+              <span>
+                <strong>Export to Sheet tab</strong>
+                <small>Create an output tab in the same file</small>
+              </span>
+            </label>
+          </div>
+
+          <div class="field compact-field">
+            <label for="outputTabName">Output tab name</label>
+            <input id="outputTabName" placeholder="Client Report - 2026-04" />
+          </div>
+
+          <div class="ai-switches">
+            <label class="mini-switch"><input id="includeAiSummary" type="checkbox" checked /> AI summary</label>
+            <label class="mini-switch"><input id="includeRecommendations" type="checkbox" checked /> Recommendations</label>
+          </div>
+
+          <button id="runBtn" class="btn-primary">Generate Dashboard</button>
+          <button id="clearBtn" class="btn btn-secondary">Clear Preview</button>
+        </div>
+      </div>
+
+      <details class="advanced-panel">
+        <summary>
+          <span>Advanced settings</span>
+          <small>Column mapping, sections, metrics, style</small>
+        </summary>
+
+        <div class="advanced-body">
+          <div class="card nested-card">
+            <div class="card-head">Column mapping</div>
+            <div class="card-body">
+              <div class="grid-2">
+                <div class="field"><label>Date</label><input id="mapDate" placeholder="Date" /></div>
+                <div class="field"><label>Campaign</label><input id="mapCampaign" placeholder="Campaign" /></div>
+                <div class="field"><label>Channel</label><input id="mapChannel" placeholder="Channel" /></div>
+                <div class="field"><label>Country</label><input id="mapCountry" placeholder="Country" /></div>
+                <div class="field"><label>Spend</label><input id="mapSpend" placeholder="Spend" /></div>
+                <div class="field"><label>Impressions</label><input id="mapImpressions" placeholder="Impressions" /></div>
+                <div class="field"><label>Clicks</label><input id="mapClicks" placeholder="Clicks" /></div>
+                <div class="field"><label>Conversions</label><input id="mapConversions" placeholder="Conversions" /></div>
+                <div class="field"><label>Revenue</label><input id="mapRevenue" placeholder="Revenue" /></div>
+                <div class="field"><label>Leads</label><input id="mapLeads" placeholder="Leads" /></div>
+                <div class="field"><label>Sessions</label><input id="mapSessions" placeholder="Sessions" /></div>
+                <div class="field"><label>Users</label><input id="mapUsers" placeholder="Users" /></div>
+              </div>
+              <div class="hint">Leave empty when headers are standard. Use only when the source file has custom column names.</div>
+            </div>
+          </div>
+
+          <div class="card nested-card">
+            <div class="card-head">Dashboard sections</div>
+            <div class="card-body">
+              <div class="toggle-grid">
+                <label class="toggle-pill"><input id="showKpis" type="checkbox" checked /> KPI cards</label>
+                <label class="toggle-pill"><input id="showTrend" type="checkbox" checked /> Trend chart</label>
+                <label class="toggle-pill"><input id="showBreakdown" type="checkbox" checked /> Breakdown chart</label>
+                <label class="toggle-pill"><input id="showTable" type="checkbox" checked /> Table</label>
+                <label class="toggle-pill"><input id="showSummary" type="checkbox" checked /> AI summary</label>
+                <label class="toggle-pill"><input id="showRecommendations" type="checkbox" checked /> Recommendations</label>
+                <label class="toggle-pill"><input id="showSourcePreview" type="checkbox" /> Source preview</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card nested-card">
+            <div class="card-head">Automatic chart modules</div>
+            <div class="card-body">
+              <div id="chartModulesList" class="module-card-grid"></div>
+              <div class="hint">The dashboard can suggest extra charts automatically. The campaign manager can add or remove modules without regenerating the report.</div>
+            </div>
+          </div>
+
+          <div class="card nested-card">
+            <div class="card-head">Metrics and chart behavior</div>
+            <div class="card-body">
+              <div class="field">
+                <span class="field-label">KPI cards</span>
+                <div id="kpiMetricsList" class="multi-list compact-list"></div>
+              </div>
+
+              <div class="field">
+                <span class="field-label">Trend metrics</span>
+                <div id="trendMetricsList" class="multi-list compact-list"></div>
+              </div>
+
+              <div class="field">
+                <label for="breakdownSort">Breakdown sort</label>
+                <select id="breakdownSort">
+                  <option value="desc">High to Low</option>
+                  <option value="asc">Low to High</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="card nested-card">
+            <div class="card-head">Style and saved setup</div>
+            <div class="card-body">
+              <div class="grid-3">
+                <div class="field">
+                  <label for="accentColor">Accent</label>
+                  <input id="accentColor" type="color" value="#00B3A4" />
+                </div>
+
+                <div class="field">
+                  <label for="currency">Currency</label>
+                  <select id="currency">
+                    <option value="₪">₪</option>
+                    <option value="$">$</option>
+                    <option value="€">€</option>
+                    <option value="£">£</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="numberFormat">Numbers</label>
+                  <select id="numberFormat">
+                    <option value="short">Short</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              <button id="applyPresetBtn" class="btn btn-secondary">Reset template settings</button>
+              <button id="saveConfigBtn" class="btn btn-secondary">Save Local Config</button>
+              <button id="loadConfigBtn" class="btn btn-secondary">Load Local Config</button>
+            </div>
+          </div>
+        </div>
+      </details>
+    </aside>
+
+    <main>
+      <section id="emptyState" class="empty">
+        Configure a Google Sheet source and generate a dashboard preview.
+        <br />
+        The result will include KPI cards, charts, breakdown table, AI summary and recommendations.
+      </section>
+
+      <section id="dashboard" style="display:none;">
+        <div id="statusStrip" class="status-strip"></div>
+
+        <section id="kpiSection">
+          <div id="kpis" class="kpi-grid"></div>
+        </section>
+
+        <div class="dashboard-grid">
+          <div id="trendSection" class="card">
+            <div class="card-head">
+              <span>Trend</span>
+              <span id="trendSubtitle" class="hint"></span>
+              <select id="trendChartTypeSwitch" class="chart-type-switch no-print" aria-label="Change trend chart type">
+                <option value="line">Line</option>
+                <option value="area">Area</option>
+                <option value="bar">Vertical bar</option>
+                <option value="stackedBar">Stacked bar</option>
+                <option value="steppedLine">Stepped line</option>
+              </select>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrap">
+                <canvas id="trendChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div id="breakdownSection" class="card">
+            <div class="card-head">
+              <span>Top Breakdown</span>
+              <span id="breakdownSubtitle" class="hint"></span>
+              <select id="breakdownChartTypeSwitch" class="chart-type-switch no-print" aria-label="Change breakdown chart type">
+                <option value="horizontalBar">Horizontal bar</option>
+                <option value="bar">Vertical bar</option>
+                <option value="doughnut">Doughnut</option>
+                <option value="pie">Pie</option>
+                <option value="line">Line</option>
+              </select>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrap tall">
+                <canvas id="breakdownChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div id="summarySection" class="card">
+            <div class="card-head">AI Summary</div>
+            <div class="card-body">
+              <div id="summary" class="summary"></div>
+            </div>
+          </div>
+
+          <div id="recommendationsSection" class="card">
+            <div class="card-head">Recommendations</div>
+            <div class="card-body">
+              <ol id="recommendations" class="recommendations"></ol>
+            </div>
+          </div>
+        </div>
+
+        <section id="reportNotesSection" class="card">
+          <div class="card-head">
+            <span>Report Text Blocks</span>
+            <div class="chart-actions no-client-view">
+              <button id="addTextBlockBtn" class="mini-btn" type="button">Add text block</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="reportNotesList" class="report-notes-list"></div>
+          </div>
+        </section>
+
+        <section id="extraChartsSection" class="chart-gallery"></section>
+
+        <div id="tableSection" class="card">
+          <div class="card-head">Performance Breakdown</div>
+          <div class="card-body">
+            <div class="table-toolbar no-client-view">
+              <div class="hint">Click table headers to sort locally.</div>
+              <button id="downloadCsvBtn" class="btn">Download CSV</button>
+            </div>
+            <div id="breakdownTable" class="table-wrap"></div>
+          </div>
+        </div>
+
+        <div id="sourcePreviewSection" class="card">
+          <div class="card-head">Source Preview</div>
+          <div class="card-body">
+            <div id="previewTable" class="table-wrap"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="logsCard" class="card">
+        <div class="card-head">Live Logs</div>
+        <div class="card-body">
+          <div id="logs" class="logs"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const socket = io();
+
+    const METRICS = [
+      "spend",
+      "impressions",
+      "clicks",
+      "ctr",
+      "cpc",
+      "cpm",
+      "conversions",
+      "conversionRate",
+      "cpa",
+      "revenue",
+      "roas",
+      "leads",
+      "cpl",
+      "sessions",
+      "users",
+      "organicTraffic",
+      "paidTraffic"
+    ];
+
+    const METRIC_LABELS = {
+      spend: "Spend",
+      impressions: "Impressions",
+      clicks: "Clicks",
+      ctr: "CTR",
+      cpc: "CPC",
+      cpm: "CPM",
+      conversions: "Conversions",
+      conversionRate: "Conv. Rate",
+      cpa: "CPA",
+      revenue: "Revenue",
+      roas: "ROAS",
+      leads: "Leads",
+      cpl: "CPL",
+      sessions: "Sessions",
+      users: "Users",
+      organicTraffic: "Organic Traffic",
+      paidTraffic: "Paid Traffic"
+    };
+
+    const EXTRA_CHART_MODULES = [
+      {
+        id: "comparison",
+        title: "Current vs previous",
+        description: "Compare selected KPI metrics with the previous period.",
+        defaultOn: true
+      },
+      {
+        id: "funnel",
+        title: "Marketing funnel",
+        description: "Impressions, clicks, sessions, leads and conversions in one flow.",
+        defaultOn: true
+      },
+      {
+        id: "spendRevenue",
+        title: "Spend vs revenue",
+        description: "See whether top campaigns or channels return more than they spend.",
+        defaultOn: true
+      },
+      {
+        id: "share",
+        title: "Share of selected metric",
+        description: "Pie chart for the selected breakdown metric.",
+        defaultOn: false
+      },
+      {
+        id: "roasCpa",
+        title: "ROAS and CPA",
+        description: "Efficiency view across the top breakdown rows.",
+        defaultOn: false
+      },
+      {
+        id: "efficiency",
+        title: "Efficiency scatter",
+        description: "Spend on the X axis and conversions on the Y axis.",
+        defaultOn: false
+      }
+    ];
+
+    const DEFAULT_PRESETS = {
+      "campaign-performance-overview": {
+        primaryMetric: "conversions",
+        breakdownMetric: "conversions",
+        kpiMetrics: ["spend", "clicks", "ctr", "conversions", "cpa", "revenue", "roas"],
+        trendMetrics: ["conversions", "spend"],
+        tableColumns: ["label", "spend", "clicks", "ctr", "conversions", "conversionRate", "cpa", "revenue", "roas"],
+        accent: "#00B3A4"
+      },
+      "ecommerce-roas-report": {
+        primaryMetric: "roas",
+        breakdownMetric: "roas",
+        kpiMetrics: ["spend", "revenue", "roas", "conversions", "cpa", "conversionRate"],
+        trendMetrics: ["revenue", "spend", "roas"],
+        tableColumns: ["label", "spend", "revenue", "roas", "conversions", "conversionRate", "cpa"],
+        accent: "#14B8A6"
+      },
+      "leads-conversions-report": {
+        primaryMetric: "leads",
+        breakdownMetric: "leads",
+        kpiMetrics: ["spend", "leads", "cpl", "conversions", "conversionRate", "clicks", "ctr"],
+        trendMetrics: ["leads", "conversions", "spend"],
+        tableColumns: ["label", "spend", "clicks", "ctr", "leads", "cpl", "conversions", "cpa"],
+        accent: "#22C55E"
+      },
+      "seo-traffic-report": {
+        primaryMetric: "sessions",
+        breakdownMetric: "sessions",
+        kpiMetrics: ["sessions", "users", "organicTraffic", "conversions", "revenue", "conversionRate"],
+        trendMetrics: ["sessions", "users", "organicTraffic"],
+        tableColumns: ["label", "sessions", "users", "organicTraffic", "conversions", "conversionRate", "revenue"],
+        accent: "#A855F7"
+      },
+      "budget-pacing-report": {
+        primaryMetric: "spend",
+        breakdownMetric: "spend",
+        kpiMetrics: ["spend", "impressions", "clicks", "cpc", "conversions", "cpa"],
+        trendMetrics: ["spend"],
+        tableColumns: ["label", "spend", "impressions", "clicks", "cpc", "conversions", "cpa"],
+        accent: "#F59E0B"
+      }
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    const runBtn = $("runBtn");
+    const clearBtn = $("clearBtn");
+    const logs = $("logs");
+    const dashboard = $("dashboard");
+    const emptyState = $("emptyState");
+
+    let resultBuffer = "";
+    let collectingResult = false;
+    let currentResult = null;
+    const liveChartTypeOverrides = { trend: null, breakdown: null };
+    let trendChartInstance = null;
+    let breakdownChartInstance = null;
+    let extraChartInstances = {};
+    let localTableSort = { key: null, direction: "desc" };
+    let reportTextBlocks = [];
+
+    function value(id) {
+      return $(id).value.trim();
+    }
+
+    function checked(id) {
+      return $(id).checked;
+    }
+
+    function optionalValue(id) {
+      const v = value(id);
+      return v || undefined;
+    }
+
+    function initControls() {
+      fillMetricSelect("primaryMetric", "conversions");
+      fillMetricSelect("breakdownMetric", "conversions");
+      renderMetricCheckboxes("kpiMetricsList", "kpiMetric", DEFAULT_PRESETS["campaign-performance-overview"].kpiMetrics);
+      renderMetricCheckboxes("trendMetricsList", "trendMetric", DEFAULT_PRESETS["campaign-performance-overview"].trendMetrics);
+      renderChartModules();
+      applyPreset(false);
+      applyDatePreset();
+      updateChoiceCards();
+    }
+
+    function fillMetricSelect(id, selected) {
+      $(id).innerHTML = METRICS.map((metric) => `
+        <option value="${metric}" ${metric === selected ? "selected" : ""}>${METRIC_LABELS[metric] || metric}</option>
+      `).join("");
+    }
+
+    function renderMetricCheckboxes(containerId, name, selectedValues) {
+      const selected = new Set(selectedValues || []);
+
+      $(containerId).innerHTML = METRICS.map((metric) => `
+        <label>
+          <span>${escapeHtml(METRIC_LABELS[metric] || metric)}</span>
+          <input type="checkbox" name="${name}" value="${metric}" ${selected.has(metric) ? "checked" : ""} />
+        </label>
+      `).join("");
+    }
+
+    function getCheckedValues(name) {
+      return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((el) => el.value);
+    }
+
+    function renderChartModules(selectedIds) {
+      const selected = new Set(selectedIds || EXTRA_CHART_MODULES.filter((module) => module.defaultOn).map((module) => module.id));
+
+      $("chartModulesList").innerHTML = EXTRA_CHART_MODULES.map((module) => `
+        <div class="module-card">
+          <input type="checkbox" name="chartModule" value="${module.id}" ${selected.has(module.id) ? "checked" : ""} />
+          <span>
+            <strong>${escapeHtml(module.title)}</strong>
+            <small>${escapeHtml(module.description)}</small>
+            <input class="module-title-input" data-module-title="${module.id}" value="${escapeAttr(module.title)}" aria-label="Chart title" />
+            <textarea class="module-description-input" data-module-description="${module.id}" aria-label="Chart explanation">${escapeHtml(module.description)}</textarea>
+          </span>
+          <div class="module-options">
+            <div class="field">
+              <label>Chart type</label>
+              <select data-module-type="${module.id}">
+                ${chartTypeOptions(module.id)}
+              </select>
+            </div>
+            <div class="field">
+              <label>Data metric</label>
+              <select data-module-metric="${module.id}">
+                ${metricOptions(defaultModuleMetric(module.id))}
+              </select>
+            </div>
+            <div class="field">
+              <label>Size</label>
+              <select data-module-size="${module.id}">
+                <option value="small">Small</option>
+                <option value="medium" selected>Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Rows</label>
+              <select data-module-limit="${module.id}">
+                <option value="5">Top 5</option>
+                <option value="8" selected>Top 8</option>
+                <option value="10">Top 10</option>
+                <option value="15">Top 15</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll('[name="chartModule"], [data-module-type], [data-module-metric], [data-module-size], [data-module-limit], [data-module-title], [data-module-description]').forEach((input) => {
+        input.addEventListener("change", () => {
+          if (currentResult) renderExtraCharts(currentResult);
+        });
+        input.addEventListener("input", () => {
+          if (currentResult) renderExtraCharts(currentResult);
+        });
+      });
+    }
+
+    function chartTypeOptions(moduleId) {
+      const defaults = {
+        comparison: "bar",
+        funnel: "horizontalBar",
+        spendRevenue: "bar",
+        share: "doughnut",
+        roasCpa: "bar",
+        efficiency: "scatter"
+      };
+
+      return chartTypeOptionsForValue(moduleId, defaults[moduleId]);
+    }
+
+    function chartTypeOptionsForValue(moduleId, selectedType) {
+      const allowed = moduleId === "share"
+        ? ["doughnut", "pie", "bar", "horizontalBar", "line"]
+        : moduleId === "efficiency"
+          ? ["scatter", "bar", "horizontalBar", "line", "area"]
+          : ["bar", "horizontalBar", "line", "area", "stackedBar"];
+
+      return allowed.map((type) => `<option value="${type}" ${type === selectedType ? "selected" : ""}>${readableChartType(type)}</option>`).join("");
+    }
+
+    function metricOptions(selectedMetric) {
+      return METRICS.map((metric) => `<option value="${metric}" ${metric === selectedMetric ? "selected" : ""}>${METRIC_LABELS[metric] || metric}</option>`).join("");
+    }
+
+    function defaultModuleMetric(moduleId) {
+      if (moduleId === "comparison") return value("primaryMetric") || "conversions";
+      if (moduleId === "funnel") return "conversions";
+      if (moduleId === "spendRevenue") return "revenue";
+      if (moduleId === "share") return value("breakdownMetric") || "conversions";
+      if (moduleId === "roasCpa") return "roas";
+      if (moduleId === "efficiency") return "conversions";
+      return "conversions";
+    }
+
+    function readableChartType(type) {
+      return ({
+        bar: "Vertical bar",
+        line: "Line",
+        area: "Area",
+        stackedBar: "Stacked bar",
+        steppedLine: "Stepped line",
+        horizontalBar: "Horizontal bar",
+        doughnut: "Doughnut",
+        pie: "Pie",
+        scatter: "Scatter"
+      })[type] || type;
+    }
+
+    function toChartJsType(type) {
+      if (type === "horizontalBar" || type === "stackedBar") return "bar";
+      if (type === "area" || type === "steppedLine") return "line";
+      return type || "bar";
+    }
+
+    function getSelectedChartModules() {
+      return getCheckedValues("chartModule");
+    }
+
+    function getChartModuleSettings(moduleId) {
+      const module = EXTRA_CHART_MODULES.find((item) => item.id === moduleId) || {};
+      return {
+        id: moduleId,
+        title: document.querySelector(`[data-module-title="${moduleId}"]`)?.value?.trim() || module.title || moduleId,
+        description: document.querySelector(`[data-module-description="${moduleId}"]`)?.value?.trim() || module.description || "",
+        type: document.querySelector(`[data-module-type="${moduleId}"]`)?.value || "bar",
+        metric: document.querySelector(`[data-module-metric="${moduleId}"]`)?.value || defaultModuleMetric(moduleId),
+        size: document.querySelector(`[data-module-size="${moduleId}"]`)?.value || "medium",
+        limit: Number(document.querySelector(`[data-module-limit="${moduleId}"]`)?.value || 8)
+      };
+    }
+
+    function applyPreset(showNotice = true) {
+      const reportType = value("reportType");
+      const preset = DEFAULT_PRESETS[reportType] || DEFAULT_PRESETS["campaign-performance-overview"];
+
+      $("primaryMetric").value = preset.primaryMetric;
+      $("breakdownMetric").value = preset.breakdownMetric;
+      $("accentColor").value = preset.accent;
+      document.documentElement.style.setProperty("--accent", preset.accent);
+
+      renderMetricCheckboxes("kpiMetricsList", "kpiMetric", preset.kpiMetrics);
+      renderMetricCheckboxes("trendMetricsList", "trendMetric", preset.trendMetrics);
+
+      if (showNotice) {
+        appendLog(`Applied preset for ${reportType}`);
+      }
+    }
+
+    $("reportType").addEventListener("change", () => applyPreset(false));
+    $("applyPresetBtn").addEventListener("click", () => applyPreset(true));
+    $("accentColor").addEventListener("input", () => {
+      document.documentElement.style.setProperty("--accent", value("accentColor"));
+      if (currentResult) renderDashboard(currentResult);
+    });
+
+    $("trendChartTypeSwitch").addEventListener("change", () => {
+      liveChartTypeOverrides.trend = value("trendChartTypeSwitch");
+      if ($("trendChartType")) $("trendChartType").value = liveChartTypeOverrides.trend;
+      if (currentResult) renderTrendChart(currentResult);
+    });
+
+    $("breakdownChartTypeSwitch").addEventListener("change", () => {
+      liveChartTypeOverrides.breakdown = value("breakdownChartTypeSwitch");
+      if ($("breakdownChartType")) $("breakdownChartType").value = liveChartTypeOverrides.breakdown;
+      if (currentResult) renderBreakdownChart(currentResult);
+    });
+
+    $("datePreset").addEventListener("change", applyDatePreset);
+
+    function applyDatePreset() {
+      const preset = value("datePreset");
+      const customFields = $("customDateFields");
+
+      if (preset === "custom") {
+        customFields.classList.add("is-open");
+        return;
+      }
+
+      customFields.classList.remove("is-open");
+
+      if (preset === "all") {
+        $("startDate").value = "";
+        $("endDate").value = "";
+        return;
+      }
+
+      const today = new Date();
+      const start = new Date(today);
+      const end = new Date(today);
+
+      if (preset === "last-7") {
+        start.setDate(today.getDate() - 6);
+      }
+
+      if (preset === "last-30") {
+        start.setDate(today.getDate() - 29);
+      }
+
+      if (preset === "this-month") {
+        start.setDate(1);
+      }
+
+      if (preset === "previous-month") {
+        start.setMonth(today.getMonth() - 1, 1);
+        end.setDate(0);
+      }
+
+      $("startDate").value = toDateInputValue(start);
+      $("endDate").value = toDateInputValue(end);
+    }
+
+    function toDateInputValue(date) {
+      return date.toISOString().slice(0, 10);
+    }
+
+    function updateChoiceCards() {
+      document.querySelectorAll(".choice-card").forEach((card) => {
+        const input = card.querySelector("input");
+        card.classList.toggle("active-choice", Boolean(input?.checked));
+      });
+    }
+
+    ["dryRun", "exportToSheet"].forEach((id) => {
+      $(id).addEventListener("change", updateChoiceCards);
+    });
+
+    function buildDashboardConfig() {
+      return {
+        visibleSections: {
+          kpiCards: checked("showKpis"),
+          trendChart: checked("showTrend"),
+          breakdownChart: checked("showBreakdown"),
+          performanceTable: checked("showTable"),
+          aiSummary: checked("showSummary"),
+          recommendations: checked("showRecommendations"),
+          sourcePreview: checked("showSourcePreview")
+        },
+        kpiMetrics: getCheckedValues("kpiMetric"),
+        trendChart: {
+          type: value("trendChartType"),
+          metrics: getCheckedValues("trendMetric"),
+          groupBy: "date"
+        },
+        breakdownChart: {
+          type: value("breakdownChartType"),
+          metric: value("breakdownMetric"),
+          limit: Number(value("breakdownLimit")) || 8,
+          sort: value("breakdownSort")
+        },
+        table: {
+          columns: getCurrentPresetTableColumns(),
+          sortBy: value("breakdownMetric"),
+          sortDirection: value("breakdownSort")
+        },
+        display: {
+          accentColor: value("accentColor"),
+          currency: value("currency"),
+          numberFormat: value("numberFormat")
+        },
+        uiModules: {
+          extraCharts: getSelectedChartModules(),
+          chartSettings: Object.fromEntries(getSelectedChartModules().map((id) => [id, getChartModuleSettings(id)]))
+        }
+      };
+    }
+
+    function getCurrentPresetTableColumns() {
+      const preset = DEFAULT_PRESETS[value("reportType")] || DEFAULT_PRESETS["campaign-performance-overview"];
+      return preset.tableColumns;
+    }
+
+    function buildPayload() {
+      return {
+        mode: "client-reports",
+        spreadsheetId: value("spreadsheetId"),
+        sourceTab: optionalValue("sourceTab"),
+
+        reportType: value("reportType"),
+        primaryMetric: value("primaryMetric"),
+        breakdown: value("breakdown"),
+
+        dateRange: {
+          startDate: optionalValue("startDate"),
+          endDate: optionalValue("endDate")
+        },
+
+        columnMapping: {
+          date: optionalValue("mapDate"),
+          campaign: optionalValue("mapCampaign"),
+          channel: optionalValue("mapChannel"),
+          country: optionalValue("mapCountry"),
+          spend: optionalValue("mapSpend"),
+          impressions: optionalValue("mapImpressions"),
+          clicks: optionalValue("mapClicks"),
+          conversions: optionalValue("mapConversions"),
+          revenue: optionalValue("mapRevenue"),
+          leads: optionalValue("mapLeads"),
+          sessions: optionalValue("mapSessions"),
+          users: optionalValue("mapUsers")
+        },
+
+        dashboardConfig: buildDashboardConfig(),
+
+        options: {
+          dryRun: checked("dryRun"),
+          exportToSheet: checked("exportToSheet"),
+          includeAiSummary: checked("includeAiSummary"),
+          includeRecommendations: checked("includeRecommendations"),
+          outputTabName: optionalValue("outputTabName")
+        }
+      };
+    }
+
+    function appendLog(text) {
+      logs.textContent += `${text}\n`;
+      logs.scrollTop = logs.scrollHeight;
+      parseResultMarkers(String(text));
+    }
+
+    function parseResultMarkers(text) {
+      if (text.includes("CLIENT_REPORT_RESULT_JSON_START")) {
+        collectingResult = true;
+        resultBuffer = "";
+        return;
+      }
+
+      if (text.includes("CLIENT_REPORT_RESULT_JSON_END")) {
+        collectingResult = false;
+
+        try {
+          const clean = resultBuffer.trim();
+          const result = JSON.parse(clean);
+          renderDashboard(result);
+        } catch (err) {
+          appendLog(`Failed to parse report result JSON: ${err.message}`);
+        }
+
+        return;
+      }
+
+      if (collectingResult) {
+        resultBuffer += text;
+      }
+    }
+
+    runBtn.addEventListener("click", () => {
+      const payload = buildPayload();
+
+      if (!payload.spreadsheetId) {
+        alert("Please enter a Google Sheet ID or URL.");
+        return;
+      }
+
+      logs.textContent = "";
+      resultBuffer = "";
+      liveChartTypeOverrides.trend = null;
+      liveChartTypeOverrides.breakdown = null;
+      collectingResult = false;
+      runBtn.disabled = true;
+      runBtn.textContent = "Generating...";
+
+      socket.emit("start-agent", payload);
+    });
+
+    clearBtn.addEventListener("click", () => {
+      dashboard.style.display = "none";
+      emptyState.style.display = "block";
+      logs.textContent = "";
+      currentResult = null;
+      reportTextBlocks = [];
+      destroyCharts();
+    });
+
+    $("addTextBlockBtn").addEventListener("click", () => {
+      reportTextBlocks.push({
+        id: `manual-${Date.now()}`,
+        title: "New text block",
+        content: "Write a new explanation, insight or client-facing note."
+      });
+
+      if (currentResult) {
+        renderReportNotes(currentResult);
+      }
+    });
+
+    socket.on("log", appendLog);
+
+    socket.on("done", () => {
+      runBtn.disabled = false;
+      runBtn.textContent = "Generate Dashboard Preview";
+    });
+
+    function renderDashboard(result) {
+      currentResult = result;
+      applyDisplayConfig(result.dashboardConfig?.display);
+
+      emptyState.style.display = "none";
+      dashboard.style.display = "block";
+
+      renderStatusStrip(result);
+      renderSectionsVisibility(result.dashboardConfig?.visibleSections || {});
+      renderKpis(result);
+      renderTrendChart(result);
+      renderBreakdownChart(result);
+      renderInsights(result.insights || {});
+      renderReportNotes(result);
+      renderExtraCharts(result);
+      renderBreakdownTable(result);
+      renderPreviewTable(result.previewRows || []);
+      applyClientViewLock(document.body.classList.contains("client-view"));
+    }
+
+    function applyDisplayConfig(display) {
+      const accent = display?.accentColor || value("accentColor") || "#00B3A4";
+      document.documentElement.style.setProperty("--accent", accent);
+      $("accentColor").value = accent;
+    }
+
+    function renderSectionsVisibility(visible) {
+      $("kpiSection").style.display = visible.kpiCards === false ? "none" : "";
+      $("trendSection").style.display = visible.trendChart === false ? "none" : "";
+      $("breakdownSection").style.display = visible.breakdownChart === false ? "none" : "";
+      $("tableSection").style.display = visible.performanceTable === false ? "none" : "";
+      $("summarySection").style.display = visible.aiSummary === false ? "none" : "";
+      $("recommendationsSection").style.display = visible.recommendations === false ? "none" : "";
+      $("sourcePreviewSection").style.display = visible.sourcePreview ? "" : "none";
+    }
+
+    function renderStatusStrip(result) {
+      const dateInfo = result.dateInfo || {};
+      const items = [
+        ["Source", result.sourceTab || "-"],
+        ["Rows included", result.filteredRowCount || 0],
+        ["Detected dates", dateInfo.minDate && dateInfo.maxDate ? `${dateInfo.minDate} - ${dateInfo.maxDate}` : "No date detected"],
+        ["Report type", readableReportType(result.reportType)]
+      ];
+
+      $("statusStrip").innerHTML = items.map(([label, value]) => `
+        <div class="status-item">
+          <div class="status-label">${escapeHtml(label)}</div>
+          <div class="status-value" title="${escapeHtml(value)}">${escapeHtml(value)}</div>
+        </div>
+      `).join("");
+    }
+
+    function renderKpis(result) {
+      const totals = result.totals || {};
+      const config = result.dashboardConfig || {};
+      const display = config.display || {};
+      const comparisonByMetric = new Map((result.comparison || []).map((x) => [x.metric, x]));
+      const kpiMetrics = config.kpiMetrics || getCheckedValues("kpiMetric");
+
+      $("kpis").innerHTML = kpiMetrics.map((metric) => {
+        const value = totals[metric] ?? 0;
+        const comp = comparisonByMetric.get(metric);
+        const sub = comp && comp.changePct !== null
+          ? `${comp.changePct > 0 ? "+" : ""}${comp.changePct}% vs previous period`
+          : "";
+
+        return `
+          <div class="kpi" data-kpi-card="${escapeHtml(metric)}">
+            <button class="mini-btn kpi-remove no-client-view" type="button" data-remove-kpi="${escapeHtml(metric)}">Remove</button>
+            <div class="kpi-title">${escapeHtml(METRIC_LABELS[metric] || metric)}</div>
+            <div class="kpi-value">${escapeHtml(formatMetric(value, metric, display))}</div>
+            <div class="kpi-sub">${escapeHtml(sub)}</div>
+          </div>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-remove-kpi]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const metric = btn.dataset.removeKpi;
+
+          const checkbox = document.querySelector(`input[name="kpiMetric"][value="${CSS.escape(metric)}"]`);
+          if (checkbox) checkbox.checked = false;
+
+          if (currentResult?.dashboardConfig?.kpiMetrics) {
+            currentResult.dashboardConfig.kpiMetrics = currentResult.dashboardConfig.kpiMetrics.filter((item) => item !== metric);
+          }
+
+          renderKpis(currentResult || result);
+        });
+      });
+    }
+
+    function renderTrendChart(result) {
+      const config = result.dashboardConfig || {};
+      const display = config.display || {};
+      const trendConfig = config.trendChart || {};
+      const series = result.chartData?.line || [];
+      const selectedType = liveChartTypeOverrides.trend || trendConfig.type || value("trendChartType") || "line";
+      if ($("trendChartTypeSwitch")) $("trendChartTypeSwitch").value = selectedType;
+      const isBar = selectedType === "bar" || selectedType === "stackedBar";
+      const isStacked = selectedType === "stackedBar";
+      const isArea = selectedType === "area";
+      const isStepped = selectedType === "steppedLine";
+
+      $("trendSubtitle").textContent = `${(trendConfig.metrics || []).map((m) => METRIC_LABELS[m] || m).join(" + ")} · ${readableChartType(selectedType)}`;
+
+      if (trendChartInstance) trendChartInstance.destroy();
+
+      const ctx = $("trendChart");
+      const labels = series[0]?.points?.map((p) => p.label) || [];
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+      const palette = [accent, "#8AB4FF", "#F59E0B", "#22C55E", "#A855F7", "#EF4444"];
+
+      const datasets = series.map((s, index) => ({
+        label: METRIC_LABELS[s.metric] || s.metric,
+        data: s.points.map((p) => Number(p.value) || 0),
+        borderColor: palette[index % palette.length],
+        backgroundColor: withAlpha(palette[index % palette.length], isBar ? 0.72 : 0.22),
+        pointRadius: isBar ? 0 : 4,
+        pointHoverRadius: 6,
+        borderWidth: 3,
+        tension: isStepped ? 0 : 0.28,
+        stepped: isStepped,
+        fill: isArea,
+        type: isBar ? "bar" : "line",
+        borderRadius: isBar ? 7 : 0
+      }));
+
+      trendChartInstance = new Chart(ctx, {
+        type: isBar ? "bar" : "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { display: true, labels: { color: "rgba(255,255,255,0.78)", font: { weight: "bold" } } },
+            tooltip: {
+              enabled: true,
+              callbacks: {
+                label: (ctx) => {
+                  const metric = series[ctx.datasetIndex]?.metric;
+                  return `${ctx.dataset.label}: ${formatMetric(ctx.raw, metric, display)}`;
+                }
+              }
+            },
+            datalabels: {
+              display: labels.length <= 12,
+              color: "rgba(255,255,255,0.78)",
+              anchor: "end",
+              align: "top",
+              formatter: (value, ctx) => {
+                const metric = series[ctx.datasetIndex]?.metric;
+                return compactForChart(value, metric, display);
+              },
+              font: { size: 10, weight: "bold" }
+            }
+          },
+          scales: {
+            x: { stacked: isStacked, ticks: { color: "rgba(255,255,255,0.68)", maxRotation: 0, autoSkip: true }, grid: { color: "rgba(255,255,255,0.08)" } },
+            y: { stacked: isStacked, beginAtZero: true, ticks: { color: "rgba(255,255,255,0.72)", callback: (value) => compactNumber(value, display.numberFormat) }, grid: { color: "rgba(255,255,255,0.1)" } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderBreakdownChart(result) {
+      const config = result.dashboardConfig || {};
+      const display = config.display || {};
+      const chartConfig = config.breakdownChart || {};
+      const metric = chartConfig.metric || value("breakdownMetric");
+      const limit = Number(chartConfig.limit || value("breakdownLimit") || 8);
+      const rows = sortRows([...result.breakdownRows], metric, chartConfig.sort || "desc").slice(0, limit);
+      const chartType = liveChartTypeOverrides.breakdown || chartConfig.type || value("breakdownChartType") || "horizontalBar";
+      if ($("breakdownChartTypeSwitch")) $("breakdownChartTypeSwitch").value = chartType;
+      const isCircular = chartType === "doughnut" || chartType === "pie";
+      const isHorizontal = chartType === "horizontalBar";
+      const isLine = chartType === "line";
+
+      $("breakdownSubtitle").textContent = `${METRIC_LABELS[metric] || metric} by ${value("breakdown")} · ${readableChartType(chartType)}`;
+
+      if (breakdownChartInstance) breakdownChartInstance.destroy();
+
+      const ctx = $("breakdownChart");
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+      const palette = [accent, "#8AB4FF", "#F59E0B", "#22C55E", "#A855F7", "#EF4444", "#F472B6", "#38BDF8"];
+
+      const dataset = {
+        label: METRIC_LABELS[metric] || metric,
+        data: rows.map((r) => Number(r[metric]) || 0),
+        backgroundColor: isCircular ? palette.map((color) => withAlpha(color, 0.78)) : withAlpha(accent, isLine ? 0.18 : 0.75),
+        borderColor: isCircular ? "rgba(255,255,255,0.12)" : accent,
+        borderWidth: isCircular ? 1 : 2,
+        borderRadius: isLine ? 0 : 8,
+        barThickness: isLine ? undefined : 24,
+        fill: isLine,
+        tension: 0.28,
+        pointRadius: isLine ? 4 : 0
+      };
+
+      const options = isCircular
+        ? {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom", labels: { color: "rgba(255,255,255,0.78)", font: { weight: "bold" } } },
+              tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${formatMetric(ctx.raw, metric, display)}` } },
+              datalabels: { color: "rgba(255,255,255,0.92)", formatter: (value) => compactForChart(value, metric, display), font: { size: 10, weight: "bold" } }
+            }
+          }
+        : {
+            indexAxis: isHorizontal ? "y" : "x",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: (ctx) => `${METRIC_LABELS[metric] || metric}: ${formatMetric(ctx.raw, metric, display)}` } },
+              datalabels: { color: "rgba(255,255,255,0.86)", anchor: "end", align: "end", formatter: (value) => compactForChart(value, metric, display), font: { size: 10, weight: "bold" } }
+            },
+            scales: {
+              x: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.7)", callback: (value) => compactNumber(value, display.numberFormat) }, grid: { color: "rgba(255,255,255,0.08)" } },
+              y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.7)" }, grid: { color: "rgba(255,255,255,0.08)" } }
+            }
+          };
+
+      breakdownChartInstance = new Chart(ctx, {
+        type: isCircular ? chartType : isLine ? "line" : "bar",
+        data: { labels: rows.map((r) => r.label), datasets: [dataset] },
+        options,
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderInsights(insights) {
+      $("summary").textContent = insights.summary || "No summary generated.";
+      $("summary").setAttribute("contenteditable", "true");
+      $("summary").classList.add("editable-report-text");
+
+      const recs = Array.isArray(insights.recommendations) ? insights.recommendations : [];
+      $("recommendations").innerHTML = recs.length
+        ? recs.map((rec, index) => `<li class="editable-report-text" contenteditable="true" data-rec-index="${index}">${escapeHtml(rec)}</li>`).join("")
+        : `<li class="editable-report-text" contenteditable="true">No recommendations generated.</li>`;
+    }
+
+
+    function renderReportNotes(result) {
+      const existingBlocks = Array.isArray(result.insightBlocks) ? result.insightBlocks : [];
+
+      if (!reportTextBlocks.length && existingBlocks.length) {
+        reportTextBlocks = existingBlocks
+          .filter((block) => block.kind === "summary" || block.kind === "recommendation" || block.kind === "opportunity" || block.kind === "risk")
+          .slice(0, 4)
+          .map((block) => ({
+            id: block.id,
+            title: block.title || readableBlockKind(block.kind),
+            content: block.content || ""
+          }));
+      }
+
+      if (!reportTextBlocks.length) {
+        reportTextBlocks = [
+          {
+            id: `text-${Date.now()}`,
+            title: "Campaign manager note",
+            content: "Add a manual explanation, client context or next-step note here."
+          }
+        ];
+      }
+
+      $("reportNotesList").innerHTML = reportTextBlocks.map((block) => `
+        <div class="report-note" data-note-id="${escapeHtml(block.id)}">
+          <div class="report-note-title editable-report-text" contenteditable="true" data-note-field="title">${escapeHtml(block.title)}</div>
+          <div class="summary editable-report-text" contenteditable="true" data-note-field="content">${escapeHtml(block.content)}</div>
+          <div class="chart-actions no-client-view" style="margin-top:8px;">
+            <button class="mini-btn" type="button" data-remove-note="${escapeHtml(block.id)}">Remove</button>
+          </div>
+        </div>
+      `).join("");
+
+      document.querySelectorAll("[data-note-field]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const noteEl = el.closest("[data-note-id]");
+          const note = reportTextBlocks.find((item) => item.id === noteEl.dataset.noteId);
+          if (!note) return;
+          note[el.dataset.noteField] = el.textContent.trim();
+        });
+      });
+
+      document.querySelectorAll("[data-remove-note]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          reportTextBlocks = reportTextBlocks.filter((item) => item.id !== btn.dataset.removeNote);
+          renderReportNotes(result);
+        });
+      });
+    }
+
+    function readableBlockKind(kind) {
+      return String(kind || "Text block")
+        .split("-")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    }
+
+    function renderExtraCharts(result) {
+      destroyExtraCharts();
+
+      const selectedModules = getSelectedChartModules();
+      const modules = EXTRA_CHART_MODULES.filter((module) => selectedModules.includes(module.id));
+
+      if (!modules.length) {
+        $("extraChartsSection").innerHTML = "";
+        return;
+      }
+
+      $("extraChartsSection").innerHTML = modules.map((module) => {
+        const settings = getChartModuleSettings(module.id);
+        return `
+          <div id="module-${module.id}" class="card chart-card-${settings.size}">
+            <div class="card-head">
+              <span class="chart-title-edit" contenteditable="true" data-live-chart-title="${module.id}">${escapeHtml(settings.title)}</span>
+              <div class="chart-actions no-client-view">
+                <select class="module-chart-type-switch" data-live-module-type="${module.id}" aria-label="Change chart type">
+                  ${chartTypeOptionsForValue(module.id, settings.type)}
+                </select>
+                <button class="mini-btn" type="button" data-remove-chart="${module.id}">Remove</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="chart-explanation editable-report-text" contenteditable="true" data-live-chart-description="${module.id}">${escapeHtml(settings.description)}</p>
+              <div class="chart-wrap">
+                <canvas id="chart-${module.id}"></canvas>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      document.querySelectorAll("[data-live-chart-title]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const source = document.querySelector(`[data-module-title="${el.dataset.liveChartTitle}"]`);
+          if (source) source.value = el.textContent.trim();
+        });
+      });
+
+      document.querySelectorAll("[data-live-chart-description]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const source = document.querySelector(`[data-module-description="${el.dataset.liveChartDescription}"]`);
+          if (source) source.value = el.textContent.trim();
+        });
+      });
+
+      document.querySelectorAll("[data-remove-chart]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = document.querySelector(`input[name="chartModule"][value="${btn.dataset.removeChart}"]`);
+          if (input) input.checked = false;
+          renderExtraCharts(result);
+        });
+      });
+
+      document.querySelectorAll("[data-live-module-type]").forEach((select) => {
+        select.addEventListener("change", () => {
+          const source = document.querySelector(`[data-module-type="${select.dataset.liveModuleType}"]`);
+          if (source) source.value = select.value;
+          renderExtraChartById(select.dataset.liveModuleType, result);
+        });
+      });
+
+      for (const module of modules) {
+        renderExtraChartById(module.id, result);
+      }
+    }
+
+    function renderExtraChartById(id, result) {
+      const settings = getChartModuleSettings(id);
+      if (id === "comparison") renderComparisonChart(result, settings);
+      if (id === "funnel") renderFunnelChart(result, settings);
+      if (id === "spendRevenue") renderSpendRevenueChart(result, settings);
+      if (id === "share") renderShareChart(result, settings);
+      if (id === "roasCpa") renderRoasCpaChart(result, settings);
+      if (id === "efficiency") renderEfficiencyScatter(result, settings);
+    }
+
+    function renderComparisonChart(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const metrics = Array.from(new Set([settings.metric, ...(result.dashboardConfig?.kpiMetrics || getCheckedValues("kpiMetric"))])).filter(Boolean).slice(0, settings.limit || 7);
+      const comparison = new Map((result.comparison || []).map((item) => [item.metric, item]));
+      const labels = metrics.map((metric) => METRIC_LABELS[metric] || metric);
+      const current = metrics.map((metric) => Number(comparison.get(metric)?.current ?? result.totals?.[metric] ?? 0));
+      const previous = metrics.map((metric) => Number(comparison.get(metric)?.previous ?? 0));
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+
+      extraChartInstances.comparison = new Chart($("chart-comparison"), {
+        type: settings.type === "horizontalBar" ? "bar" : settings.type,
+        data: {
+          labels,
+          datasets: [
+            { label: "Current", data: current, backgroundColor: withAlpha(accent, 0.72), borderColor: accent, borderWidth: 1, borderRadius: 7 },
+            { label: "Previous", data: previous, backgroundColor: "rgba(255,255,255,0.18)", borderColor: "rgba(255,255,255,0.32)", borderWidth: 1, borderRadius: 7 }
+          ]
+        },
+        options: baseChartOptions((value) => compactNumber(value, display.numberFormat)),
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderFunnelChart(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const totals = result.totals || {};
+      const steps = ["impressions", "clicks", "sessions", "leads", "conversions", "transactions"].filter((metric) => Number(totals[metric]) > 0);
+      const labels = steps.map((metric) => METRIC_LABELS[metric] || metric);
+      const data = steps.map((metric) => Number(totals[metric]) || 0);
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+
+      extraChartInstances.funnel = new Chart($("chart-funnel"), {
+        type: settings.type === "line" ? "line" : "bar",
+        data: { labels, datasets: [{ label: METRIC_LABELS[settings.metric] || "Volume", data, backgroundColor: withAlpha(accent, 0.72), borderColor: accent, borderRadius: 8, tension: 0.35 }] },
+        options: { ...baseChartOptions((value) => compactNumber(value, display.numberFormat)), indexAxis: "y" },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderSpendRevenueChart(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const rows = topBreakdownRows(result, settings.metric || "revenue", settings.limit || 8);
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+
+      extraChartInstances.spendRevenue = new Chart($("chart-spendRevenue"), {
+        type: settings.type === "horizontalBar" ? "bar" : settings.type,
+        data: {
+          labels: rows.map((row) => shortenLabel(row.label)),
+          datasets: [
+            { label: "Spend", data: rows.map((row) => Number(row.spend) || 0), backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 7 },
+            { label: "Revenue", data: rows.map((row) => Number(row.revenue) || 0), backgroundColor: withAlpha(accent, 0.72), borderRadius: 7 }
+          ]
+        },
+        options: baseChartOptions((value) => compactForChart(value, "revenue", display)),
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderShareChart(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const metric = settings.metric || result.dashboardConfig?.breakdownChart?.metric || value("breakdownMetric");
+      const rows = topBreakdownRows(result, metric, settings.limit || 7);
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+      const palette = [accent, "#8AB4FF", "#F59E0B", "#22C55E", "#A855F7", "#EF4444", "#F472B6"];
+
+      extraChartInstances.share = new Chart($("chart-share"), {
+        type: settings.type === "bar" ? "bar" : settings.type,
+        data: {
+          labels: rows.map((row) => shortenLabel(row.label)),
+          datasets: [{ data: rows.map((row) => Number(row[metric]) || 0), backgroundColor: palette.map((color) => withAlpha(color, 0.78)), borderWidth: 0 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom", labels: { color: "rgba(255,255,255,0.78)", font: { weight: "bold" } } },
+            datalabels: { color: "rgba(255,255,255,0.9)", formatter: (value) => compactForChart(value, metric, display), font: { size: 10, weight: "bold" } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderRoasCpaChart(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const rows = topBreakdownRows(result, settings.metric || "roas", settings.limit || 8);
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+
+      extraChartInstances.roasCpa = new Chart($("chart-roasCpa"), {
+        type: "bar",
+        data: {
+          labels: rows.map((row) => shortenLabel(row.label)),
+          datasets: [
+            { label: "ROAS", data: rows.map((row) => Number(row.roas) || 0), backgroundColor: withAlpha(accent, 0.72), borderRadius: 7 },
+            { label: "CPA", data: rows.map((row) => Number(row.cpa) || 0), backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 7 }
+          ]
+        },
+        options: baseChartOptions((value) => compactNumber(value, display.numberFormat)),
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function renderEfficiencyScatter(result, settings) {
+      const display = result.dashboardConfig?.display || {};
+      const rows = topBreakdownRows(result, settings.metric || "spend", settings.limit || 18);
+      const accent = display.accentColor || value("accentColor") || "#00B3A4";
+
+      extraChartInstances.efficiency = new Chart($("chart-efficiency"), {
+        type: settings.type === "bar" ? "bar" : "scatter",
+        data: {
+          datasets: [{
+            label: "Spend vs conversions",
+            data: rows.map((row) => ({ x: Number(row.spend) || 0, y: Number(row.conversions) || 0, label: row.label })),
+            backgroundColor: withAlpha(accent, 0.78),
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.raw.label}: ${formatMetric(ctx.raw.x, "spend", display)} / ${formatMetric(ctx.raw.y, "conversions", display)}` } },
+            datalabels: { display: false }
+          },
+          scales: {
+            x: { title: { display: true, text: "Spend", color: "rgba(255,255,255,0.72)" }, ticks: { color: "rgba(255,255,255,0.72)", callback: (value) => compactForChart(value, "spend", display) }, grid: { color: "rgba(255,255,255,0.1)" } },
+            y: { title: { display: true, text: "Conversions", color: "rgba(255,255,255,0.72)" }, ticks: { color: "rgba(255,255,255,0.72)" }, grid: { color: "rgba(255,255,255,0.1)" } }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function topBreakdownRows(result, metric, limit) {
+      return sortRows([...(result.breakdownRows || [])], metric, "desc").slice(0, limit);
+    }
+
+    function shortenLabel(label, max = 22) {
+      const s = String(label || "-");
+      return s.length > max ? `${s.slice(0, max)}...` : s;
+    }
+
+    function baseChartOptions(tickFormatter) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: true, labels: { color: "rgba(255,255,255,0.78)", font: { weight: "bold" } } },
+          datalabels: {
+            display: false,
+            color: "rgba(255,255,255,0.82)",
+            anchor: "end",
+            align: "top",
+            formatter: (value) => compactNumber(value, "short"),
+            font: { size: 10, weight: "bold" }
+          }
+        },
+        scales: {
+          x: { ticks: { color: "rgba(255,255,255,0.68)", maxRotation: 0, autoSkip: true }, grid: { color: "rgba(255,255,255,0.08)" } },
+          y: { beginAtZero: true, ticks: { color: "rgba(255,255,255,0.72)", callback: tickFormatter }, grid: { color: "rgba(255,255,255,0.1)" } }
+        }
+      };
+    }
+
+    function renderBreakdownTable(result) {
+      const config = result.dashboardConfig || {};
+      const display = config.display || {};
+      const tableConfig = config.table || {};
+      const headers = tableConfig.columns || getCurrentPresetTableColumns();
+
+      let rows = [...(result.breakdownRows || [])];
+
+      if (localTableSort.key) {
+        rows = sortRows(rows, localTableSort.key, localTableSort.direction);
+      }
+
+      $("breakdownTable").innerHTML = `
+        <table>
+          <thead>
+            <tr>${headers.map((h) => `<th data-key="${escapeHtml(h)}">${escapeHtml(METRIC_LABELS[h] || h)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                ${headers.map((h) => `<td>${escapeHtml(formatTableCell(row[h], h, display))}</td>`).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+
+      document.querySelectorAll("#breakdownTable th").forEach((th) => {
+        th.addEventListener("click", () => {
+          const key = th.getAttribute("data-key");
+          if (localTableSort.key === key) {
+            localTableSort.direction = localTableSort.direction === "desc" ? "asc" : "desc";
+          } else {
+            localTableSort.key = key;
+            localTableSort.direction = "desc";
+          }
+
+          renderBreakdownTable(currentResult);
+        });
+      });
+    }
+
+    function renderPreviewTable(rows) {
+      if (!rows.length) {
+        $("previewTable").innerHTML = "<div style='padding:16px;color:var(--muted)'>No preview rows.</div>";
+        return;
+      }
+
+      const headers = Object.keys(rows[0]);
+      $("previewTable").innerHTML = buildTable(headers, rows);
+    }
+
+    function buildTable(headers, rows) {
+      return `
+        <table>
+          <thead>
+            <tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                ${headers.map((h) => `<td>${escapeHtml(row[h] ?? "")}</td>`).join("")}
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function sortRows(rows, key, direction) {
+      const mult = direction === "asc" ? 1 : -1;
+
+      return rows.sort((a, b) => {
+        const av = a[key];
+        const bv = b[key];
+
+        if (key === "label") {
+          return String(av || "").localeCompare(String(bv || "")) * mult;
+        }
+
+        return ((Number(av) || 0) - (Number(bv) || 0)) * mult;
+      });
+    }
+
+    function formatTableCell(value, metric, display) {
+      if (metric === "label") return value || "";
+      if (metric === "rows") return String(value || 0);
+      return formatMetric(value, metric, display);
+    }
+
+    function formatMetric(value, metric, display = {}) {
+      const n = Number(value) || 0;
+      const currency = display.currency || valueOrDefault("currency", "₪");
+
+      if (["spend", "cpc", "cpm", "cpa", "revenue", "cpl"].includes(metric)) {
+        return `${currency}${formatNumber(n, display.numberFormat)}`;
+      }
+
+      if (["ctr", "conversionRate", "emailOpenRate", "emailClickRate"].includes(metric)) {
+        return `${round(n, 2)}%`;
+      }
+
+      if (metric === "roas") {
+        return `${round(n, 2)}x`;
+      }
+
+      return formatNumber(n, display.numberFormat);
+    }
+
+    function compactForChart(value, metric, display = {}) {
+      const n = Number(value) || 0;
+
+      if (["ctr", "conversionRate", "emailOpenRate", "emailClickRate"].includes(metric)) {
+        return `${round(n, 1)}%`;
+      }
+
+      if (metric === "roas") {
+        return `${round(n, 1)}x`;
+      }
+
+      if (["spend", "cpc", "cpm", "cpa", "revenue", "cpl"].includes(metric)) {
+        return `${display.currency || value("currency")}${compactNumber(n, "short")}`;
+      }
+
+      return compactNumber(n, "short");
+    }
+
+    function formatNumber(n, format = "short") {
+      if (format === "full") {
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
+      }
+
+      return compactNumber(n, "short");
+    }
+
+    function compactNumber(n, format = "short") {
+      const num = Number(n) || 0;
+
+      if (format === "full") {
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(num);
+      }
+
+      if (Math.abs(num) >= 1000000) return `${round(num / 1000000, 1)}M`;
+      if (Math.abs(num) >= 1000) return `${round(num / 1000, 1)}K`;
+      return String(round(num, 2));
+    }
+
+    function round(n, digits = 2) {
+      const factor = Math.pow(10, digits);
+      return Math.round((Number(n) || 0) * factor) / factor;
+    }
+
+    function withAlpha(hex, alpha) {
+      const clean = String(hex || "#00B3A4").replace("#", "");
+      const bigint = parseInt(clean.length === 3 ? clean.split("").map((x) => x + x).join("") : clean, 16);
+
+      const r = (bigint >> 16) & 255;
+      const g = (bigint >> 8) & 255;
+      const b = bigint & 255;
+
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function readableReportType(type) {
+      return String(type || "")
+        .split("-")
+        .map((x) => x.charAt(0).toUpperCase() + x.slice(1))
+        .join(" ");
+    }
+
+    function valueOrDefault(id, fallback) {
+      const el = $(id);
+      return el ? el.value || fallback : fallback;
+    }
+
+    function escapeHtml(input) {
+      return String(input ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeAttr(input) {
+      return escapeHtml(input);
+    }
+
+    function destroyCharts() {
+      if (trendChartInstance) trendChartInstance.destroy();
+      if (breakdownChartInstance) breakdownChartInstance.destroy();
+      destroyExtraCharts();
+      trendChartInstance = null;
+      breakdownChartInstance = null;
+    }
+
+    function destroyExtraCharts() {
+      Object.values(extraChartInstances).forEach((chart) => {
+        if (chart) chart.destroy();
+      });
+      extraChartInstances = {};
+    }
+
+    $("saveConfigBtn").addEventListener("click", () => {
+      localStorage.setItem("carmelonClientReportsConfig", JSON.stringify(buildPayload()));
+      appendLog("Local dashboard config saved.");
+    });
+
+    $("loadConfigBtn").addEventListener("click", () => {
+      const raw = localStorage.getItem("carmelonClientReportsConfig");
+      if (!raw) {
+        alert("No saved local config found.");
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(raw);
+        hydrateFromPayload(payload);
+        appendLog("Local dashboard config loaded.");
+      } catch (err) {
+        alert(`Failed to load config: ${err.message}`);
+      }
+    });
+
+    function hydrateFromPayload(payload) {
+      if (payload.spreadsheetId) $("spreadsheetId").value = payload.spreadsheetId;
+      if (payload.sourceTab) $("sourceTab").value = payload.sourceTab;
+      if (payload.reportType) $("reportType").value = payload.reportType;
+      if (payload.primaryMetric) $("primaryMetric").value = payload.primaryMetric;
+      if (payload.breakdown) $("breakdown").value = payload.breakdown;
+
+      $("startDate").value = payload.dateRange?.startDate || "";
+      $("endDate").value = payload.dateRange?.endDate || "";
+      $("datePreset").value = payload.dateRange?.startDate || payload.dateRange?.endDate ? "custom" : "all";
+      $("customDateFields").classList.toggle("is-open", $("datePreset").value === "custom");
+
+      const map = payload.columnMapping || {};
+      $("mapDate").value = map.date || "";
+      $("mapCampaign").value = map.campaign || "";
+      $("mapChannel").value = map.channel || "";
+      $("mapCountry").value = map.country || "";
+      $("mapSpend").value = map.spend || "";
+      $("mapImpressions").value = map.impressions || "";
+      $("mapClicks").value = map.clicks || "";
+      $("mapConversions").value = map.conversions || "";
+      $("mapRevenue").value = map.revenue || "";
+      $("mapLeads").value = map.leads || "";
+      $("mapSessions").value = map.sessions || "";
+      $("mapUsers").value = map.users || "";
+
+      const cfg = payload.dashboardConfig || {};
+      $("showKpis").checked = cfg.visibleSections?.kpiCards !== false;
+      $("showTrend").checked = cfg.visibleSections?.trendChart !== false;
+      $("showBreakdown").checked = cfg.visibleSections?.breakdownChart !== false;
+      $("showTable").checked = cfg.visibleSections?.performanceTable !== false;
+      $("showSummary").checked = cfg.visibleSections?.aiSummary !== false;
+      $("showRecommendations").checked = cfg.visibleSections?.recommendations !== false;
+      $("showSourcePreview").checked = Boolean(cfg.visibleSections?.sourcePreview);
+
+      renderMetricCheckboxes("kpiMetricsList", "kpiMetric", cfg.kpiMetrics || []);
+      renderMetricCheckboxes("trendMetricsList", "trendMetric", cfg.trendChart?.metrics || []);
+      renderChartModules(cfg.uiModules?.extraCharts);
+
+      $("trendChartType").value = cfg.trendChart?.type || "line";
+      if ($("breakdownChartType")) $("breakdownChartType").value = cfg.breakdownChart?.type || "horizontalBar";
+      $("breakdownMetric").value = cfg.breakdownChart?.metric || "conversions";
+      $("breakdownLimit").value = String(cfg.breakdownChart?.limit || 8);
+      $("breakdownSort").value = cfg.breakdownChart?.sort || "desc";
+      $("accentColor").value = cfg.display?.accentColor || "#00B3A4";
+      $("currency").value = cfg.display?.currency || "₪";
+      $("numberFormat").value = cfg.display?.numberFormat || "short";
+
+      document.documentElement.style.setProperty("--accent", $("accentColor").value);
+    }
+
+    function applyClientViewLock(isLocked) {
+      document.querySelectorAll("[contenteditable]").forEach((el) => {
+        if (!el.dataset.originalContenteditable) {
+          el.dataset.originalContenteditable = el.getAttribute("contenteditable") || "true";
+        }
+
+        el.setAttribute("contenteditable", isLocked ? "false" : el.dataset.originalContenteditable);
+      });
+    }
+
+    function setClientViewMode(isClientView) {
+      document.body.classList.toggle("client-view", isClientView);
+      $("clientViewBtn").textContent = isClientView ? "Edit View" : "Client View";
+      applyClientViewLock(isClientView);
+    }
+
+    $("clientViewBtn").addEventListener("click", () => {
+      setClientViewMode(!document.body.classList.contains("client-view"));
+    });
+
+    $("printBtn").addEventListener("click", () => {
+      window.print();
+    });
+
+    $("downloadHtmlBtn").addEventListener("click", () => {
+      if (!currentResult) {
+        alert("Generate a report first.");
+        return;
+      }
+
+      const html = buildStandaloneReportHtml(currentResult);
+      downloadFile("client-report.html", html, "text/html");
+    });
+
+    $("downloadCsvBtn").addEventListener("click", () => {
+      if (!currentResult) {
+        alert("Generate a report first.");
+        return;
+      }
+
+      const columns = currentResult.dashboardConfig?.table?.columns || getCurrentPresetTableColumns();
+      const csv = [
+        columns.join(","),
+        ...(currentResult.breakdownRows || []).map((row) =>
+          columns.map((col) => csvEscape(row[col] ?? "")).join(",")
+        )
+      ].join("\n");
+
+      downloadFile("client-report-breakdown.csv", csv, "text/csv");
+    });
+
+    function csvEscape(value) {
+      const s = String(value ?? "");
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    }
+
+    function downloadFile(filename, content, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function buildStandaloneReportHtml(result) {
+      const clonedDashboard = $("dashboard").cloneNode(true);
+      clonedDashboard.style.display = "block";
+
+      return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Client Report</title>
+<style>
+body { font-family: Arial, sans-serif; background: #fff; color: #111; padding: 24px; }
+.card, .kpi, .status-item { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.card-head { font-weight: 800; margin-bottom: 12px; }
+.kpi-grid, .status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kpi-title, .status-label { color: #555; font-size: 12px; text-transform: uppercase; font-weight: 800; }
+.kpi-value { font-size: 24px; font-weight: 900; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+canvas, .no-client-view, #sourcePreviewSection { display: none !important; }
+</style>
+</head>
+<body>
+<h1>Client Report</h1>
+<p>Generated at ${new Date().toISOString()}</p>
+${clonedDashboard.outerHTML}
+</body>
+</html>`;
+    }
+
+    initControls();
+  </script>
+</body>
+</html>

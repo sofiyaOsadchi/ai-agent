@@ -17,6 +17,10 @@ import {
   formatStrictTerminologyFromSelection,
 } from "./subjobs/utility-translate.js";
 
+import { getGlossaryPrompt } from "./subjobs/translation-glossary.js";
+
+type UiGlossaryByLang = Partial<Record<LangKey, Record<string, string>>>;
+
 type DemoPromptOverrides = {
   draftSystem?: string; // system prompt for draft step
   draftUser?: string; // user prompt for draft step
@@ -33,8 +37,14 @@ type TranslateDemoOverrides = {
   // notes per language (override)
   languageNotes?: Partial<Record<LangKey, string>>;
 
+  // glossary per language from UI (simple source -> required translation map)
+  glossaryByLang?: UiGlossaryByLang;
+
   // terminology profile per language (override)
   terminologyByLang?: Partial<Record<LangKey, TerminologyProfile>>;
+
+  // model selected from UI
+  model?: string;
 
   // optional extra rules per language (mostly for DE polish)
   polishRulesByLang?: Partial<Record<LangKey, string>>;
@@ -251,8 +261,10 @@ export class TranslateFromSheetDemoJob {
           typeof payload.splitIntoTwo === "boolean" ? payload.splitIntoTwo : true,
         prompts: payload.prompts ?? undefined,
         languageNotes: payload.languageNotes ?? undefined,
+        glossaryByLang: payload.glossaryByLang ?? undefined,
         terminologyByLang: payload.terminologyByLang ?? undefined,
         polishRulesByLang: payload.polishRulesByLang ?? undefined,
+        model: payload.model ? String(payload.model) : undefined,
       },
     };
 
@@ -330,6 +342,63 @@ export class TranslateFromSheetDemoJob {
   ): TerminologyProfile {
     const k = this.normalizeLang(lang);
     return overrides?.[k] ?? TERMINOLOGY_MANAGEMENT[k] ?? {};
+  }
+
+  private resolveModel(model?: string): string {
+    const allowed = new Set([
+      "o3",
+      "o4-mini",
+      "gpt-5.2",
+      "gpt-5",
+      "gpt-5-mini",
+      "gpt-5-nano",
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "gpt-4o",
+      "gpt-4o-mini",
+    ]);
+
+    const value = String(model || "").trim();
+    return allowed.has(value) ? value : "o3";
+  }
+
+  private normalizeGlossaryText(text: string): string {
+    return String(text || "")
+      .toLowerCase()
+      .replace(/[’']/g, "'")
+      .replace(/[–—-]/g, " ")
+      .replace(/[^\p{L}\p{N}\s']/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private formatUiGlossaryPrompt(
+    lang: string,
+    sourceRows: string[][],
+    glossaryByLang?: UiGlossaryByLang
+  ): string {
+    const langKey = this.normalizeLang(lang);
+    const glossary = glossaryByLang?.[langKey] ?? {};
+
+    if (!glossary || Object.keys(glossary).length === 0) {
+      return "";
+    }
+
+    const sourceText = this.normalizeGlossaryText(sourceRows.flat().join(" "));
+    const matched = Object.entries(glossary).filter(([source, target]) => {
+      const normalizedSource = this.normalizeGlossaryText(source);
+      return Boolean(normalizedSource && String(target || "").trim() && sourceText.includes(normalizedSource));
+    });
+
+    if (!matched.length) {
+      return "";
+    }
+
+    return [
+      "=== UI TRANSLATION GLOSSARY ===",
+      "These rules were entered in the demo UI. When you see these source terms, translate them exactly as shown:",
+      ...matched.map(([source, target]) => `- "${source}" -> "${target}"`),
+    ].join("\n");
   }
 
   // ---- JSON parsing helpers (robust) ----
@@ -420,7 +489,8 @@ export class TranslateFromSheetDemoJob {
     lang: string,
     rows: string[][],
     translateHeader: boolean,
-    hotelName: string
+    hotelName: string,
+    glossaryRules: string
   ): string {
     return [
       `TASK: Translate EVERY cell in the provided matrix to ${this.langLabel(lang)}.`,
@@ -428,6 +498,9 @@ export class TranslateFromSheetDemoJob {
       ` - Domain: Hotel FAQ.`,
       ` - Official Hotel Name: "${hotelName}".`,
       ``,
+      glossaryRules
+        ? [`MANDATORY GLOSSARY RULES:`, glossaryRules, ``].join("\n")
+        : "",
       `INSTRUCTIONS:`,
       `- Translate ALL text content in the rows.`,
       `- Look at each row as a connected context unit (Category + Question + Answer).`,
@@ -435,10 +508,13 @@ export class TranslateFromSheetDemoJob {
       `- Translate header row: ${translateHeader ? "YES" : "NO"}.`,
       `- PRESERVE the exact 2D matrix structure (same number of rows and columns).`,
       `- If the source mentions the hotel name, ensure the translated text also includes "${hotelName}". Do not shorten it to "the hotel".`,
+      `- Apply the mandatory glossary rules exactly when relevant.`,
       ``,
       `INPUT DATA (JSON):`,
       JSON.stringify({ rows }),
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   private defaultPolishSystem(lang: string, hotelName: string): string {
@@ -567,9 +643,26 @@ const rows = this.toRectMatrix(rawRows, width);
     }
 
     const prompts = cfg.demoOverrides?.prompts;
+    const selectedModel = this.resolveModel(cfg.demoOverrides?.model);
+    console.log(chalk.gray(`🤖 translate-demo model: ${selectedModel}`));
 
     const processChunk = async (chunkRows: string[][], lang: string, partNum: number) => {
       console.log(chalk.yellow(`   ⏳ Processing Part ${partNum}/2 (${chunkRows.length} rows)...`));
+
+      const normalizedLang = this.normalizeLang(lang);
+      const staticGlossaryRules = getGlossaryPrompt(normalizedLang, chunkRows);
+      const uiGlossaryRules = this.formatUiGlossaryPrompt(
+        normalizedLang,
+        chunkRows,
+        cfg.demoOverrides?.glossaryByLang
+      );
+      const glossaryRules = [staticGlossaryRules, uiGlossaryRules].filter(Boolean).join("\n\n");
+
+      console.log(
+        chalk.gray(
+          `[GLOSSARY] lang=${normalizedLang} static=${staticGlossaryRules ? "yes" : "no"} ui=${uiGlossaryRules ? "yes" : "no"}`
+        )
+      );
 
       // Step A: Draft
       const draftSystem = prompts?.draftSystem?.trim()
@@ -583,12 +676,13 @@ const rows = this.toRectMatrix(rawRows, width);
         ? this.buildPrompt(prompts.draftUser, {
             lang: this.langLabel(lang),
             hotelName: docTitle,
+            glossaryRules: glossaryRules || "",
             rows: JSON.stringify({ rows: chunkRows }),
             translateHeader: translateHeader ? "YES" : "NO",
           })
-        : this.defaultDraftUser(lang, chunkRows, translateHeader, docTitle);
+        : this.defaultDraftUser(lang, chunkRows, translateHeader, docTitle, glossaryRules);
 
-     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, "o3");
+     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, selectedModel);
 
 let draftRows = this.parseJsonMatrixOrThrow(draftResult);
 draftRows = this.enforceSameShape(chunkRows, draftRows);
@@ -661,7 +755,7 @@ const draftJsonClean = JSON.stringify({ rows: draftRows });
             languageNotes,
           });
 
-      const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, "o3");
+      const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, selectedModel);
 
 let finalRows = this.parseJsonMatrixOrThrow(finalJson);
 finalRows = this.enforceSameShape(chunkRows, finalRows);

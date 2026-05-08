@@ -168,7 +168,30 @@ export class MetaSchemaFromSheetJob {
     }
 
     return s;
+
   }
+private enforceMaxMetaDescLenItalian(desc: string, maxLen = 160): string {
+  let s = this.sanitizeOneLine(desc);
+
+  // Step 1: remove Wi-Fi
+  if (s.length > maxLen) {
+    s = s.replace(/,\s*Wi-Fi\s*,/g, ",");
+    s = s.replace(/\s*Wi-Fi\s*,/g, "");
+  }
+
+  // Step 2: remove parking
+  if (s.length > maxLen) {
+    s = s.replace(/,\s*parcheggio\s*,/gi, ",");
+    s = s.replace(/\s*parcheggio\s*,/gi, "");
+  }
+
+  // Step 3: hard cut
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen).trim();
+  }
+
+  return s;
+}
 
   private resolveHebrewHotelName(englishHotelName: string): string | null {
     const targetKey = this.normalizeHotelKey(englishHotelName);
@@ -196,6 +219,7 @@ export class MetaSchemaFromSheetJob {
         throw new Error(`Missing Hebrew hotel name for lang="${lang}"`);
       }
 
+      
       const metaTitle = this.sanitizeOneLine(`שאלות נפוצות | ${hotelNameHe}`);
 
       const metaDescRaw = this.sanitizeOneLine(
@@ -219,6 +243,21 @@ export class MetaSchemaFromSheetJob {
   const metaDesc = this.enforceMaxMetaDescLenEnglish(metaDescRaw, 160);
 
   const h1 = this.sanitizeOneLine(`FAQ zum ${hotelNameEn}`);
+
+  return { metaTitle, metaDesc, h1 };
+}
+
+if (lang.startsWith("it")) {
+  const metaTitle = this.sanitizeOneLine(`FAQ | ${hotelNameEn}`);
+
+  const metaDescRaw = this.sanitizeOneLine(
+    `Trova le risposte alle domande frequenti su ${hotelNameEn}. ` +
+      `Scopri informazioni su orari di check-in, parcheggio, Wi-Fi, posizione, servizi e molto altro.`
+  );
+
+  const metaDesc = this.enforceMaxMetaDescLenItalian(metaDescRaw, 160);
+
+  const h1 = this.sanitizeOneLine(`Domande frequenti su ${hotelNameEn}`);
 
   return { metaTitle, metaDesc, h1 };
 }

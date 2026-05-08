@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sheet Utilities - Cross-file Operations</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root {
+      --bg: #202124;
+      --surface: #2a2b2f;
+      --surface-2: #303237;
+      --surface-3: #242529;
+
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(255, 255, 255, 0.16);
+
+      --text: rgba(255, 255, 255, 0.92);
+      --text-dim: rgba(255, 255, 255, 0.72);
+      --text-muted: rgba(255, 255, 255, 0.52);
+
+      --accent: #8b5cf6;
+      --accent-2: #6366f1;
+      --accent-soft: rgba(139, 92, 246, 0.16);
+      --accent-border: rgba(139, 92, 246, 0.38);
+      --accent-text: #c4b5fd;
+
+      --green: #34d399;
+      --green-dim: rgba(52, 211, 153, 0.14);
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --blue: #93c5fd;
+
+      --radius: 12px;
+      --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .demo-header {
+      height: 72px;
+      padding: 18px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(
+        180deg,
+        rgba(139, 92, 246, 0.08),
+        rgba(139, 92, 246, 0.01)
+      );
+    }
+
+    .demo-header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon {
+      width: 34px;
+      height: 34px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-text);
+      border: 1px solid var(--accent-border);
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(430px, 0.65fr);
+      height: calc(100vh - 72px);
+    }
+
+    .config-panel {
+      padding: 18px 20px 28px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+
+    .terminal-panel {
+      background: #191a1e;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .card-head {
+      padding: 13px 16px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-head h3 {
+      margin: 0;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-kicker {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .card-body {
+      padding: 14px 16px 16px;
+    }
+
+    .section-hint {
+      margin: 0 0 14px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .context-box {
+      border: 1px solid var(--accent-border);
+      background: rgba(139, 92, 246, 0.08);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .context-box small {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--accent-text);
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+    }
+
+    .context-box strong {
+      display: block;
+      font-size: 1rem;
+      margin-bottom: 5px;
+    }
+
+    .context-box p {
+      margin: 0;
+      color: var(--text-dim);
+      line-height: 1.45;
+      font-size: 0.84rem;
+    }
+
+    label,
+    .field-label {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 42px;
+      margin: 0 0 14px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: var(--font);
+      font-size: 0.86rem;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent-border);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.16);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .input-row.three {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .operation-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(210px, 1fr));
+      gap: 10px;
+    }
+
+    .operation-chip {
+      text-align: left;
+      cursor: pointer;
+      min-height: 132px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-dim);
+      padding: 12px;
+      transition: border-color 0.16s, background 0.16s, transform 0.16s;
+    }
+
+    .operation-chip:hover {
+      border-color: var(--border-active);
+      transform: translateY(-1px);
+    }
+
+    .operation-chip.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-text);
+    }
+
+    .operation-chip strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 0.88rem;
+    }
+
+    .operation-chip span {
+      display: block;
+      font-size: 0.75rem;
+      line-height: 1.38;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+
+    .operation-chip b {
+      color: var(--text-dim);
+      font-size: 0.72rem;
+    }
+
+    .operation-chip small {
+      display: inline-flex;
+      margin-top: 8px;
+      color: var(--accent-text);
+      font-size: 0.66rem;
+      font-weight: 800;
+      border: 1px solid var(--accent-border);
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: rgba(139, 92, 246, 0.08);
+    }
+
+    .source-target-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .sub-card {
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.028);
+      overflow: hidden;
+    }
+
+    .sub-card-head {
+      padding: 11px 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.035);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sub-card-head strong {
+      display: block;
+      font-size: 0.86rem;
+      margin-bottom: 3px;
+    }
+
+    .sub-card-head span {
+      display: block;
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      line-height: 1.35;
+    }
+
+    .sub-card-tag {
+      flex: 0 0 auto;
+      font-size: 0.64rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--accent-text);
+      border: 1px solid var(--accent-border);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(139, 92, 246, 0.08);
+    }
+
+    .sub-card-body {
+      padding: 13px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 9px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .toggle-row:first-child {
+      border-top: 0;
+    }
+
+    .toggle-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toggle-copy strong {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .toggle-copy span {
+      color: var(--text-muted);
+      font-size: 0.74rem;
+    }
+
+    .toggle {
+      width: 42px;
+      height: 23px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      position: relative;
+      cursor: pointer;
+      flex: 0 0 auto;
+      transition: background 0.2s;
+    }
+
+    .toggle.on {
+      background: var(--accent);
+    }
+
+    .toggle::after {
+      content: "";
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+
+    .toggle.on::after {
+      transform: translateX(19px);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      position: sticky;
+      bottom: 0;
+      padding: 12px 0 0;
+      background: linear-gradient(180deg, rgba(32, 33, 36, 0), var(--bg) 30%);
+      z-index: 2;
+    }
+
+    .run-btn {
+      flex: 1;
+      padding: 15px 16px;
+      border-radius: var(--radius);
+      border: none;
+      color: white;
+      font-weight: 800;
+      font-size: 0.94rem;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .run-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .run-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .run-btn.secondary {
+      background: linear-gradient(135deg, #475569, #334155);
+    }
+
+    .terminal-bar,
+    .stats-bar {
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .terminal-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .terminal-dots span:nth-child(1) {
+      background: #ef4444;
+    }
+
+    .terminal-dots span:nth-child(2) {
+      background: #f59e0b;
+    }
+
+    .terminal-dots span:nth-child(3) {
+      background: #22c55e;
+    }
+
+    .terminal-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.76rem;
+    }
+
+    .clear-btn {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 9px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.74rem;
+    }
+
+    .terminal-summary {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: #1f2025;
+    }
+
+    .summary-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .summary-top strong {
+      font-size: 0.86rem;
+    }
+
+    .summary-pill {
+      font-size: 0.68rem;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .summary-pill.running {
+      background: rgba(122, 162, 255, 0.14);
+      color: var(--blue);
+      border-color: rgba(122, 162, 255, 0.32);
+    }
+
+    .summary-pill.done {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(52, 211, 153, 0.32);
+    }
+
+    .summary-pill.error {
+      background: rgba(248, 113, 113, 0.14);
+      color: var(--red);
+      border-color: rgba(248, 113, 113, 0.32);
+    }
+
+    .terminal-summary p {
+      margin: 0 0 12px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .summary-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .summary-steps span {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .terminal-body {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .terminal-line {
+      margin: 0 0 6px;
+    }
+
+    .terminal-line.info {
+      color: var(--blue);
+    }
+
+    .terminal-line.success {
+      color: var(--green);
+    }
+
+    .terminal-line.warn {
+      color: var(--yellow);
+    }
+
+    .terminal-line.error {
+      color: var(--red);
+    }
+
+    .stats-bar {
+      border-bottom: 0;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.74rem;
+      font-family: var(--mono);
+    }
+
+    .operation-fields {
+      display: none;
+    }
+
+    .operation-fields.active {
+      display: block;
+    }
+
+    .payload-preview {
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    @media (max-width: 1280px) {
+      .operation-grid {
+        grid-template-columns: repeat(2, minmax(210px, 1fr));
+      }
+    }
+
+    @media (max-width: 980px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .config-panel {
+        border-right: 0;
+      }
+
+      .terminal-panel {
+        min-height: 560px;
+      }
+
+      .input-row,
+      .input-row.three {
+        grid-template-columns: 1fr;
+      }
+
+      .operation-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="demo-header">
+    <h1>
+      <span class="icon">🔗</span>
+      Sheet Utilities / Cross-file Operations
+    </h1>
+    <span class="badge">Live Demo</span>
+  </header>
+
+  <main class="main-grid">
+    <section class="config-panel">
+      <div class="card">
+        <div class="card-head">
+          <h3>🧩 Choose Operation</h3>
+          <span class="card-kicker">Step 1</span>
+        </div>
+
+        <div class="card-body">
+          <p class="section-hint">
+            Pick the action you want the system to perform. The form below changes according to the selected operation.
+          </p>
+
+          <div class="operation-grid">
+            <button class="operation-chip active" data-operation="lookup_copy">
+              <strong>Lookup Copy</strong>
+              <span><b>What it does:</b> copies one column from an incoming sheet into a target sheet by matching keys.</span>
+              <span><b>Use when:</b> you have something like translatable_id and need to copy answers into another file.</span>
+              <small>VLOOKUP style</small>
+            </button>
+
+            <button class="operation-chip" data-operation="folder_to_master_injection">
+              <strong>Folder to Master Injection</strong>
+              <span><b>What it does:</b> reads many hotel files from a folder and writes selected values into one master file.</span>
+              <span><b>Use when:</b> translated files need to update the central master sheet.</span>
+              <small>Folder → Master</small>
+            </button>
+
+            <button class="operation-chip" data-operation="cross_check">
+              <strong>Cross-check Report</strong>
+              <span><b>What it does:</b> compares source data against a master and creates an issue report.</span>
+              <span><b>Use when:</b> you need to find missing rows, duplicates, empty keys or mismatches.</span>
+              <small>Audit only</small>
+            </button>
+
+            <button class="operation-chip" data-operation="coverage_report">
+              <strong>Master Coverage Report</strong>
+              <span><b>What it does:</b> checks how much of the source folder is covered by the master.</span>
+              <span><b>Use when:</b> you need counts of covered hotels/questions and what is missing.</span>
+              <small>Coverage</small>
+            </button>
+
+            <button class="operation-chip" data-operation="copy_columns">
+              <strong>Copy Columns</strong>
+              <span><b>What it does:</b> copies one or more columns between tabs or files.</span>
+              <span><b>Use when:</b> the structure is already aligned, or you want to copy by key match.</span>
+              <small>Column transfer</small>
+            </button>
+
+            <button class="operation-chip" data-operation="build_work_file">
+              <strong>Build Work File</strong>
+              <span><b>What it does:</b> collects selected columns from many files into one work tab.</span>
+              <span><b>Use when:</b> you need one temporary file for review, QA or manual work.</span>
+              <small>Collect data</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>⚙️ Configure Operation</h3>
+          <span class="card-kicker">Step 2</span>
+        </div>
+
+        <div class="card-body">
+          <div id="operationContext" class="context-box">
+            <small>Selected operation</small>
+            <strong>Lookup Copy</strong>
+            <p>Copies one value column from an incoming source sheet into a target sheet by matching key columns.</p>
+          </div>
+
+          <div id="lookup_copy" class="operation-fields active">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Incoming Source Sheet</strong>
+                    <span>The file that contains the value you want to copy from.</span>
+                  </div>
+                  <div class="sub-card-tag">Read from</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Source Spreadsheet ID / URL</label>
+                  <input data-field="sourceSpreadsheetId" type="text" placeholder="Google Sheet URL or ID" />
+
+                  <div class="input-row">
+                    <div>
+                      <label>Source Tab</label>
+                      <input data-field="sourceTab" type="text" value="Sheet1" />
+                    </div>
+                    <div>
+                      <label>Source Key Column</label>
+                      <input data-field="sourceKeyColumn" type="text" value="translatable_id" />
+                    </div>
+                  </div>
+
+                  <label>Source Value Column</label>
+                  <input data-field="sourceValueColumn" type="text" placeholder="Example: Hebrew Answer" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Target Sheet to Update</strong>
+                    <span>The file that should receive the copied values.</span>
+                  </div>
+                  <div class="sub-card-tag">Write to</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Target Spreadsheet ID / URL</label>
+                  <input data-field="targetSpreadsheetId" type="text" placeholder="Google Sheet URL or ID" />
+
+                  <div class="input-row">
+                    <div>
+                      <label>Target Tab</label>
+                      <input data-field="targetTab" type="text" value="Sheet1" />
+                    </div>
+                    <div>
+                      <label>Target Key Column</label>
+                      <input data-field="targetKeyColumn" type="text" value="translatable_id" />
+                    </div>
+                  </div>
+
+                  <label>Target Write Column</label>
+                  <input data-field="targetWriteColumn" type="text" placeholder="Column header or letter to update" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="folder_to_master_injection" class="operation-fields">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Source Folder</strong>
+                    <span>The folder with hotel files or translated work files. The system reads all Google Sheets inside it.</span>
+                  </div>
+                  <div class="sub-card-tag">Read many</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Source Folder ID / URL</label>
+                  <input data-field="sourceFolderId" type="text" placeholder="Google Drive folder URL or ID" />
+
+                  <div class="input-row">
+                    <div>
+                      <label>Source Tab Name in Each File</label>
+                      <input data-field="sourceTabName" type="text" value="Sheet1" />
+                    </div>
+                    <div>
+                      <label>Match Strategy</label>
+                      <select data-field="matchStrategy">
+                        <option value="exact">Exact key match</option>
+                        <option value="normalized_text">Normalized text match</option>
+                        <option value="hotel_question">Hotel name + question match</option>
+                        <option value="translatable_id">Translatable ID match</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <label>Source Key Columns</label>
+                  <input data-field="sourceKeyColumns" type="text" placeholder="Example: translatable_id or hotel name, question" />
+
+                  <label>Source Value Columns</label>
+                  <input data-field="sourceValueColumns" type="text" placeholder="Example: Answer IT, Question IT" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Master Sheet</strong>
+                    <span>The central file that should be updated from the source folder.</span>
+                  </div>
+                  <div class="sub-card-tag">Write into</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Master Spreadsheet ID / URL</label>
+                  <input data-field="masterSpreadsheetId" type="text" placeholder="Master Google Sheet URL or ID" />
+
+                  <label>Master Tab</label>
+                  <input data-field="masterTab" type="text" value="Sheet1" />
+
+                  <label>Master Key Columns</label>
+                  <input data-field="masterKeyColumns" type="text" placeholder="Example: translatable_id or hotel name, question" />
+
+                  <label>Master Write Columns</label>
+                  <input data-field="masterWriteColumns" type="text" placeholder="Example: Answer IT, Question IT" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Status Writing</strong>
+                    <span>Optional status column inside the master file.</span>
+                  </div>
+                  <div class="sub-card-tag">Optional</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <div class="toggle-row">
+                    <div class="toggle-copy">
+                      <strong>Write status column</strong>
+                      <span>Writes whether the row was matched, skipped or missing.</span>
+                    </div>
+                    <div id="writeStatusColumn" class="toggle" role="button" tabindex="0"></div>
+                  </div>
+
+                  <label>Status Column</label>
+                  <input data-field="statusColumn" type="text" placeholder="Example: Injection Status" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="cross_check" class="operation-fields">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Source to Check</strong>
+                    <span>The sheet or folder you want to compare against the master.</span>
+                  </div>
+                  <div class="sub-card-tag">Compare from</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <div class="input-row">
+                    <div>
+                      <label>Source Type</label>
+                      <select data-field="sourceType">
+                        <option value="sheet">Single Sheet</option>
+                        <option value="folder">Folder of Sheets</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Source Tab</label>
+                      <input data-field="sourceTab" type="text" value="Sheet1" />
+                    </div>
+                  </div>
+
+                  <label>Source Sheet or Folder ID / URL</label>
+                  <input data-field="sourceId" type="text" placeholder="Sheet URL, Sheet ID, Folder URL or Folder ID" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Master / Main Data Sheet</strong>
+                    <span>The main sheet that acts as the reference list for the check.</span>
+                  </div>
+                  <div class="sub-card-tag">Compare against</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Master Spreadsheet ID / URL</label>
+                  <input data-field="masterSpreadsheetId" type="text" placeholder="Master Google Sheet URL or ID" />
+
+                  <label>Master Tab</label>
+                  <input data-field="masterTab" type="text" value="Sheet1" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Check Rules and Report</strong>
+                    <span>Choose the matching keys, optional comparison columns and where to write the report.</span>
+                  </div>
+                  <div class="sub-card-tag">Report</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <div class="input-row">
+                    <div>
+                      <label>Report Mode</label>
+                      <select data-field="reportMode">
+                        <option value="missing_only">Missing rows only</option>
+                        <option value="mismatches_only">Mismatches only</option>
+                        <option value="full_audit">Full audit</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Output Report Tab Name</label>
+                      <input data-field="outputReportTabName" type="text" value="Cross-check Report" />
+                    </div>
+                  </div>
+
+                  <label>Key Columns</label>
+                  <input data-field="keyColumns" type="text" placeholder="Example: translatable_id or hotel name, question" />
+
+                  <label>Comparison Columns</label>
+                  <input data-field="comparisonColumns" type="text" placeholder="Example: Question, Answer" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="coverage_report" class="operation-fields">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Source Folder</strong>
+                    <span>The folder whose files should be checked for master coverage.</span>
+                  </div>
+                  <div class="sub-card-tag">Coverage source</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Source Folder ID / URL</label>
+                  <input data-field="sourceFolderId" type="text" placeholder="Google Drive folder URL or ID" />
+
+                  <label>Source Tab Name</label>
+                  <input data-field="sourceTabName" type="text" value="Sheet1" />
+
+                  <label>Source Key Columns</label>
+                  <input data-field="sourceKeyColumns" type="text" placeholder="Example: hotel name, question" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Master / Main Data Sheet</strong>
+                    <span>The main sheet that should contain the covered rows.</span>
+                  </div>
+                  <div class="sub-card-tag">Reference</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Master Spreadsheet ID / URL</label>
+                  <input data-field="masterSpreadsheetId" type="text" placeholder="Master Google Sheet URL or ID" />
+
+                  <label>Master Tab</label>
+                  <input data-field="masterTab" type="text" value="Sheet1" />
+
+                  <label>Master Key Columns</label>
+                  <input data-field="masterKeyColumns" type="text" placeholder="Example: hotel name, question" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Report Destination</strong>
+                    <span>The report is written into this tab inside the master spreadsheet when Dry Run is off.</span>
+                  </div>
+                  <div class="sub-card-tag">Output</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Output Report Tab Name</label>
+                  <input data-field="outputReportTabName" type="text" value="Master Coverage Report" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="copy_columns" class="operation-fields">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Copy Source</strong>
+                    <span>The file and columns you want to copy from.</span>
+                  </div>
+                  <div class="sub-card-tag">Read from</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <div class="input-row">
+                    <div>
+                      <label>Copy Mode</label>
+                      <select data-field="copyMode">
+                        <option value="by_key_match">Copy by key match</option>
+                        <option value="by_row_index">Copy by row index</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Header Row</label>
+                      <input data-field="headerRow" type="text" value="1" />
+                    </div>
+                  </div>
+
+                  <label>Source Spreadsheet ID / URL</label>
+                  <input data-field="sourceSpreadsheetId" type="text" placeholder="Google Sheet URL or ID" />
+
+                  <div class="input-row">
+                    <div>
+                      <label>Source Tab</label>
+                      <input data-field="sourceTab" type="text" value="Sheet1" />
+                    </div>
+                    <div>
+                      <label>Source Key Column</label>
+                      <input data-field="sourceKeyColumn" type="text" placeholder="Required only for key match mode" />
+                    </div>
+                  </div>
+
+                  <label>Source Columns to Copy</label>
+                  <input data-field="sourceColumns" type="text" placeholder="Example: A, B, Answer IT" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Copy Destination</strong>
+                    <span>The file and columns that should receive the copied values.</span>
+                  </div>
+                  <div class="sub-card-tag">Write to</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Target Spreadsheet ID / URL</label>
+                  <input data-field="targetSpreadsheetId" type="text" placeholder="Google Sheet URL or ID" />
+
+                  <div class="input-row">
+                    <div>
+                      <label>Target Tab</label>
+                      <input data-field="targetTab" type="text" value="Sheet1" />
+                    </div>
+                    <div>
+                      <label>Target Key Column</label>
+                      <input data-field="targetKeyColumn" type="text" placeholder="Required only for key match mode" />
+                    </div>
+                  </div>
+
+                  <label>Target Columns to Update</label>
+                  <input data-field="targetColumns" type="text" placeholder="Example: C, D, Final Answer IT" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="build_work_file" class="operation-fields">
+            <div class="source-target-layout">
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Source Folder</strong>
+                    <span>The folder with files you want to collect data from.</span>
+                  </div>
+                  <div class="sub-card-tag">Collect from</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Source Folder ID / URL</label>
+                  <input data-field="sourceFolderId" type="text" placeholder="Google Drive folder URL or ID" />
+
+                  <label>Source Tab in Each File</label>
+                  <input data-field="sourceTab" type="text" value="Sheet1" />
+
+                  <label>Columns to Collect</label>
+                  <input data-field="columnsToCollect" type="text" placeholder="Example: Hotel Name, Question, Answer, Status" />
+                </div>
+              </div>
+
+              <div class="sub-card">
+                <div class="sub-card-head">
+                  <div>
+                    <strong>Output Work File</strong>
+                    <span>The spreadsheet and tab where the collected work table should be written.</span>
+                  </div>
+                  <div class="sub-card-tag">Write output</div>
+                </div>
+
+                <div class="sub-card-body">
+                  <label>Output Spreadsheet ID / URL</label>
+                  <input data-field="outputSpreadsheetId" type="text" placeholder="Existing output spreadsheet URL or ID" />
+
+                  <label>Output Tab Name</label>
+                  <input data-field="outputTabName" type="text" value="Work File" />
+
+                  <div class="toggle-row">
+                    <div class="toggle-copy">
+                      <strong>Include source file name</strong>
+                      <span>Adds Source File and Source Spreadsheet ID columns to the output.</span>
+                    </div>
+                    <div id="includeSourceFileName" class="toggle on" role="button" tabindex="0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Run Safety intentionally moved below operation settings -->
+      <div class="card">
+        <div class="card-head">
+          <h3>🛡️ Run Safety</h3>
+          <span class="card-kicker">Step 3</span>
+        </div>
+
+        <div class="card-body">
+          <p class="section-hint">
+            Keep Dry Run on for the first run. Turn it off only after the terminal preview looks correct.
+          </p>
+
+          <div class="input-row">
+            <div>
+              <label for="headerRow">Default Header Row</label>
+              <input id="headerRow" data-common="true" type="text" value="1" />
+            </div>
+
+            <div>
+              <label for="outputReportTabName">Default Report / Output Tab</label>
+              <input id="outputReportTabName" data-common="true" type="text" value="Sheet Utilities Report" />
+            </div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <strong>Dry Run - preview only</strong>
+              <span>No files are changed. The system only reads data, matches rows and prints planned changes.</span>
+            </div>
+            <div id="dryRun" class="toggle on" role="button" tabindex="0"></div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <strong>Create Backup</strong>
+              <span>Reserved in the payload for future backup behavior. Current operation logic does not create backups yet.</span>
+            </div>
+            <div id="createBackup" class="toggle" role="button" tabindex="0"></div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <strong>Overwrite existing values</strong>
+              <span>When off, existing target/master cells are protected and skipped.</span>
+            </div>
+            <div id="overwriteExisting" class="toggle" role="button" tabindex="0"></div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <strong>Trim values before matching</strong>
+              <span>Removes extra spaces from keys before comparing. Recommended for most Sheets work.</span>
+            </div>
+            <div id="trimValues" class="toggle on" role="button" tabindex="0"></div>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-copy">
+              <strong>Case sensitive matching</strong>
+              <span>When on, “Hotel A” and “hotel a” are treated as different keys. Usually keep this off.</span>
+            </div>
+            <div id="caseSensitive" class="toggle" role="button" tabindex="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>📦 Payload Preview</h3>
+          <span class="card-kicker">Debug</span>
+        </div>
+
+        <div class="card-body">
+          <textarea id="payloadPreview" class="payload-preview" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="previewBtn" class="run-btn secondary">Preview only - run Dry Run</button>
+        <button id="runBtn" class="run-btn">Run operation - can write to Sheets</button>
+      </div>
+    </section>
+
+    <section class="terminal-panel">
+      <div class="terminal-bar">
+        <div class="terminal-title">
+          <div class="terminal-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span>Sheet Utilities Agent - Live Output</span>
+        </div>
+
+        <button id="clearLogsBtn" class="clear-btn">Clear</button>
+      </div>
+
+      <div class="terminal-summary">
+        <div class="summary-top">
+          <strong>What’s happening</strong>
+          <span id="statusPill" class="summary-pill">Idle</span>
+        </div>
+
+        <p id="summaryText">
+          Choose an operation, configure the files and run a dry run first.
+        </p>
+
+        <div class="summary-steps">
+          <span>Reading data</span>
+          <span>Building keys</span>
+          <span>Planning changes</span>
+          <span>Writing output</span>
+          <span>Reporting</span>
+        </div>
+      </div>
+
+      <div id="logs" class="terminal-body">
+        <p class="terminal-line info">Ready. Choose a sheet utility operation and run a dry run.</p>
+      </div>
+
+      <div class="stats-bar">
+        <span id="statusText">Status: Idle</span>
+        <span id="timerText">Time: 0s</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const socket = io();
+
+    const OPERATION_COPY = {
+      lookup_copy: {
+        title: "Lookup Copy",
+        description: "Copies one value column from an incoming source sheet into a target sheet by matching key columns."
+      },
+      folder_to_master_injection: {
+        title: "Folder to Master Injection",
+        description: "Reads many hotel or language files from a folder and writes selected values into one central master sheet."
+      },
+      cross_check: {
+        title: "Cross-check Report",
+        description: "Compares source data against the master and creates a report for missing rows, duplicates, empty keys and mismatches."
+      },
+      coverage_report: {
+        title: "Master Coverage Report",
+        description: "Checks how much of the source folder is covered by the master and reports what is missing."
+      },
+      copy_columns: {
+        title: "Copy Columns",
+        description: "Copies one or more columns between tabs or spreadsheets, either by row index or by key match."
+      },
+      build_work_file: {
+        title: "Build Work File",
+        description: "Collects selected columns from many files into one output work tab for review, QA or manual editing."
+      }
+    };
+
+    const state = {
+      operationType: "lookup_copy",
+      startedAt: null,
+      timer: null
+    };
+
+    const logsDiv = document.getElementById("logs");
+    const payloadPreview = document.getElementById("payloadPreview");
+    const previewBtn = document.getElementById("previewBtn");
+    const runBtn = document.getElementById("runBtn");
+    const clearLogsBtn = document.getElementById("clearLogsBtn");
+    const statusPill = document.getElementById("statusPill");
+    const statusText = document.getElementById("statusText");
+    const timerText = document.getElementById("timerText");
+    const summaryText = document.getElementById("summaryText");
+    const operationContext = document.getElementById("operationContext");
+
+    const toggleIds = [
+      "dryRun",
+      "createBackup",
+      "overwriteExisting",
+      "trimValues",
+      "caseSensitive",
+      "writeStatusColumn",
+      "includeSourceFileName"
+    ];
+
+    function activePanel() {
+      return document.getElementById(state.operationType);
+    }
+
+    function getCommonValue(id) {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : "";
+    }
+
+    function getPanelValue(name) {
+      const panel = activePanel();
+      const el = panel ? panel.querySelector(`[data-field="${name}"]`) : null;
+      return el ? String(el.value || "").trim() : "";
+    }
+
+    function isToggleOn(id) {
+      const el = document.getElementById(id);
+      return Boolean(el && el.classList.contains("on"));
+    }
+
+    function setToggle(id, value) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle("on", Boolean(value));
+      updatePayloadPreview();
+    }
+
+    function csv(value) {
+      return String(value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function positiveInt(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+    }
+
+    function getHeaderRow() {
+      const local = getPanelValue("headerRow");
+      if (local) return positiveInt(local, 1);
+      return positiveInt(getCommonValue("headerRow"), 1);
+    }
+
+    function buildOperation() {
+      const common = {
+        headerRow: getHeaderRow(),
+        overwriteExisting: isToggleOn("overwriteExisting"),
+        trimValues: isToggleOn("trimValues"),
+        caseSensitive: isToggleOn("caseSensitive")
+      };
+
+      if (state.operationType === "lookup_copy") {
+        return {
+          type: "lookup_copy",
+          ...common,
+          sourceSpreadsheetId: getPanelValue("sourceSpreadsheetId"),
+          sourceTab: getPanelValue("sourceTab") || "Sheet1",
+          sourceKeyColumn: getPanelValue("sourceKeyColumn"),
+          sourceValueColumn: getPanelValue("sourceValueColumn"),
+          targetSpreadsheetId: getPanelValue("targetSpreadsheetId"),
+          targetTab: getPanelValue("targetTab") || "Sheet1",
+          targetKeyColumn: getPanelValue("targetKeyColumn"),
+          targetWriteColumn: getPanelValue("targetWriteColumn")
+        };
+      }
+
+      if (state.operationType === "folder_to_master_injection") {
+        return {
+          type: "folder_to_master_injection",
+          ...common,
+          sourceFolderId: getPanelValue("sourceFolderId"),
+          sourceTabName: getPanelValue("sourceTabName") || "Sheet1",
+          sourceKeyColumns: csv(getPanelValue("sourceKeyColumns")),
+          sourceValueColumns: csv(getPanelValue("sourceValueColumns")),
+          masterSpreadsheetId: getPanelValue("masterSpreadsheetId"),
+          masterTab: getPanelValue("masterTab") || "Sheet1",
+          masterKeyColumns: csv(getPanelValue("masterKeyColumns")),
+          masterWriteColumns: csv(getPanelValue("masterWriteColumns")),
+          matchStrategy: getPanelValue("matchStrategy") || "exact",
+          writeStatusColumn: isToggleOn("writeStatusColumn"),
+          statusColumn: getPanelValue("statusColumn")
+        };
+      }
+
+      if (state.operationType === "cross_check") {
+        const sourceType = getPanelValue("sourceType") || "sheet";
+        const sourceId = getPanelValue("sourceId");
+
+        return {
+          type: "cross_check",
+          ...common,
+          sourceType,
+          sourceSpreadsheetId: sourceType === "sheet" ? sourceId : "",
+          sourceFolderId: sourceType === "folder" ? sourceId : "",
+          sourceTab: getPanelValue("sourceTab") || "Sheet1",
+          masterSpreadsheetId: getPanelValue("masterSpreadsheetId"),
+          masterTab: getPanelValue("masterTab") || "Sheet1",
+          keyColumns: csv(getPanelValue("keyColumns")),
+          comparisonColumns: csv(getPanelValue("comparisonColumns")),
+          outputReportTabName: getPanelValue("outputReportTabName") || getCommonValue("outputReportTabName") || "Cross-check Report",
+          reportMode: getPanelValue("reportMode") || "full_audit"
+        };
+      }
+
+      if (state.operationType === "coverage_report") {
+        return {
+          type: "coverage_report",
+          ...common,
+          sourceFolderId: getPanelValue("sourceFolderId"),
+          sourceTabName: getPanelValue("sourceTabName") || "Sheet1",
+          sourceKeyColumns: csv(getPanelValue("sourceKeyColumns")),
+          masterSpreadsheetId: getPanelValue("masterSpreadsheetId"),
+          masterTab: getPanelValue("masterTab") || "Sheet1",
+          masterKeyColumns: csv(getPanelValue("masterKeyColumns")),
+          outputReportTabName: getPanelValue("outputReportTabName") || getCommonValue("outputReportTabName") || "Master Coverage Report"
+        };
+      }
+
+      if (state.operationType === "copy_columns") {
+        return {
+          type: "copy_columns",
+          ...common,
+          copyMode: getPanelValue("copyMode") || "by_key_match",
+          sourceSpreadsheetId: getPanelValue("sourceSpreadsheetId"),
+          sourceTab: getPanelValue("sourceTab") || "Sheet1",
+          sourceColumns: csv(getPanelValue("sourceColumns")),
+          sourceKeyColumn: getPanelValue("sourceKeyColumn"),
+          targetSpreadsheetId: getPanelValue("targetSpreadsheetId"),
+          targetTab: getPanelValue("targetTab") || "Sheet1",
+          targetColumns: csv(getPanelValue("targetColumns")),
+          targetKeyColumn: getPanelValue("targetKeyColumn")
+        };
+      }
+
+      if (state.operationType === "build_work_file") {
+        return {
+          type: "build_work_file",
+          ...common,
+          sourceFolderId: getPanelValue("sourceFolderId"),
+          sourceTab: getPanelValue("sourceTab") || "Sheet1",
+          columnsToCollect: csv(getPanelValue("columnsToCollect")),
+          outputSpreadsheetId: getPanelValue("outputSpreadsheetId"),
+          outputTabName: getPanelValue("outputTabName") || "Work File",
+          includeSourceFileName: isToggleOn("includeSourceFileName")
+        };
+      }
+
+      return { type: state.operationType };
+    }
+
+    function buildPayload(forceDryRun = null) {
+      return {
+        mode: "sheet-utilities",
+        operation: buildOperation(),
+        dryRun: forceDryRun === null ? isToggleOn("dryRun") : Boolean(forceDryRun),
+        createBackup: isToggleOn("createBackup")
+      };
+    }
+
+    function updatePayloadPreview() {
+      payloadPreview.value = JSON.stringify(buildPayload(), null, 2);
+    }
+
+    function validatePayload(payload) {
+      const op = payload.operation;
+
+      if (!op || !op.type) return "Operation type is required.";
+
+      if (op.type === "lookup_copy") {
+        if (!op.sourceSpreadsheetId) return "Source Spreadsheet ID / URL is required.";
+        if (!op.sourceKeyColumn) return "Source Key Column is required.";
+        if (!op.sourceValueColumn) return "Source Value Column is required.";
+        if (!op.targetSpreadsheetId) return "Target Spreadsheet ID / URL is required.";
+        if (!op.targetKeyColumn) return "Target Key Column is required.";
+        if (!op.targetWriteColumn) return "Target Write Column is required.";
+      }
+
+      if (op.type === "folder_to_master_injection") {
+        if (!op.sourceFolderId) return "Source Folder ID / URL is required.";
+        if (!op.sourceKeyColumns.length) return "Source Key Columns are required.";
+        if (!op.sourceValueColumns.length) return "Source Value Columns are required.";
+        if (!op.masterSpreadsheetId) return "Master Spreadsheet ID / URL is required.";
+        if (!op.masterKeyColumns.length) return "Master Key Columns are required.";
+        if (!op.masterWriteColumns.length) return "Master Write Columns are required.";
+        if (op.sourceValueColumns.length !== op.masterWriteColumns.length) {
+          return "Source Value Columns and Master Write Columns must have the same count.";
+        }
+      }
+
+      if (op.type === "cross_check") {
+        if (op.sourceType === "sheet" && !op.sourceSpreadsheetId) return "Source Sheet is required.";
+        if (op.sourceType === "folder" && !op.sourceFolderId) return "Source Folder is required.";
+        if (!op.masterSpreadsheetId) return "Master Sheet is required.";
+        if (!op.keyColumns.length) return "Key Columns are required.";
+      }
+
+      if (op.type === "coverage_report") {
+        if (!op.sourceFolderId) return "Source Folder is required.";
+        if (!op.masterSpreadsheetId) return "Master Sheet is required.";
+        if (!op.sourceKeyColumns.length) return "Source Key Columns are required.";
+        if (!op.masterKeyColumns.length) return "Master Key Columns are required.";
+      }
+
+      if (op.type === "copy_columns") {
+        if (!op.sourceSpreadsheetId) return "Source Spreadsheet is required.";
+        if (!op.targetSpreadsheetId) return "Target Spreadsheet is required.";
+        if (!op.sourceColumns.length) return "Source Columns are required.";
+        if (!op.targetColumns.length) return "Target Columns are required.";
+        if (op.sourceColumns.length !== op.targetColumns.length) {
+          return "Source Columns and Target Columns must have the same count.";
+        }
+        if (op.copyMode === "by_key_match" && (!op.sourceKeyColumn || !op.targetKeyColumn)) {
+          return "Source Key Column and Target Key Column are required for key match mode.";
+        }
+      }
+
+      if (op.type === "build_work_file") {
+        if (!op.sourceFolderId) return "Source Folder is required.";
+        if (!op.columnsToCollect.length) return "Columns to Collect are required.";
+        if (!op.outputSpreadsheetId) return "Output Spreadsheet is required.";
+      }
+
+      return "";
+    }
+
+    function addLog(message, type = "info") {
+      const line = document.createElement("p");
+      line.className = `terminal-line ${type}`;
+      line.textContent = message;
+      logsDiv.appendChild(line);
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+
+    function setStatus(status, type = "idle") {
+      statusPill.textContent = status;
+      statusPill.classList.remove("running", "done", "error");
+
+      if (type !== "idle") {
+        statusPill.classList.add(type);
+      }
+
+      statusText.textContent = `Status: ${status}`;
+    }
+
+    function cleanAnsi(text) {
+      return String(text || "").replace(/\x1B\[[0-9;]*m/g, "");
+    }
+
+    function startTimer() {
+      state.startedAt = Date.now();
+      timerText.textContent = "Time: 0s";
+
+      if (state.timer) clearInterval(state.timer);
+
+      state.timer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+        timerText.textContent = `Time: ${elapsed}s`;
+      }, 500);
+    }
+
+    function stopTimer() {
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+    }
+
+    function setRunning(isRunning) {
+      previewBtn.disabled = isRunning;
+      runBtn.disabled = isRunning;
+
+      previewBtn.textContent = isRunning ? "Running dry run..." : "Preview only - run Dry Run";
+      runBtn.textContent = isRunning ? "Running operation..." : "Run operation - can write to Sheets";
+    }
+
+    function updateOperationContext() {
+      const copy = OPERATION_COPY[state.operationType] || OPERATION_COPY.lookup_copy;
+      operationContext.innerHTML = `
+        <small>Selected operation</small>
+        <strong>${copy.title}</strong>
+        <p>${copy.description}</p>
+      `;
+      summaryText.textContent = `Selected operation: ${copy.title}. Configure the fields and run a dry run first.`;
+    }
+
+    function runOperation(forceDryRun) {
+      const payload = buildPayload(forceDryRun);
+      updatePayloadPreview();
+
+      const error = validatePayload(payload);
+      if (error) {
+        addLog(`Validation error: ${error}`, "error");
+        alert(error);
+        return;
+      }
+
+      logsDiv.innerHTML = "";
+      setRunning(true);
+      setStatus("Running", "running");
+
+      summaryText.textContent = payload.dryRun
+        ? "Dry run started. The job will read, match and report planned changes without writing."
+        : "Live run started. The job can write changes to Google Sheets.";
+
+      addLog(`Starting ${payload.operation.type}...`, "info");
+      addLog(`Dry Run: ${payload.dryRun ? "true" : "false"}`, payload.dryRun ? "warn" : "error");
+      addLog("Payload sent to agent.", "info");
+
+      startTimer();
+      socket.emit("start-agent", payload);
+    }
+
+    function bindEvents() {
+      document.querySelectorAll("input, select, textarea").forEach((el) => {
+        el.addEventListener("input", updatePayloadPreview);
+        el.addEventListener("change", updatePayloadPreview);
+      });
+
+      toggleIds.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+
+        el.addEventListener("click", () => setToggle(id, !isToggleOn(id)));
+        el.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setToggle(id, !isToggleOn(id));
+          }
+        });
+      });
+
+      document.querySelectorAll(".operation-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          document.querySelectorAll(".operation-chip").forEach((item) => item.classList.remove("active"));
+          chip.classList.add("active");
+
+          state.operationType = chip.dataset.operation || "lookup_copy";
+
+          document.querySelectorAll(".operation-fields").forEach((panel) => panel.classList.remove("active"));
+          document.getElementById(state.operationType).classList.add("active");
+
+          updateOperationContext();
+          updatePayloadPreview();
+        });
+      });
+
+      previewBtn.addEventListener("click", () => {
+        setToggle("dryRun", true);
+        runOperation(true);
+      });
+
+      runBtn.addEventListener("click", () => {
+        runOperation(false);
+      });
+
+      clearLogsBtn.addEventListener("click", () => {
+        logsDiv.innerHTML = "";
+        addLog("Logs cleared.", "info");
+      });
+    }
+
+    socket.on("log", (msg) => {
+      const text = cleanAnsi(msg).trimEnd();
+      if (!text) return;
+
+      const type =
+        /error|failed|❌/i.test(text) ? "error" :
+        /warn|skip|duplicate|dry run|⚠️/i.test(text) ? "warn" :
+        /done|completed|success|✅|🎉/i.test(text) ? "success" :
+        "info";
+
+      text.split("\n").forEach((line) => {
+        if (line.trim()) addLog(line, type);
+      });
+    });
+
+    socket.on("done", () => {
+      setRunning(false);
+      stopTimer();
+      setStatus("Done", "done");
+      summaryText.textContent = "Run finished. Review logs and stats before running without dry run.";
+      addLog("Process finished.", "success");
+    });
+
+    bindEvents();
+    updateOperationContext();
+    updatePayloadPreview();
+  </script>
+</body>
+</html>

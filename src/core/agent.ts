@@ -77,22 +77,25 @@ export class AIAgent {
   const spinner = ora(`🤔 Task ${task.id} (${status.calls + 1}/${status.maxCalls})`).start();
 
   try {
-   const isOseries = task.model?.startsWith("o");   // o1 / o3 / o4-mini
+const model = task.model ?? "o3";
 
-const completion = isOseries
+const shouldUseResponsesApi =
+  model.startsWith("o") ||
+  model.startsWith("gpt-5");
+
+const completion = shouldUseResponsesApi
   ? await this.openai.responses.create({
-      model: task.model!,
+      model,
       tools: [{ type: "web_search_preview" as const }],
-      tool_choice: "auto",             // (optional but recommended)
+      tool_choice: "auto",
       input: [
         { role: "user" as const, content: task.prompt },
       ],
-      // ← כאן ה-"system":
-      instructions: task.system,   // string | undefined
+      instructions: task.system,
       store: false,
     })
   : await this.openai.chat.completions.create({
-      model: task.model ?? "gpt-4o",
+      model,
       messages: [
         ...(task.system ? [{ role: "system" as const, content: task.system }] : []),
         { role: "user" as const, content: task.prompt },
@@ -101,12 +104,12 @@ const completion = isOseries
       temperature: 0.7,
     });
 
-    const responseText = isOseries
-      ? (completion as any).output_text             // responses API
-      : (completion as any).choices[0].message.content;
+    const responseText = shouldUseResponsesApi
+  ? (completion as any).output_text
+  : (completion as any).choices[0].message.content;
 
- if (isOseries) {
-      const outputItems = Array.isArray((completion as any).output)
+if (shouldUseResponsesApi) {
+        const outputItems = Array.isArray((completion as any).output)
         ? (completion as any).output
         : [];
 
@@ -118,9 +121,11 @@ const completion = isOseries
       console.log(chalk.magenta(`   ${badge} (calls: ${task.webSearchCallsCount})`));
     }
 
-    const tokens = isOseries
-      ? (completion as any).usage.total_tokens ?? 0
-      : completion.usage?.total_tokens ?? 0;
+   const tokens = shouldUseResponsesApi
+
+  ? (completion as any).usage.total_tokens ?? 0
+
+  : completion.usage?.total_tokens ?? 0;
 
     task.response = responseText;
     this.safety.recordCall(tokens);

@@ -3,6 +3,165 @@
 // This object holds the specific translation rules for different target languages.
 // You can add 'de', 'fr', etc. here later.
 export const TRANSLATION_GLOSSARY: Record<string, Record<string, string>> = {
+  
+  de: {
+    "Aparthotel": "Aparthotel",
+    "Serviced apartments": "Serviced Apartments",
+    "Apartments": "Apartments",
+    "Property": "Unterkunft",
+    "Building": "Gebäude",
+
+    // Guest types
+    "Business travellers": "Geschäftsreisende",
+    "Leisure guests": "Urlaubsgäste",
+    "Families": "Familien",
+    "Couples": "Paare",
+    "Guests": "Gäste",
+
+    // Accessibility
+    "Accessible": "barrierefrei",
+    "Accessible features": "barrierearme Merkmale",
+    "Mobility needs": "eingeschränkte Mobilität",
+    "Step-free access": "stufenfreier Zugang",
+    "Walk-in shower": "bodengleiche Dusche",
+    "Wider doorways": "breitere Türen",
+    "Officially accessible": "offiziell barrierefrei",
+
+    // Apartment facilities
+    "Fully equipped kitchen": "voll ausgestattete Küche",
+    "Dishwasher": "Geschirrspüler",
+    "Combination microwave-oven": "Kombi-Mikrowelle mit Backofenfunktion",
+    "Cookware": "Kochgeschirr",
+    "Dishware": "Geschirr",
+    "Utensils": "Besteck und Küchenutensilien",
+    "Coffee machine": "Kaffeemaschine",
+    "Kettle": "Wasserkocher",
+    "Smart TV": "Smart-TV",
+    "Air-conditioning": "Klimaanlage",
+    "Heating": "Heizung",
+    "Individual controls": "individuell regelbare Systeme",
+    "In-room safe": "Zimmersafe",
+    "Hairdryer": "Haartrockner",
+    "Complimentary toiletries": "kostenfreie Pflegeartikel",
+
+    // Cleaning and laundry
+    "Housekeeping": "Reinigung",
+    "Weekly housekeeping": "wöchentliche Reinigung",
+    "Fresh towels": "frische Handtücher",
+    "Linen change": "Bettwäschewechsel",
+    "Additional cleaning": "zusätzliche Reinigung",
+    "Self-service laundry room": "Waschraum zur Selbstbedienung",
+    "Laundry detergent": "Waschmittel",
+    "Ironing facilities": "Bügelmöglichkeiten",
+    "Washing machine": "Waschmaschine",
+    "Dryer": "Trockner",
+
+    // Payments, cancellation and policies
+    "Free cancellation": "kostenfreie Stornierung",
+    "Flexible cancellation policy": "flexible Stornierungsbedingungen",
+    "Non-refundable rate": "nicht erstattungsfähiger Tarif",
+    "Security deposit": "Kaution",
+    "Pre-authorization": "Vorautorisierung",
+    "Credit card guarantee": "Kreditkartengarantie",
+    "Accommodation charges": "Unterkunftskosten",
+    "VAT": "Mehrwertsteuer",
+    "City tax": "Stadtabgabe",
+    "Tourist tax": "Touristensteuer",
+    "Corporate rates": "Firmenraten",
+
+    // Check-in and access
+    "Self-check-in": "Self-Check-in",
+    "Check-in": "Check-in",
+    "Check-out": "Check-out",
+    "Access code": "Zugangscode",
+    "PIN code": "PIN-Code",
+    "Digital identity verification": "digitale Identitätsprüfung",
+    "Pre-arrival registration": "Registrierung vor der Anreise",
+    "Luggage storage": "Gepäckaufbewahrung",
+    "Early check-in": "früher Check-in",
+    "Late check-out": "später Check-out",
+
+    // Food and location
+    "Self-catering": "Selbstverpflegung",
+    "Breakfast-inclusive rate": "Tarif inklusive Frühstück",
+    "Room service": "Zimmerservice",
+    "Restaurant and bar": "Restaurant und Bar",
+    "Food delivery": "Essenslieferung",
+    "Building entrance": "Gebäudeeingang",
+    "Public garages": "öffentliche Parkgaragen",
+    "Metro station": "U-Bahnhof",
+    "Walking distance": "fußläufig erreichbar",
+    "Five-minute walk": "fünf Gehminuten",
+     "Trevi Fountain": "Trevi-Brunnen",
+
+  "Spanish Steps": "Spanische Treppe",
+
+  "Piazza di Spagna": "Piazza di Spagna",
+
+  "Pantheon": "Pantheon",
+
+  "Colosseum": "Kolosseum",
+
+  "Roma Termini railway station": "Bahnhof Roma Termini",
+
+  "Rome city tax": "römische Stadtabgabe",
+
+  "historic centre": "historisches Zentrum",
+
+  "Via del Corso": "Via del Corso",
+
+  // Apartment types
+
+  "Studio with Balcony": "Studio mit Balkon",
+
+  "Large Studio Ground Level": "Großes Studio im Erdgeschoss",
+
+  "Large Studio with Balcony": "Großes Studio mit Balkon",
+
+  "One-Bedroom Apartment with Big Terrace": "Ein-Schlafzimmer-Apartment mit großer Terrasse",
+
+  "Family Apartment with Balcony": "Familien-Apartment mit Balkon",
+
+  "Two-Bedroom Penthouse with Big Terrace": "Penthouse mit zwei Schlafzimmern und großer Terrasse",
+
+  "Three-Bedroom Penthouse with Big Terrace": "Penthouse mit drei Schlafzimmern und großer Terrasse",
+
+  // Arrival and access
+
+  "Front entrance access code": "Zugangscode für den Haupteingang",
+
+  "Apartment entry details": "Zugangsdaten für das Apartment",
+
+  "Common areas": "Gemeinschaftsbereiche",
+
+  "Service rooms": "Serviceräume",
+
+  "Government-issued photo ID": "amtlicher Lichtbildausweis",
+
+  "Continental breakfast": "kontinentales Frühstück",
+
+  "Light refreshments": "kleine Erfrischungen",
+
+  "Lounge bar": "Lounge-Bar",
+
+  "Soft drinks": "Softdrinks",
+
+  "Wine or champagne service": "Wein- oder Champagnerservice",
+
+  // Facilities and comfort
+
+  "Hypo-allergenic bedding": "hypoallergene Bettwäsche",
+
+  "Extra pillows": "zusätzliche Kissen",
+
+  "Laptop-size safe": "Safe in Laptopgröße",
+
+  "Light daily refreshment service": "leichter täglicher Reinigungsservice",
+
+  "Full housekeeping service": "vollständiger Reinigungsservice",
+
+  "Home-workout equipment": "Home-Workout-Equipment"
+  },
   he: {
    
     // ביטולים, תשלומים ונהלים
@@ -132,7 +291,6 @@ export const TRANSLATION_GLOSSARY: Record<string, Record<string, string>> = {
     "Dining and nightlife": "מסעדות ומקומות בילוי",
     "Gluten-free items": "אפשרויות ללא גלוטן",
     "Gluten-free selections": "אפשרויות ללא גלוטן",
-    "Smaller portions": "מנות מוקטנות",
     "Child-friendly meal options": "מנות ילדים",
     "Outdoor lounge area": "אזור ישיבה חיצוני",
     "Designated play areas": "אזורי משחק ייעודיים",

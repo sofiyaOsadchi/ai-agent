@@ -1010,6 +1010,264 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
     de: {
         mappings: [
             // === EXISTING MAPPINGS ===
+             {
+
+      forbidden: "Wäscherei",
+
+      preferred: "Wäschemöglichkeiten",
+
+      reason: "When referring to laundry facilities rather than a laundry service, 'Wäschemöglichkeiten' is more accurate."
+
+    },
+
+    {
+
+      forbidden: "arbeitsfreundliche Tische",
+
+      preferred: "Tische, die sich gut zum Arbeiten eignen",
+
+      reason: "Avoid literal phrasing. This sounds more natural in German hospitality copy."
+
+    },
+
+    {
+
+      forbidden: "Remote-Worker",
+
+      preferred: "Gäste, die remote arbeiten",
+
+      reason: "Avoid unnecessary English terms in German guest-facing copy."
+
+    },
+
+    {
+
+      forbidden: "Großes Studio Erdgeschoss",
+
+      preferred: "Großes Studio im Erdgeschoss",
+
+      reason: "Grammar fix. German requires 'im Erdgeschoss' here."
+
+    },
+
+    {
+
+      forbidden: "laptopsichere Safes",
+
+      preferred: "Safes in Laptopgröße",
+
+      reason: "'Laptopsichere Safes' sounds unnatural. Use the clearer hospitality term."
+
+    },
+
+    {
+
+      forbidden: "leichte Auffrischung",
+
+      preferred: "leichter Reinigungsservice",
+
+      reason: "In housekeeping context, 'Auffrischung' is vague. Use a clear cleaning-related term."
+
+    },
+
+    {
+
+      forbidden: "vollständige Reinigung",
+
+      preferred: "vollständiger Reinigungsservice",
+
+      reason: "More natural and service-oriented in hotel FAQ copy."
+
+    },
+
+    {
+
+      forbidden: "Lounge Bar",
+
+      preferred: "Lounge-Bar",
+
+      reason: "Use German compound hyphenation."
+
+    },
+
+    {
+
+      forbidden: "Steuerinhalte",
+
+      preferred: "enthaltenen Steuern",
+
+      reason: "'Steuerinhalte' is unnatural German. Use a natural phrase for included taxes."
+
+    },
+
+    {
+
+      forbidden: "wird die Stadtabgabe bei der Ankunft separat eingezogen",
+
+      preferred: "wird die Stadtabgabe bei der Ankunft separat berechnet",
+
+      reason: "Use natural payment wording. 'Eingezogen' sounds bureaucratic."
+
+    },
+
+    {
+
+      forbidden: "Trevi-Fontäne",
+
+      preferred: "Trevi-Brunnen",
+
+      reason: "Keep terminology consistent. 'Trevi-Brunnen' is the standard German name."
+
+    },
+
+    {
+
+      forbidden: "direkt vor dem master Trevi",
+
+      preferred: "direkt vor master Trevi",
+
+      reason: "Do not add an article before the brand name."
+
+    },
+
+    {
+
+      forbidden: "Die Unterkunft arbeitet mit",
+
+      preferred: "Die Unterkunft nutzt",
+
+      reason: "More natural German phrasing for systems or processes."
+
+    },
+
+    {
+
+      forbidden: "im master Trevi",
+
+      preferred: "bei master Trevi",
+
+      reason: "For service and policy questions, 'bei master Trevi' usually sounds more natural than 'im master Trevi'."
+
+    },
+
+    {
+
+      forbidden: "das master Trevi",
+
+      preferred: "master Trevi",
+
+      reason: "Avoid adding an article before the brand name unless a full noun phrase requires it."
+
+    },
+     {
+
+      forbidden: "jede Einheit",
+
+      preferred: "jedes Apartment",
+
+      reason: "Avoid literal translation of 'unit'. In guest-facing apartment copy, 'Apartment' sounds more natural."
+
+    },
+
+    {
+
+      forbidden: "in der Einheit",
+
+      preferred: "im Apartment",
+
+      reason: "Avoid literal 'unit' phrasing. Use 'Apartment' for natural hospitality German."
+
+    },
+
+    {
+
+      forbidden: "Streaming-Vergnügen",
+
+      preferred: "Streaming-Unterhaltung",
+
+      reason: "Avoid overly promotional or unnatural phrasing. 'Streaming-Unterhaltung' is more neutral and polished."
+
+    },
+
+    {
+
+      forbidden: "nächtliche Gebühr",
+
+      preferred: "Gebühr pro Nacht",
+
+      reason: "Use the standard German hospitality phrasing for nightly fees."
+
+    },
+
+    {
+
+      forbidden: "Convenience Stores",
+
+      preferred: "Lebensmittelgeschäfte",
+
+      reason: "Avoid unnecessary English in German hotel copy."
+
+    },
+
+    {
+
+      forbidden: "Spätkauf-Lebensmittelgeschäfte",
+
+      preferred: "Lebensmittelgeschäfte mit langen Öffnungszeiten oder 24-Stunden-Shops",
+
+      reason: "'Spätkauf' is Germany-specific and sounds less suitable for Warsaw."
+
+    },
+
+    {
+
+      forbidden: "direkte Straßenbahn",
+
+      preferred: "direkte Straßenbahnverbindung",
+
+      reason: "More natural German when describing public transport access."
+
+    },
+
+    {
+
+      forbidden: "muss am Abreisetag bis",
+
+      preferred: "erfolgt am Abreisetag bis",
+
+      reason: "Avoid regulatory tone in hotel FAQ copy; use neutral hospitality phrasing."
+
+    },
+
+    {
+
+      forbidden: "Wie ist die genaue Adresse",
+
+      preferred: "Wie lautet die genaue Adresse",
+
+      reason: "Standard German phrasing for asking about an exact address."
+
+    },
+
+    {
+
+      forbidden: "Geschirr und Besteck und Küchenutensilien",
+
+      preferred: "Geschirr, Besteck und Küchenutensilien",
+
+      reason: "Avoid duplicated 'und' in lists."
+
+    },
+
+    {
+
+      forbidden: "Paare auf Städtetrip",
+
+      preferred: "Paare auf einem Städtetrip",
+
+      reason: "Correct and natural German phrasing."
+
+    },
             { forbidden: "Haus", preferred: "Hotel", reason: "Do not refer to the property as 'Haus'." },
             { forbidden: "Hausgäste", preferred: "Hotelgäste", reason: "Avoid 'Hausgäste'." },
             { forbidden: "in ca.", preferred: "in etwa", reason: "Prefer natural German." },
@@ -1160,6 +1418,236 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
 }
         ],
         examples: [
+
+         {
+
+      draft: "master Trevi ist ein luxuriöses Aparthotel, das private Wohnbereiche mit hotelähnlichen Services wie Rezeption, Reinigung und Wäscherei verbindet.",
+
+      polish: "master Trevi ist ein luxuriöses Aparthotel, das private Wohnbereiche mit hotelähnlichen Leistungen wie Rezeption, Reinigung und Wäschemöglichkeiten verbindet.",
+
+      note: "Use 'Wäschemöglichkeiten' for laundry facilities. 'Wäscherei' may imply a laundry service."
+
+    },
+
+    {
+
+      draft: "Die Apartments verfügen über arbeitsfreundliche Tische.",
+
+      polish: "Die Apartments verfügen über Tische, die sich gut zum Arbeiten eignen.",
+
+      note: "Avoid literal phrasing. The polished version sounds more natural in German."
+
+    },
+
+    {
+
+      draft: "Gibt es bei master Trevi einen Arbeitsplatz oder Co-Working-Bereich für Remote-Worker?",
+
+      polish: "Gibt es bei master Trevi einen Arbeitsbereich oder Co-Working-Bereich für Gäste, die remote arbeiten?",
+
+      note: "Avoid 'Remote-Worker' in German guest-facing copy."
+
+    },
+
+    {
+
+      draft: "Großes Studio Erdgeschoss",
+
+      polish: "Großes Studio im Erdgeschoss",
+
+      note: "Grammar fix. German needs 'im Erdgeschoss'."
+
+    },
+
+    {
+
+      draft: "Sind in allen Apartments bei master Trevi laptopsichere Safes zur sicheren Aufbewahrung installiert?",
+
+      polish: "Gibt es in allen Apartments bei master Trevi Safes in Laptopgröße zur sicheren Aufbewahrung?",
+
+      note: "'Laptopsichere Safes' is unnatural. Prefer direct phrasing with 'Safes in Laptopgröße'."
+
+    },
+
+    {
+
+      draft: "Jedes Apartment erhält täglich eine leichte Auffrischung.",
+
+      polish: "Jedes Apartment erhält täglich einen leichten Reinigungsservice.",
+
+      note: "In housekeeping context, 'Reinigungsservice' is clearer than 'Auffrischung'."
+
+    },
+
+    {
+
+      draft: "Verfügt master Trevi über eine Lounge Bar?",
+
+      polish: "Verfügt master Trevi über eine Lounge-Bar?",
+
+      note: "Use German compound hyphenation."
+
+    },
+
+    {
+
+      draft: "Die Steuerinhalte hängen vom Buchungskanal ab.",
+
+      polish: "Welche Steuern enthalten sind, hängt vom Buchungskanal ab.",
+
+      note: "'Steuerinhalte' is not natural German. Rephrase the sentence."
+
+    },
+
+    {
+
+      draft: "Bei Buchungen über Drittplattformen wird die Stadtabgabe bei der Ankunft separat eingezogen.",
+
+      polish: "Bei Buchungen über Drittplattformen wird die Stadtabgabe bei der Ankunft separat berechnet.",
+
+      note: "'Separat berechnet' is more natural than 'eingezogen'."
+
+    },
+
+    {
+
+      draft: "Spazieren Sie zur Trevi-Fontäne, Spanischen Treppe, zum Pantheon und zur Piazza Navona.",
+
+      polish: "Spazieren Sie zum Trevi-Brunnen, zur Spanischen Treppe, zum Pantheon und zur Piazza Navona.",
+
+      note: "Use the standard German name 'Trevi-Brunnen' and maintain correct prepositions."
+
+    },
+
+    {
+
+      draft: "Einige der besten Trattorien und Aperitivo-Bars Roms liegen direkt vor dem master Trevi.",
+
+      polish: "Einige der besten Trattorien und Aperitivo-Bars Roms liegen direkt vor master Trevi.",
+
+      note: "Avoid adding an article before the brand name."
+
+    },
+
+    {
+
+      draft: "Die Unterkunft arbeitet mit einem Self-Check-in-System.",
+
+      polish: "Die Unterkunft nutzt ein Self-Check-in-System.",
+
+      note: "'Nutzt' sounds more natural than 'arbeitet mit' for systems."
+
+    },
+
+    {
+
+      draft: "master Wola eignet sich sowohl für Geschäftsreisende auf längeren Einsätzen, Paare auf Städtetrip als auch Familien, die Warschau entdecken.",
+
+      polish: "master Wola eignet sich sowohl für Geschäftsreisende auf längeren Einsätzen als auch für Paare auf einem Städtetrip und Familien, die Warschau entdecken.",
+
+      note: "Fix missing article and improve the parallel structure of 'sowohl ... als auch'."
+
+    },
+
+    {
+
+      draft: "Der mehrsprachige Gästeservice antwortet rund um die Uhr per WhatsApp, Telefon und E-Mail.",
+
+      polish: "Das mehrsprachige Support-Team ist rund um die Uhr per WhatsApp, Telefon und E-Mail erreichbar.",
+
+      note: "Avoid generic 'Gästeservice' when a more natural support-team phrasing fits the source."
+
+    },
+
+    {
+
+      draft: "Ja, im hoteleigenen Waschraum zur Selbstbedienung stehen Waschmittel und gemeinschaftliche Bügelbretter bereit.",
+
+      polish: "Ja, im Waschraum zur Selbstbedienung vor Ort stehen Waschmittel und gemeinsam nutzbare Bügelbretter zur Verfügung.",
+
+      note: "Do not call master Wola 'hotel' in this context. Also prefer 'steht zur Verfügung' over 'steht bereit'."
+
+    },
+
+    {
+
+      draft: "Ja, jede Einheit verfügt über einen Smart-TV, auf dem Netflix für das Streaming-Vergnügen der Gäste vorinstalliert ist.",
+
+      polish: "Ja, jedes Apartment verfügt über einen Smart-TV mit vorinstalliertem Netflix für Streaming-Unterhaltung.",
+
+      note: "Avoid literal 'unit' and overly promotional 'Streaming-Vergnügen'."
+
+    },
+
+    {
+
+      draft: "Darüber hinaus verfügen unsere Three-Bedroom Apartments exklusiv über eigene Waschmaschinen und Trockner in der Einheit.",
+
+      polish: "Darüber hinaus verfügen unsere Three-Bedroom Apartments über eigene Waschmaschinen und Trockner im Apartment.",
+
+      note: "Avoid 'in der Einheit'. 'Im Apartment' is more natural."
+
+    },
+
+    {
+
+      draft: "Stellt master Wola in jeder Apartmentküche Kochgeschirr, Geschirr und Besteck und Küchenutensilien zur Verfügung?",
+
+      polish: "Stellt master Wola in jeder Apartmentküche Kochgeschirr, Geschirr, Besteck und Küchenutensilien zur Verfügung?",
+
+      note: "Fix duplicated 'und' in the list."
+
+    },
+
+    {
+
+      draft: "Sind Hunde in master Wola erlaubt und wie hoch ist die nächtliche Gebühr?",
+
+      polish: "Sind Hunde in master Wola erlaubt, und wie hoch ist die Gebühr pro Nacht?",
+
+      note: "'Gebühr pro Nacht' is the standard phrasing. Add comma before coordinated main clause."
+
+    },
+
+    {
+
+      draft: "Wie ist die genaue Adresse von master Wola?",
+
+      polish: "Wie lautet die genaue Adresse von master Wola?",
+
+      note: "'Wie lautet die genaue Adresse' is the correct standard question form."
+
+    },
+
+    {
+
+      draft: "Der Check-in beginnt um 15:00 Uhr, der Check-out muss am Abreisetag bis 11:00 Uhr erfolgen.",
+
+      polish: "Der Check-in beginnt um 15:00 Uhr, der Check-out erfolgt am Abreisetag bis 11:00 Uhr.",
+
+      note: "Avoid 'muss ... erfolgen', which sounds bureaucratic."
+
+    },
+
+    {
+
+      draft: "Die Warschauer Altstadt liegt etwa zwei Kilometer entfernt und ist mit einer direkten Straßenbahn in rund 15 Minuten bequem zu erreichen.",
+
+      polish: "Die Warschauer Altstadt liegt etwa zwei Kilometer entfernt und ist mit einer direkten Straßenbahnverbindung in rund 15 Minuten bequem zu erreichen.",
+
+      note: "'Direkte Straßenbahnverbindung' is more natural than 'direkte Straßenbahn'."
+
+    },
+
+    {
+
+      draft: "Gibt es Spätkauf-Lebensmittelgeschäfte in der Nähe von master Wola?",
+
+      polish: "Gibt es Lebensmittelgeschäfte mit langen Öffnungszeiten oder 24-Stunden-Shops in der Nähe von master Wola?",
+
+      note: "'Spätkauf' is Germany-specific and less suitable for Warsaw."
+
+    },
             {
                 draft: "Gibt es im Haus kostenloses WLAN?",
                 polish: "Bietet das Hotel kostenloses WLAN?",

@@ -30,31 +30,99 @@ const LOADMORE_CYCLES = Number(process.env.FAQ_AUDIT_LOADMORE_CYCLES ?? "8");
 const SCROLL_STEPS = Number(process.env.FAQ_AUDIT_SCROLL_STEPS ?? "12");
 const SCROLL_DELTA = Number(process.env.FAQ_AUDIT_SCROLL_DELTA ?? "1400");
 
-type SiteLocale = "en" | "he" | "de"; // תרחיבי ל-10 שפות אצלך
+type SiteLocale = "en" | "he" | "de" | "it";
+
+type DiscoveryMode = "auto" | "leonardo";
 
 type SiteConfig = {
   locale: SiteLocale;
   allowedHosts: string[];
   acceptLanguage: string;
+
+  discoveryMode: DiscoveryMode;
+  maxDiscoveryPages: number;
+  maxDiscoveryDepth: number;
+
+  faqPathCandidates: string[];
+  faqLinkKeywords: string[];
+  excludeUrlPatterns: RegExp[];
 };
+
+const DEFAULT_FAQ_PATH_CANDIDATES = [
+  "/faq",
+  "/faqs",
+  "/frequently-asked-questions",
+  "/questions-and-answers",
+  "/help/faq",
+  "/help/faqs",
+];
+
+const DEFAULT_FAQ_LINK_KEYWORDS = [
+  "faq",
+  "faqs",
+  "frequently asked questions",
+  "questions and answers",
+];
+
+const DEFAULT_EXCLUDE_URL_PATTERNS = [
+  /\/(blog|news|privacy|terms|cookies|contact|about|careers|login|signup|cart|checkout)\/?$/i,
+  /\/(brand|advantage|club|loyalty|offers?)\/?$/i,
+  /\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|mp4|webm)$/i,
+];
 
 const SITE_CONFIG: Record<SiteLocale, SiteConfig> = {
   en: {
     locale: "en",
     allowedHosts: ["www.leonardo-hotels.com"],
     acceptLanguage: "en-GB,en;q=0.9",
+
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: DEFAULT_FAQ_LINK_KEYWORDS,
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
   },
   he: {
     locale: "he",
     allowedHosts: ["www.leonardo-hotels.co.il"],
     acceptLanguage: "he-IL,he;q=0.9,en;q=0.8",
+
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: DEFAULT_FAQ_LINK_KEYWORDS,
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
   },
   de: {
     locale: "de",
     allowedHosts: ["www.leonardo-hotels.de"],
     acceptLanguage: "de-DE,de;q=0.9,en;q=0.8",
-  },
 
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: DEFAULT_FAQ_LINK_KEYWORDS,
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
+  },
+  it: {
+    locale: "it",
+    allowedHosts: ["www.leonardo-hotels.it"],
+    acceptLanguage: "it-IT,it;q=0.9,en;q=0.8",
+
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: DEFAULT_FAQ_LINK_KEYWORDS,
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
+  },
 };
 
 // --- פונקציית חומרה (מחוץ למחלקה) - סיווג קפדני ---
@@ -100,8 +168,9 @@ export class FaqAuditFromWebJob {
     hotelsWithFaq: number;
     hotelsWithProblems: number;
   }> {
-const cfg = SITE_CONFIG[opts.locale];
-const hotels = await this.collectHotels(opts.countryUrl, cfg);
+const cfg = this.buildRuntimeSiteConfig(opts.countryUrl, SITE_CONFIG[opts.locale]);
+const hotels = await this.discoverFaqTargets(opts.countryUrl, cfg);
+
 console.log("DEBUG hotels:", hotels.map(h => ({ name: h.name, faqUrl: h.faqUrl })));
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -474,6 +543,206 @@ schemaOnlyQuestions || "",
     return issues;
   }
   
+  private buildRuntimeSiteConfig(startUrl: string, baseCfg: SiteConfig): SiteConfig {
+  const host = new URL(startUrl).host;
+
+  const isLeonardo = host.includes("leonardo-hotels");
+
+  return {
+    ...baseCfg,
+    allowedHosts: [host],
+    discoveryMode: isLeonardo ? "leonardo" : "auto",
+  };
+}
+
+private async discoverFaqTargets(startUrl: string, cfg: SiteConfig): Promise<HotelItem[]> {
+  if (cfg.discoveryMode === "leonardo") {
+    return await this.collectHotels(startUrl, cfg);
+  }
+
+  return await this.collectGenericFaqTargets(startUrl, cfg);
+}
+
+private async collectGenericFaqTargets(startUrl: string, cfg: SiteConfig): Promise<HotelItem[]> {
+  const visited = new Set<string>();
+  const candidatePages = new Map<string, { url: string; text: string }>();
+
+  const queue: Array<{ url: string; depth: number }> = [{ url: startUrl, depth: 0 }];
+
+  while (queue.length > 0 && visited.size < cfg.maxDiscoveryPages) {
+    const current = queue.shift();
+    if (!current) break;
+
+    const currentUrl = current.url.replace(/#.*$/, "").replace(/\/$/, "");
+
+    if (visited.has(currentUrl)) continue;
+    visited.add(currentUrl);
+
+    let html = "";
+
+    try {
+      html = await this.fetchText(currentUrl, false, cfg);
+    } catch {
+      continue;
+    }
+
+    const $ = cheerio.load(html);
+
+    $("a[href]").each((_, el) => {
+      const hrefRaw = ($(el).attr("href") || "").trim();
+      const linkText = $(el).text().replace(/\s+/g, " ").trim();
+
+      if (!hrefRaw) return;
+
+      const abs = this.makeAbsolute(currentUrl, hrefRaw).replace(/#.*$/, "").replace(/\/$/, "");
+
+      let u: URL;
+
+      try {
+        u = new URL(abs);
+      } catch {
+        return;
+      }
+
+      if (!cfg.allowedHosts.includes(u.host)) return;
+
+      const path = u.pathname.toLowerCase();
+
+      if (this.shouldExcludeUrl(path, cfg)) return;
+
+      if (this.looksLikePropertyPage(abs, linkText)) {
+        candidatePages.set(abs, { url: abs, text: linkText });
+      }
+
+      if (current.depth < cfg.maxDiscoveryDepth && this.shouldFollowForDiscovery(abs, linkText, cfg)) {
+        if (!visited.has(abs)) {
+          queue.push({ url: abs, depth: current.depth + 1 });
+        }
+      }
+    });
+  }
+
+  console.log("🔎 Generic candidate property pages found:", candidatePages.size);
+
+  const hotels: HotelItem[] = [];
+
+  for (const item of candidatePages.values()) {
+    const faqUrl = await this.discoverFaqUrlForPage(item.url, cfg);
+
+    hotels.push({
+      name: this.prettyNameFromUrl(item.text || item.url),
+      faqUrl,
+    });
+  }
+
+  return hotels.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+private shouldExcludeUrl(path: string, cfg: SiteConfig): boolean {
+  return cfg.excludeUrlPatterns.some((pattern) => pattern.test(path));
+}
+
+private shouldFollowForDiscovery(url: string, linkText: string, cfg: SiteConfig): boolean {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+    const text = linkText.toLowerCase();
+
+    if (this.shouldExcludeUrl(path, cfg)) return false;
+
+    if (this.looksLikePropertyPage(url, linkText)) return true;
+
+    return /\/(hotels|hotel|apartments|apartment|properties|property|locations|location|destinations|destination|stays|rooms)\b/i.test(path)
+      || /\b(hotels|apartments|locations|destinations|properties|where we are|stay)\b/i.test(text);
+  } catch {
+    return false;
+  }
+}
+
+private looksLikePropertyPage(url: string, linkText: string): boolean {
+  try {
+    const u = new URL(url);
+    const segs = u.pathname.split("/").filter(Boolean);
+
+    if (segs.length < 2 || segs.length > 3) return false;
+
+    const last = segs[segs.length - 1].toLowerCase();
+    const text = linkText.toLowerCase();
+
+    if (/^(faq|faqs|blog|news|privacy|terms|contact|about|careers|offers?|login|signup)$/i.test(last)) {
+      return false;
+    }
+
+    const hasPropertyWord =
+      /\b(hotel|apart|apartment|suite|suites|rooms|residence|stay|master)\b/i.test(last) ||
+      /\b(hotel|apart|apartment|suite|suites|rooms|residence|stay|master)\b/i.test(text);
+
+    const hasHumanText = linkText.trim().length >= 3;
+
+    return hasPropertyWord || hasHumanText;
+  } catch {
+    return false;
+  }
+}
+
+private async discoverFaqUrlForPage(pageUrl: string, cfg: SiteConfig): Promise<string | null> {
+  for (const path of cfg.faqPathCandidates) {
+    const candidate = `${pageUrl.replace(/\/$/, "")}${path}`;
+
+    const ok = await this.headOk(candidate);
+    if (ok) {
+      console.log(`    • ${candidate} ✅`);
+      return candidate;
+    }
+  }
+
+  try {
+    const html = await this.fetchText(pageUrl, false, cfg);
+    const $ = cheerio.load(html);
+
+    const candidates = new Set<string>();
+
+    $("a[href]").each((_, el) => {
+      const hrefRaw = ($(el).attr("href") || "").trim();
+      const text = $(el).text().replace(/\s+/g, " ").trim().toLowerCase();
+
+      if (!hrefRaw) return;
+
+      const abs = this.makeAbsolute(pageUrl, hrefRaw).replace(/#.*$/, "").replace(/\/$/, "");
+
+      try {
+        const u = new URL(abs);
+
+        if (!cfg.allowedHosts.includes(u.host)) return;
+
+        const haystack = `${u.pathname.toLowerCase()} ${text}`;
+
+        const looksLikeFaq = cfg.faqLinkKeywords.some((keyword) =>
+          haystack.includes(keyword.toLowerCase())
+        );
+
+        if (looksLikeFaq) {
+          candidates.add(abs);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    for (const candidate of candidates) {
+      const ok = await this.headOk(candidate);
+      if (ok) {
+        console.log(`    • ${candidate} ✅`);
+        return candidate;
+      }
+    }
+
+    console.log(`    • ${pageUrl}/faq ❌`);
+    return null;
+  } catch {
+    return null;
+  }
+}
   // -----------------------------------------------------------
   // איסוף מלונות מעמוד מדינה + וידוא שיוך לעיר (לוגיקה מקורית)
   // -----------------------------------------------------------
@@ -1238,10 +1507,18 @@ await page.waitForTimeout(250);
     }
   }
 
-  private prettyNameFromUrl(url: string) {
-    const last = url.split("/").filter(Boolean).slice(-1)[0];
-    return decodeURIComponent((last || url)).replace(/-/g, " ").trim();
+ private prettyNameFromUrl(input: string) {
+  const raw = String(input || "").trim();
+
+  if (!raw) return "Unknown";
+
+  try {
+    const last = new URL(raw).pathname.split("/").filter(Boolean).slice(-1)[0];
+    return decodeURIComponent((last || raw)).replace(/-/g, " ").trim();
+  } catch {
+    return raw.replace(/-/g, " ").trim();
   }
+}
 
   private makeAbsolute(base: string, href: string) {
     try { return new URL(href, base).toString(); } catch { return href; }

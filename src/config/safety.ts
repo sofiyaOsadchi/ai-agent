@@ -15,9 +15,9 @@ export interface SafetyLimits {
 
 // הגדרות מוכנות לסביבות שונות - 🔧 הגבלות מתוקנות
 const MODES = {
-  development: { maxCalls: 120, maxTokens: 2000, maxTasks: 5, delay: 1500 },
+  development: { maxCalls: 200, maxTokens: 3000, maxTasks: 5, delay: 1500 },
   default: { maxCalls: 20, maxTokens: 1500, maxTasks: 4, delay: 2000 },
-  production: { maxCalls: 15, maxTokens: 1000, maxTasks: 3, delay: 3000 }
+  production: { maxCalls: 40, maxTokens: 3000, maxTasks: 6, delay: 3000 }
 };
 
 export class SafetyManager {

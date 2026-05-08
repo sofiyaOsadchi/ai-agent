@@ -234,22 +234,35 @@ async clearTabValues(spreadsheetId: string, tabTitle: string): Promise<void> {
   });
 }
 
-  private async withBackoff<T>(fn: () => Promise<T>, maxRetries = 8): Promise<T> {
+ private async withBackoff<T>(fn: () => Promise<T>, maxRetries = 8): Promise<T> {
   let attempt = 0;
 
-  const sleep = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const retryableStatuses = new Set([429, 500, 502, 503, 504]);
 
   while (true) {
     try {
       return await fn();
     } catch (err: any) {
-      const status = err?.code ?? err?.response?.status;
-      if (status !== 429 || attempt >= maxRetries) throw err;
+      const status = err?.code ?? err?.status ?? err?.response?.status;
+      const isRetryable = retryableStatuses.has(Number(status));
 
-      const base = 1000; // 1s
-      const delay = Math.min(60000, base * Math.pow(2, attempt));
-      const jitter = Math.floor(Math.random() * 250);
-      await sleep(delay + jitter);
+      if (!isRetryable || attempt >= maxRetries) {
+        throw err;
+      }
+
+      const baseDelayMs = 1500;
+      const delayMs = Math.min(60000, baseDelayMs * Math.pow(2, attempt));
+      const jitterMs = Math.floor(Math.random() * 500);
+
+      console.warn(
+        `Google Sheets API retry ${attempt + 1}/${maxRetries} after status ${status}. Waiting ${
+          delayMs + jitterMs
+        }ms...`
+      );
+
+      await sleep(delayMs + jitterMs);
 
       attempt++;
     }

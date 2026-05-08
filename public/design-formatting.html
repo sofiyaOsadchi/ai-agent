@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design & Formatting Engine - Live Demo</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root {
+      --bg: #f6f3ff;
+      --surface: #ffffff;
+      --surface-2: #f3efff;
+      --surface-3: #ebe4ff;
+      --border: rgba(88, 64, 140, 0.14);
+      --border-active: rgba(124, 92, 255, 0.32);
+      --text: #251f38;
+      --text-dim: #5c5570;
+      --text-muted: #8a829d;
+      --accent: #7c3aed;
+      --accent-2: #6366f1;
+      --accent-dim: rgba(124, 58, 237, 0.1);
+      --accent-glow: rgba(124, 58, 237, 0.16);
+      --green: #059669;
+      --green-dim: rgba(5, 150, 105, 0.1);
+      --red: #dc2626;
+      --red-dim: rgba(220, 38, 38, 0.08);
+      --blue: #2563eb;
+      --blue-dim: rgba(37, 99, 235, 0.08);
+      --radius: 12px;
+      --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 28%),
+        linear-gradient(180deg, #fbfaff 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { border: none; }
+
+    .demo-header {
+      height: 72px;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(124, 58, 237, 0.12) 0%, rgba(124, 58, 237, 0.02) 100%);
+    }
+
+    .demo-header h1 {
+      font-size: 1.18rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .demo-header h1 span.icon {
+      width: 32px;
+      height: 32px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(124, 58, 237, 0.24);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      white-space: nowrap;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(720px, 1.34fr) minmax(420px, 0.66fr);
+      height: calc(100vh - 72px);
+    }
+
+    .config-panel {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 18px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .terminal-panel {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: visible;
+      transition: border-color 0.2s, background 0.2s;
+      box-shadow: 0 8px 24px rgba(84, 58, 140, 0.06);
+    }
+
+    .card:hover { border-color: var(--border-active); }
+
+    .card-head {
+      padding: 13px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+    }
+
+    .card-head h3 {
+      font-size: 0.82rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-head .chevron {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      transition: transform 0.2s;
+    }
+
+    .card-head.collapsed .chevron { transform: rotate(-90deg); }
+
+    .card-body {
+      padding: 14px 16px;
+      border-bottom-left-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+    }
+
+    .card-body.hidden { display: none; }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: 190px minmax(260px, 1fr) 160px;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .source-options {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .input-group { margin-bottom: 14px; }
+    .input-group:last-child, .input-row:last-child { margin-bottom: 0; }
+
+    .field-label {
+      font-size: 0.66rem;
+      font-weight: 800;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .field-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      line-height: 1.45;
+    }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 10px 11px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.82rem;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+      outline: none;
+      min-height: 42px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 0 rgba(84, 58, 140, 0.04);
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+      border-color: rgba(124, 58, 237, 0.42);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 1), 0 0 0 3px rgba(124, 58, 237, 0.12);
+      background: #ffffff;
+    }
+
+    input:disabled, select:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      background: #f5f2ff;
+    }
+
+    textarea {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    select option { background: #ffffff; color: #251f38; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      gap: 12px;
+    }
+
+    .toggle-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .toggle {
+      width: 40px;
+      height: 22px;
+      border-radius: 11px;
+      background: rgba(88, 64, 140, 0.16);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on { background: var(--accent); }
+
+    .toggle::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle.on::after { transform: translateX(18px); }
+
+    .category-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+
+    .category-tab {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      background: #ffffff;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: 0.18s;
+    }
+
+    .category-tab:hover { color: var(--text); border-color: var(--border-active); }
+    .category-tab.active { color: var(--accent); border-color: rgba(124, 58, 237, 0.28); background: var(--accent-dim); }
+
+    .operation-category { display: none; }
+    .operation-category.active { display: block; }
+
+    .category-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .category-title strong { font-size: 0.8rem; color: var(--text); white-space: nowrap; }
+    .category-title span { font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; text-align: right; }
+
+    .operation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+    .operation-chip {
+      padding: 12px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: #ffffff;
+      transition: all 0.2s;
+      color: var(--text-dim);
+      min-height: 116px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: 0 4px 14px rgba(84, 58, 140, 0.04);
+    }
+
+    .operation-chip:hover {
+      border-color: var(--border-active);
+      color: var(--text);
+      background: #fbfaff;
+      transform: translateY(-1px);
+    }
+
+    .operation-chip.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .operation-chip strong { display: block; font-size: 0.8rem; line-height: 1.25; }
+    .operation-chip span { display: block; color: var(--text-muted); font-size: 0.68rem; line-height: 1.42; }
+
+    .operation-chip small {
+      margin-top: auto;
+      display: inline-flex;
+      width: fit-content;
+      color: var(--blue);
+      background: var(--blue-dim);
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 0.62rem;
+      font-weight: 800;
+    }
+
+    .operation-fields { display: none; }
+    .operation-fields.active { display: block; }
+
+    .section-divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+    .mini-note {
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      background: var(--blue-dim);
+      color: var(--text-dim);
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 0.74rem;
+      line-height: 1.45;
+      margin-bottom: 13px;
+    }
+
+    .mini-note strong { color: var(--blue); }
+
+    .selected-action-box {
+      border: 1px solid rgba(124, 58, 237, 0.16);
+      background: var(--accent-dim);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .selected-action-box .selected-title { font-size: 0.78rem; font-weight: 900; color: var(--accent); margin-bottom: 4px; }
+    .selected-action-box .selected-desc { font-size: 0.74rem; color: var(--text-dim); line-height: 1.45; }
+
+    .run-btn {
+      width: 100%;
+      padding: 17px 18px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: var(--radius);
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 24px var(--accent-glow);
+      margin-top: 8px;
+      flex-shrink: 0;
+      min-height: 58px;
+    }
+
+    .run-btn.secondary { background: linear-gradient(135deg, #7c8aa5 0%, #667085 100%); box-shadow: none; margin-top: 0; }
+    .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 32px var(--accent-glow); }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      background: linear-gradient(180deg, rgba(246, 243, 255, 0), var(--bg) 30%);
+      padding-top: 10px;
+    }
+
+    .payload-preview {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      line-height: 1.55;
+      color: var(--text-dim);
+      background: #fbfaff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      white-space: pre-wrap;
+      max-height: 360px;
+      overflow: auto;
+    }
+
+    .terminal-bar {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: #ffffff;
+      flex-shrink: 0;
+    }
+
+    .terminal-dots { display: flex; gap: 6px; }
+    .terminal-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal-dots .r { background: #ef4444; }
+    .terminal-dots .y { background: #eab308; }
+    .terminal-dots .g { background: #22c55e; }
+
+    .terminal-title { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); }
+    .terminal-clear { font-size: 0.68rem; color: var(--text-muted); cursor: pointer; border: none; background: none; font-family: var(--font); padding: 4px 8px; border-radius: 4px; transition: all 0.2s; }
+    .terminal-clear:hover { color: var(--text); background: var(--surface-2); }
+
+    .terminal-summary {
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(124, 58, 237, 0.06) 0%, rgba(255, 255, 255, 0) 100%);
+      flex-shrink: 0;
+    }
+
+    .summary-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .summary-title { font-size: 0.78rem; font-weight: 800; color: var(--text); letter-spacing: -0.01em; }
+    .summary-pill { font-size: 0.66rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); background: #ffffff; white-space: nowrap; }
+    .summary-main { font-size: 0.78rem; color: var(--text-dim); line-height: 1.45; margin-bottom: 12px; }
+    .summary-steps { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+
+    .s-step { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--border); background: #ffffff; font-size: 0.68rem; color: var(--text-muted); }
+    .s-step .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); opacity: 0.7; }
+    .s-step.active { border-color: rgba(37, 99, 235, 0.2); background: var(--blue-dim); color: var(--blue); }
+    .s-step.active .dot { background: var(--blue); opacity: 1; }
+    .s-step.done { border-color: rgba(5, 150, 105, 0.22); background: var(--green-dim); color: var(--green); }
+    .s-step.done .dot { background: var(--green); opacity: 1; }
+    .s-step.error { border-color: rgba(220, 38, 38, 0.2); background: var(--red-dim); color: var(--red); }
+    .s-step.error .dot { background: var(--red); opacity: 1; }
+
+    .summary-meta { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.68rem; color: var(--text-muted); }
+    .meta-val { color: var(--text); font-family: var(--mono); font-size: 0.68rem; }
+
+    .output-tabs { display: flex; gap: 4px; padding: 10px 12px; background: #ffffff; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .output-tab { flex: 1; padding: 8px 10px; border-radius: 8px; background: #ffffff; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.72rem; font-weight: 800; cursor: pointer; transition: 0.18s; }
+    .output-tab:hover { color: var(--text); border-color: var(--border-active); }
+    .output-tab.active { color: var(--accent); border-color: rgba(124, 58, 237, 0.28); background: var(--accent-dim); }
+
+    .output-view { display: none; flex: 1; min-height: 0; }
+    .output-view.active { display: flex; flex-direction: column; }
+
+    .terminal-body { flex: 1; overflow-y: auto; padding: 15px; font-family: var(--mono); font-size: 0.74rem; line-height: 1.72; color: #4b445f; background: #fbfaff; min-height: 0; }
+    .log-line { white-space: pre-wrap; word-break: break-word; }
+    .log-line.error { color: var(--red); }
+    .log-line.info { color: var(--blue); }
+    .log-line.success { color: var(--green); }
+    .log-line.warn { color: var(--accent); }
+    .log-line.dim { color: var(--text-muted); }
+
+    .sheet-preview-panel { flex: 1; min-height: 0; padding: 14px; overflow: auto; background: radial-gradient(circle at top left, rgba(124, 58, 237, 0.08), transparent 26%), #fbfaff; }
+    .sheet-preview-empty { height: 100%; min-height: 260px; border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; text-align: center; padding: 22px; font-size: 0.78rem; line-height: 1.5; }
+    .sheet-preview-wrap { display: none; flex-direction: column; gap: 12px; min-width: 100%; }
+    .sheet-preview-wrap.active { display: flex; }
+
+    .sheet-preview-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: #ffffff; }
+    .sheet-preview-title { font-size: 0.78rem; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+    .sheet-preview-subtitle { font-size: 0.68rem; color: var(--text-muted); font-family: var(--mono); word-break: break-all; }
+    .sheet-preview-badge { font-size: 0.66rem; font-weight: 900; color: var(--green); background: var(--green-dim); border: 1px solid rgba(5, 150, 105, 0.16); border-radius: 999px; padding: 4px 9px; white-space: nowrap; }
+
+    .sheet-grid-shell { border: 1px solid var(--border); border-radius: 12px; overflow: auto; background: #ffffff; max-height: 52vh; }
+    .sheet-grid { border-collapse: separate; border-spacing: 0; min-width: 100%; table-layout: fixed; }
+    .sheet-grid th, .sheet-grid td { border-right: 1px solid rgba(88, 64, 140, 0.1); border-bottom: 1px solid rgba(88, 64, 140, 0.1); }
+    .sheet-grid th { position: sticky; top: 0; z-index: 2; height: 28px; background: #eee8ff; color: var(--text-dim); font-size: 0.68rem; font-weight: 900; font-family: var(--mono); text-align: center; padding: 6px; }
+    .sheet-grid .corner-cell { left: 0; z-index: 4; width: 48px; min-width: 48px; max-width: 48px; background: #e6ddff; position: sticky; }
+    .sheet-grid .row-number { position: sticky; left: 0; z-index: 1; width: 48px; min-width: 48px; max-width: 48px; background: #f3efff; color: var(--text-muted); text-align: center; font-family: var(--mono); font-size: 0.68rem; font-weight: 800; padding: 8px 6px; }
+    .sheet-grid td { width: 210px; min-width: 210px; max-width: 210px; height: 48px; vertical-align: top; background: #ffffff; color: #3d3653; font-size: 0.72rem; line-height: 1.4; padding: 8px; cursor: default; transition: background 0.15s, outline 0.15s; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+    .sheet-grid td.changed { background: rgba(5, 150, 105, 0.08); outline: 1px solid rgba(5, 150, 105, 0.28); outline-offset: -1px; color: var(--text); cursor: pointer; }
+    .sheet-grid td.changed:hover { background: rgba(5, 150, 105, 0.14); }
+    .sheet-grid td.selected { outline: 2px solid rgba(124, 58, 237, 0.75); outline-offset: -2px; background: rgba(124, 58, 237, 0.12); }
+    .cell-content { max-height: 82px; overflow: hidden; }
+
+    .cell-detail { display: none; border: 1px solid var(--border); border-radius: 12px; background: #ffffff; overflow: hidden; }
+    .cell-detail.active { display: block; }
+    .cell-detail-head { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .cell-detail-title { color: var(--accent); font-family: var(--mono); font-size: 0.72rem; font-weight: 900; }
+    .cell-detail-hint { color: var(--text-muted); font-size: 0.68rem; }
+    .cell-detail-body { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+    .detail-label { font-size: 0.62rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 6px; }
+    .detail-value { font-family: var(--mono); font-size: 0.72rem; line-height: 1.55; white-space: pre-wrap; word-break: break-word; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: #fbfaff; color: var(--text-dim); max-height: 170px; overflow-y: auto; }
+    .detail-value.after { color: var(--text); border-color: rgba(5, 150, 105, 0.16); background: rgba(5, 150, 105, 0.055); }
+
+    .preview-card { border: 1px solid var(--border); border-radius: 12px; background: #ffffff; overflow: hidden; }
+    .preview-card-head { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fbfaff; }
+    .preview-cell { color: var(--accent); font-family: var(--mono); font-size: 0.72rem; font-weight: 800; min-width: fit-content; }
+    .preview-file { color: var(--text-muted); font-size: 0.68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+    .preview-card-body { padding: 12px; }
+    .preview-plan-list { padding-left: 18px; color: var(--text-dim); font-size: 0.74rem; line-height: 1.55; }
+    .preview-plan-list li { margin-bottom: 4px; }
+
+    .stats-bar { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 18px; font-size: 0.7rem; color: var(--text-muted); background: #ffffff; align-items: center; flex-shrink: 0; }
+    .stat { display: flex; align-items: center; gap: 5px; }
+    .stat-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+    .stat-dot.live { background: var(--green); animation: pulse 1.5s infinite; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    @media (max-width: 1180px) {
+      .main-grid { grid-template-columns: minmax(620px, 1.1fr) minmax(420px, 0.9fr); }
+      .operation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .source-grid { grid-template-columns: 180px minmax(240px, 1fr); }
+      .source-grid .tab-field { grid-column: span 2; }
+    }
+
+    @media (max-width: 980px) {
+      .main-grid { grid-template-columns: 1fr; height: auto; }
+      .config-panel { border-right: 0; }
+      .terminal-panel { min-height: 620px; }
+      .source-grid, .source-options, .input-row, .operation-grid, .button-row, .cell-detail-body { grid-template-columns: 1fr; }
+      .source-grid .tab-field { grid-column: auto; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="demo-header">
+    <h1><span class="icon">🎨</span> Design & Formatting Engine</h1>
+    <span class="badge">Live Demo</span>
+  </header>
+
+  <div class="main-grid">
+    <div class="config-panel">
+      <div class="card">
+        <div class="card-head" onclick="toggleCard(this)">
+          <h3>📄 Source Configuration</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="source-grid">
+            <div>
+              <label class="field-label">Source Type</label>
+              <select id="sourceType">
+                <option value="sheet">Single Google Sheet</option>
+                <option value="folder">Google Drive Folder</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Google Sheet / Folder ID or URL</label>
+              <input type="text" id="targetId" placeholder="Paste Sheet URL, Sheet ID, Folder URL or Folder ID" />
+              <p class="field-hint">Use a copied test sheet first. Comments extraction currently works best on a single sheet.</p>
+            </div>
+            <div class="tab-field">
+              <label class="field-label">Source Tab</label>
+              <input type="text" id="tabName" value="Sheet1" />
+            </div>
+          </div>
+
+          <div class="source-options">
+            <div>
+              <div class="toggle-row">
+                <span class="toggle-label">Dry Run Only</span>
+                <div class="toggle on" id="dryRun" onclick="toggleAndPreview(this)"></div>
+              </div>
+              <p class="field-hint">Preview changes without writing to the sheet. For comments extraction, disable Dry Run to write comments.</p>
+            </div>
+            <div>
+              <div class="toggle-row">
+                <span class="toggle-label">Create Backup Tab</span>
+                <div class="toggle" id="createBackup" onclick="toggleAndPreview(this)"></div>
+              </div>
+              <p class="field-hint">Creates a backup tab before real changes. Ignored during Dry Run.</p>
+            </div>
+          </div>
+          <input type="hidden" id="maxFiles" value="30" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" onclick="toggleCard(this)">
+          <h3>🎯 Target Range</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="mini-note">
+            <strong>Range logic:</strong>
+            choose where the action should run. Comments extraction uses its own source/output column settings below.
+          </div>
+          <div class="input-row">
+            <div>
+              <label class="field-label">Column Scope</label>
+              <select id="columnScope" onchange="syncRangeControls()">
+                <option value="column">Single Column</option>
+                <option value="columns">Column Range</option>
+                <option value="sheet">Whole Sheet</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Columns</label>
+              <input type="text" id="columnsInput" value="C" />
+              <p class="field-hint" id="columnsHint">Examples: C, B:D, A:F.</p>
+            </div>
+          </div>
+          <div class="input-row">
+            <div>
+              <label class="field-label">Row Scope</label>
+              <select id="rowScope" onchange="syncRangeControls()">
+                <option value="range">Row Range</option>
+                <option value="all">All Rows</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Rows</label>
+              <input type="text" id="rowsInput" value="2:" />
+              <p class="field-hint" id="rowsHint">Examples: 2:, 1:70, 5:20. Use 2: to skip header.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" onclick="toggleCard(this)">
+          <h3>🧩 Formatting Action</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="category-tabs" id="categoryTabs"></div>
+          <div id="operationCategories"></div>
+          <p class="field-hint" style="margin-top: 12px;">Choose one action per run. The action settings below will change according to the selected action.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head" onclick="toggleCard(this)">
+          <h3>⚙️ Action Settings</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body">
+          <div class="selected-action-box">
+            <div class="selected-title" id="selectedActionTitle">Text Replace</div>
+            <div class="selected-desc" id="selectedActionDesc">Find and replace text in selected cells.</div>
+          </div>
+
+          <div id="fields-text_replace" class="operation-fields active">
+            <div class="input-row">
+              <div>
+                <label class="field-label">Match Mode</label>
+                <select id="replaceMode">
+                  <option value="contains">Contains - replace every match inside the cell</option>
+                  <option value="exact">Exact Cell - replace only when the full cell matches</option>
+                  <option value="regex">Regex - advanced pattern replacement</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Replace Empty Result</label>
+                <select id="allowEmptyReplace">
+                  <option value="yes">Allow empty replace</option>
+                  <option value="no">Block empty replace</option>
+                </select>
+              </div>
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">Find</label>
+                <input type="text" id="replaceFind" value="[VERIFY]" />
+                <p class="field-hint">Examples: [VERIFY], duplicated words, HTML fragments.</p>
+              </div>
+              <div>
+                <label class="field-label">Replace With</label>
+                <input type="text" id="replaceWith" value="" />
+                <p class="field-hint">Leave empty only when you want to remove the text.</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="fields-wrap_html" class="operation-fields">
+            <div class="input-row">
+              <div>
+                <label class="field-label">HTML Tag</label>
+                <input type="text" id="wrapTag" value="p" />
+                <p class="field-hint">Example: p turns “Text” into &lt;p&gt;Text&lt;/p&gt;.</p>
+              </div>
+              <div>
+                <label class="field-label">Empty Cells</label>
+                <select id="wrapEmptyCells">
+                  <option value="skip">Skip empty cells</option>
+                  <option value="wrap">Wrap empty cells</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Skip cells already wrapped with this tag</span>
+              <div class="toggle on" id="wrapSkipExisting" onclick="toggleAndPreview(this)"></div>
+            </div>
+          </div>
+
+          <div id="fields-normalize_spaces" class="operation-fields">
+            <p class="field-hint">Removes duplicated spaces and trims values in the selected range. Example: “Hello   world” becomes “Hello world”.</p>
+          </div>
+
+          <div id="fields-normalize_line_breaks" class="operation-fields">
+            <label class="field-label">Replacement</label>
+            <select id="lineBreakReplacement">
+              <option value="space">Replace line breaks with one space</option>
+              <option value="paragraph">Convert line breaks into HTML paragraphs</option>
+              <option value="br">Replace line breaks with &lt;br&gt;</option>
+            </select>
+            <p class="field-hint">Use this when answers were pasted with inconsistent manual line breaks.</p>
+          </div>
+
+          <div id="fields-plain_to_html_paragraphs" class="operation-fields">
+            <label class="field-label">Split By</label>
+            <select id="htmlParagraphSplitBy">
+              <option value="line_breaks">Every line break becomes a paragraph</option>
+              <option value="double_line_breaks">Only double line breaks split paragraphs</option>
+            </select>
+            <p class="field-hint">Turns plain multi-line content into clean &lt;p&gt;...&lt;/p&gt; blocks.</p>
+          </div>
+
+          <div id="fields-case_transform" class="operation-fields">
+            <label class="field-label">Case Mode</label>
+            <select id="caseMode">
+              <option value="lower">lowercase - all letters become lowercase</option>
+              <option value="upper">UPPERCASE - all letters become uppercase</option>
+              <option value="title">Title Case - first letter of each word</option>
+              <option value="sentence">Sentence case - first letter of each sentence</option>
+            </select>
+            <p class="field-hint">Useful for fixing imported headers, labels or inconsistent title formats.</p>
+          </div>
+
+          <div id="fields-format_table" class="operation-fields">
+            <div class="input-row">
+              <div>
+                <label class="field-label">Style Preset</label>
+                <select id="tablePreset">
+                  <option value="clean">Clean Table - balanced row height</option>
+                  <option value="compact">Compact Table - tighter rows</option>
+                  <option value="content">Content Review Table - taller rows for long text</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Freeze Header</label>
+                <select id="tableFreezeHeader">
+                  <option value="yes">Yes - keep first row visible while scrolling</option>
+                  <option value="no">No - keep scrolling normal</option>
+                </select>
+              </div>
+            </div>
+            <div class="toggle-row"><span class="toggle-label">Apply header style</span><div class="toggle on" id="tableHeaderStyle" onclick="toggleAndPreview(this)"></div></div>
+            <div class="toggle-row"><span class="toggle-label">Apply borders</span><div class="toggle on" id="tableBorders" onclick="toggleAndPreview(this)"></div></div>
+            <div class="toggle-row"><span class="toggle-label">Wrap text in selected cells</span><div class="toggle on" id="tableWrapText" onclick="toggleAndPreview(this)"></div></div>
+            <div class="toggle-row"><span class="toggle-label">Auto resize selected columns</span><div class="toggle on" id="tableAutoResize" onclick="toggleAndPreview(this)"></div></div>
+          </div>
+
+          <div id="fields-header_style" class="operation-fields">
+            <div class="toggle-row"><span class="toggle-label">Bold header row</span><div class="toggle on" id="headerBold" onclick="toggleAndPreview(this)"></div></div>
+            <div class="toggle-row"><span class="toggle-label">Freeze first row</span><div class="toggle on" id="headerFreeze" onclick="toggleAndPreview(this)"></div></div>
+            <div class="toggle-row"><span class="toggle-label">Wrap header text</span><div class="toggle on" id="headerWrapText" onclick="toggleAndPreview(this)"></div></div>
+          </div>
+
+          <div id="fields-wrap_text" class="operation-fields">
+            <label class="field-label">Text Wrapping</label>
+            <select id="textWrapMode">
+              <option value="WRAP">Wrap - show long text on multiple lines</option>
+              <option value="CLIP">Clip - hide overflow inside the cell</option>
+              <option value="OVERFLOW_CELL">Overflow - let text continue into empty cells</option>
+            </select>
+          </div>
+
+          <div id="fields-align_cells" class="operation-fields">
+            <div class="input-row">
+              <div>
+                <label class="field-label">Horizontal Align</label>
+                <select id="horizontalAlign"><option value="LEFT">Left</option><option value="CENTER">Center</option><option value="RIGHT">Right</option></select>
+              </div>
+              <div>
+                <label class="field-label">Vertical Align</label>
+                <select id="verticalAlign"><option value="MIDDLE">Middle</option><option value="TOP">Top</option><option value="BOTTOM">Bottom</option></select>
+              </div>
+            </div>
+          </div>
+
+          <div id="fields-set_column_widths" class="operation-fields">
+            <label class="field-label">Width Px</label>
+            <input type="number" id="widthPx" value="240" min="40" max="1000" />
+            <p class="field-hint">Uses the selected columns from Target Range. Good for question/answer columns.</p>
+          </div>
+
+          <div id="fields-set_row_heights" class="operation-fields">
+            <label class="field-label">Height Px</label>
+            <input type="number" id="heightPx" value="44" min="18" max="400" />
+            <p class="field-hint">Uses the selected rows from Target Range. Use higher values for long answers.</p>
+          </div>
+
+          <div id="fields-extract_comments" class="operation-fields">
+            <div class="mini-note">
+              <strong>Google Sheet comments:</strong>
+              extracts Google Sheets comments from one column and writes only the comment text into another column.
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">Comments Source Column</label>
+                <input type="text" id="commentsSourceColumn" value="B" />
+                <p class="field-hint">The column where the comments are attached. Example: B.</p>
+              </div>
+              <div>
+                <label class="field-label">Output Column</label>
+                <input type="text" id="commentsOutputColumn" value="C" />
+                <p class="field-hint">Where the extracted comment text should be written. Example: C.</p>
+              </div>
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">Start Row</label>
+                <input type="number" id="commentsStartRow" value="2" min="1" />
+                <p class="field-hint">Use 2 to skip the header row.</p>
+              </div>
+              <div>
+                <label class="field-label">Output Header</label>
+                <input type="text" id="commentsOutputHeader" value="Comment" />
+                <p class="field-hint">Header text for the output column.</p>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <span class="toggle-label">Include replies inside the comment cell</span>
+              <div class="toggle on" id="commentsIncludeReplies" onclick="toggleAndPreview(this)"></div>
+            </div>
+          </div>
+
+          <div id="fields-add_column" class="operation-fields">
+            <div class="input-row">
+              <div><label class="field-label">Column Letter</label><input type="text" id="addColumnLetter" value="H" /></div>
+              <div><label class="field-label">Header</label><input type="text" id="addColumnHeader" value="QA Note" /></div>
+            </div>
+            <p class="field-hint">Writes a new header into the chosen column. It does not shift existing columns.</p>
+          </div>
+
+          <div id="fields-rename_column" class="operation-fields">
+            <div class="input-row">
+              <div><label class="field-label">Column Letter</label><input type="text" id="renameColumnLetter" value="H" /></div>
+              <div><label class="field-label">New Header</label><input type="text" id="renameColumnHeader" value="QA Note" /></div>
+            </div>
+            <p class="field-hint">Changes only the first-row header of the chosen column.</p>
+          </div>
+
+          <div id="fields-reorder_columns" class="operation-fields">
+            <label class="field-label">New Order</label>
+            <input type="text" id="reorderColumns" value="A,B,C,D" />
+            <p class="field-hint">Creates a new tab with columns copied in this order. It does not destroy the source tab.</p>
+            <div class="section-divider"></div>
+            <label class="field-label">Output Tab</label>
+            <input type="text" id="reorderOutputTab" value="Reordered" />
+          </div>
+
+          <div id="fields-duplicate_tab_template" class="operation-fields">
+            <div class="input-row">
+              <div><label class="field-label">Template Tab Name</label><input type="text" id="templateTabName" value="TEMPLATE" /></div>
+              <div><label class="field-label">New Tab Name</label><input type="text" id="newTabName" value="New formatted tab" /></div>
+            </div>
+            <p class="field-hint">Duplicates an existing template tab in every selected spreadsheet.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head collapsed" onclick="toggleCard(this)">
+          <h3>🧾 Payload Preview</h3>
+          <span class="chevron">▼</span>
+        </div>
+        <div class="card-body hidden"><div class="payload-preview" id="payloadPreview"></div></div>
+      </div>
+
+      <div class="button-row">
+        <button class="run-btn secondary" id="previewBtn" onclick="runFormatting(true)">Preview / Dry Run</button>
+        <button class="run-btn" id="runBtn" onclick="runFormatting(false)">Run Formatting</button>
+      </div>
+    </div>
+
+    <div class="terminal-panel">
+      <div class="terminal-bar">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="terminal-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <span class="terminal-title">Formatting Agent - Live Output</span>
+        </div>
+        <button class="terminal-clear" onclick="clearTerminal()">Clear</button>
+      </div>
+
+      <div class="terminal-summary" id="summaryCard">
+        <div class="summary-top"><div class="summary-title">What’s happening</div><div class="summary-pill" id="summaryPill">Idle</div></div>
+        <div class="summary-main" id="summaryMain">Choose a Google Sheet, select a range and formatting action, then run a dry run.</div>
+        <div class="summary-steps" id="summarySteps">
+          <div class="s-step" id="s-read"><span class="dot"></span>Reading files</div>
+          <div class="s-step" id="s-plan"><span class="dot"></span>Planning changes</div>
+          <div class="s-step" id="s-apply"><span class="dot"></span>Applying formatting</div>
+          <div class="s-step" id="s-report"><span class="dot"></span>Reporting</div>
+        </div>
+        <div class="summary-meta">
+          <div class="meta-item">Action: <span class="meta-val" id="summaryAction">-</span></div>
+          <div class="meta-item">Files: <span class="meta-val" id="summaryFiles">0</span></div>
+          <div class="meta-item">Changed: <span class="meta-val" id="summaryChanged">0</span></div>
+          <div class="meta-item">Time: <span class="meta-val" id="summaryTime">0s</span></div>
+        </div>
+      </div>
+
+      <div class="output-tabs">
+        <button type="button" class="output-tab active" id="terminalTab" onclick="switchOutputView('terminal')">Terminal</button>
+        <button type="button" class="output-tab" id="previewTab" onclick="switchOutputView('preview')">Sheet Preview <span id="previewCountLabel">(0)</span></button>
+      </div>
+
+      <div class="output-view active" id="terminalView"><div class="terminal-body" id="logs"></div></div>
+
+      <div class="output-view" id="previewView">
+        <div class="sheet-preview-panel" id="sheetPreviewPanel">
+          <div class="sheet-preview-empty" id="sheetPreviewEmpty">Run a dry run to see a sheet-like preview here. For folders, the preview shows the first file with detected changes.</div>
+          <div class="sheet-preview-wrap" id="sheetPreviewWrap">
+            <div class="sheet-preview-toolbar">
+              <div>
+                <div class="sheet-preview-title" id="sheetPreviewTitle">Sheet Preview</div>
+                <div class="sheet-preview-subtitle" id="sheetPreviewSubtitle">-</div>
+              </div>
+              <div class="sheet-preview-badge" id="sheetPreviewBadge">0 changed cells</div>
+            </div>
+            <div class="sheet-grid-shell"><table class="sheet-grid" id="sheetGrid"></table></div>
+            <div class="cell-detail" id="cellDetail">
+              <div class="cell-detail-head"><div class="cell-detail-title" id="cellDetailTitle">Cell</div><div class="cell-detail-hint">Selected changed cell</div></div>
+              <div class="cell-detail-body">
+                <div><div class="detail-label">Before</div><div class="detail-value" id="cellBeforeValue"></div></div>
+                <div><div class="detail-label">After</div><div class="detail-value after" id="cellAfterValue"></div></div>
+              </div>
+            </div>
+            <div id="planPreviewContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-dot" id="statusDot"></span><span id="statusText">Idle</span></div>
+        <div class="stat" id="timerStat" style="display: none;">⏱️ <span id="elapsedTime">0s</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    const logsEl = document.getElementById("logs");
+    const summaryMainEl = document.getElementById("summaryMain");
+    const summaryPillEl = document.getElementById("summaryPill");
+    const summaryActionEl = document.getElementById("summaryAction");
+    const summaryFilesEl = document.getElementById("summaryFiles");
+    const summaryChangedEl = document.getElementById("summaryChanged");
+    const summaryTimeEl = document.getElementById("summaryTime");
+    const selectedActionTitleEl = document.getElementById("selectedActionTitle");
+    const selectedActionDescEl = document.getElementById("selectedActionDesc");
+    const terminalViewEl = document.getElementById("terminalView");
+    const previewViewEl = document.getElementById("previewView");
+    const terminalTabEl = document.getElementById("terminalTab");
+    const previewTabEl = document.getElementById("previewTab");
+    const previewCountLabelEl = document.getElementById("previewCountLabel");
+    const sheetPreviewEmptyEl = document.getElementById("sheetPreviewEmpty");
+    const sheetPreviewWrapEl = document.getElementById("sheetPreviewWrap");
+    const sheetPreviewTitleEl = document.getElementById("sheetPreviewTitle");
+    const sheetPreviewSubtitleEl = document.getElementById("sheetPreviewSubtitle");
+    const sheetPreviewBadgeEl = document.getElementById("sheetPreviewBadge");
+    const sheetGridEl = document.getElementById("sheetGrid");
+    const cellDetailEl = document.getElementById("cellDetail");
+    const cellDetailTitleEl = document.getElementById("cellDetailTitle");
+    const cellBeforeValueEl = document.getElementById("cellBeforeValue");
+    const cellAfterValueEl = document.getElementById("cellAfterValue");
+    const planPreviewContainerEl = document.getElementById("planPreviewContainer");
+
+    let previewItemsCount = 0;
+
+    const OPERATION_CATEGORIES = [
+      {
+        id: "text",
+        label: "Text cleanup",
+        title: "Text cleanup",
+        description: "Clean or change text values in selected rows and columns.",
+        operations: [
+          { id: "text_replace", title: "Text Replace", desc: "Find and replace labels, symbols, warnings, HTML fragments or any repeated text.", tag: "Text" },
+          { id: "normalize_spaces", title: "Remove Duplicated Spaces", desc: "Clean repeated spaces and trim extra spaces at the start or end of each cell.", tag: "Cleanup" },
+          { id: "normalize_line_breaks", title: "Normalize Line Breaks", desc: "Fix inconsistent manual line breaks by converting them to spaces, <br>, or paragraphs.", tag: "Cleanup" },
+          { id: "case_transform", title: "Case Transform", desc: "Standardize text casing for headers, labels or imported content.", tag: "Text" }
+        ]
+      },
+      {
+        id: "html",
+        label: "HTML formatting",
+        title: "HTML formatting",
+        description: "Prepare plain sheet content for website-ready HTML.",
+        operations: [
+          { id: "wrap_html", title: "Wrap with HTML", desc: "Wrap every selected cell with one tag, for example <p>Answer</p>.", tag: "HTML" },
+          { id: "plain_to_html_paragraphs", title: "Plain Text To Paragraphs", desc: "Split multi-line text and convert it into clean HTML paragraph blocks.", tag: "HTML" }
+        ]
+      },
+      {
+        id: "design",
+        label: "Sheet design",
+        title: "Sheet design",
+        description: "Make spreadsheets easier to read, review and edit.",
+        operations: [
+          { id: "format_table", title: "Format As Table", desc: "Best all-in-one option: styles headers, adds borders, wraps long text and resizes columns.", tag: "Table" },
+          { id: "header_style", title: "Header Row Style", desc: "Styles only the first row as a readable header and can freeze it.", tag: "Header" },
+          { id: "wrap_text", title: "Wrap Text", desc: "Controls long text display inside cells: wrap, clip or overflow.", tag: "Cells" },
+          { id: "align_cells", title: "Align Cells", desc: "Sets horizontal and vertical alignment for the selected range.", tag: "Cells" },
+          { id: "set_column_widths", title: "Set Column Widths", desc: "Applies a fixed pixel width to selected columns, useful for question and answer columns.", tag: "Columns" },
+          { id: "set_row_heights", title: "Set Row Heights", desc: "Applies a fixed pixel height to selected rows, useful for review tables.", tag: "Rows" }
+        ]
+      },
+      {
+        id: "structure",
+        label: "Structure",
+        title: "Structure",
+        description: "Change sheet structure without rewriting content.",
+        operations: [
+          { id: "extract_comments", title: "Extract Sheet Comments", desc: "Extract Google Sheets comments from a selected column and write them into a nearby output column.", tag: "Comments" },
+          { id: "add_column", title: "Add Column Header", desc: "Writes a new header into a selected column. It does not move existing columns.", tag: "Columns" },
+          { id: "rename_column", title: "Rename Column Header", desc: "Changes the first-row title of a selected column.", tag: "Columns" },
+          { id: "reorder_columns", title: "Reorder Columns", desc: "Creates a safe new tab with columns copied in your chosen order.", tag: "Safe copy" },
+          { id: "duplicate_tab_template", title: "Duplicate Template Tab", desc: "Copies an existing template tab into every selected spreadsheet.", tag: "Tabs" }
+        ]
+      }
+    ];
+
+    let selectedCategory = "text";
+    let selectedOperation = "text_replace";
+    let timerInterval = null;
+    let timerStart = 0;
+
+    function getAllOperations() { return OPERATION_CATEGORIES.flatMap((category) => category.operations); }
+    function getSelectedOperationMeta() { return getAllOperations().find((operation) => operation.id === selectedOperation); }
+
+    function renderCategoryTabs() {
+      const tabs = document.getElementById("categoryTabs");
+      tabs.innerHTML = OPERATION_CATEGORIES.map((category) => {
+        const activeClass = category.id === selectedCategory ? "active" : "";
+        return `<button type="button" class="category-tab ${activeClass}" onclick="selectCategory('${category.id}')">${category.label}</button>`;
+      }).join("");
+    }
+
+    function renderOperationCategories() {
+      const wrapper = document.getElementById("operationCategories");
+      wrapper.innerHTML = OPERATION_CATEGORIES.map((category) => {
+        const activeClass = category.id === selectedCategory ? "active" : "";
+        const operationsHtml = category.operations.map((operation) => {
+          const operationActiveClass = operation.id === selectedOperation ? "active" : "";
+          return `
+            <div class="operation-chip ${operationActiveClass}" onclick="selectOperation('${operation.id}')">
+              <strong>${operation.title}</strong>
+              <span>${operation.desc}</span>
+              <small>${operation.tag}</small>
+            </div>
+          `;
+        }).join("");
+        return `
+          <div class="operation-category ${activeClass}" id="category-${category.id}">
+            <div class="category-title">
+              <strong>${category.title}</strong>
+              <span>${category.description}</span>
+            </div>
+            <div class="operation-grid">${operationsHtml}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function selectCategory(categoryId) {
+      selectedCategory = categoryId;
+      renderCategoryTabs();
+      renderOperationCategories();
+    }
+
+    function selectOperation(id) {
+      selectedOperation = id;
+      const category = OPERATION_CATEGORIES.find((item) => item.operations.some((operation) => operation.id === id));
+      if (category) selectedCategory = category.id;
+      renderCategoryTabs();
+      renderOperationCategories();
+      document.querySelectorAll(".operation-fields").forEach((group) => group.classList.remove("active"));
+      const target = document.getElementById(`fields-${id}`);
+      if (target) target.classList.add("active");
+      updateSelectedActionInfo();
+      updatePayloadPreview();
+    }
+
+    function updateSelectedActionInfo() {
+      const meta = getSelectedOperationMeta();
+      if (!meta) return;
+      selectedActionTitleEl.textContent = meta.title;
+      selectedActionDescEl.textContent = meta.desc;
+    }
+
+    function toggleCard(headElement) {
+      headElement.classList.toggle("collapsed");
+      const body = headElement.nextElementSibling;
+      if (body) body.classList.toggle("hidden");
+    }
+
+    function toggleAndPreview(element) {
+      element.classList.toggle("on");
+      updatePayloadPreview();
+    }
+
+    function isToggleOn(id) { return document.getElementById(id).classList.contains("on"); }
+    function getValue(id) { return document.getElementById(id).value.trim(); }
+    function getNumber(id) { return Number(document.getElementById(id).value || 0); }
+
+    function syncRangeControls() {
+      const columnScope = getValue("columnScope");
+      const rowScope = getValue("rowScope");
+      const columnsInput = document.getElementById("columnsInput");
+      const rowsInput = document.getElementById("rowsInput");
+      const columnsHint = document.getElementById("columnsHint");
+      const rowsHint = document.getElementById("rowsHint");
+
+      if (columnScope === "sheet") {
+        columnsInput.disabled = true;
+        columnsInput.value = "A:ZZ";
+        columnsHint.textContent = "Locked because Whole Sheet is selected.";
+      } else {
+        columnsInput.disabled = false;
+        if (columnsInput.value === "A:ZZ") columnsInput.value = columnScope === "column" ? "C" : "A:E";
+        columnsHint.textContent = columnScope === "column" ? "Use a single column letter, for example C." : "Use a column range, for example B:D or A:F.";
+      }
+
+      if (rowScope === "all") {
+        rowsInput.disabled = true;
+        rowsInput.value = "1:";
+        rowsHint.textContent = "Locked because All Rows is selected.";
+      } else {
+        rowsInput.disabled = false;
+        if (rowsInput.value === "1:") rowsInput.value = "2:";
+        rowsHint.textContent = "Examples: 2:, 1:70, 5:20. Use 2: to skip header.";
+      }
+
+      updatePayloadPreview();
+    }
+
+    function getRangeConfig() {
+      return {
+        columnScope: getValue("columnScope"),
+        columns: getValue("columnsInput"),
+        rowScope: getValue("rowScope"),
+        rows: getValue("rowsInput")
+      };
+    }
+
+    function getOperationConfig() {
+      if (selectedOperation === "text_replace") {
+        return { type: "text_replace", find: getValue("replaceFind"), replaceWith: getValue("replaceWith"), matchMode: getValue("replaceMode"), allowEmptyReplace: getValue("allowEmptyReplace") === "yes" };
+      }
+      if (selectedOperation === "wrap_html") {
+        return { type: "wrap_html", tag: getValue("wrapTag") || "p", skipExisting: isToggleOn("wrapSkipExisting"), emptyCells: getValue("wrapEmptyCells") };
+      }
+      if (selectedOperation === "normalize_spaces") return { type: "normalize_spaces" };
+      if (selectedOperation === "normalize_line_breaks") return { type: "normalize_line_breaks", replacement: getValue("lineBreakReplacement") };
+      if (selectedOperation === "plain_to_html_paragraphs") return { type: "plain_to_html_paragraphs", splitBy: getValue("htmlParagraphSplitBy") };
+      if (selectedOperation === "case_transform") return { type: "case_transform", mode: getValue("caseMode") };
+      if (selectedOperation === "format_table") {
+        return { type: "format_table", preset: getValue("tablePreset"), freezeHeader: getValue("tableFreezeHeader") === "yes", headerStyle: isToggleOn("tableHeaderStyle"), borders: isToggleOn("tableBorders"), wrapText: isToggleOn("tableWrapText"), autoResize: isToggleOn("tableAutoResize") };
+      }
+      if (selectedOperation === "header_style") return { type: "header_style", bold: isToggleOn("headerBold"), freeze: isToggleOn("headerFreeze"), wrapText: isToggleOn("headerWrapText") };
+      if (selectedOperation === "wrap_text") return { type: "wrap_text", mode: getValue("textWrapMode") };
+      if (selectedOperation === "align_cells") return { type: "align_cells", horizontal: getValue("horizontalAlign"), vertical: getValue("verticalAlign") };
+      if (selectedOperation === "set_column_widths") return { type: "set_column_widths", widthPx: getNumber("widthPx") || 240 };
+      if (selectedOperation === "set_row_heights") return { type: "set_row_heights", heightPx: getNumber("heightPx") || 44 };
+      if (selectedOperation === "extract_comments") {
+        return {
+          type: "extract_comments",
+          sourceColumn: getValue("commentsSourceColumn") || "B",
+          outputColumn: getValue("commentsOutputColumn") || "C",
+          startRow: getNumber("commentsStartRow") || 2,
+          outputHeader: getValue("commentsOutputHeader") || "Comment",
+          includeReplies: isToggleOn("commentsIncludeReplies")
+        };
+      }
+      if (selectedOperation === "add_column") return { type: "add_column", columnLetter: getValue("addColumnLetter") || "H", header: getValue("addColumnHeader") || "New Column" };
+      if (selectedOperation === "rename_column") return { type: "rename_column", columnLetter: getValue("renameColumnLetter") || "H", header: getValue("renameColumnHeader") || "New Header" };
+      if (selectedOperation === "reorder_columns") return { type: "reorder_columns", columns: getValue("reorderColumns").split(",").map((item) => item.trim()).filter(Boolean), outputTabName: getValue("reorderOutputTab") || "Reordered" };
+      return { type: "duplicate_tab_template", templateTabName: getValue("templateTabName") || "TEMPLATE", newTabName: getValue("newTabName") || "New formatted tab" };
+    }
+
+    function getPayload(forceDryRun = null) {
+      return {
+        mode: "design-formatting",
+        sourceType: getValue("sourceType"),
+        targetId: getValue("targetId"),
+        tabName: getValue("tabName") || "Sheet1",
+        maxFiles: getNumber("maxFiles") || 30,
+        dryRun: forceDryRun === null ? isToggleOn("dryRun") : forceDryRun,
+        createBackup: isToggleOn("createBackup"),
+        range: getRangeConfig(),
+        operation: getOperationConfig()
+      };
+    }
+
+    function updatePayloadPreview() {
+      const payloadPreview = document.getElementById("payloadPreview");
+      payloadPreview.textContent = JSON.stringify(getPayload(), null, 2);
+    }
+
+    function switchOutputView(view) {
+      const isTerminal = view === "terminal";
+      terminalViewEl.classList.toggle("active", isTerminal);
+      previewViewEl.classList.toggle("active", !isTerminal);
+      terminalTabEl.classList.toggle("active", isTerminal);
+      previewTabEl.classList.toggle("active", !isTerminal);
+    }
+
+    function clearPreview() {
+      previewItemsCount = 0;
+      previewCountLabelEl.textContent = "(0)";
+      sheetPreviewEmptyEl.style.display = "";
+      sheetPreviewWrapEl.classList.remove("active");
+      sheetGridEl.innerHTML = "";
+      planPreviewContainerEl.innerHTML = "";
+      cellDetailEl.classList.remove("active");
+      cellBeforeValueEl.textContent = "";
+      cellAfterValueEl.textContent = "";
+      cellDetailTitleEl.textContent = "Cell";
+    }
+
+    function clearTerminal() {
+      logsEl.innerHTML = "";
+      clearPreview();
+      resetSummary();
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function addPreviewEvent(event) {
+      if (!event || !event.kind) return;
+      previewItemsCount += 1;
+      previewCountLabelEl.textContent = `(${previewItemsCount})`;
+      sheetPreviewEmptyEl.style.display = "none";
+      sheetPreviewWrapEl.classList.add("active");
+      if (event.kind === "sheet_preview") return renderSheetPreview(event);
+      if (event.kind === "plan") return renderPlanPreview(event);
+    }
+
+    function renderSheetPreview(event) {
+      const rows = Array.isArray(event.rows) ? event.rows : [];
+      const columns = Array.isArray(event.columns) ? event.columns : [];
+      sheetPreviewTitleEl.textContent = `Sheet Preview - ${event.tabName || "Sheet"}`;
+      sheetPreviewSubtitleEl.textContent = `${event.fileName || event.spreadsheetId || ""} | ${event.rangeA1 || ""}`;
+      sheetPreviewBadgeEl.textContent = `${event.changedCellsCount || 0} changed cells`;
+      planPreviewContainerEl.innerHTML = "";
+      let html = "<thead><tr><th class=\"corner-cell\"></th>";
+      columns.forEach((column) => { html += `<th>${escapeHtml(column)}</th>`; });
+      html += "</tr></thead><tbody>";
+      rows.forEach((row) => {
+        html += `<tr><td class="row-number">${escapeHtml(row.rowNumber)}</td>`;
+        const cells = Array.isArray(row.cells) ? row.cells : [];
+        cells.forEach((cell) => {
+          const changedClass = cell.changed ? "changed" : "";
+          const before = escapeHtml(cell.before ?? "");
+          const after = escapeHtml(cell.value ?? "");
+          const cellName = `${cell.column}${row.rowNumber}`;
+          html += `
+            <td class="${changedClass}" data-cell="${escapeHtml(cellName)}" data-before="${before}" data-after="${after}" onclick="selectPreviewCell(this)">
+              <div class="cell-content">${after || "&nbsp;"}</div>
+            </td>
+          `;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody>";
+      sheetGridEl.innerHTML = html;
+      cellDetailEl.classList.remove("active");
+    }
+
+    function renderPlanPreview(event) {
+      sheetPreviewTitleEl.textContent = event.title || "Planned formatting changes";
+      sheetPreviewSubtitleEl.textContent = `${event.fileName || event.spreadsheetId || ""}`;
+      sheetPreviewBadgeEl.textContent = "Plan";
+      sheetGridEl.innerHTML = "";
+      cellDetailEl.classList.remove("active");
+      const details = Array.isArray(event.details) ? event.details : [];
+      planPreviewContainerEl.innerHTML = `
+        <div class="preview-card">
+          <div class="preview-card-head">
+            <div class="preview-cell">${escapeHtml(event.title || "Planned change")}</div>
+            <div class="preview-file">${escapeHtml(event.fileName || event.spreadsheetId || "")}</div>
+          </div>
+          <div class="preview-card-body">
+            <ul class="preview-plan-list">${details.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+          </div>
+        </div>
+      `;
+    }
+
+    function selectPreviewCell(cellElement) {
+      if (!cellElement.classList.contains("changed")) return;
+      document.querySelectorAll(".sheet-grid td.selected").forEach((td) => td.classList.remove("selected"));
+      cellElement.classList.add("selected");
+      const cellName = cellElement.dataset.cell || "Cell";
+      const before = cellElement.dataset.before || "";
+      const after = cellElement.dataset.after || "";
+      cellDetailTitleEl.textContent = cellName;
+      cellBeforeValueEl.textContent = before;
+      cellAfterValueEl.textContent = after;
+      cellDetailEl.classList.add("active");
+    }
+
+    function addLog(text, className = "") {
+      const clean = String(text).replace(/\x1B\[\d+m/g, "");
+      clean.split("\n").forEach((line) => {
+        if (!line.trim()) return;
+        const div = document.createElement("div");
+        div.className = "log-line";
+        div.textContent = line;
+        if (className) div.classList.add(className);
+        else if (line.includes("❌") || line.includes("Failed") || line.includes("Error")) div.classList.add("error");
+        else if (line.includes("✅") || line.includes("Done") || line.includes("finished")) div.classList.add("success");
+        else if (line.includes("🚀") || line.includes("➡")) div.classList.add("info");
+        else if (line.includes("DRY RUN") || line.includes("Would")) div.classList.add("warn");
+        else if (line.includes("FILES_PROCESSED") || line.includes("CELLS_CHANGED") || line.includes("ERRORS")) div.classList.add("dim");
+        logsEl.appendChild(div);
+      });
+      logsEl.scrollTop = logsEl.scrollHeight;
+    }
+
+    function setSummary(step, text, pillText = null) {
+      if (text) summaryMainEl.textContent = text;
+      if (pillText) summaryPillEl.textContent = pillText;
+      const steps = ["read", "plan", "apply", "report"];
+      const currentIndex = steps.indexOf(step);
+      steps.forEach((item, index) => {
+        const element = document.getElementById(`s-${item}`);
+        if (!element) return;
+        element.classList.remove("active", "done", "error");
+        if (currentIndex === -1) return;
+        if (index < currentIndex) element.classList.add("done");
+        else if (index === currentIndex) element.classList.add("active");
+      });
+    }
+
+    function setSummaryError(text) {
+      summaryMainEl.textContent = text || "Something went wrong. Please check the logs below.";
+      summaryPillEl.textContent = "Error";
+      const active = document.querySelector(".s-step.active");
+      if (active) {
+        active.classList.remove("active");
+        active.classList.add("error");
+      } else {
+        document.getElementById("s-read")?.classList.add("error");
+      }
+    }
+
+    function resetSummary() {
+      summaryPillEl.textContent = "Idle";
+      summaryMainEl.textContent = "Choose a Google Sheet, select a range and formatting action, then run a dry run.";
+      ["read", "plan", "apply", "report"].forEach((item) => {
+        const element = document.getElementById(`s-${item}`);
+        if (element) element.classList.remove("active", "done", "error");
+      });
+      summaryActionEl.textContent = "-";
+      summaryFilesEl.textContent = "0";
+      summaryChangedEl.textContent = "0";
+      summaryTimeEl.textContent = "0s";
+    }
+
+    function startTimer() {
+      timerStart = Date.now();
+      document.getElementById("timerStat").style.display = "";
+      timerInterval = setInterval(() => {
+        const seconds = Math.round((Date.now() - timerStart) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const label = minutes > 0 ? `${minutes}m ${seconds % 60}s` : `${seconds}s`;
+        document.getElementById("elapsedTime").textContent = label;
+        summaryTimeEl.textContent = label;
+      }, 1000);
+    }
+
+    function stopTimer() { clearInterval(timerInterval); }
+
+    function runFormatting(forceDryRun) {
+      const payload = getPayload(forceDryRun);
+
+      if (!payload.targetId) {
+        addLog("❌ Please enter a Sheet or Folder ID.", "error");
+        return;
+      }
+
+      if (payload.operation.type === "extract_comments" && payload.sourceType !== "sheet") {
+        addLog("❌ Extract Sheet Comments currently supports Single Google Sheet only.", "error");
+        return;
+      }
+
+      logsEl.innerHTML = "";
+      clearPreview();
+
+      const isCommentsExtraction = payload.operation.type === "extract_comments";
+      const actionLabel = isCommentsExtraction ? "comments extraction" : "formatting action";
+
+      addLog(`🚀 Starting ${actionLabel}: ${payload.operation.type}`, "info");
+      addLog(`📄 Target: ${payload.targetId}`, "dim");
+      addLog(`🧪 Dry Run: ${payload.dryRun ? "YES" : "NO"}`, "dim");
+
+      if (isCommentsExtraction) {
+        addLog(`💬 Comments source column: ${payload.operation.sourceColumn}`, "dim");
+        addLog(`📝 Output column: ${payload.operation.outputColumn}`, "dim");
+      }
+
+      document.getElementById("runBtn").disabled = true;
+      document.getElementById("previewBtn").disabled = true;
+      document.getElementById("statusDot").classList.add("live");
+      document.getElementById("statusText").textContent = "Running";
+      summaryActionEl.textContent = payload.operation.type;
+
+      const startMessage = isCommentsExtraction ? "Reading Google Sheet comments..." : "Reading target files and selected tab...";
+      setSummary("read", startMessage, "Running");
+      startTimer();
+
+      socket.emit("start-agent", payload);
+    }
+
+    socket.on("log", (message) => {
+      addLog(message);
+      if (message.includes("Targets found") || message.includes("Processing")) setSummary("plan", "Planning the formatting changes...", "Running");
+      if (message.includes("DRY RUN") || message.includes("changed cells") || message.includes("comments")) setSummary("apply", "Applying or simulating changes...", "Running");
+      if (message.includes("FILES_PROCESSED")) {
+        const match = message.match(/FILES_PROCESSED=(\d+)/);
+        if (match) summaryFilesEl.textContent = match[1];
+      }
+      if (message.includes("CELLS_CHANGED")) {
+        const match = message.match(/CELLS_CHANGED=(\d+)/);
+        if (match) summaryChangedEl.textContent = match[1];
+      }
+      if (message.includes("❌") || message.toLowerCase().includes("failed") || message.toLowerCase().includes("error")) {
+        setSummaryError("Action failed. Please verify permissions, tab name, range and source ID.");
+      }
+    });
+
+    socket.on("preview-event", (event) => {
+      addPreviewEvent(event);
+      switchOutputView("preview");
+    });
+
+    socket.on("done", () => {
+      document.getElementById("runBtn").disabled = false;
+      document.getElementById("previewBtn").disabled = false;
+      document.getElementById("statusDot").classList.remove("live");
+      document.getElementById("statusText").textContent = "Finished";
+      stopTimer();
+      setSummary("report", "Done. Check the logs and sheet preview for changed files and cells.", "Finished");
+      ["read", "plan", "apply", "report"].forEach((item) => {
+        const element = document.getElementById(`s-${item}`);
+        if (element) {
+          element.classList.remove("active");
+          element.classList.add("done");
+        }
+      });
+      const latestPayload = getPayload();
+      const doneLabel = latestPayload.operation.type === "extract_comments" ? "Comments extraction complete" : "Formatting complete";
+      addLog(`\n✅ ${doneLabel}!`, "success");
+    });
+
+    document.querySelectorAll("input, select, textarea").forEach((element) => {
+      element.addEventListener("input", updatePayloadPreview);
+      element.addEventListener("change", updatePayloadPreview);
+    });
+
+    renderCategoryTabs();
+    renderOperationCategories();
+    updateSelectedActionInfo();
+    syncRangeControls();
+    updatePayloadPreview();
+  </script>
+</body>
+</html>
