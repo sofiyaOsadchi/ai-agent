@@ -47,6 +47,16 @@ import { DesignFormattingJob } from "./jobs/design-formatting-job.js";
 import { SheetUtilitiesJob } from "./jobs/sheet-utilities-job.js";
 import { ClientReportsJob } from "./jobs/client-reports-job.js";
 import { ClientReportsEditJob } from "./jobs/client-reports-edit-job.js";
+import { runSiteAiAuditFromPayload } from "./jobs/site-ai-audit-crawler.js";
+import { discoverSiteUrls } from "./jobs/site-ai-audit-discovery.js";
+import { runSiteFaqAudit } from "./jobs/site-ai-faq-audit.js";
+import { analyzeSiteAuditWithAi } from "./jobs/subjobs/site-ai-audit-ai-analysis.js";
+import { SchemaBuilderJob } from "./jobs/schema-builder-job.js";
+
+
+
+
+
 
 
 // טעינת משתני סביבה
@@ -776,6 +786,16 @@ if (TRANSLATE_FOLDER.trim()) {
     console.log(chalk.red("❌ design-formatting failed:"), e);
   }
 
+} else if (MODE === "schema-builder") {
+  const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
+  const job = new SchemaBuilderJob(sheets);
+
+  try {
+    await job.run(payload);
+    console.log(chalk.green("✅ schema-builder completed"));
+  } catch (e) {
+    console.log(chalk.red("❌ schema-builder failed:"), e);
+  }
 
 } else if (MODE === "rewrite") {
   const job = new RewriteFromSheetJob(agent, sheets);
@@ -1628,12 +1648,97 @@ aiMaxRows: 3000,
     console.error(chalk.red("❌ Client reports edit job failed:"), err);
   }
 
+  } else if (MODE === "site-ai-audit") {
+  const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
+
+  try {
+    const result = await runSiteAiAuditFromPayload(payload);
+
+    if (payload?.includeAiAnalysis) {
+  try {
+    result.aiAnalysis = await analyzeSiteAuditWithAi(
+      agent,
+      result,
+      payload.aiModel || "gpt-5.5"
+    );
+  } catch (error) {
+    result.aiAnalysis = {
+      model: payload.aiModel || "gpt-5.5",
+      generatedAt: new Date().toISOString(),
+      confidence: "low",
+      executiveSummary: "",
+      clientNarrative: "",
+      internalRisks: [],
+      topOpportunities: [],
+      recommendedNextSteps: [],
+      uncertainties: [],
+      suggestedClientSections: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+
+    console.log("SITE_AI_AUDIT_RESULT_JSON_START");
+    console.log(JSON.stringify(result, null, 2));
+    console.log("SITE_AI_AUDIT_RESULT_JSON_END");
+
+    console.log(
+      chalk.green(
+        `✅ site-ai-audit completed | Score: ${result.score.total}/100 | Pages: ${result.pages.length} | Issues: ${result.issues.length}`
+      )
+    );
+  } catch (e) {
+    console.log(chalk.red("❌ site-ai-audit failed:"), e);
+  }
+
+  } else if (MODE === "site-ai-discovery") {
+  const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
+
+  try {
+    const result = await discoverSiteUrls(payload);
+
+    console.log("SITE_AI_DISCOVERY_RESULT_JSON_START");
+    console.log(JSON.stringify(result, null, 2));
+    console.log("SITE_AI_DISCOVERY_RESULT_JSON_END");
+
+    console.log(
+      chalk.green(
+        `✅ site-ai-discovery completed | URLs: ${result.urls.length} | Groups: ${result.groups.length}`
+      )
+    );
+  } catch (e) {
+    console.log(chalk.red("❌ site-ai-discovery failed:"), e);
+  }
+
+  } else if (MODE === "site-ai-faq-audit") {
+  const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
+
+  try {
+    const result = await runSiteFaqAudit(payload);
+
+    console.log("SITE_FAQ_AUDIT_RESULT_JSON_START");
+    console.log(JSON.stringify(result, null, 2));
+    console.log("SITE_FAQ_AUDIT_RESULT_JSON_END");
+
+    console.log(
+      chalk.green(
+        `✅ site-ai-faq-audit completed | Pages: ${result.summary.pagesChecked} | Visible Q/A: ${result.summary.totalVisibleQuestions} | Schema Q/A: ${result.summary.totalSchemaQuestions}`
+      )
+    );
+  } catch (e) {
+    console.log(chalk.red("❌ site-ai-faq-audit failed:"), e);
+  }
+
+
    } else if (MODE === "sheet-utilities") {
   const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
   const job = new SheetUtilitiesJob(sheets);
   await job.run(payload);
   console.log(chalk.green("✅ sheet-utilities completed"));
 }
+
+
 
 
 

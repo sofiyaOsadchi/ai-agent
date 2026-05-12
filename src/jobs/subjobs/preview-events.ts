@@ -43,6 +43,7 @@ export type SheetPreviewEvent = {
   columns: string[];
   rows: SheetPreviewRow[];
   changedCellsCount: number;
+  badgeLabel?: string;
 };
 
 export type PreviewEvent = PreviewChangeEvent | PreviewPlanEvent | SheetPreviewEvent;

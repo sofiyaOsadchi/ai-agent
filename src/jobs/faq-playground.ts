@@ -155,7 +155,7 @@ function padToDataRows(arr: string[], dataRowCount: number): string[] {
  * Keeps your UI intact (5 cards), server adapts to it.
  * Task ids 1-5 are treated as:
  * 1 Questions, 2 Answers, 3 Duplicate, 4 Source, 5 Grammar
- * Variables supported: {{subject}}, {{hotel}}, {{last}}
+ * Variables supported: {{subject}}, {{hotel}}, {{last}}, {{answersTsv}}
  * =========================
  */
 async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTasksConfig) {
@@ -185,7 +185,14 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
       // Important: strict boolean check
       if (!t || t.enabled !== true) continue;
 
-      const vars = { subject, hotel: subject, last };
+      const answersTsv = outputsById.get(2) || "";
+      const vars = {
+        subject,
+        hotel: subject,
+        last,
+        answersTsv,
+        baseTsv: answersTsv
+      };
 
       const system = replaceVars(t.system || "", vars).trim();
       const user = replaceVars(t.user || "", vars).trim();

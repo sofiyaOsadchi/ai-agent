@@ -4,26 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Carmelon Agent Hub</title>
+  <title>Carmelon AI Hub</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #fbfafc;
       --surface: #ffffff;
-      --surface-soft: #f8fafc;
-      --border: #e2e8f0;
-      --text: #111827;
-      --text-dim: #475569;
-      --text-muted: #64748b;
-      --accent: #00b3a4;
-      --accent-strong: #008f86;
-      --accent-soft: rgba(0, 179, 164, 0.12);
-      --blue-soft: rgba(37, 99, 235, 0.08);
-      --purple-soft: rgba(139, 92, 246, 0.1);
-      --orange-soft: rgba(245, 158, 11, 0.12);
+      --surface-soft: #f8f5fa;
+      --border: #e6ddea;
+      --border-strong: #d7c8e1;
+      --text: #20172d;
+      --heading: #2d2340;
+      --text-dim: #536072;
+      --text-muted: #788294;
+      --accent: #7650a8;
+      --accent-strong: #60358f;
+      --accent-soft: rgba(118, 80, 168, 0.1);
+      --teal-soft: rgba(72, 185, 189, 0.12);
+      --yellow-soft: rgba(241, 196, 15, 0.14);
+      --orange-soft: rgba(239, 143, 53, 0.12);
+      --pink-soft: rgba(217, 81, 138, 0.12);
       --radius: 18px;
       --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --mono: "JetBrains Mono", monospace;
@@ -38,16 +41,17 @@
       min-height: 100vh;
       font-family: var(--font);
       color: var(--text);
-      background:
-        radial-gradient(circle at 10% 0%, rgba(0, 179, 164, 0.12), transparent 28%),
-        radial-gradient(circle at 70% 0%, rgba(37, 99, 235, 0.08), transparent 30%),
-        linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      background: var(--bg);
+    }
+
+    a {
+      color: inherit;
     }
 
     .shell {
       width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 34px 0 48px;
+      padding: 32px 0 52px;
     }
 
     .topbar {
@@ -61,41 +65,38 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      min-width: 0;
     }
 
-    .brand-icon {
+    .brand-logo {
+      width: 168px;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-ai {
       width: 42px;
       height: 42px;
-      border-radius: 14px;
       display: grid;
       place-items: center;
-      background: linear-gradient(135deg, var(--accent-soft), var(--blue-soft));
-      border: 1px solid rgba(0, 179, 164, 0.22);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-      font-size: 22px;
-    }
-
-    .brand-title {
-      margin: 0;
-      font-size: 1rem;
+      border-radius: 15px;
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      color: var(--accent-strong);
+      box-shadow: 0 10px 26px rgba(32, 23, 45, 0.055);
+      font-size: 0.9rem;
       font-weight: 900;
-      letter-spacing: -0.03em;
-    }
-
-    .brand-subtitle {
-      margin: 3px 0 0;
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      font-weight: 700;
+      letter-spacing: 0.04em;
     }
 
     .badge {
       padding: 7px 12px;
       border-radius: 999px;
       color: var(--accent-strong);
-      background: var(--accent-soft);
-      border: 1px solid rgba(0, 179, 164, 0.22);
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
       font-size: 0.68rem;
       font-weight: 900;
       letter-spacing: 0.08em;
@@ -104,7 +105,7 @@
     }
 
     .hero {
-      margin-bottom: 28px;
+      margin-bottom: 30px;
     }
 
     .hero-kicker {
@@ -116,7 +117,7 @@
       border-radius: 999px;
       color: var(--accent-strong);
       background: var(--accent-soft);
-      border: 1px solid rgba(0, 179, 164, 0.18);
+      border: 1px solid var(--border-strong);
       font-size: 0.72rem;
       font-weight: 900;
       text-transform: uppercase;
@@ -126,9 +127,10 @@
     .hero h1 {
       max-width: 760px;
       margin: 0;
-      font-size: clamp(2.1rem, 5vw, 4rem);
-      line-height: 0.98;
-      letter-spacing: -0.07em;
+      color: var(--heading);
+      font-size: clamp(2.15rem, 5vw, 4rem);
+      line-height: 1;
+      letter-spacing: 0;
       font-weight: 900;
     }
 
@@ -138,15 +140,38 @@
       color: var(--text-dim);
       font-size: 1.02rem;
       line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .tool-section {
+      margin-top: 34px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
     }
 
     .section-title {
-      margin: 34px 0 14px;
+      margin: 0;
       color: var(--text-muted);
       font-size: 0.76rem;
       font-weight: 900;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    .section-copy {
+      max-width: 520px;
+      margin: 0;
+      color: var(--text-muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+      font-weight: 700;
+      text-align: left;
     }
 
     .cards {
@@ -162,18 +187,29 @@
       justify-content: space-between;
       text-decoration: none;
       color: inherit;
-      background: rgba(255, 255, 255, 0.94);
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 18px;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      box-shadow: 0 10px 28px rgba(32, 23, 45, 0.055);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
     .tool-card:hover {
       transform: translateY(-3px);
-      border-color: #cbd5e1;
-      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.09);
+      border-color: var(--border-strong);
+      box-shadow: 0 16px 36px rgba(32, 23, 45, 0.085);
+      background: #fffefe;
+    }
+
+    .tool-card.disabled {
+      cursor: default;
+      opacity: 0.76;
+    }
+
+    .tool-card.disabled:hover {
+      transform: none;
+      box-shadow: 0 10px 28px rgba(32, 23, 45, 0.055);
     }
 
     .tool-top {
@@ -187,33 +223,54 @@
       border-radius: 14px;
       display: grid;
       place-items: center;
-      font-size: 22px;
+      color: var(--accent-strong);
       background: var(--surface-soft);
       border: 1px solid var(--border);
+      font-size: 0.95rem;
+      font-weight: 900;
+      letter-spacing: 0.02em;
     }
 
-    .tool-card.faq .tool-icon {
+    .tool-card.builder .tool-icon,
+    .tool-card.audit .tool-icon {
       background: var(--accent-soft);
     }
 
-    .tool-card.translate .tool-icon {
-      background: var(--blue-soft);
+    .tool-card.editing .tool-icon {
+      background: var(--pink-soft);
+      color: #a93669;
     }
 
+    .tool-card.translate .tool-icon,
     .tool-card.sheets .tool-icon {
-      background: var(--purple-soft);
+      background: var(--teal-soft);
+      color: #277f83;
+    }
+
+    .tool-card.schema .tool-icon {
+      background: var(--yellow-soft);
+      color: #8a6600;
     }
 
     .tool-card.reports .tool-icon {
       background: var(--orange-soft);
+      color: #a45516;
     }
 
-    .tool-card.design .tool-icon {
-      background: rgba(14, 165, 233, 0.1);
+    .tool-card.utility .tool-icon {
+      background: var(--teal-soft);
+      color: #277f83;
     }
 
-    .tool-card.edit .tool-icon {
-      background: rgba(236, 72, 153, 0.1);
+    .tool-pill {
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-weight: 900;
     }
 
     .tool-title {
@@ -221,7 +278,7 @@
       font-size: 1.08rem;
       line-height: 1.2;
       font-weight: 900;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
     }
 
     .tool-description {
@@ -229,6 +286,7 @@
       color: var(--text-dim);
       font-size: 0.88rem;
       line-height: 1.52;
+      font-weight: 600;
     }
 
     .tool-footer {
@@ -252,17 +310,23 @@
       color: var(--accent-strong);
       font-size: 0.82rem;
       font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .tool-card.disabled .tool-action {
+      color: var(--text-muted);
     }
 
     .note {
-      margin-top: 22px;
+      margin-top: 28px;
       padding: 14px 16px;
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.72);
+      background: rgba(255, 255, 255, 0.76);
       border: 1px solid var(--border);
       color: var(--text-muted);
       font-size: 0.85rem;
       line-height: 1.55;
+      font-weight: 700;
     }
 
     @media (max-width: 980px) {
@@ -281,8 +345,21 @@
         align-items: flex-start;
       }
 
+      .brand-logo {
+        width: 136px;
+      }
+
       .badge {
         display: none;
+      }
+
+      .section-head {
+        display: block;
+      }
+
+      .section-copy {
+        margin-top: 8px;
+        text-align: left;
       }
 
       .cards {
@@ -300,11 +377,8 @@
   <main class="shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-icon">🍋</div>
-        <div>
-          <h2 class="brand-title">Carmelon Agent Hub</h2>
-          <p class="brand-subtitle">Internal tools for FAQ, translation, sheets and reports</p>
-        </div>
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </div>
 
       <span class="badge">Demo Server</span>
@@ -314,112 +388,166 @@
       <div class="hero-kicker">Agent Control Center</div>
       <h1>Choose the workflow you want to run.</h1>
       <p>
-        This page is only the entry point. Each workflow has its own dedicated screen, form, settings and live terminal.
+        Start with the job you need, move into the right workspace, and let the agent handle the structured work behind it.
       </p>
     </section>
 
-    <div class="section-title">Available tools</div>
+    <section class="tool-section">
+      <div class="section-head">
+        <h2 class="section-title">FAQ workflows</h2>
+        <p class="section-copy">Build, edit, translate and prepare structured FAQ work from one clear starting point.</p>
+      </div>
 
-    <section class="cards">
-      <a class="tool-card faq" href="/faq-playground.html">
-        <div class="tool-top">
-          <div class="tool-icon">⛓️</div>
-          <div>
-            <h3 class="tool-title">FAQ Workflow Builder</h3>
-            <p class="tool-description">
-              Build a custom FAQ chain with research, answer generation, QA, optional translation and final export.
-            </p>
+      <div class="cards">
+        <a class="tool-card builder" href="/faq-playground.html">
+          <div class="tool-top">
+            <div class="tool-icon">FAQ</div>
+            <div>
+              <span class="tool-pill">Builder</span>
+              <h3 class="tool-title">FAQ Workflow Builder</h3>
+              <p class="tool-description">
+                Build a custom FAQ chain with categories, prompts, QA, saved plans and final export.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: faq-playground</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: faq-playground</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
 
-      <a class="tool-card translate" href="/translate-demo.html">
-        <div class="tool-top">
-          <div class="tool-icon">🌐</div>
-          <div>
-            <h3 class="tool-title">AI Translation Engine</h3>
-            <p class="tool-description">
-              Translate sheets or folders with language notes, glossary rules, terminology rules and live logs.
-            </p>
+        <a class="tool-card editing" href="/design-formatting.html">
+          <div class="tool-top">
+            <div class="tool-icon">EDIT</div>
+            <div>
+              <span class="tool-pill">Editing</span>
+              <h3 class="tool-title">FAQ Editing Workspace</h3>
+              <p class="tool-description">
+                Edit existing FAQ sheets, apply client notes, replace columns, format tables and preview live sheet data.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: translate-demo</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: design-formatting</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
 
-      <a class="tool-card sheets" href="/sheet-utilities.html">
-        <div class="tool-top">
-          <div class="tool-icon">🔗</div>
-          <div>
-            <h3 class="tool-title">Sheet Utilities</h3>
-            <p class="tool-description">
-              Run cross-file operations like lookup copy, folder injection, cross-checks, coverage reports and work files.
-            </p>
+        <a class="tool-card translate" href="/translate-demo.html">
+          <div class="tool-top">
+            <div class="tool-icon">TR</div>
+            <div>
+              <span class="tool-pill">Translate</span>
+              <h3 class="tool-title">AI Translation Engine</h3>
+              <p class="tool-description">
+                Translate sheets or folders with glossary rules, terminology rules, draft notes and polish prompts.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: sheet-utilities</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: translate-demo</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
 
-      <a class="tool-card reports" href="/client-reports.html">
-        <div class="tool-top">
-          <div class="tool-icon">📊</div>
-          <div>
-            <h3 class="tool-title">Client Reports</h3>
-            <p class="tool-description">
-              Create dashboard-style client reports from Google Sheets with KPIs, charts, summaries and recommendations.
-            </p>
+        <a class="tool-card schema" href="/schema-builder.html">
+          <div class="tool-top">
+            <div class="tool-icon">{ }</div>
+            <div>
+              <span class="tool-pill">Schema</span>
+              <h3 class="tool-title">Schema Builder</h3>
+              <p class="tool-description">
+                Create FAQPage JSON-LD from approved questions and answers, then validate it with Rich Results.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: client-reports</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: schema-builder</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
 
-      <a class="tool-card design" href="/design-formatting.html">
-        <div class="tool-top">
-          <div class="tool-icon">🎨</div>
-          <div>
-            <h3 class="tool-title">Design Formatting</h3>
-            <p class="tool-description">
-              Run formatting-focused workflows for structured content, layout preparation and presentation-friendly outputs.
-            </p>
+        <a class="tool-card audit" href="/site-ai-faq-audit.html">
+          <div class="tool-top">
+            <div class="tool-icon">QA</div>
+            <div>
+              <span class="tool-pill">FAQ Audit</span>
+              <h3 class="tool-title">AI FAQ Audit</h3>
+              <p class="tool-description">
+                Map FAQ pages, compare visible questions with schema, and validate source-file implementation.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: design-formatting</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: site-ai-faq-audit</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
 
-      <a class="tool-card edit" href="/client-reports-edit.html">
-        <div class="tool-top">
-          <div class="tool-icon">✍️</div>
-          <div>
-            <h3 class="tool-title">Client Reports Edit</h3>
-            <p class="tool-description">
-              Edit or improve report text blocks through the AI agent without reading a source sheet.
-            </p>
+        <a class="tool-card utility" href="/sheet-utilities.html">
+          <div class="tool-top">
+            <div class="tool-icon">SHT</div>
+            <div>
+              <span class="tool-pill">Sheets</span>
+              <h3 class="tool-title">Sheet Utilities</h3>
+              <p class="tool-description">
+                Run cross-file operations like lookup copy, folder injection, coverage checks and work-file generation.
+              </p>
+            </div>
           </div>
-        </div>
-        <div class="tool-footer">
-          <span class="tool-mode">mode: client-reports-edit</span>
-          <span class="tool-action">Open →</span>
-        </div>
-      </a>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: sheet-utilities</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section">
+      <div class="section-head">
+        <h2 class="section-title">Bonus: audits and reports</h2>
+        <p class="section-copy">Advanced crawlers and client-facing reporting tools.</p>
+      </div>
+
+      <div class="cards">
+        <a class="tool-card audit" href="/site-ai-audit.html">
+          <div class="tool-top">
+            <div class="tool-icon">AI</div>
+            <div>
+              <span class="tool-pill">Audit</span>
+              <h3 class="tool-title">AI Site Audit Crawler</h3>
+              <p class="tool-description">
+                Audit meta, schema, links, content, crawler access, AI readiness and client-report sections.
+              </p>
+            </div>
+          </div>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: site-ai-audit</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
+
+        <a class="tool-card reports" href="/client-reports.html">
+          <div class="tool-top">
+            <div class="tool-icon">RPT</div>
+            <div>
+              <span class="tool-pill">Reports</span>
+              <h3 class="tool-title">Client Reports</h3>
+              <p class="tool-description">
+                Create dashboard-style client reports from Google Sheets with KPIs, charts, summaries and recommendations.
+              </p>
+            </div>
+          </div>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: client-reports</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
+      </div>
     </section>
 
     <div class="note">
-      If one of these pages does not exist yet, the link will return 404 until the matching HTML file is added to the public folder.
+      If one of these pages does not exist yet, the link stays disabled until the matching HTML file is added to the public folder.
     </div>
   </main>
 </body>

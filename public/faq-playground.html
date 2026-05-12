@@ -1,251 +1,2713 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carmelon Agent Chain</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        .terminal { background: #1e1e1e; color: #10b981; font-family: monospace; height: 600px; overflow-y: auto; padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; font-size: 0.85rem; }
-        .task-card { border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; margin-bottom: 12px; transition: all 0.2s; }
-        .task-card.disabled { opacity: 0.6; background: #f8fafc; }
-        .task-header { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #f8fafc; border-radius: 8px 8px 0 0; }
-        .task-body { padding: 15px; }
-        .field-label { font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; display: block; }
-        .magic-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; transition: all 0.2s; }
-        .magic-input:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
-        .var-badge { cursor: pointer; font-family: monospace; background: #eff6ff; color: #2563eb; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; border: 1px solid #dbeafe; display: inline-block; margin-right: 4px; }
-        .var-badge:hover { background: #dbeafe; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carmelon FAQ Creator Studio</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg: #fbf8fc;
+      --surface: #ffffff;
+      --surface-soft: #fffafd;
+      --surface-tint: #f7f1fb;
+      --ink: #171827;
+      --text: #31384a;
+      --muted: #667086;
+      --border: #eadfec;
+      --border-strong: #dccbe7;
+      --purple: #7e5aae;
+      --purple-dark: #4b2a75;
+      --purple-soft: #f2eaf8;
+      --teal: #36b7b8;
+      --teal-soft: #eafafa;
+      --orange: #f27422;
+      --orange-soft: #fff1e8;
+      --rose: #df82ad;
+      --green: #5da58d;
+      --shadow: 0 22px 60px rgba(74, 42, 117, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Inter", "DM Sans", "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 28px;
+      background: rgba(255, 255, 255, 0.88);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 168px;
+      max-width: 34vw;
+      height: auto;
+      display: block;
+    }
+
+    .brand-copy {
+      border-inline-start: 1px solid var(--border);
+      padding-inline-start: 18px;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--purple);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      margin-bottom: 2px;
+      font-size: clamp(24px, 2.1vw, 34px);
+      line-height: 1.08;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      min-height: 40px;
+      padding: 0 16px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--purple-dark);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .page {
+      width: min(1720px, calc(100% - 36px));
+      margin: 24px auto 48px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .workspace,
+    .rail {
+      min-width: 0;
+    }
+
+    .rail {
+      position: sticky;
+      top: 104px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel + .panel {
+      margin-top: 18px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .builder-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.74);
+      box-shadow: var(--shadow);
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .view-tab {
+      min-height: 42px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text);
+      padding: 0 18px;
+      font-weight: 900;
+      transition: background 0.18s ease, color 0.18s ease, border 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .view-tab.active {
+      color: #fff;
+      background: var(--purple);
+      border-color: var(--purple);
+      box-shadow: 0 12px 28px rgba(126, 90, 174, 0.2);
+    }
+
+    .panel-head {
+      padding: 24px 26px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .panel-head h2 {
+      margin-bottom: 8px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .panel-body {
+      padding: 24px 26px 28px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .setup-grid {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    .control-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .setup-controls {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .wide-field {
+      grid-column: 1 / -1;
+    }
+
+    .info-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #ffffff;
+    }
+
+    .info-strip h3 {
+      margin: 0 0 4px;
+      font-size: 17px;
+    }
+
+    .info-strip p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .strip-metrics {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .strip-metric {
+      min-width: 78px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: #fff;
+      text-align: center;
+    }
+
+    .strip-metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .strip-metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+    }
+
+    .chat-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .chat-box,
+    .chat-summary {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .chat-log {
+      height: 430px;
+      overflow-y: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #fff;
+    }
+
+    .chat-message {
+      width: fit-content;
+      max-width: min(78%, 680px);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      color: var(--text);
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .chat-message.bot {
+      align-self: flex-start;
+      background: var(--surface-soft);
+    }
+
+    .chat-message.user {
+      align-self: flex-end;
+      color: #fff;
+      background: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .quick-replies {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 18px 14px;
+      background: #fff;
+    }
+
+    .quick-reply {
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--purple-dark);
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .quick-reply:hover {
+      border-color: var(--purple);
+      background: var(--purple-soft);
+    }
+
+    .chat-composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      padding: 14px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+
+    .chat-input {
+      min-height: 48px;
+      max-height: 120px;
+      resize: vertical;
+    }
+
+    .chat-summary {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .chat-summary h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .chat-summary-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .chat-summary-item {
+      display: grid;
+      gap: 4px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .chat-summary-item span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .output-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .artifact-card {
+      display: grid;
+      gap: 10px;
+      min-height: 138px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+    }
+
+    .artifact-card h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.35;
+    }
+
+    .artifact-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .artifact-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .empty-output {
+      grid-column: 1 / -1;
+      padding: 18px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 18px;
+      color: var(--muted);
+      background: #fff;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .compact-combo {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 108px;
+      gap: 8px;
+    }
+
+    .compact-panel {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      padding: 12px;
+      align-content: start;
+    }
+
+    .source-panel,
+    .naming-panel {
+      grid-column: span 2;
+    }
+
+    .compact-panel .textarea {
+      min-height: 70px;
+      padding: 10px 12px;
+    }
+
+    .compact-panel .compact-combo {
+      grid-template-columns: minmax(130px, 0.85fr) minmax(170px, 1.15fr);
+    }
+
+    .source-picker,
+    .policy-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .source-chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0 12px;
+      color: var(--text);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .source-chip input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .source-chip:has(input:checked) {
+      color: var(--purple-dark);
+      background: var(--purple-soft);
+      border-color: rgba(126, 90, 174, 0.36);
+      box-shadow: inset 0 0 0 1px rgba(126, 90, 174, 0.12);
+    }
+
+    .read-only-note {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .read-only-note strong {
+      color: var(--ink);
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field span,
+    .field-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .input,
+    .textarea,
+    .select {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--ink);
+      padding: 12px 14px;
+      outline: none;
+      transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .textarea {
+      min-height: 104px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    .input:focus,
+    .textarea:focus,
+    .select:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 4px rgba(126, 90, 174, 0.12);
+    }
+
+    .ltr {
+      direction: ltr;
+      text-align: left;
+    }
+
+    .prompt-text {
+      direction: ltr;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .preset-row,
+    .toolbar,
+    .chips,
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .preset-row {
+      margin-top: 18px;
+    }
+
+    .seg-btn,
+    .btn,
+    .ghost-btn,
+    .var-btn {
+      min-height: 42px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      padding: 0 16px;
+      font-weight: 900;
+      transition: transform 0.18s ease, border 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .seg-btn:hover,
+    .btn:hover,
+    .ghost-btn:hover,
+    .var-btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--purple);
+    }
+
+    .seg-btn.active {
+      color: #fff;
+      background: var(--purple);
+      border-color: var(--purple);
+      box-shadow: 0 12px 28px rgba(126, 90, 174, 0.22);
+    }
+
+    .btn {
+      background: var(--purple);
+      color: #fff;
+      border-color: var(--purple);
+      box-shadow: 0 16px 34px rgba(126, 90, 174, 0.24);
+    }
+
+    .btn.secondary {
+      background: var(--teal);
+      border-color: var(--teal);
+      box-shadow: 0 16px 34px rgba(54, 183, 184, 0.2);
+    }
+
+    .ghost-btn {
+      background: var(--surface-soft);
+    }
+
+    .btn:disabled {
+      opacity: 0.62;
+      cursor: wait;
+      transform: none;
+    }
+
+    .micro-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 16px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .category-card,
+    .task-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      overflow: hidden;
+      transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .category-card.is-selected,
+    .task-card.is-active {
+      border-color: rgba(126, 90, 174, 0.58);
+      box-shadow: 0 14px 32px rgba(126, 90, 174, 0.1);
+      background: #ffffff;
+    }
+
+    .category-card[open],
+    .task-card[open] {
+      border-color: rgba(54, 183, 184, 0.46);
+    }
+
+    details > summary {
+      list-style: none;
+    }
+
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .card-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 18px;
+      cursor: pointer;
+    }
+
+    .summary-main {
+      min-width: 0;
+    }
+
+    .summary-main h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .summary-main p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .summary-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .switch input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .switch-ui {
+      width: 44px;
+      height: 26px;
+      border-radius: 999px;
+      background: #e9e4ee;
+      border: 1px solid var(--border-strong);
+      display: inline-flex;
+      align-items: center;
+      padding: 3px;
+      transition: background 0.2s ease, border 0.2s ease;
+    }
+
+    .switch-ui::after {
+      content: "";
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+      transition: transform 0.2s ease;
+    }
+
+    .switch input:checked + .switch-ui {
+      background: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .switch input:checked + .switch-ui::after {
+      transform: translateX(-18px);
+    }
+
+    .caret {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      color: var(--purple);
+      background: #fff;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    details[open] .caret {
+      transform: rotate(180deg);
+      background: var(--purple-soft);
+    }
+
+    .card-body {
+      border-top: 1px solid var(--border);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .category-title-input,
+    .category-description-input {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      outline: none;
+      padding: 0;
+    }
+
+    .category-title-input {
+      font-size: 18px;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .category-description-input {
+      min-height: 28px;
+      resize: none;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: right;
+    }
+
+    .category-target-select {
+      min-height: 36px;
+      max-width: 150px;
+      border-radius: 999px;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .prompt-help {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .badge.active {
+      color: var(--purple-dark);
+      background: var(--purple-soft);
+      border-color: rgba(126, 90, 174, 0.32);
+    }
+
+    .badge.teal {
+      color: #1f7375;
+      background: var(--teal-soft);
+      border-color: rgba(54, 183, 184, 0.34);
+    }
+
+    .badge.orange {
+      color: #9c4d11;
+      background: var(--orange-soft);
+      border-color: rgba(242, 116, 34, 0.28);
+    }
+
+    .tasks-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .task-card:not(.is-active) {
+      background: #ffffff;
+    }
+
+    .task-card:not(.is-active) .card-body {
+      opacity: 0.8;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .var-btn {
+      min-height: 32px;
+      padding: 0 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: var(--purple-dark);
+      background: var(--purple-soft);
+      border-color: rgba(126, 90, 174, 0.26);
+    }
+
+    .run-strip {
+      position: sticky;
+      bottom: 14px;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 18px;
+      padding: 10px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 18px 40px rgba(74, 42, 117, 0.12);
+      backdrop-filter: blur(14px);
+    }
+
+    .run-strip strong {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 14px;
+    }
+
+    .run-strip p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      max-width: 680px;
+    }
+
+    .run-strip > div:first-child {
+      flex: 1 1 auto;
+      min-width: 340px;
+    }
+
+    .run-strip .actions-row {
+      flex-wrap: nowrap;
+      flex: 0 0 auto;
+    }
+
+    .run-strip .btn,
+    .run-strip .ghost-btn {
+      min-height: 38px;
+      padding: 0 12px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .rail-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .rail-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .rail-card p,
+    .rail-card li {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .rail-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .rail-list li {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-top: 7px;
+      background: var(--purple);
+      box-shadow: 0 0 0 5px rgba(126, 90, 174, 0.1);
+    }
+
+    .terminal-wrap {
+      overflow: hidden;
+    }
+
+    .terminal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .terminal {
+      direction: ltr;
+      text-align: left;
+      min-height: 220px;
+      max-height: 420px;
+      overflow-y: auto;
+      border-radius: 16px;
+      background: #111827;
+      color: #c9f7f1;
+      padding: 16px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12.5px;
+      line-height: 1.55;
+    }
+
+    .terminal:empty::before {
+      content: "Run output will appear here.";
+      color: #8390a4;
+    }
+
+    .mobile-log {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .rail {
+        position: static;
+        order: -1;
+      }
+
+      .rail .terminal-wrap {
+        display: none;
+      }
+
+      .mobile-log {
+        display: block;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .brand-copy {
+        border-inline-start: none;
+        padding-inline-start: 0;
+      }
+
+      .page {
+        width: min(100% - 18px, 1720px);
+      }
+
+      .setup-grid,
+      .control-grid,
+      .summary-grid,
+      .category-grid,
+      .chat-shell,
+      .output-grid,
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-head,
+      .info-strip,
+      .section-title,
+      .run-strip {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .strip-metrics {
+        justify-content: stretch;
+      }
+
+      .strip-metric {
+        flex: 1;
+      }
+
+      .compact-combo {
+        grid-template-columns: 1fr;
+      }
+
+      .source-panel,
+      .naming-panel {
+        grid-column: auto;
+      }
+
+      .run-strip .actions-row {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .run-strip .btn,
+      .run-strip .ghost-btn {
+        flex: 1;
+      }
+
+      .builder-tabs {
+        width: 100%;
+      }
+
+      .view-tab {
+        flex: 1;
+      }
+
+      .chat-composer {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
-
-    <div class="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <div class="lg:col-span-6 flex flex-col gap-4 h-[95vh] overflow-y-auto pr-2 pb-20">
-            
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 sticky top-0 z-10">
-                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2 mb-4">
-                    ⛓️ FAQ Workflow Builder
-                </h1>
-                
-                <div class="grid grid-cols-1 gap-4">
-                    <div>
-                        <label class="field-label">Subject / Hotel Name</label>
-                        <input type="text" id="subjects" class="magic-input font-bold text-lg border-blue-300" 
-                               placeholder="e.g. Leonardo Royal Berlin">
-                        <p class="text-xs text-gray-500 mt-1">Tip: You can enter multiple hotels separated by commas.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tasksContainer">
-                </div>
-
-            <button id="runBtn" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition transform active:scale-[0.99] flex justify-center items-center gap-2 text-lg">
-                🚀 Run Agent Chain
-            </button>
-        </div>
-
-        <div class="lg:col-span-6">
-            <div class="bg-gray-900 rounded-t-xl p-3 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                    <span class="text-xs text-gray-400 font-mono ml-2">Agent Terminal</span>
-                </div>
-                <button onclick="document.getElementById('logs').innerHTML=''" class="text-xs text-gray-500 hover:text-white">Clear</button>
-            </div>
-            <div id="logs" class="terminal shadow-2xl"></div>
-        </div>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+      <div class="brand-copy">
+        <p class="eyebrow">Creator Studio</p>
+        <h1>FAQ Workflow Builder</h1>
+        <p class="subtitle">בונים שאלות, תשובות ו־QA לפי קטגוריות אמיתיות, עם שליטה במודל ובפרומפטים.</p>
+      </div>
     </div>
+    <span class="status-pill" id="saveStatus">נשמר מקומית</span>
+  </header>
 
-    <script>
-        const socket = io();
-        const logsDiv = document.getElementById('logs');
-        const runBtn = document.getElementById('runBtn');
-        const container = document.getElementById('tasksContainer');
+  <main class="page">
+    <section class="workspace">
+      <nav class="builder-tabs" aria-label="FAQ builder views">
+        <button class="view-tab active" type="button" data-view-tab="builder">עריכה ידנית</button>
+        <button class="view-tab" type="button" data-view-tab="chat">מילוי בצ׳אט</button>
+      </nav>
 
-        // === כאן הקסם: הפרומפטים הדיפולטיביים החכמים ===
-        // משימות 1, 2, 3 דלוקות כברירת מחדל כדי לייצר FAQ מושלם
-        const DEFAULT_TASKS = [
-            { 
-                id: 1, 
-                name: "Step 1: Research & Generate Questions", 
-                enabled: true, 
-                sys: "You are an expert SEO Researcher for hospitality.", 
-                // שימי לב: השתמשתי ב-{{subject}}
-                user: "Generate 20 high-value FAQ questions for {{subject}}.\nFocus on: Check-in, Amenities, Policies, Location, Breakfast.\nReturn ONLY a Markdown Table (Category | Question | Priority).", 
-                tone: "Professional, inquisitive, guest-focused.", 
-                src: "Official Hotel Website, Booking.com, TripAdvisor" 
-            },
-            { 
-                id: 2, 
-                name: "Step 2: Generate Answers", 
-                enabled: true, 
-                sys: "You are a Senior Hotel Concierge.", 
-                // שימי לב: השתמשתי ב-{{last}} כדי לקחת את השאלות משלב 1
-                user: "Provide authoritative answers for the questions below.\n\nINPUT QUESTIONS:\n{{last}}\n\nFormat: TSV (Tab Separated Values).\nColumns: Category, Question, Answer, Frequency.", 
-                tone: "Welcoming, luxury hospitality tone. Third-person.", 
-                src: "Official Website (Primary Source)" 
-            },
-            { 
-                id: 3, 
-                name: "Step 3: QA & Refine", 
-                enabled: true, 
-                sys: "You are a strict Content Editor.", 
-                // לוקח את התשובות משלב 2 ({{last}}) ומתקן אותן
-                user: "Review the following FAQ data for grammar, duplicates, and missing info.\n\nDATA TO CHECK:\n{{last}}\n\nOutput the final clean version in TSV format.", 
-                tone: "Precise and error-free.", 
-                src: "" 
-            },
-            { id: 4, name: "Step 4: Translate (Optional)", enabled: false, sys: "You are a translator.", user: "Translate this to German:\n{{last}}", tone: "", src: "" },
-            { id: 5, name: "Step 5: Final Export", enabled: false, sys: "", user: "{{last}}", tone: "", src: "" }
-        ];
+      <section class="panel hidden" id="chatPanel" data-chat-section>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Guided setup</p>
+            <h2>מילוי דרך צ׳אט</h2>
+            <p class="subtitle">שיחה קצרה בעברית שממלאת את ההגדרות המרכזיות. אחרי הסיום אפשר לעבור לעריכה ידנית ולדייק כל פרט.</p>
+          </div>
+          <div class="toolbar">
+            <button class="ghost-btn" type="button" id="chatResetBtn">התחלה מחדש</button>
+            <button class="ghost-btn" type="button" id="chatOpenBuilderBtnTop">פתח לעריכה</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chat-shell">
+            <div class="chat-box">
+              <div class="chat-log" id="faqChatLog"></div>
+              <div class="quick-replies" id="faqChatQuickReplies"></div>
+              <form class="chat-composer" id="faqChatForm">
+                <textarea class="textarea chat-input" id="faqChatInput" rows="1" placeholder="כתבי כאן תשובה קצרה..."></textarea>
+                <button class="btn secondary" id="faqChatSendBtn" type="submit">שליחה</button>
+              </form>
+            </div>
+            <aside class="chat-summary">
+              <p class="eyebrow">Setup preview</p>
+              <h3>מה הצ׳אט כבר מילא</h3>
+              <div class="chat-summary-list" id="faqChatSummary"></div>
+              <button class="ghost-btn" type="button" id="chatOpenBuilderBtn">פתח לעריכה ידנית</button>
+              <button class="ghost-btn" type="button" id="chatSavePlanBtn">שמור תוכנית JSON</button>
+            </aside>
+          </div>
+        </div>
+      </section>
 
-        function renderTasks() {
-            container.innerHTML = '';
-            DEFAULT_TASKS.forEach((task, index) => {
-                // תיקון: שימוש ב-${task.sys} בתוך הטקסט-אריאה ולא כ-value
-                const html = `
-                <div class="task-card ${!task.enabled ? 'disabled' : ''}" id="card-${task.id}">
-                    <div class="task-header" onclick="toggleTask(${task.id})">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox" id="enable-${task.id}" ${task.enabled ? 'checked' : ''} 
-                                   class="w-5 h-5 accent-blue-600" onclick="event.stopPropagation(); toggleTaskState(${task.id})">
-                            <span class="font-bold text-slate-700">#${task.id}</span>
-                            <input type="text" id="name-${task.id}" value="${task.name}" 
-                                   class="bg-transparent border-none font-semibold text-sm w-64 focus:ring-0" 
-                                   onclick="event.stopPropagation()" placeholder="Task Name">
-                        </div>
-                        <span class="text-slate-400 text-xs">▼</span>
-                    </div>
-                    
-                    <div class="task-body ${!task.enabled ? 'hidden' : ''}" id="body-${task.id}">
-                        
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                                <label class="field-label">Tone & Style</label>
-                                <input type="text" id="tone-${task.id}" value="${task.tone}" class="magic-input" placeholder="e.g. Professional">
-                            </div>
-                            <div>
-                                <label class="field-label">Sources / Search</label>
-                                <input type="text" id="src-${task.id}" value="${task.src}" class="magic-input" placeholder="e.g. Official Site">
-                            </div>
-                        </div>
+      <section class="panel" id="setupPanel" data-builder-section>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Step 1</p>
+            <h2>הגדרת העבודה</h2>
+            <p class="subtitle">הכניסי מלון, עמוד או נושא. אפשר כמה שורות, כל שורה תרוץ כעבודה נפרדת.</p>
+          </div>
+          <div class="preset-row" aria-label="FAQ presets">
+            <button class="seg-btn active" type="button" data-preset="hotel">מלונות</button>
+            <button class="seg-btn" type="button" data-preset="local">עסק מקומי</button>
+          </div>
+        </div>
 
-                        <div class="mb-3">
-                            <label class="field-label">System Prompt (Role)</label>
-                            <textarea id="sys-${task.id}" rows="1" class="magic-input bg-slate-50">${task.sys}</textarea>
-                        </div>
-                        <div>
-                            <div class="flex justify-between">
-                                <label class="field-label">User Prompt (Instructions)</label>
-                                <div class="space-x-1">
-                                    <span class="var-badge" onclick="insertVar(${task.id}, '{{subject}}')">{{subject}}</span>
-                                    <span class="var-badge" onclick="insertVar(${task.id}, '{{last}}')">{{last}}</span>
-                                </div>
-                            </div>
-                            <textarea id="user-${task.id}" rows="6" class="magic-input font-mono text-xs">${task.user}</textarea>
-                        </div>
-                    </div>
+        <div class="panel-body">
+          <div class="info-strip">
+            <div>
+              <p class="eyebrow">How it works</p>
+              <h3>שרשרת עבודה קצרה וברורה</h3>
+              <p>מגדירים נושאים, בוחרים מודל וכללים כלליים, ואז עורכים את הפרומפטים והקטגוריות רק אם צריך.</p>
+            </div>
+            <div class="strip-metrics">
+              <div class="strip-metric">
+                <span>נושאים</span>
+                <strong id="subjectCount">0</strong>
+              </div>
+              <div class="strip-metric">
+                <span>קטגוריות</span>
+                <strong id="categoryCount">0</strong>
+              </div>
+              <div class="strip-metric">
+                <span>משימות</span>
+                <strong id="taskCount">0</strong>
+              </div>
+              <div class="strip-metric">
+                <span>מודל</span>
+                <strong id="modelShort">o3</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid setup-grid">
+            <label class="field">
+              <span>מלונות / נושאים</span>
+              <textarea id="subjects" class="textarea ltr" rows="4" placeholder="Leonardo Royal Berlin&#10;Bachar House&#10;master Wola"></textarea>
+              <span class="hint">שורה חדשה או פסיק מפרידים בין נושאים. ההגדרה נשמרת בדפדפן כדי להמשיך מאותה נקודה.</span>
+            </label>
+          </div>
+
+          <div class="grid control-grid setup-controls" style="margin-top: 18px;">
+            <label class="field">
+              <span>מודל ראשי</span>
+              <select id="globalModel" class="select ltr">
+                <option value="o3">o3 - balanced reasoning</option>
+                <option value="gpt-5.5">gpt-5.5 - deep strategy</option>
+                <option value="gpt-5.4">gpt-5.4 - strong daily work</option>
+                <option value="gpt-5.4-mini">gpt-5.4-mini - quick draft</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>יעד שאלות</span>
+              <div class="compact-combo">
+                <select id="questionCountMode" class="select">
+                  <option value="target">יעד מספרי</option>
+                  <option value="as_found">כמה שנמצא</option>
+                  <option value="quality_first">ללא יעד קשיח</option>
+                </select>
+                <input id="questionCount" class="input ltr" type="number" min="1" max="120" step="1" value="30" />
+              </div>
+            </label>
+
+            <label class="field">
+              <span>שפת התוצר</span>
+              <select id="outputLanguage" class="select">
+                <option value="English (UK)">English (UK)</option>
+                <option value="English (US)">English (US)</option>
+                <option value="English">English</option>
+                <option value="Hebrew">עברית</option>
+                <option value="German">Deutsch</option>
+                <option value="French">Français</option>
+                <option value="Spanish">Español</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>קהל יעד</span>
+              <input id="audience" class="input ltr" value="Guests before booking, guests before arrival, and in-house guests" />
+            </label>
+
+            <div class="field compact-panel source-panel">
+              <span>מקורות כלליים</span>
+              <div class="source-picker" id="sourceOptions">
+                <label class="source-chip"><input type="checkbox" value="Official website" checked />אתר רשמי</label>
+                <label class="source-chip"><input type="checkbox" value="Google Business Profile" />GBP</label>
+                <label class="source-chip"><input type="checkbox" value="OTAs" />OTAs</label>
+                <label class="source-chip"><input type="checkbox" value="Public reviews" />ביקורות</label>
+                <label class="source-chip"><input type="checkbox" value="Competitors" />מתחרים</label>
+              </div>
+              <textarea id="sourceInstructions" class="textarea ltr" rows="2">Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.</textarea>
+            </div>
+
+            <div class="field compact-panel naming-panel">
+              <span>שם הנכס / המוצר</span>
+              <div class="compact-combo">
+                <select id="namingPolicy" class="select">
+                  <option value="natural_exact">שם מדויק, טבעי</option>
+                  <option value="light">מעט אזכורים</option>
+                  <option value="strict">שם מדויק בכל שאלה רלוונטית</option>
+                  <option value="custom">הנחיה מותאמת</option>
+                </select>
+                <input id="namingRules" class="input" value="לא לקצר או לתרגם את השם" />
+              </div>
+            </div>
+
+            <div class="read-only-note wide-field">
+              <span>שם הגיליון נוצר אוטומטית לפי הנושא:</span>
+              <strong id="sheetNamePreview">Creator: {{subject}}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="workflowPanel" data-builder-section>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Step 3</p>
+            <h2>שרשרת הפרומפטים</h2>
+            <p class="subtitle">אפשר להשאיר את הדיפולט, או לפתוח כל שלב ולערוך ידנית. השלבים שומרים על IDs כדי שהייצוא לגוגל שיט יעבוד.</p>
+          </div>
+          <div class="toolbar">
+            <button class="ghost-btn" type="button" id="expandTasksBtn">פתח משימות</button>
+            <button class="ghost-btn" type="button" id="collapseTasksBtn">סגור משימות</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="tasksContainer" class="tasks-stack"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="categoryPanel" data-builder-section>
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Optional</p>
+            <h2>קטגוריות לשלב יצירת השאלות</h2>
+            <p class="subtitle">פתיחה רק כשצריך לדייק את סוגי השאלות. העריכה כאן מוזנת לפרומפט של משימת השאלות.</p>
+          </div>
+          <div class="toolbar">
+            <label class="field" style="min-width: 180px;">
+              <span>טווח לכל הקטגוריות</span>
+              <select id="globalCategoryTarget" class="select">
+                <option value="inherit">ללא שינוי</option>
+                <option value="2-4">2-4 שאלות</option>
+                <option value="3-5">3-5 שאלות</option>
+                <option value="4-6">4-6 שאלות</option>
+                <option value="as_found">כמה שנמצא</option>
+                <option value="quality_first">ללא יעד קשיח</option>
+              </select>
+            </label>
+            <button class="ghost-btn" type="button" id="applyCategoryTargetBtn">החל</button>
+            <button class="ghost-btn" type="button" id="expandCategoriesBtn">פתח הכל</button>
+            <button class="ghost-btn" type="button" id="collapseCategoriesBtn">סגור הכל</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="categoryContainer" class="category-grid"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="outputsPanel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Outputs</p>
+            <h2>תוצרים וקבצים</h2>
+            <p class="subtitle">כאן יופיעו הגיליונות שנוצרו מהריצה וקבצי תוכנית העבודה שנשמרו מהמסך.</p>
+          </div>
+          <div class="toolbar">
+            <button class="ghost-btn" type="button" id="clearArtifactsBtn">נקה רשימה</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="output-grid" id="artifactList"></div>
+        </div>
+      </section>
+
+      <section class="panel mobile-log" data-builder-section>
+        <div class="panel-body terminal-wrap">
+          <div class="terminal-head">
+            <h3>Run log</h3>
+            <button class="ghost-btn" type="button" data-clear-log>נקה</button>
+          </div>
+          <div class="terminal" id="logsMobile"></div>
+        </div>
+      </section>
+
+      <div class="run-strip">
+        <div>
+          <strong id="runSummary">מוכן להרצה</strong>
+          <p id="runDetails">בחרי נושא אחד לפחות ואז הריצי את ה־FAQ workflow.</p>
+        </div>
+        <div class="actions-row">
+          <input id="importPlanInput" type="file" accept="application/json,.json" hidden />
+          <button class="ghost-btn" type="button" id="resetBtn">איפוס</button>
+          <button class="ghost-btn" type="button" id="downloadPlanBtn">שמור JSON</button>
+          <button class="ghost-btn" type="button" id="importPlanBtn">טען JSON</button>
+          <button class="ghost-btn" type="button" id="copyPlanBtn">העתק תוכנית</button>
+          <button class="btn secondary" type="button" id="runBtn">הרץ FAQ Workflow</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <section class="rail-card">
+        <p class="eyebrow">Reading map</p>
+        <h3>מה חשוב בבניית FAQ טוב</h3>
+        <ul class="rail-list">
+          <li><span class="dot"></span><span>מתחילים מכוונת משתמש: לפני הזמנה, לפני הגעה, במהלך שהייה ואחרי יציאה.</span></li>
+          <li><span class="dot"></span><span>שאלה טובה היא ספציפית לעמוד או לנכס, ולא כותרת כללית כמו “Amenities”.</span></li>
+          <li><span class="dot"></span><span>תשובה טובה קצרה, ניתנת לאימות, ומסמנת כשחסר מקור אמין.</span></li>
+          <li><span class="dot"></span><span>הקטגוריות הן כלי עבודה פנימי: הן מכוונות את המודל, אבל לא אמורות להפוך לשאלות כלליות.</span></li>
+        </ul>
+      </section>
+
+      <section class="rail-card">
+        <p class="eyebrow">Workflow</p>
+        <h3>מה ירוץ עכשיו</h3>
+        <div class="chips" id="workflowChips"></div>
+      </section>
+
+      <section class="rail-card">
+        <p class="eyebrow">Variables</p>
+        <h3>משתנים זמינים</h3>
+        <div class="chips">
+          <span class="badge active">{{subject}}</span>
+          <span class="badge active">{{last}}</span>
+          <span class="badge active">{{answersTsv}}</span>
+          <span class="badge teal">{{categoryPlan}}</span>
+          <span class="badge teal">{{questionTarget}}</span>
+          <span class="badge orange">{{language}}</span>
+          <span class="badge orange">{{namingRules}}</span>
+        </div>
+        <p style="margin: 12px 0 0;">המשתנים של התצוגה מוחלפים לפני השליחה. `{{subject}}`, `{{last}}` ו־`{{answersTsv}}` נשמרים לשרת בזמן הריצה.</p>
+      </section>
+
+      <section class="rail-card terminal-wrap">
+        <div class="terminal-head">
+          <div>
+            <p class="eyebrow">Live</p>
+            <h3>Run log</h3>
+          </div>
+          <button class="ghost-btn" type="button" data-clear-log>נקה</button>
+        </div>
+        <div class="terminal" id="logs"></div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const socket = io();
+    const STORAGE_KEY = "carmelon.faqPlayground.v3";
+    const OUTPUTS_STORAGE_KEY = "carmelon.faqPlayground.outputs.v1";
+
+    const MODEL_OPTIONS = [
+      { value: "inherit", label: "Use global model" },
+      { value: "o3", label: "o3" },
+      { value: "gpt-5.5", label: "gpt-5.5" },
+      { value: "gpt-5.4", label: "gpt-5.4" },
+      { value: "gpt-5.4-mini", label: "gpt-5.4-mini" }
+    ];
+
+    const CATEGORY_LIBRARY = [
+      {
+        id: "general",
+        title: "General Information",
+        label: "מידע כללי",
+        description: "מה המקום, למי הוא מתאים, מה חשוב לדעת לפני שמתחילים.",
+        countMode: "target",
+        count: 5,
+        enabled: true,
+        intents: [
+          "What exactly is this property or service?",
+          "Who is it best suited for?",
+          "What makes it different from alternatives?"
+        ]
+      },
+      {
+        id: "booking",
+        title: "Booking & Payment",
+        label: "הזמנה ותשלום",
+        description: "מחירים, ביטול, פיקדון, אמצעי תשלום ומדיניות הזמנה.",
+        countMode: "target",
+        count: 4,
+        enabled: true,
+        intents: [
+          "How do I book and what is included?",
+          "What payment methods are accepted?",
+          "What is the cancellation or deposit policy?"
+        ]
+      },
+      {
+        id: "checkin",
+        title: "Check-in & Check-out",
+        label: "צ'ק אין וצ'ק אאוט",
+        description: "זמני כניסה, קוד גישה, איחור, שמירת מזוודות ועזיבה.",
+        countMode: "target",
+        count: 4,
+        enabled: true,
+        intents: [
+          "What time is check-in and check-out?",
+          "How do guests receive access instructions?",
+          "Can guests arrive late or store luggage?"
+        ]
+      },
+      {
+        id: "rooms",
+        title: "Rooms & Amenities",
+        label: "חדרים ומתקנים",
+        description: "סוגי חדרים, מטבח, Wi-Fi, מיזוג, ניקיון, כביסה ונגישות.",
+        countMode: "target",
+        count: 6,
+        enabled: true,
+        intents: [
+          "What amenities are available in the room?",
+          "Is Wi-Fi, air-conditioning or kitchen equipment included?",
+          "Are there accessibility or family-friendly features?"
+        ]
+      },
+      {
+        id: "location",
+        title: "Location & Transportation",
+        label: "מיקום והגעה",
+        description: "שכונה, תחבורה ציבורית, חניה, אטרקציות ונקודות עניין.",
+        countMode: "target",
+        count: 4,
+        enabled: true,
+        intents: [
+          "Where is the property located?",
+          "How do guests get there from airport or train station?",
+          "What attractions or business areas are nearby?"
+        ]
+      },
+      {
+        id: "food",
+        title: "Food & Dining",
+        label: "אוכל וארוחות",
+        description: "ארוחת בוקר, מסעדות, מטבחון, בתי קפה ואפשרויות סביב הנכס.",
+        countMode: "target",
+        count: 3,
+        enabled: true,
+        intents: [
+          "Is breakfast available?",
+          "Are there dining options nearby?",
+          "Can guests cook or store food in the room?"
+        ]
+      },
+      {
+        id: "policies",
+        title: "Policies & House Rules",
+        label: "מדיניות וכללים",
+        description: "עישון, חיות מחמד, ילדים, רעש, אורחים נוספים וכללים חשובים.",
+        countMode: "target",
+        count: 4,
+        enabled: true,
+        intents: [
+          "Are pets, smoking or parties allowed?",
+          "What rules should guests know before arrival?",
+          "What happens if guests need help during the stay?"
+        ]
+      },
+      {
+        id: "trust",
+        title: "Trust & Support",
+        label: "אמון ושירות",
+        description: "שירות לקוחות, אבטחה, חוות דעת, אמינות ותמיכה בזמן אמת.",
+        countMode: "as_found",
+        count: 3,
+        enabled: false,
+        intents: [
+          "How can guests contact support?",
+          "What safety or security measures are in place?",
+          "What should guests do if something goes wrong?"
+        ]
+      }
+    ];
+
+    const DEFAULT_SOURCE_OPTIONS = ["Official website"];
+
+    const NAMING_POLICIES = {
+      natural_exact: "Use each subject exactly as written by the user. Do not shorten, translate or rewrite the property/product name. Mention it naturally where it helps clarity and avoid keyword stuffing.",
+      light: "Use the exact subject name only when it is useful for clarity. Avoid repeating it in every row.",
+      strict: "Use the exact subject name in every question where the entity is named, and keep the same spelling throughout the workflow.",
+      custom: ""
+    };
+
+    const DEFAULT_TASKS = [
+      {
+        id: 1,
+        name: "Research questions",
+        enabled: true,
+        model: "inherit",
+        system: "You are a senior SEO, GEO and customer-intent researcher. You build practical FAQ question sets from real user needs and reliable source signals.",
+        user: [
+          "Research and build a practical FAQ question plan for {{subject}}.",
+          "",
+          "Question target: {{questionTarget}}.",
+          "Output language: {{language}}.",
+          "Audience: {{audience}}.",
+          "Source policy: {{sourceStrategy}}.",
+          "Entity naming rules: {{namingRules}}.",
+          "",
+          "CATEGORY PLAN:",
+          "{{categoryPlan}}",
+          "",
+          "Research rules:",
+          "- Prefer high-frequency questions real users ask before booking/buying, before arrival/use, during the experience, or while comparing alternatives.",
+          "- Every question must be clear, self-contained and suitable for a real FAQ page.",
+          "- Do not turn generic category headings into questions.",
+          "- Do not create duplicate questions or close paraphrases, even across categories.",
+          "- Avoid sales copy, vague questions, and questions that cannot be answered from reliable sources.",
+          "- Use the exact subject name naturally in questions where it helps clarity.",
+          "- Include questions that help AI/search systems understand the entity, service, policies, location and trust signals.",
+          "",
+          "Return ONLY a Markdown table with columns:",
+          "Category | Question | Frequency Level | Evidence needed"
+        ].join("\n"),
+        tone: "Strategic, practical, user-first.",
+        sources: "Official source first. Reviews, OTAs, Google Business Profile and competitors may be used only as question-demand inspiration, not as final facts."
+      },
+      {
+        id: 2,
+        name: "Write answers as TSV",
+        enabled: true,
+        model: "inherit",
+        system: "You are a precise FAQ content editor. You write short, useful and verifiable answers without inventing facts.",
+        user: [
+          "Using the question plan below, write source-grounded FAQ answers for {{subject}}.",
+          "",
+          "QUESTION PLAN:",
+          "{{last}}",
+          "",
+          "Return ONLY TSV. Header exactly:",
+          "Category\tQuestion\tAnswer\tFrequency Level",
+          "",
+          "Rules:",
+          "- Answer in {{language}}.",
+          "- Follow these entity naming rules: {{namingRules}}.",
+          "- Each answer should be 1-3 concise sentences and at least 10-12 words when possible.",
+          "- For yes/no questions, start with Yes, No, or Currently when it fits the facts.",
+          "- Keep wording natural and helpful, not promotional.",
+          "- If information is unavailable after checking approved sources, write exactly: Information is currently not available. [VERIFY]",
+          "- If a fact comes from a non-official source, keep it cautious and mark it with [VERIFY].",
+          "- Keep the exact question wording unless grammar must be fixed."
+        ].join("\n"),
+        tone: "Warm, concise, reliable.",
+        sources: "Official website and approved business sources only."
+      },
+      {
+        id: 3,
+        name: "Duplicate check",
+        enabled: true,
+        model: "inherit",
+        system: "You are a strict FAQ QA reviewer. You identify duplicate questions and near-duplicate intent without changing the table.",
+        user: [
+          "Check for duplicate FAQ questions that seek the same information.",
+          "",
+          "A question is duplicate if it asks for information already covered by another row, even if the wording is different.",
+          "Prefer the broader question as primary and mark the narrower repeated question as duplicate.",
+          "",
+          "DATA TO CHECK:",
+          "{{answersTsv}}",
+          "",
+          "Return exactly:",
+          "HEADER",
+          "Duplicate",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "Write NO if unique.",
+          "Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
+        ].join("\n"),
+        tone: "Strict and concrete.",
+        sources: ""
+      },
+      {
+        id: 4,
+        name: "Source verification",
+        enabled: false,
+        model: "inherit",
+        system: "You are a careful FAQ fact checker. You verify answers against approved sources and flag uncertain facts.",
+        user: [
+          "Cross-check each answer in the TSV against the approved source policy.",
+          "",
+          "Pay special attention to rows marked [VERIFY] or rows saying information is not available.",
+          "",
+          "DATA TO CHECK:",
+          "{{answersTsv}}",
+          "",
+          "Return exactly:",
+          "HEADER",
+          "Source OK",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "For each row write one of:",
+          "- Q[#] - OK",
+          "- Q[#] - NOT VERIFIED",
+          "- Q[#] - WRONG: [correct full answer] - Source: [source name]",
+          "- Q[#] - FOUND: [new full answer] - Source: [source name]",
+          "",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
+        ].join("\n"),
+        tone: "Cautious, factual and evidence-first.",
+        sources: "Use the same approved sources selected for the workflow."
+      },
+      {
+        id: 5,
+        name: "Grammar and answer fit",
+        enabled: false,
+        model: "inherit",
+        system: "You are a strict FAQ editor. You check grammar, answer fit, clarity and tone without adding unsupported facts.",
+        user: [
+          "Review each TSV row for writing quality and question-answer fit.",
+          "",
+          "DATA TO CHECK:",
+          "{{answersTsv}}",
+          "",
+          "Check:",
+          "- Does the answer directly answer the exact question?",
+          "- Is the wording clear, grammatical and natural in {{language}}?",
+          "- Is the answer concise and useful rather than promotional?",
+          "- For yes/no questions, does it start with Yes, No, or Currently when appropriate?",
+          "- Does the question include the subject name naturally when needed, without keyword stuffing?",
+          "",
+          "Return exactly:",
+          "HEADER",
+          "Grammar Fix",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "Write - if the row is good.",
+          "If any issue exists, write the complete fixed question or complete fixed answer in one line.",
+          "Do not add extra commentary. Return exactly one line per data row, excluding the header."
+        ].join("\n"),
+        tone: "Precise, clean and practical.",
+        sources: ""
+      }
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const logsDiv = $("logs");
+    const logsMobile = $("logsMobile");
+    const runBtn = $("runBtn");
+    const tasksContainer = $("tasksContainer");
+    const categoryContainer = $("categoryContainer");
+    const artifactList = $("artifactList");
+    let outputArtifacts = loadOutputArtifacts();
+    let activeRunSubject = "";
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function loadSavedState() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function loadOutputArtifacts() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(OUTPUTS_STORAGE_KEY) || "[]");
+        return Array.isArray(stored) ? stored : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveOutputArtifacts() {
+      localStorage.setItem(OUTPUTS_STORAGE_KEY, JSON.stringify(outputArtifacts.slice(0, 30)));
+    }
+
+    function normalizeSheetUrl(url) {
+      const clean = String(url || "").replace(/[)"']+$/g, "");
+      return clean.includes("/edit") ? clean : `${clean.replace(/\/$/, "")}/edit`;
+    }
+
+    function artifactId() {
+      return window.crypto?.randomUUID ? window.crypto.randomUUID() : String(Date.now());
+    }
+
+    function addOutputArtifact(artifact) {
+      if (!artifact) return;
+      const url = artifact.url ? normalizeSheetUrl(artifact.url) : "";
+      if (url && outputArtifacts.some((item) => item.url === url)) {
+        return;
+      }
+
+      outputArtifacts.unshift({
+        id: artifactId(),
+        createdAt: new Date().toISOString(),
+        type: artifact.type || "קובץ",
+        title: artifact.title || "תוצר חדש",
+        description: artifact.description || "",
+        url,
+        fileName: artifact.fileName || ""
+      });
+      outputArtifacts = outputArtifacts.slice(0, 30);
+      saveOutputArtifacts();
+      renderOutputArtifacts();
+    }
+
+    function renderOutputArtifacts() {
+      if (!artifactList) return;
+      if (!outputArtifacts.length) {
+        artifactList.innerHTML = `
+          <div class="empty-output">
+            עדיין אין תוצרים. אחרי הרצה יוצגו כאן Google Sheets שנוצרו, וקבצי JSON שתשמרי מהמסך.
+          </div>
+        `;
+        return;
+      }
+
+      artifactList.innerHTML = outputArtifacts.map((artifact) => {
+        const date = new Date(artifact.createdAt);
+        const dateLabel = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+        const urlAction = artifact.url
+          ? `<a class="ghost-btn" href="${escapeHtml(artifact.url)}" target="_blank" rel="noreferrer">פתח</a>`
+          : "";
+        return `
+          <article class="artifact-card">
+            <span class="badge teal">${escapeHtml(artifact.type)}</span>
+            <h3>${escapeHtml(artifact.title)}</h3>
+            <p>${escapeHtml(artifact.description || artifact.fileName || "תוצר שנשמר מהבילדר.")}</p>
+            ${artifact.url ? `<p class="ltr">${escapeHtml(artifact.url)}</p>` : ""}
+            <div class="artifact-actions">
+              ${urlAction}
+              ${dateLabel ? `<span class="badge">${escapeHtml(dateLabel)}</span>` : ""}
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function inspectLogForArtifacts(message) {
+      const clean = String(message || "");
+      const subjectMatch = clean.match(/Processing Subject:\s*(.+)$/i);
+      if (subjectMatch) {
+        activeRunSubject = subjectMatch[1].trim();
+      }
+
+      const sheetMatch = clean.match(/Sheet created:\s*(https:\/\/docs\.google\.com\/spreadsheets\/d\/[^\s]+)/i);
+      if (sheetMatch) {
+        addOutputArtifact({
+          type: "Google Sheet",
+          title: activeRunSubject ? `FAQ Sheet: ${activeRunSubject}` : "FAQ Google Sheet",
+          description: "גיליון שנוצר מהרצת FAQ Workflow.",
+          url: sheetMatch[1]
+        });
+      }
+    }
+
+    function mergeTasks(savedTasks) {
+      const savedById = new Map((Array.isArray(savedTasks) ? savedTasks : []).map((task) => [Number(task.id), task]));
+      return DEFAULT_TASKS.map((task) => ({ ...task, ...(savedById.get(task.id) || {}) }));
+    }
+
+    function mergeCategories(savedCategories) {
+      const savedById = savedCategories && typeof savedCategories === "object" ? savedCategories : {};
+      return CATEGORY_LIBRARY.map((category) => ({
+        ...category,
+        ...(savedById[category.id] || {}),
+        intents: Array.isArray(savedById[category.id]?.intents) ? savedById[category.id].intents : category.intents
+      }));
+    }
+
+    const savedState = loadSavedState();
+    let taskDrafts = mergeTasks(savedState.tasks);
+    let categoryDrafts = mergeCategories(savedState.categories);
+
+    function getSelectedSourceOptions() {
+      return Array.from(document.querySelectorAll("#sourceOptions input[type='checkbox']:checked"))
+        .map((input) => input.value);
+    }
+
+    function applySourceOptions(values) {
+      const selected = new Set(Array.isArray(values) && values.length ? values : DEFAULT_SOURCE_OPTIONS);
+      document.querySelectorAll("#sourceOptions input[type='checkbox']").forEach((input) => {
+        input.checked = selected.has(input.value);
+      });
+    }
+
+    function applySavedControls() {
+      $("subjects").value = savedState.subjects || "";
+      $("globalModel").value = savedState.controls?.globalModel || "o3";
+      $("questionCountMode").value = savedState.controls?.questionCountMode || "target";
+      $("questionCount").value = savedState.controls?.questionCount || "30";
+      $("outputLanguage").value = savedState.controls?.outputLanguage || "English (UK)";
+      $("audience").value = savedState.controls?.audience || "Guests before booking, guests before arrival, and in-house guests";
+      $("sourceInstructions").value = savedState.controls?.sourceInstructions || "Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.";
+      $("namingPolicy").value = savedState.controls?.namingPolicy || "natural_exact";
+      $("namingRules").value = savedState.controls?.namingRules || "לא לקצר או לתרגם את השם";
+      applySourceOptions(savedState.controls?.sourceOptions);
+      const savedPreset = savedState.controls?.preset;
+      setActivePreset(savedPreset === "local" ? "local" : "hotel", false);
+    }
+
+    function modelOptions(selected) {
+      return MODEL_OPTIONS.map((option) => {
+        const isSelected = option.value === selected ? "selected" : "";
+        return `<option value="${escapeHtml(option.value)}" ${isSelected}>${escapeHtml(option.label)}</option>`;
+      }).join("");
+    }
+
+    function categoryTargetValue(category) {
+      if (category.target) return category.target;
+      if (category.countMode === "as_found" || category.countMode === "quality_first") return category.countMode;
+      const count = Number(category.count || 4);
+      return `${Math.max(1, count - 1)}-${count + 1}`;
+    }
+
+    function renderCategories() {
+      categoryContainer.innerHTML = categoryDrafts.map((category, index) => {
+        const selected = category.enabled ? "is-selected" : "";
+        const target = categoryTargetValue(category);
+        return `
+          <details class="category-card ${selected}" id="category-${category.id}">
+            <summary class="card-summary">
+              <div class="summary-main">
+                <input class="category-title-input" id="cat-label-${category.id}" value="${escapeHtml(category.label)}" onclick="event.stopPropagation()" />
+                <textarea class="category-description-input" id="cat-description-${category.id}" rows="1" onclick="event.stopPropagation()">${escapeHtml(category.description)}</textarea>
+                <div class="task-meta">
+                  <span class="badge">${escapeHtml(category.title)}</span>
+                  <select class="select category-target-select" id="cat-target-${category.id}" onclick="event.stopPropagation()">
+                    <option value="2-4" ${target === "2-4" ? "selected" : ""}>2-4 שאלות</option>
+                    <option value="3-5" ${target === "3-5" ? "selected" : ""}>3-5 שאלות</option>
+                    <option value="4-6" ${target === "4-6" ? "selected" : ""}>4-6 שאלות</option>
+                    <option value="as_found" ${target === "as_found" ? "selected" : ""}>כמה שנמצא</option>
+                    <option value="quality_first" ${target === "quality_first" ? "selected" : ""}>ללא יעד קשיח</option>
+                  </select>
                 </div>
-                `;
-                container.insertAdjacentHTML('beforeend', html);
-            });
+              </div>
+              <div class="summary-controls">
+                <label class="switch" title="כלול קטגוריה">
+                  <input type="checkbox" id="cat-enabled-${category.id}" ${category.enabled ? "checked" : ""} data-category-toggle="${category.id}" onclick="event.stopPropagation()" />
+                  <span class="switch-ui"></span>
+                </label>
+                <span class="caret">⌄</span>
+              </div>
+            </summary>
+            <div class="card-body">
+              <div class="mini-grid">
+                <label class="field">
+                  <span>נושאים לשאלות</span>
+                  <textarea class="textarea ltr" id="cat-intents-${category.id}" rows="3">${escapeHtml(category.intents.join("\n"))}</textarea>
+                </label>
+              </div>
+            </div>
+          </details>
+        `;
+      }).join("");
+      updateSummary();
+    }
+
+    function renderTasks() {
+      tasksContainer.innerHTML = taskDrafts.map((task) => {
+        const active = task.enabled ? "is-active" : "";
+        const open = task.enabled && task.id <= 2 ? "open" : "";
+        return `
+          <details class="task-card ${active}" id="card-${task.id}" ${open}>
+            <summary class="card-summary">
+              <div class="summary-main">
+                <h3>#${task.id} ${escapeHtml(task.name)}</h3>
+                <div class="task-meta">
+                  <span class="badge ${task.enabled ? "active" : ""}" id="task-badge-${task.id}">${task.enabled ? "Active" : "Skipped"}</span>
+                  <span class="badge teal">ID נשמר</span>
+                  <span class="badge">Task ${task.id}</span>
+                </div>
+              </div>
+              <div class="summary-controls">
+                <label class="switch" title="הפעל משימה">
+                  <input type="checkbox" id="enable-${task.id}" ${task.enabled ? "checked" : ""} data-task-toggle="${task.id}" onclick="event.stopPropagation()" />
+                  <span class="switch-ui"></span>
+                </label>
+                <span class="caret">⌄</span>
+              </div>
+            </summary>
+            <div class="card-body">
+              <div class="grid control-grid">
+                <label class="field">
+                  <span>שם משימה</span>
+                  <input class="input" id="name-${task.id}" value="${escapeHtml(task.name)}" />
+                </label>
+                <label class="field">
+                  <span>מודל למשימה</span>
+                  <select class="select ltr" id="model-${task.id}">${modelOptions(task.model || "inherit")}</select>
+                </label>
+                <label class="field">
+                  <span>סגנון כתיבה</span>
+                  <input class="input ltr" id="tone-${task.id}" value="${escapeHtml(task.tone || "")}" />
+                </label>
+              </div>
+
+              <label class="field">
+                <span>מקורות / מדיניות</span>
+                <input class="input ltr" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
+              </label>
+
+              <label class="field">
+                <span>הנחיות רקע למודל</span>
+                <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
+              </label>
+
+              <label class="field">
+                <span>הנחיות עבודה</span>
+                <div class="toolbar" style="margin-bottom: 8px;">
+                  <button class="var-btn" type="button" data-insert-var="{{subject}}" data-task-id="${task.id}">{{subject}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{last}}" data-task-id="${task.id}">{{last}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{answersTsv}}" data-task-id="${task.id}">{{answersTsv}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{categoryPlan}}" data-task-id="${task.id}">{{categoryPlan}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{questionTarget}}" data-task-id="${task.id}">{{questionTarget}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{language}}" data-task-id="${task.id}">{{language}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{namingRules}}" data-task-id="${task.id}">{{namingRules}}</button>
+                </div>
+                <span class="prompt-help">המשתנים הם קיצורי דרך שנשמרים בפרומפט; subject ו-last מוחלפים בזמן הריצה.</span>
+                <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(task.user || "")}</textarea>
+              </label>
+            </div>
+          </details>
+        `;
+      }).join("");
+      updateSummary();
+    }
+
+    function getSubjects() {
+      return $("subjects").value
+        .split(/[\n,]+/)
+        .map((subject) => subject.trim())
+        .filter(Boolean);
+    }
+
+    function readCategoryDraftsFromDom() {
+      return categoryDrafts.map((base) => {
+        const enabledEl = $(`cat-enabled-${base.id}`);
+        const labelEl = $(`cat-label-${base.id}`);
+        const descriptionEl = $(`cat-description-${base.id}`);
+        const targetEl = $(`cat-target-${base.id}`);
+        const intentsEl = $(`cat-intents-${base.id}`);
+        const target = targetEl?.value || categoryTargetValue(base);
+        const label = labelEl?.value || base.label;
+        return {
+          ...base,
+          enabled: enabledEl ? enabledEl.checked : base.enabled,
+          label,
+          title: base.title || label,
+          description: descriptionEl?.value || base.description,
+          target,
+          countMode: target === "as_found" || target === "quality_first" ? target : "range",
+          count: Number(target.match(/\d+-(\d+)/)?.[1] || base.count),
+          intents: String(intentsEl?.value || base.intents.join("\n"))
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+        };
+      });
+    }
+
+    function readTaskDraftsFromDom() {
+      return DEFAULT_TASKS.map((base) => ({
+        ...base,
+        enabled: $(`enable-${base.id}`)?.checked === true,
+        name: $(`name-${base.id}`)?.value || base.name,
+        model: $(`model-${base.id}`)?.value || base.model,
+        tone: $(`tone-${base.id}`)?.value || "",
+        sources: $(`src-${base.id}`)?.value || "",
+        system: $(`sys-${base.id}`)?.value || "",
+        user: $(`user-${base.id}`)?.value || ""
+      }));
+    }
+
+    function describeQuestionTarget(mode, count) {
+      if (mode === "as_found") {
+        return "Generate as many useful, source-grounded questions as are actually found. Do not force filler questions.";
+      }
+
+      if (mode === "quality_first") {
+        return "No fixed number. Prioritize quality, coverage and source confidence over quantity.";
+      }
+
+      return `Aim for about ${count || 30} final questions. It is acceptable to return fewer if good source-grounded questions do not exist.`;
+    }
+
+    function describeQuestionTargetForUi(mode, count) {
+      if (mode === "as_found") {
+        return "המודל יחזיר רק שאלות טובות שנמצאו בפועל, בלי למלא בכוח.";
+      }
+
+      if (mode === "quality_first") {
+        return "אין יעד קשיח: איכות, כיסוי ואמינות מקור קודמים לכמות.";
+      }
+
+      return `יעד עבודה: בערך ${count || 30} שאלות טובות. אם אין מספיק מידע אמין, אפשר להחזיר פחות.`;
+    }
+
+    function describeCategoryTarget(target) {
+      if (target === "as_found") {
+        return "Use as many useful, source-grounded questions as this category genuinely supports.";
+      }
+
+      if (target === "quality_first") {
+        return "No fixed target. Include only strong questions with clear user intent.";
+      }
+
+      return `Aim for ${target || "3-5"} strong questions in this category. Fewer is fine if the source material is thin.`;
+    }
+
+    function buildSourcePolicy() {
+      const selectedSources = getSelectedSourceOptions();
+      return [
+        selectedSources.length ? `Selected source types: ${selectedSources.join(", ")}.` : "Selected source types: Official website.",
+        $("sourceInstructions").value || ""
+      ].map((part) => part.trim()).filter(Boolean).join("\n");
+    }
+
+    function buildNamingRules() {
+      const policy = $("namingPolicy").value || "natural_exact";
+      const customNote = ($("namingRules").value || "").trim();
+      return [NAMING_POLICIES[policy] || "", customNote]
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    function buildCategoryPlan() {
+      const categories = readCategoryDraftsFromDom().filter((category) => category.enabled);
+      if (!categories.length) return "No categories selected.";
+
+      return [
+        "Selected FAQ categories:",
+        ...categories.map((category) => {
+          const intents = category.intents.map((intent) => `  - ${intent}`).join("\n");
+          const target = describeCategoryTarget(category.target);
+          return `- ${category.title} / ${category.label}\n  Description: ${category.description}\n  Question target: ${target}\n${intents}`;
+        }),
+        "",
+        "Do not use category names themselves as FAQ questions. Use the intents as guidance for real customer questions."
+      ].join("\n");
+    }
+
+    function replaceUiVars(text) {
+      const replacements = {
+        categoryPlan: buildCategoryPlan(),
+        questionCount: $("questionCount").value || "30",
+        questionTarget: describeQuestionTarget($("questionCountMode").value, $("questionCount").value),
+        language: $("outputLanguage").value || "English (UK)",
+        audience: $("audience").value || "",
+        sourceStrategy: buildSourcePolicy(),
+        namingRules: buildNamingRules()
+      };
+
+      let output = String(text || "");
+      for (const [key, value] of Object.entries(replacements)) {
+        output = output.replace(new RegExp(`{{${key}}}`, "gi"), value);
+      }
+      return output;
+    }
+
+    function collectTasksForPayload() {
+      return readTaskDraftsFromDom().map((task) => {
+        let userPrompt = replaceUiVars(task.user);
+        const systemPrompt = replaceUiVars(task.system);
+
+        if (task.tone.trim()) {
+          userPrompt += `\n\nTONE & STYLE:\n${task.tone.trim()}`;
         }
 
-        // --- Logic Handlers ---
-        window.toggleTaskState = (id) => {
-            const isChecked = document.getElementById(`enable-${id}`).checked;
-            const card = document.getElementById(`card-${id}`);
-            const body = document.getElementById(`body-${id}`);
-            
-            if (isChecked) {
-                card.classList.remove('disabled');
-                body.classList.remove('hidden');
-            } else {
-                card.classList.add('disabled');
-                body.classList.add('hidden');
-            }
+        if (task.sources.trim()) {
+          userPrompt += `\n\nAPPROVED SOURCES:\n${task.sources.trim()}`;
+        }
+
+        return {
+          id: task.id,
+          enabled: task.enabled === true,
+          name: task.name,
+          system: systemPrompt,
+          user: userPrompt,
+          model: task.model === "inherit" ? $("globalModel").value : task.model
         };
+      });
+    }
 
-        window.toggleTask = (id) => {
-            const body = document.getElementById(`body-${id}`);
-            body.classList.toggle('hidden');
+    function collectState() {
+      return {
+        subjects: $("subjects").value,
+        controls: {
+          globalModel: $("globalModel").value,
+          questionCountMode: $("questionCountMode").value,
+          questionCount: $("questionCount").value,
+          outputLanguage: $("outputLanguage").value,
+          audience: $("audience").value,
+          sourceOptions: getSelectedSourceOptions(),
+          sourceInstructions: $("sourceInstructions").value,
+          namingPolicy: $("namingPolicy").value,
+          namingRules: $("namingRules").value,
+          preset: document.querySelector(".seg-btn.active")?.dataset.preset || "hotel"
+        },
+        categories: Object.fromEntries(readCategoryDraftsFromDom().map((category) => [category.id, category])),
+        tasks: readTaskDraftsFromDom()
+      };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+      $("saveStatus").textContent = "נשמר מקומית";
+    }
+
+    function updateCardStates() {
+      CATEGORY_LIBRARY.forEach((category) => {
+        const card = $(`category-${category.id}`);
+        const enabled = $(`cat-enabled-${category.id}`)?.checked === true;
+        card?.classList.toggle("is-selected", enabled);
+      });
+
+      DEFAULT_TASKS.forEach((task) => {
+        const card = $(`card-${task.id}`);
+        const enabled = $(`enable-${task.id}`)?.checked === true;
+        card?.classList.toggle("is-active", enabled);
+        const badge = $(`task-badge-${task.id}`);
+        if (badge) {
+          badge.textContent = enabled ? "Active" : "Skipped";
+          badge.classList.toggle("active", enabled);
+        }
+      });
+    }
+
+    function updateSummary() {
+      const subjects = getSubjects();
+      const selectedCategories = readCategoryDraftsFromDom().filter((category) => category.enabled);
+      const enabledTasks = readTaskDraftsFromDom().filter((task) => task.enabled);
+      const model = $("globalModel").value;
+      const questionTarget = describeQuestionTargetForUi($("questionCountMode").value, $("questionCount").value);
+
+      $("subjectCount").textContent = subjects.length;
+      $("categoryCount").textContent = selectedCategories.length;
+      $("taskCount").textContent = enabledTasks.length;
+      $("modelShort").textContent = model.replace("gpt-", "");
+      $("questionCount").disabled = $("questionCountMode").value !== "target";
+      $("sheetNamePreview").textContent = subjects.length
+        ? subjects.slice(0, 3).map((subject) => `Creator: ${subject}`).join(" | ")
+        : "נבנה אוטומטית משם הנושא";
+      $("runSummary").textContent = subjects.length
+        ? `מוכן להרצה: ${subjects.length} נושאים, ${enabledTasks.length} משימות`
+        : "מוכן להרצה";
+      $("runDetails").textContent = selectedCategories.length
+        ? `${selectedCategories.length} קטגוריות פעילות. ${questionTarget}`
+        : "בחרי לפחות קטגוריה אחת כדי לתת למודל כיוון ברור.";
+
+      $("workflowChips").innerHTML = enabledTasks
+        .map((task) => `<span class="badge active">#${task.id} ${escapeHtml(task.name)}</span>`)
+        .join("") || `<span class="badge">אין משימות פעילות</span>`;
+
+      updateCardStates();
+    }
+
+    function setActivePreset(preset, shouldApply = true) {
+      document.querySelectorAll("[data-preset]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.preset === preset);
+      });
+
+      if (!shouldApply) return;
+
+      const enabledByPreset = {
+        hotel: ["general", "booking", "checkin", "rooms", "location", "food", "policies"],
+        local: ["general", "booking", "location", "policies", "trust"]
+      }[preset] || [];
+
+      CATEGORY_LIBRARY.forEach((category) => {
+        const input = $(`cat-enabled-${category.id}`);
+        if (input) input.checked = enabledByPreset.includes(category.id);
+      });
+
+      updateSummary();
+      saveState();
+    }
+
+    function appendLog(message, kind = "") {
+      const clean = String(message || "").replace(/\x1B\[\d+m/g, "");
+      inspectLogForArtifacts(clean);
+      [logsDiv, logsMobile].filter(Boolean).forEach((target) => {
+        const line = document.createElement("div");
+        line.textContent = clean;
+        if (kind === "error" || clean.includes("Failed") || clean.includes("Error")) line.style.color = "#ff9b9b";
+        if (kind === "success" || clean.includes("SUCCESS") || clean.includes("Created")) line.style.color = "#86f1df";
+        target.appendChild(line);
+        target.scrollTop = target.scrollHeight;
+      });
+    }
+
+    function clearLogs() {
+      [logsDiv, logsMobile].filter(Boolean).forEach((target) => {
+        target.innerHTML = "";
+      });
+    }
+
+    function insertVar(taskId, text) {
+      const el = $(`user-${taskId}`);
+      if (!el) return;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      el.value = `${el.value.substring(0, start)}${text}${el.value.substring(end)}`;
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + text.length;
+      saveState();
+    }
+
+    function runWorkflow() {
+      const subjects = getSubjects();
+      if (!subjects.length) {
+        alert("צריך להכניס לפחות מלון, עמוד או נושא אחד.");
+        return;
+      }
+
+      const tasks = collectTasksForPayload();
+      if (!tasks.some((task) => task.enabled === true)) {
+        alert("צריך להפעיל לפחות משימה אחת.");
+        return;
+      }
+
+      saveState();
+      clearLogs();
+      activeRunSubject = "";
+
+      const payload = {
+        mode: "faq-playground",
+        subjects,
+        tasks
+      };
+
+      runBtn.disabled = true;
+      runBtn.textContent = "מריץ FAQ Workflow...";
+      appendLog(`> Starting FAQ workflow for ${subjects.length} subject(s).`);
+      appendLog(`> Global model: ${$("globalModel").value}`);
+      appendLog(`> Active tasks: ${tasks.filter((task) => task.enabled).map((task) => `#${task.id}`).join(", ")}`);
+      socket.emit("start-agent", payload);
+    }
+
+    function copyCategoryPlan() {
+      navigator.clipboard?.writeText(buildCategoryPlan());
+      $("saveStatus").textContent = "תוכנית הועתקה";
+      setTimeout(() => ($("saveStatus").textContent = "נשמר מקומית"), 1600);
+    }
+
+    function safeFileName(value) {
+      return String(value || "faq-work-plan")
+        .trim()
+        .replace(/[^a-zA-Z0-9\u0590-\u05ff]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80) || "faq-work-plan";
+    }
+
+    function downloadWorkPlan() {
+      saveState();
+      const subjects = getSubjects();
+      const payload = {
+        kind: "carmelon-faq-work-plan",
+        version: 3,
+        exportedAt: new Date().toISOString(),
+        state: collectState()
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const fileName = `${safeFileName(subjects[0] || "faq-work-plan")}-faq-work-plan.json`;
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      addOutputArtifact({
+        type: "Work plan JSON",
+        title: "תוכנית עבודה שנשמרה",
+        description: "קובץ JSON שאפשר לטעון חזרה למסך ולהמשיך מאותה נקודה.",
+        fileName
+      });
+      $("saveStatus").textContent = "JSON נשמר";
+      setTimeout(() => ($("saveStatus").textContent = "נשמר מקומית"), 1600);
+    }
+
+    function importWorkPlan(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(String(reader.result || "{}"));
+          const importedState = imported.state || imported;
+          if (!importedState || typeof importedState !== "object" || !Array.isArray(importedState.tasks)) {
+            throw new Error("Invalid FAQ work plan");
+          }
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(importedState));
+          $("saveStatus").textContent = "תוכנית נטענה";
+          location.reload();
+        } catch (error) {
+          alert(`לא הצלחתי לטעון את קובץ ה-JSON: ${error.message}`);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetStudio() {
+      if (!confirm("לאפס את ההגדרות של FAQ Playground בדפדפן?")) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    function setStudioView(view) {
+      const isChat = view === "chat";
+      $("chatPanel")?.classList.toggle("hidden", !isChat);
+      document.querySelectorAll("[data-builder-section]").forEach((section) => {
+        section.classList.toggle("hidden", isChat);
+      });
+      document.querySelectorAll("[data-view-tab]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.viewTab === view);
+      });
+    }
+
+    function setCategoryTarget(target) {
+      document.querySelectorAll("[id^='cat-target-']").forEach((select) => {
+        select.value = target;
+      });
+      updateSummary();
+      saveState();
+    }
+
+    function setTasksEnabled(taskMap) {
+      if (!taskMap || typeof taskMap !== "object") return;
+
+      Object.entries(taskMap).forEach(([taskId, enabled]) => {
+        const input = $(`enable-${taskId}`);
+        if (input) input.checked = enabled === true;
+      });
+
+      updateSummary();
+      saveState();
+    }
+
+    function setCategoriesEnabled(ids) {
+      const selected = new Set(Array.isArray(ids) ? ids : []);
+      CATEGORY_LIBRARY.forEach((category) => {
+        const input = $(`cat-enabled-${category.id}`);
+        if (input) input.checked = selected.has(category.id);
+      });
+      updateSummary();
+      saveState();
+    }
+
+    function escapeRegExp(value) {
+      return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function upsertPromptBlock(elementId, label, content) {
+      const element = $(elementId);
+      if (!element) return;
+
+      const marker = `WORKFLOW NOTE - ${label}:`;
+      const oldMarker = `CHAT SETUP - ${label}:`;
+      const pattern = new RegExp(`\\n\\n${escapeRegExp(marker)}\\n[\\s\\S]*?(?=\\n\\nWORKFLOW NOTE - |$)`, "m");
+      const oldPattern = new RegExp(`\\n\\n${escapeRegExp(oldMarker)}\\n[\\s\\S]*?(?=\\n\\nCHAT SETUP - |\\n\\nWORKFLOW NOTE - |$)`, "m");
+      element.value = element.value.replace(pattern, "").replace(oldPattern, "").trimEnd();
+
+      const clean = String(content || "").trim();
+      if (clean) {
+        element.value += `\n\n${marker}\n${clean}`;
+      }
+    }
+
+    function applyChatPromptGuidance(guidance = {}) {
+      upsertPromptBlock("user-1", "Question focus", guidance.questionUserNote);
+      upsertPromptBlock("user-2", "Answer rules", guidance.answerUserNote);
+      upsertPromptBlock("user-3", "QA checks", guidance.qaChecks);
+      upsertPromptBlock("user-5", "Writing QA focus", guidance.qaChecks);
+
+      if (typeof guidance.questionTone === "string") {
+        const tone = $("tone-1");
+        if (tone) tone.value = guidance.questionTone;
+      }
+
+      if (typeof guidance.answerTone === "string") {
+        const tone = $("tone-2");
+        if (tone) tone.value = guidance.answerTone;
+      }
+
+      updateSummary();
+      saveState();
+    }
+
+    function applyCustomCategories(rawText) {
+      let rows = String(rawText || "")
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, CATEGORY_LIBRARY.length);
+
+      if (rows.length === 1 && !/\s[-:–]\s/.test(rows[0]) && /[,;|]/.test(rows[0])) {
+        rows = rows[0]
+          .split(/[,;|]/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .slice(0, CATEGORY_LIBRARY.length);
+      }
+
+      if (!rows.length) return;
+
+      const parsed = rows.map((line, index) => {
+        const [namePart, ...detailParts] = line.split(/\s[-:–]\s/);
+        const name = (namePart || `קטגוריה ${index + 1}`).trim();
+        const detail = detailParts.join(" - ").trim();
+        const intents = (detail || name)
+          .split(/[,;|]/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+
+        return {
+          label: name,
+          title: name,
+          description: detail || "קטגוריה מותאמת שנוצרה דרך הצ׳אט.",
+          intents: intents.length ? intents : [name]
         };
+      });
 
-        window.insertVar = (id, text) => {
-            const el = document.getElementById(`user-${id}`);
-            const start = el.selectionStart;
-            const end = el.selectionEnd;
-            const val = el.value;
-            el.value = val.substring(0, start) + text + val.substring(end);
-            el.focus();
+      categoryDrafts = CATEGORY_LIBRARY.map((base, index) => {
+        const custom = parsed[index];
+        if (!custom) return { ...base, enabled: false };
+        return {
+          ...base,
+          ...custom,
+          enabled: true,
+          target: "3-5",
+          countMode: "range",
+          count: 5
         };
+      });
 
-        // --- Run ---
-        runBtn.addEventListener('click', () => {
-            const subjectsStr = document.getElementById('subjects').value;
-            if (!subjectsStr.trim()) return alert("Please enter at least one subject/hotel.");
+      renderCategories();
+      updateSummary();
+      saveState();
+    }
 
-            const subjects = subjectsStr.split(',').map(s => s.trim()).filter(s => s);
-            
-            // איסוף המשימות
-            const tasks = [];
-            const TASK_COUNT = 5;
-            for(let i=1; i<=TASK_COUNT; i++) {
-                const enabled = document.getElementById(`enable-${i}`).checked;
-                
-                let userPrompt = document.getElementById(`user-${i}`).value;
-                const tone = document.getElementById(`tone-${i}`).value;
-                const sources = document.getElementById(`src-${i}`).value;
+    document.addEventListener("input", (event) => {
+      if (event.target.matches("input, textarea, select")) {
+        updateSummary();
+        saveState();
+      }
+    });
 
-                // שרשור שדות ה-Tone וה-Source לפרומפט שנשלח לשרת
-                if (tone && tone.trim()) userPrompt += `\n\nTONE & STYLE:\n${tone}`;
-                if (sources && sources.trim()) userPrompt += `\n\nAPPROVED SOURCES:\n${sources}`;
+    document.addEventListener("change", (event) => {
+      if (event.target.matches("input, textarea, select")) {
+        updateSummary();
+        saveState();
+      }
+    });
 
-                tasks.push({
-                    id: i,
-                    enabled: enabled,
-                    name: document.getElementById(`name-${i}`).value,
-                    system: document.getElementById(`sys-${i}`).value,
-                    user: userPrompt
-                });
-            }
+    document.addEventListener("click", (event) => {
+      const preset = event.target.closest("[data-preset]");
+      if (preset) {
+        setActivePreset(preset.dataset.preset, true);
+        return;
+      }
 
-            const payload = {
-                mode: 'faq-playground',
-                subjects: subjects,
-                tasks: tasks
-            };
+      const varButton = event.target.closest("[data-insert-var]");
+      if (varButton) {
+        insertVar(varButton.dataset.taskId, varButton.dataset.insertVar);
+      }
+    });
 
-            runBtn.disabled = true;
-            runBtn.innerHTML = '⏳ Agent Running...';
-            logsDiv.innerHTML += `\n<div style="color:cyan">> Starting Job for ${subjects.length} subjects...</div>`;
+    document.querySelectorAll("[data-clear-log]").forEach((button) => {
+      button.addEventListener("click", clearLogs);
+    });
 
-            socket.emit('start-agent', payload);
-        });
+    $("expandCategoriesBtn").addEventListener("click", () => {
+      document.querySelectorAll(".category-card").forEach((card) => { card.open = true; });
+    });
 
-        socket.on('log', (msg) => {
-            const line = document.createElement('div');
-            line.textContent = msg.replace(/\x1B\[\d+m/g, ''); 
-            if (msg.includes("Failed")) line.style.color = "#ef4444";
-            if (msg.includes("Success") || msg.includes("Created")) line.style.color = "#3b82f6";
-            logsDiv.appendChild(line);
-            logsDiv.scrollTop = logsDiv.scrollHeight;
-        });
+    $("collapseCategoriesBtn").addEventListener("click", () => {
+      document.querySelectorAll(".category-card").forEach((card) => { card.open = false; });
+    });
 
-        socket.on('done', () => {
-            runBtn.disabled = false;
-            runBtn.innerHTML = '🚀 Run Agent Chain';
-        });
+    $("applyCategoryTargetBtn").addEventListener("click", () => {
+      const target = $("globalCategoryTarget").value;
+      if (target === "inherit") return;
+      document.querySelectorAll("[id^='cat-target-']").forEach((select) => {
+        select.value = target;
+      });
+      updateSummary();
+      saveState();
+    });
 
-        // Start
-        renderTasks();
+    $("expandTasksBtn").addEventListener("click", () => {
+      document.querySelectorAll(".task-card").forEach((card) => { card.open = true; });
+    });
 
-    </script>
+    $("collapseTasksBtn").addEventListener("click", () => {
+      document.querySelectorAll(".task-card").forEach((card) => { card.open = false; });
+    });
+
+    document.querySelectorAll("[data-view-tab]").forEach((button) => {
+      button.addEventListener("click", () => setStudioView(button.dataset.viewTab || "builder"));
+    });
+
+    $("clearArtifactsBtn").addEventListener("click", () => {
+      outputArtifacts = [];
+      saveOutputArtifacts();
+      renderOutputArtifacts();
+    });
+
+    $("runBtn").addEventListener("click", runWorkflow);
+    $("copyPlanBtn").addEventListener("click", copyCategoryPlan);
+    $("downloadPlanBtn").addEventListener("click", downloadWorkPlan);
+    $("importPlanBtn").addEventListener("click", () => $("importPlanInput").click());
+    $("importPlanInput").addEventListener("change", (event) => {
+      importWorkPlan(event.target.files?.[0]);
+      event.target.value = "";
+    });
+    $("resetBtn").addEventListener("click", resetStudio);
+
+    socket.on("log", (msg) => appendLog(msg));
+
+    socket.on("done", () => {
+      runBtn.disabled = false;
+      runBtn.textContent = "הרץ FAQ Workflow";
+      appendLog("> Done.", "success");
+    });
+
+    applySavedControls();
+    renderCategories();
+    renderTasks();
+    renderOutputArtifacts();
+    updateSummary();
+
+    window.faqBuilderBridge = {
+      $,
+      applySourceOptions,
+      addOutputArtifact,
+      collectState,
+      downloadWorkPlan,
+      getSelectedSourceOptions,
+      getSubjects,
+      saveState,
+      setActivePreset,
+      setCategoriesEnabled,
+      setCategoryTarget,
+      setTasksEnabled,
+      setStudioView,
+      applyChatPromptGuidance,
+      applyCustomCategories,
+      updateSummary
+    };
+  </script>
+  <script src="/faq-builder-chatbot.js"></script>
 </body>
 </html>

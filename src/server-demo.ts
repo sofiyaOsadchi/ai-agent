@@ -38,7 +38,11 @@ function buildPayloadData(mode: string, config: any): any {
     mode === "sheet-utilities" ||
     mode === "ai-editing" ||
     mode === "client-reports" ||
-    mode === "client-reports-edit"
+    mode === "client-reports-edit" ||
+    mode === "schema-builder" ||
+    mode === "site-ai-audit" ||
+    mode === "site-ai-discovery" ||
+    mode === "site-ai-faq-audit"
   ) {
     return config;
   }
@@ -287,6 +291,9 @@ httpServer.listen(PORT, async () => {
   console.log(`Sheet Utilities:    ${baseUrl}/sheet-utilities.html`);
   console.log(`Client Reports:     ${baseUrl}/client-reports.html`);
   console.log(`Client Reports Edit:${baseUrl}/client-reports-edit.html`);
+  console.log(`Site AI Audit V2:   ${baseUrl}/site-ai-audit-v2.html`);
+  console.log(`Site AI Discovery:   ${baseUrl}/site-ai-discovery.html`);
+  console.log(`Site AI FAQ Audit:  ${baseUrl}/site-ai-faq-audit.html`);
 
   if (process.env.NODE_ENV !== "production") {
     try {

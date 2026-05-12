@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Design & Formatting Engine - Live Demo</title>
+  <title>Design Formatting Workspace - Live Demo</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -11,19 +11,22 @@
 
   <style>
     :root {
-      --bg: #f6f3ff;
+      --bg: #faf8fc;
       --surface: #ffffff;
-      --surface-2: #f3efff;
-      --surface-3: #ebe4ff;
-      --border: rgba(88, 64, 140, 0.14);
-      --border-active: rgba(124, 92, 255, 0.32);
-      --text: #251f38;
-      --text-dim: #5c5570;
-      --text-muted: #8a829d;
-      --accent: #7c3aed;
-      --accent-2: #6366f1;
-      --accent-dim: rgba(124, 58, 237, 0.1);
-      --accent-glow: rgba(124, 58, 237, 0.16);
+      --surface-2: #f6f0f8;
+      --surface-3: #f1e9f4;
+      --border: rgba(81, 55, 111, 0.14);
+      --border-active: rgba(119, 87, 164, 0.34);
+      --text: #211a2d;
+      --text-dim: #5f5870;
+      --text-muted: #897f97;
+      --accent: #7650a8;
+      --accent-2: #48b9bd;
+      --accent-dim: rgba(118, 80, 168, 0.1);
+      --accent-glow: rgba(118, 80, 168, 0.16);
+      --carmelon-yellow: #f1c40f;
+      --carmelon-orange: #ef8f35;
+      --carmelon-pink: #d9518a;
       --green: #059669;
       --green-dim: rgba(5, 150, 105, 0.1);
       --red: #dc2626;
@@ -40,8 +43,8 @@
 
     body {
       background:
-        radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 28%),
-        linear-gradient(180deg, #fbfaff 0%, var(--bg) 100%);
+        radial-gradient(circle at top left, rgba(72, 185, 189, 0.09), transparent 28%),
+        #fbfafc;
       color: var(--text);
       font-family: var(--font);
       min-height: 100vh;
@@ -59,7 +62,22 @@
       justify-content: space-between;
       gap: 16px;
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(124, 58, 237, 0.12) 0%, rgba(124, 58, 237, 0.02) 100%);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 150px;
+      height: auto;
+      display: block;
+      object-fit: contain;
     }
 
     .demo-header h1 {
@@ -95,6 +113,24 @@
       color: var(--accent);
       border: 1px solid rgba(124, 58, 237, 0.2);
       white-space: nowrap;
+    }
+
+    .small-btn {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text-dim);
+      border-radius: 999px;
+      padding: 8px 11px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: 0.18s;
+    }
+
+    .small-btn:hover {
+      color: var(--accent);
+      border-color: var(--border-active);
+      background: var(--accent-dim);
     }
 
     .main-grid {
@@ -176,12 +212,22 @@
     }
 
     .source-options {
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .compact-option {
+      min-width: 128px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #ffffff;
+    }
+
+    .compact-option .field-hint {
+      display: none;
     }
 
     .input-row {
@@ -189,6 +235,19 @@
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 14px;
+    }
+
+    .range-compact-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .range-compact-row input,
+    .range-compact-row select {
+      min-height: 38px;
+      padding: 8px 10px;
     }
 
     .input-group { margin-bottom: 14px; }
@@ -411,7 +470,7 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      background: var(--accent);
       color: #ffffff;
       box-shadow: 0 4px 24px var(--accent-glow);
       margin-top: 8px;
@@ -419,18 +478,25 @@
       min-height: 58px;
     }
 
-    .run-btn.secondary { background: linear-gradient(135deg, #7c8aa5 0%, #667085 100%); box-shadow: none; margin-top: 0; }
+    .run-btn.secondary { background: #596174; box-shadow: none; margin-top: 0; }
+    .run-btn.ghost {
+      background: #ffffff;
+      color: var(--accent);
+      border-color: var(--border-active);
+      box-shadow: none;
+      margin-top: 0;
+    }
     .run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 32px var(--accent-glow); }
     .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
     .button-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 0.9fr 1fr 1fr;
       gap: 12px;
       position: sticky;
       bottom: 0;
       z-index: 5;
-      background: linear-gradient(180deg, rgba(246, 243, 255, 0), var(--bg) 30%);
+      background: linear-gradient(180deg, rgba(250, 248, 252, 0), var(--bg) 30%);
       padding-top: 10px;
     }
 
@@ -471,7 +537,7 @@
     .terminal-summary {
       padding: 13px 15px;
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, rgba(124, 58, 237, 0.06) 0%, rgba(255, 255, 255, 0) 100%);
+      background: #ffffff;
       flex-shrink: 0;
     }
 
@@ -556,6 +622,106 @@
 
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
+    .workflow-panel {
+      border: 1px solid rgba(72, 185, 189, 0.22);
+      background: rgba(72, 185, 189, 0.06);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .workflow-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .workflow-title {
+      font-weight: 900;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    .workflow-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .workflow-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .workflow-step {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .workflow-step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .workflow-step-title {
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .workflow-step-desc {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .empty-workflow {
+      border: 1px dashed rgba(118, 80, 168, 0.22);
+      background: #ffffff;
+      border-radius: 12px;
+      color: var(--text-muted);
+      padding: 12px;
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+
+    .faq-common-settings {
+      display: none;
+      border: 1px solid rgba(124, 58, 237, 0.14);
+      background: #fbfaff;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .faq-common-settings.active { display: block; }
+
+    .operation-note {
+      border: 1px solid rgba(72, 185, 189, 0.2);
+      background: rgba(72, 185, 189, 0.055);
+      border-radius: 12px;
+      padding: 11px 12px;
+      color: var(--text-dim);
+      font-size: 0.76rem;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+
     @media (max-width: 1180px) {
       .main-grid { grid-template-columns: minmax(620px, 1.1fr) minmax(420px, 0.9fr); }
       .operation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -567,7 +733,7 @@
       .main-grid { grid-template-columns: 1fr; height: auto; }
       .config-panel { border-right: 0; }
       .terminal-panel { min-height: 620px; }
-      .source-grid, .source-options, .input-row, .operation-grid, .button-row, .cell-detail-body { grid-template-columns: 1fr; }
+      .source-grid, .source-options, .input-row, .range-compact-row, .operation-grid, .button-row, .cell-detail-body { grid-template-columns: 1fr; }
       .source-grid .tab-field { grid-column: auto; }
     }
   </style>
@@ -575,7 +741,10 @@
 
 <body>
   <header class="demo-header">
-    <h1><span class="icon">🎨</span> Design & Formatting Engine</h1>
+    <div class="brand-lockup">
+      <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+      <h1><span class="icon">✦</span> Design Formatting Workspace</h1>
+    </div>
     <span class="badge">Live Demo</span>
   </header>
 
@@ -583,43 +752,35 @@
     <div class="config-panel">
       <div class="card">
         <div class="card-head" onclick="toggleCard(this)">
-          <h3>📄 Source Configuration</h3>
+          <h3>מקור העבודה</h3>
           <span class="chevron">▼</span>
         </div>
         <div class="card-body">
           <div class="source-grid">
             <div>
-              <label class="field-label">Source Type</label>
+              <label class="field-label">סוג מקור</label>
               <select id="sourceType">
-                <option value="sheet">Single Google Sheet</option>
-                <option value="folder">Google Drive Folder</option>
+                <option value="sheet">Google Sheet יחיד</option>
+                <option value="folder">תיקיית Google Drive</option>
               </select>
             </div>
             <div>
-              <label class="field-label">Google Sheet / Folder ID or URL</label>
-              <input type="text" id="targetId" placeholder="Paste Sheet URL, Sheet ID, Folder URL or Folder ID" />
-              <p class="field-hint">Use a copied test sheet first. Comments extraction currently works best on a single sheet.</p>
+              <label class="field-label">קישור או ID של Sheet / תיקייה</label>
+              <input type="text" id="targetId" placeholder="הדביקי כאן קישור ל-Sheet, ID או תיקיית Drive" />
             </div>
             <div class="tab-field">
-              <label class="field-label">Source Tab</label>
+              <label class="field-label">שם טאב</label>
               <input type="text" id="tabName" value="Sheet1" />
             </div>
           </div>
 
           <div class="source-options">
-            <div>
+            <div class="toggle on" id="dryRun" style="display: none;"></div>
+            <div class="compact-option">
               <div class="toggle-row">
-                <span class="toggle-label">Dry Run Only</span>
-                <div class="toggle on" id="dryRun" onclick="toggleAndPreview(this)"></div>
-              </div>
-              <p class="field-hint">Preview changes without writing to the sheet. For comments extraction, disable Dry Run to write comments.</p>
-            </div>
-            <div>
-              <div class="toggle-row">
-                <span class="toggle-label">Create Backup Tab</span>
+                <span class="toggle-label" title="יצירת עותק של הטאב לפני כתיבה">גיבוי</span>
                 <div class="toggle" id="createBackup" onclick="toggleAndPreview(this)"></div>
               </div>
-              <p class="field-hint">Creates a backup tab before real changes. Ignored during Dry Run.</p>
             </div>
           </div>
           <input type="hidden" id="maxFiles" value="30" />
@@ -628,41 +789,33 @@
 
       <div class="card">
         <div class="card-head" onclick="toggleCard(this)">
-          <h3>🎯 Target Range</h3>
+          <h3>טווח עבודה</h3>
           <span class="chevron">▼</span>
         </div>
         <div class="card-body">
-          <div class="mini-note">
-            <strong>Range logic:</strong>
-            choose where the action should run. Comments extraction uses its own source/output column settings below.
-          </div>
-          <div class="input-row">
+          <div class="range-compact-row">
             <div>
-              <label class="field-label">Column Scope</label>
+              <label class="field-label">עמודות</label>
               <select id="columnScope" onchange="syncRangeControls()">
-                <option value="column">Single Column</option>
-                <option value="columns">Column Range</option>
-                <option value="sheet">Whole Sheet</option>
+                <option value="sheet" selected>כל העמודות</option>
+                <option value="columns">טווח עמודות</option>
+                <option value="column">עמודה אחת</option>
               </select>
             </div>
             <div>
-              <label class="field-label">Columns</label>
-              <input type="text" id="columnsInput" value="C" />
-              <p class="field-hint" id="columnsHint">Examples: C, B:D, A:F.</p>
+              <label class="field-label">טווח עמודות</label>
+              <input type="text" id="columnsInput" value="A:ZZ" title="לדוגמה: C, B:D, A:F" />
             </div>
-          </div>
-          <div class="input-row">
             <div>
-              <label class="field-label">Row Scope</label>
+              <label class="field-label">שורות</label>
               <select id="rowScope" onchange="syncRangeControls()">
-                <option value="range">Row Range</option>
-                <option value="all">All Rows</option>
+                <option value="all" selected>כל השורות</option>
+                <option value="range">טווח שורות</option>
               </select>
             </div>
             <div>
-              <label class="field-label">Rows</label>
-              <input type="text" id="rowsInput" value="2:" />
-              <p class="field-hint" id="rowsHint">Examples: 2:, 1:70, 5:20. Use 2: to skip header.</p>
+              <label class="field-label">טווח שורות</label>
+              <input type="text" id="rowsInput" value="1:" title="לדוגמה: 2:, 1:70, 5:20" />
             </div>
           </div>
         </div>
@@ -670,19 +823,32 @@
 
       <div class="card">
         <div class="card-head" onclick="toggleCard(this)">
-          <h3>🧩 Formatting Action</h3>
+          <h3>פעולה לביצוע</h3>
           <span class="chevron">▼</span>
         </div>
         <div class="card-body">
+          <div class="workflow-panel">
+            <div class="workflow-head">
+              <div>
+                <div class="workflow-title">רצף פעולות להרצה</div>
+                <p class="field-hint">בחרי פעולה למטה והוסיפי אותה לרצף. אם הרצף ריק, תרוץ רק הפעולה המסומנת.</p>
+              </div>
+              <div class="workflow-actions">
+                <button type="button" class="small-btn" onclick="addCurrentOperationToPipeline()">הוסף פעולה</button>
+                <button type="button" class="small-btn" onclick="clearPipeline()">נקה רצף</button>
+              </div>
+            </div>
+            <div class="workflow-list" id="workflowList"></div>
+          </div>
           <div class="category-tabs" id="categoryTabs"></div>
           <div id="operationCategories"></div>
-          <p class="field-hint" style="margin-top: 12px;">Choose one action per run. The action settings below will change according to the selected action.</p>
+          <p class="field-hint" style="margin-top: 12px;">אפשר להריץ פעולה אחת, או לבנות רצף שירוץ אוטומטית אחת אחרי השנייה.</p>
         </div>
       </div>
 
       <div class="card">
         <div class="card-head" onclick="toggleCard(this)">
-          <h3>⚙️ Action Settings</h3>
+          <h3>הגדרות פעולה</h3>
           <span class="chevron">▼</span>
         </div>
         <div class="card-body">
@@ -691,7 +857,7 @@
             <div class="selected-desc" id="selectedActionDesc">Find and replace text in selected cells.</div>
           </div>
 
-          <div id="fields-text_replace" class="operation-fields active">
+          <div id="fields-text_replace" class="operation-fields">
             <div class="input-row">
               <div>
                 <label class="field-label">Match Mode</label>
@@ -877,6 +1043,36 @@
             </div>
           </div>
 
+          <div id="fields-replace_column_when_value" class="operation-fields">
+            <div class="operation-note">
+              אם בעמודת המקור יש ערך, הוא מחליף את הערך בעמודת היעד באותה שורה. מתאים למשל לעבודה שבה עמודה F היא תשובה סופית שמחליפה את עמודה C.
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">עמודת מקור</label>
+                <input type="text" id="replaceColumnSource" value="F" />
+                <p class="field-hint">העמודה שממנה לוקחים ערכים קיימים.</p>
+              </div>
+              <div>
+                <label class="field-label">עמודת יעד</label>
+                <input type="text" id="replaceColumnTarget" value="C" />
+                <p class="field-hint">העמודה שתעודכן רק בשורות שבהן יש ערך במקור.</p>
+              </div>
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">שורת התחלה</label>
+                <input type="number" id="replaceColumnStartRow" value="2" min="1" />
+                <p class="field-hint">בדרך כלל 2 כדי לדלג על כותרות.</p>
+              </div>
+              <div>
+                <label class="field-label">כותרת יעד</label>
+                <input type="text" id="replaceColumnTargetHeader" value="" placeholder="ריק = לא לשנות כותרת" />
+                <p class="field-hint">אופציונלי. משנים רק אם מזינים כאן כותרת.</p>
+              </div>
+            </div>
+          </div>
+
           <div id="fields-add_column" class="operation-fields">
             <div class="input-row">
               <div><label class="field-label">Column Letter</label><input type="text" id="addColumnLetter" value="H" /></div>
@@ -909,20 +1105,121 @@
             </div>
             <p class="field-hint">Duplicates an existing template tab in every selected spreadsheet.</p>
           </div>
+
+          <div id="faqCommonSettings" class="faq-common-settings active">
+            <div class="input-row">
+              <div>
+                <label class="field-label">מודל</label>
+                <select id="faqEditModel">
+                  <option value="o3">o3 - מדויק לעריכת תוכן</option>
+                  <option value="gpt-5.5">GPT-5.5 - ניתוח עמוק</option>
+                  <option value="gpt-5.4">GPT-5.4 - מאוזן</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">שם נכס / מוצר</label>
+                <input type="text" id="faqEditHotelName" placeholder="ריק = זיהוי אוטומטי משם הקובץ" />
+              </div>
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">עמודות מקור</label>
+                <input type="text" id="faqEditSourceColumns" value="A,B,C,D" />
+                <p class="field-hint">סדר העמודות: קטגוריה, שאלה, תשובה, הערת לקוח.</p>
+              </div>
+              <div>
+                <label class="field-label">עמודות תוצאה</label>
+                <input type="text" id="faqEditOutputColumns" value="F,G,H,I" />
+                <p class="field-hint">סדר העמודות: תשובה סופית, תיקון שאלה, הערת QA, סטטוס שם.</p>
+              </div>
+            </div>
+            <div class="toggle-row"><span class="toggle-label">עיצוב FAQ</span><div class="toggle on" id="faqEditFormatAfterWrite" onclick="toggleAndPreview(this)"></div></div>
+          </div>
+
+          <div id="fields-faq_apply_client_comments" class="operation-fields active">
+            <label class="field-label">כלל עבודה</label>
+            <select id="faqCommentMode">
+              <option value="rewrite_if_needed">לשכתב רק כשצריך</option>
+              <option value="use_comment_as_answer">הערה כתשובה</option>
+            </select>
+          </div>
+
+          <div id="fields-faq_language_review" class="operation-fields">
+            <div class="operation-note">
+              עובר על התשובות הקיימות ומתקן בעיות לשון, זרימה, דקדוק וסגנון בלי לשנות עובדות.
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">עומק עריכה</label>
+                <select id="faqLanguageDepth">
+                  <option value="light">קל - רק טעויות ברורות</option>
+                  <option value="publication">פרסום - ניסוח נקי ומלוטש</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">סגנון</label>
+                <select id="faqLanguageTone">
+                  <option value="clear_hospitality">ברור ושירותי</option>
+                  <option value="concise">קצר ותכליתי</option>
+                  <option value="warm">חם ומזמין</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="fields-faq_question_review" class="operation-fields">
+            <div class="operation-note">
+              בודק אם השאלות מתאימות לעמוד FAQ אמיתי: ברורות, לא כפולות, לא ארוכות מדי, ומתאימות לתשובה.
+            </div>
+            <div class="toggle-row"><span class="toggle-label">לסמן גם כפילויות משמעותיות</span><div class="toggle on" id="faqQuestionDuplicates" onclick="toggleAndPreview(this)"></div></div>
+          </div>
+
+          <div id="fields-faq_name_injection" class="operation-fields">
+            <div class="operation-note">
+              בודק שימוש בשם הנכס או הנושא לפי שם הקובץ או השם שהוזן, ומציע שילוב טבעי בלי keyword stuffing.
+            </div>
+            <div class="input-row">
+              <div>
+                <label class="field-label">איפה לבדוק את השם</label>
+                <select id="faqNameScope">
+                  <option value="answers">בתשובות בלבד</option>
+                  <option value="questions">בשאלות בלבד</option>
+                  <option value="both">בשאלות ובתשובות</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">כתיבה</label>
+                <select id="faqNameOutputMode">
+                  <option value="final_answer">לעמודת תוצאה בלבד</option>
+                  <option value="original_answer">לעדכן את עמודת התשובה המקורית</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="fields-faq_missing_questions" class="operation-fields">
+            <div class="operation-note">
+              מזהה שאלות חשובות שחסרות ביחס לקטגוריות הקיימות ומוסיף אותן כשורות חדשות בסוף הגיליון.
+            </div>
+            <label class="field-label">נושאים שחייבים להיבדק</label>
+            <textarea id="faqMissingRequirements" rows="5">Check-in and check-out, access codes, cancellation, payment, parking, Wi-Fi, accessibility, cleaning, amenities, location and transport, guest support.</textarea>
+          </div>
+
         </div>
       </div>
 
       <div class="card">
         <div class="card-head collapsed" onclick="toggleCard(this)">
-          <h3>🧾 Payload Preview</h3>
+          <h3>תצוגת Payload</h3>
           <span class="chevron">▼</span>
         </div>
         <div class="card-body hidden"><div class="payload-preview" id="payloadPreview"></div></div>
       </div>
 
       <div class="button-row">
-        <button class="run-btn secondary" id="previewBtn" onclick="runFormatting(true)">Preview / Dry Run</button>
-        <button class="run-btn" id="runBtn" onclick="runFormatting(false)">Run Formatting</button>
+        <button class="run-btn ghost" id="loadSheetBtn" onclick="runSheetPreview()">טען גיליון</button>
+        <button class="run-btn secondary" id="previewBtn" onclick="runFormatting(true)">בדיקה בלבד</button>
+        <button class="run-btn" id="runBtn" onclick="runFormatting(false)">הרץ שינויים</button>
       </div>
     </div>
 
@@ -954,25 +1251,25 @@
 
       <div class="output-tabs">
         <button type="button" class="output-tab active" id="terminalTab" onclick="switchOutputView('terminal')">Terminal</button>
-        <button type="button" class="output-tab" id="previewTab" onclick="switchOutputView('preview')">Sheet Preview <span id="previewCountLabel">(0)</span></button>
+        <button type="button" class="output-tab" id="previewTab" onclick="switchOutputView('preview')">תצוגה מקדימה <span id="previewCountLabel">(0)</span></button>
       </div>
 
       <div class="output-view active" id="terminalView"><div class="terminal-body" id="logs"></div></div>
 
       <div class="output-view" id="previewView">
         <div class="sheet-preview-panel" id="sheetPreviewPanel">
-          <div class="sheet-preview-empty" id="sheetPreviewEmpty">Run a dry run to see a sheet-like preview here. For folders, the preview shows the first file with detected changes.</div>
+          <div class="sheet-preview-empty" id="sheetPreviewEmpty">לחצי על טען גיליון כדי לראות כאן את הנתונים האמיתיים לפני עריכה. בדיקה בלבד תציג גם תאים שישתנו.</div>
           <div class="sheet-preview-wrap" id="sheetPreviewWrap">
             <div class="sheet-preview-toolbar">
               <div>
-                <div class="sheet-preview-title" id="sheetPreviewTitle">Sheet Preview</div>
+                <div class="sheet-preview-title" id="sheetPreviewTitle">תצוגה מקדימה</div>
                 <div class="sheet-preview-subtitle" id="sheetPreviewSubtitle">-</div>
               </div>
-              <div class="sheet-preview-badge" id="sheetPreviewBadge">0 changed cells</div>
+              <div class="sheet-preview-badge" id="sheetPreviewBadge">0 תאים משתנים</div>
             </div>
             <div class="sheet-grid-shell"><table class="sheet-grid" id="sheetGrid"></table></div>
             <div class="cell-detail" id="cellDetail">
-              <div class="cell-detail-head"><div class="cell-detail-title" id="cellDetailTitle">Cell</div><div class="cell-detail-hint">Selected changed cell</div></div>
+              <div class="cell-detail-head"><div class="cell-detail-title" id="cellDetailTitle">תא</div><div class="cell-detail-hint">תא שנבחר מהתצוגה</div></div>
               <div class="cell-detail-body">
                 <div><div class="detail-label">Before</div><div class="detail-value" id="cellBeforeValue"></div></div>
                 <div><div class="detail-label">After</div><div class="detail-value after" id="cellAfterValue"></div></div>
@@ -1023,58 +1320,74 @@
 
     const OPERATION_CATEGORIES = [
       {
-        id: "text",
-        label: "Text cleanup",
-        title: "Text cleanup",
-        description: "Clean or change text values in selected rows and columns.",
+        id: "edit",
+        label: "עריכת FAQ",
+        title: "עריכת שאלות ותשובות",
+        description: "פעולות AI ממוקדות לעריכה, QA, השלמות ושימוש נכון בשם הנכס.",
         operations: [
-          { id: "text_replace", title: "Text Replace", desc: "Find and replace labels, symbols, warnings, HTML fragments or any repeated text.", tag: "Text" },
-          { id: "normalize_spaces", title: "Remove Duplicated Spaces", desc: "Clean repeated spaces and trim extra spaces at the start or end of each cell.", tag: "Cleanup" },
-          { id: "normalize_line_breaks", title: "Normalize Line Breaks", desc: "Fix inconsistent manual line breaks by converting them to spaces, <br>, or paragraphs.", tag: "Cleanup" },
-          { id: "case_transform", title: "Case Transform", desc: "Standardize text casing for headers, labels or imported content.", tag: "Text" }
+          { id: "faq_apply_client_comments", title: "עדכון לפי הערות לקוח", desc: "קורא הערות לקוח ומפיק תשובה סופית מוכנה לפרסום.", tag: "Client Notes" },
+          { id: "faq_language_review", title: "עריכה לשונית", desc: "מתקן דקדוק, בהירות וסגנון בלי לשנות עובדות.", tag: "Language" },
+          { id: "faq_question_review", title: "בדיקת שאלות", desc: "מציע תיקוני שאלות, מזהה כפילויות ובעיות התאמה לתשובה.", tag: "QA" },
+          { id: "faq_name_injection", title: "שילוב שם נכס / נושא", desc: "בודק אם צריך לשלב את שם הנכס בצורה טבעית לפי שם הקובץ.", tag: "Naming" },
+          { id: "faq_missing_questions", title: "הוספת שאלות חסרות", desc: "מוסיף שאלות חשובות שחסרות לפי קטגוריות ונושאי חובה.", tag: "Gap Fill" }
+        ]
+      },
+      {
+        id: "text",
+        label: "טקסט",
+        title: "ניקוי והחלפת טקסט",
+        description: "ניקוי, החלפה ושינוי ערכי טקסט בטווח שנבחר.",
+        operations: [
+          { id: "text_replace", title: "החלפת טקסט", desc: "חיפוש והחלפה של סימונים, מילים, תוויות או קטעי HTML.", tag: "Text" },
+          { id: "normalize_spaces", title: "ניקוי רווחים", desc: "מסיר רווחים כפולים ורווחים מיותרים בתחילת וסוף תא.", tag: "Cleanup" },
+          { id: "normalize_line_breaks", title: "ניקוי ירידות שורה", desc: "מאחד ירידות שורה ידניות לרווחים, br או פסקאות HTML.", tag: "Cleanup" },
+          { id: "case_transform", title: "שינוי אותיות", desc: "אחידות ב-lowercase, uppercase, Title Case או Sentence case.", tag: "Text" }
         ]
       },
       {
         id: "html",
-        label: "HTML formatting",
-        title: "HTML formatting",
-        description: "Prepare plain sheet content for website-ready HTML.",
+        label: "HTML",
+        title: "הכנת HTML",
+        description: "הפיכת תוכן רגיל לתוכן שמתאים להטמעה באתר.",
         operations: [
-          { id: "wrap_html", title: "Wrap with HTML", desc: "Wrap every selected cell with one tag, for example <p>Answer</p>.", tag: "HTML" },
-          { id: "plain_to_html_paragraphs", title: "Plain Text To Paragraphs", desc: "Split multi-line text and convert it into clean HTML paragraph blocks.", tag: "HTML" }
+          { id: "wrap_html", title: "עטיפה בתג HTML", desc: "עוטף כל תא נבחר בתג אחד, למשל <p>Answer</p>.", tag: "HTML" },
+          { id: "plain_to_html_paragraphs", title: "טקסט לפסקאות", desc: "מפצל טקסט מרובה שורות לפסקאות HTML נקיות.", tag: "HTML" }
         ]
       },
       {
         id: "design",
-        label: "Sheet design",
-        title: "Sheet design",
-        description: "Make spreadsheets easier to read, review and edit.",
+        label: "עיצוב",
+        title: "עיצוב גיליון",
+        description: "עוזר להפוך גיליונות לקריאים, מסודרים ונוחים לבדיקה.",
         operations: [
-          { id: "format_table", title: "Format As Table", desc: "Best all-in-one option: styles headers, adds borders, wraps long text and resizes columns.", tag: "Table" },
-          { id: "header_style", title: "Header Row Style", desc: "Styles only the first row as a readable header and can freeze it.", tag: "Header" },
-          { id: "wrap_text", title: "Wrap Text", desc: "Controls long text display inside cells: wrap, clip or overflow.", tag: "Cells" },
-          { id: "align_cells", title: "Align Cells", desc: "Sets horizontal and vertical alignment for the selected range.", tag: "Cells" },
-          { id: "set_column_widths", title: "Set Column Widths", desc: "Applies a fixed pixel width to selected columns, useful for question and answer columns.", tag: "Columns" },
-          { id: "set_row_heights", title: "Set Row Heights", desc: "Applies a fixed pixel height to selected rows, useful for review tables.", tag: "Rows" }
+          { id: "format_table", title: "עיצוב כטבלה", desc: "אפשרות מקיפה: כותרות, גבולות, עטיפת טקסט והתאמת עמודות.", tag: "Table" },
+          { id: "header_style", title: "עיצוב שורת כותרת", desc: "מעצב רק את השורה הראשונה ויכול להקפיא אותה.", tag: "Header" },
+          { id: "wrap_text", title: "עטיפת טקסט", desc: "קובע איך טקסט ארוך מוצג בתוך תאים.", tag: "Cells" },
+          { id: "align_cells", title: "יישור תאים", desc: "מגדיר יישור אופקי ואנכי לטווח שנבחר.", tag: "Cells" },
+          { id: "set_column_widths", title: "רוחב עמודות", desc: "קובע רוחב פיקסלים לעמודות, שימושי לשאלות ותשובות.", tag: "Columns" },
+          { id: "set_row_heights", title: "גובה שורות", desc: "קובע גובה שורות, שימושי לטבלאות עם תוכן ארוך.", tag: "Rows" }
         ]
       },
       {
         id: "structure",
-        label: "Structure",
-        title: "Structure",
-        description: "Change sheet structure without rewriting content.",
+        label: "מבנה",
+        title: "מבנה גיליון",
+        description: "שינוי מבני בגיליון בלי לשכתב את התוכן.",
         operations: [
-          { id: "extract_comments", title: "Extract Sheet Comments", desc: "Extract Google Sheets comments from a selected column and write them into a nearby output column.", tag: "Comments" },
-          { id: "add_column", title: "Add Column Header", desc: "Writes a new header into a selected column. It does not move existing columns.", tag: "Columns" },
-          { id: "rename_column", title: "Rename Column Header", desc: "Changes the first-row title of a selected column.", tag: "Columns" },
-          { id: "reorder_columns", title: "Reorder Columns", desc: "Creates a safe new tab with columns copied in your chosen order.", tag: "Safe copy" },
-          { id: "duplicate_tab_template", title: "Duplicate Template Tab", desc: "Copies an existing template tab into every selected spreadsheet.", tag: "Tabs" }
+          { id: "extract_comments", title: "חילוץ תגובות", desc: "מחלץ תגובות Google Sheets מעמודה נבחרת וכותב אותן לעמודה אחרת.", tag: "Comments" },
+          { id: "replace_column_when_value", title: "עמודה מחליפה עמודה", desc: "מחליף ערכים בעמודת יעד רק כשיש ערך בעמודת מקור, למשל F מחליפה C.", tag: "Columns" },
+          { id: "add_column", title: "הוספת כותרת עמודה", desc: "כותב כותרת חדשה בעמודה קיימת בלי להזיז עמודות.", tag: "Columns" },
+          { id: "rename_column", title: "שינוי שם עמודה", desc: "משנה רק את הכותרת בשורה הראשונה.", tag: "Columns" },
+          { id: "reorder_columns", title: "סידור עמודות מחדש", desc: "יוצר טאב בטוח חדש עם עמודות בסדר שבחרת.", tag: "Safe copy" },
+          { id: "duplicate_tab_template", title: "שכפול טאב תבנית", desc: "משכפל טאב תבנית לכל הגיליונות שנבחרו.", tag: "Tabs" }
         ]
       }
     ];
 
-    let selectedCategory = "text";
-    let selectedOperation = "text_replace";
+    let selectedCategory = "edit";
+    let selectedOperation = "faq_apply_client_comments";
+    let pipelineOperations = [];
+    let activeRunKind = "format";
     let timerInterval = null;
     let timerStart = 0;
 
@@ -1130,6 +1443,8 @@
       document.querySelectorAll(".operation-fields").forEach((group) => group.classList.remove("active"));
       const target = document.getElementById(`fields-${id}`);
       if (target) target.classList.add("active");
+      const faqCommon = document.getElementById("faqCommonSettings");
+      if (faqCommon) faqCommon.classList.toggle("active", id.startsWith("faq_"));
       updateSelectedActionInfo();
       updatePayloadPreview();
     }
@@ -1138,7 +1453,71 @@
       const meta = getSelectedOperationMeta();
       if (!meta) return;
       selectedActionTitleEl.textContent = meta.title;
-      selectedActionDescEl.textContent = meta.desc;
+      const faqRunNote = selectedOperation.startsWith("faq_")
+        ? " בדיקה בלבד לא כותבת לגיליון. הרצת שינויים מפעילה AI וכותבת לעמודות התוצאה."
+        : "";
+      selectedActionDescEl.textContent = `${meta.desc}${faqRunNote}`;
+    }
+
+    function cloneOperation(operation) {
+      return JSON.parse(JSON.stringify(operation));
+    }
+
+    function operationDisplayName(operation) {
+      const meta = getAllOperations().find((item) => item.id === operation.type);
+      return meta?.title || operation.type;
+    }
+
+    function operationShortDescription(operation) {
+      if (operation.type === "text_replace") return `מחפש "${operation.find}" ומחליף ב-"${operation.replaceWith}"`;
+      if (operation.type === "format_table") return `עיצוב טבלה בסגנון ${operation.preset}`;
+      if (operation.type?.startsWith("faq_")) return `עריכת FAQ עם ${operation.model || "o3"}`;
+      if (operation.type === "extract_comments") return `תגובות מ-${operation.sourceColumn} אל ${operation.outputColumn}`;
+      if (operation.type === "replace_column_when_value") return `${operation.sourceColumn} מחליפה את ${operation.targetColumn} כשיש ערך`;
+      return getAllOperations().find((item) => item.id === operation.type)?.desc || "פעולה ברצף";
+    }
+
+    function renderPipeline() {
+      const wrapper = document.getElementById("workflowList");
+      if (!wrapper) return;
+
+      if (pipelineOperations.length === 0) {
+        wrapper.innerHTML = `<div class="empty-workflow">אין עדיין רצף. אם תריצי עכשיו, תופעל רק הפעולה שנבחרה למעלה.</div>`;
+        return;
+      }
+
+      wrapper.innerHTML = pipelineOperations.map((operation, index) => `
+        <div class="workflow-step">
+          <div class="workflow-step-number">${index + 1}</div>
+          <div>
+            <div class="workflow-step-title">${escapeHtml(operationDisplayName(operation))}</div>
+            <div class="workflow-step-desc">${escapeHtml(operationShortDescription(operation))}</div>
+          </div>
+          <button type="button" class="small-btn" onclick="removePipelineStep(${index})">הסר</button>
+        </div>
+      `).join("");
+    }
+
+    function addCurrentOperationToPipeline() {
+      pipelineOperations.push(cloneOperation(getOperationConfig()));
+      renderPipeline();
+      updatePayloadPreview();
+    }
+
+    function removePipelineStep(index) {
+      pipelineOperations.splice(index, 1);
+      renderPipeline();
+      updatePayloadPreview();
+    }
+
+    function clearPipeline() {
+      pipelineOperations = [];
+      renderPipeline();
+      updatePayloadPreview();
+    }
+
+    function getEffectiveOperations() {
+      return pipelineOperations.length > 0 ? pipelineOperations.map(cloneOperation) : [getOperationConfig()];
     }
 
     function toggleCard(headElement) {
@@ -1167,21 +1546,21 @@
       if (columnScope === "sheet") {
         columnsInput.disabled = true;
         columnsInput.value = "A:ZZ";
-        columnsHint.textContent = "Locked because Whole Sheet is selected.";
+        if (columnsHint) columnsHint.textContent = "נעול כי נבחרו כל העמודות.";
       } else {
         columnsInput.disabled = false;
         if (columnsInput.value === "A:ZZ") columnsInput.value = columnScope === "column" ? "C" : "A:E";
-        columnsHint.textContent = columnScope === "column" ? "Use a single column letter, for example C." : "Use a column range, for example B:D or A:F.";
+        if (columnsHint) columnsHint.textContent = columnScope === "column" ? "אות עמודה אחת, למשל C." : "טווח עמודות, למשל B:D או A:F.";
       }
 
       if (rowScope === "all") {
         rowsInput.disabled = true;
         rowsInput.value = "1:";
-        rowsHint.textContent = "Locked because All Rows is selected.";
+        if (rowsHint) rowsHint.textContent = "נעול כי נבחרו כל השורות.";
       } else {
         rowsInput.disabled = false;
         if (rowsInput.value === "1:") rowsInput.value = "2:";
-        rowsHint.textContent = "Examples: 2:, 1:70, 5:20. Use 2: to skip header.";
+        if (rowsHint) rowsHint.textContent = "דוגמאות: 2:, 1:70, 5:20. כדי לדלג על כותרת משתמשים ב-2:.";
       }
 
       updatePayloadPreview();
@@ -1193,6 +1572,29 @@
         columns: getValue("columnsInput"),
         rowScope: getValue("rowScope"),
         rows: getValue("rowsInput")
+      };
+    }
+
+    function getFaqCommonConfig() {
+      const sourceColumns = getValue("faqEditSourceColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
+      const outputColumns = getValue("faqEditOutputColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
+
+      return {
+        model: getValue("faqEditModel") || "o3",
+        hotelName: getValue("faqEditHotelName"),
+        categoryCol: sourceColumns[0] || "A",
+        questionCol: sourceColumns[1] || "B",
+        answerCol: sourceColumns[2] || "C",
+        commentCol: sourceColumns[3] || "D",
+        targetCol: outputColumns[0] || "F",
+        questionFixCol: outputColumns[1] || "G",
+        qaNoteCol: outputColumns[2] || "H",
+        hotelNameCol: outputColumns[3] || "I",
+        targetHeader: "Agent Final Answer",
+        questionFixHeader: "Question Correction",
+        qaNoteHeader: "QA Note",
+        hotelNameHeader: "Hotel Name Status",
+        formatAfterWrite: isToggleOn("faqEditFormatAfterWrite")
       };
     }
 
@@ -1225,6 +1627,29 @@
           includeReplies: isToggleOn("commentsIncludeReplies")
         };
       }
+      if (selectedOperation === "replace_column_when_value") {
+        return {
+          type: "replace_column_when_value",
+          sourceColumn: getValue("replaceColumnSource") || "F",
+          targetColumn: getValue("replaceColumnTarget") || "C",
+          startRow: getNumber("replaceColumnStartRow") || 2,
+          targetHeader: getValue("replaceColumnTargetHeader")
+        };
+      }
+      if (selectedOperation.startsWith("faq_")) {
+        const common = getFaqCommonConfig();
+        return {
+          type: selectedOperation,
+          ...common,
+          commentMode: document.getElementById("faqCommentMode")?.value || "rewrite_if_needed",
+          languageDepth: document.getElementById("faqLanguageDepth")?.value || "light",
+          languageTone: document.getElementById("faqLanguageTone")?.value || "clear_hospitality",
+          detectDuplicates: document.getElementById("faqQuestionDuplicates")?.classList.contains("on") !== false,
+          nameScope: document.getElementById("faqNameScope")?.value || "answers",
+          nameOutputMode: document.getElementById("faqNameOutputMode")?.value || "final_answer",
+          missingRequirements: document.getElementById("faqMissingRequirements")?.value || ""
+        };
+      }
       if (selectedOperation === "add_column") return { type: "add_column", columnLetter: getValue("addColumnLetter") || "H", header: getValue("addColumnHeader") || "New Column" };
       if (selectedOperation === "rename_column") return { type: "rename_column", columnLetter: getValue("renameColumnLetter") || "H", header: getValue("renameColumnHeader") || "New Header" };
       if (selectedOperation === "reorder_columns") return { type: "reorder_columns", columns: getValue("reorderColumns").split(",").map((item) => item.trim()).filter(Boolean), outputTabName: getValue("reorderOutputTab") || "Reordered" };
@@ -1232,6 +1657,7 @@
     }
 
     function getPayload(forceDryRun = null) {
+      const operations = getEffectiveOperations();
       return {
         mode: "design-formatting",
         sourceType: getValue("sourceType"),
@@ -1241,7 +1667,8 @@
         dryRun: forceDryRun === null ? isToggleOn("dryRun") : forceDryRun,
         createBackup: isToggleOn("createBackup"),
         range: getRangeConfig(),
-        operation: getOperationConfig()
+        operation: operations[0],
+        operations
       };
     }
 
@@ -1268,7 +1695,7 @@
       cellDetailEl.classList.remove("active");
       cellBeforeValueEl.textContent = "";
       cellAfterValueEl.textContent = "";
-      cellDetailTitleEl.textContent = "Cell";
+      cellDetailTitleEl.textContent = "תא";
     }
 
     function clearTerminal() {
@@ -1299,9 +1726,9 @@
     function renderSheetPreview(event) {
       const rows = Array.isArray(event.rows) ? event.rows : [];
       const columns = Array.isArray(event.columns) ? event.columns : [];
-      sheetPreviewTitleEl.textContent = `Sheet Preview - ${event.tabName || "Sheet"}`;
+      sheetPreviewTitleEl.textContent = `תצוגה מקדימה - ${event.tabName || "Sheet"}`;
       sheetPreviewSubtitleEl.textContent = `${event.fileName || event.spreadsheetId || ""} | ${event.rangeA1 || ""}`;
-      sheetPreviewBadgeEl.textContent = `${event.changedCellsCount || 0} changed cells`;
+      sheetPreviewBadgeEl.textContent = event.badgeLabel || `${event.changedCellsCount || 0} תאים משתנים`;
       planPreviewContainerEl.innerHTML = "";
       let html = "<thead><tr><th class=\"corner-cell\"></th>";
       columns.forEach((column) => { html += `<th>${escapeHtml(column)}</th>`; });
@@ -1313,9 +1740,10 @@
           const changedClass = cell.changed ? "changed" : "";
           const before = escapeHtml(cell.before ?? "");
           const after = escapeHtml(cell.value ?? "");
+          const detailBefore = cell.changed ? before : after;
           const cellName = `${cell.column}${row.rowNumber}`;
           html += `
-            <td class="${changedClass}" data-cell="${escapeHtml(cellName)}" data-before="${before}" data-after="${after}" onclick="selectPreviewCell(this)">
+            <td class="${changedClass}" data-cell="${escapeHtml(cellName)}" data-before="${detailBefore}" data-after="${after}" onclick="selectPreviewCell(this)">
               <div class="cell-content">${after || "&nbsp;"}</div>
             </td>
           `;
@@ -1330,7 +1758,7 @@
     function renderPlanPreview(event) {
       sheetPreviewTitleEl.textContent = event.title || "Planned formatting changes";
       sheetPreviewSubtitleEl.textContent = `${event.fileName || event.spreadsheetId || ""}`;
-      sheetPreviewBadgeEl.textContent = "Plan";
+      sheetPreviewBadgeEl.textContent = "תכנון";
       sheetGridEl.innerHTML = "";
       cellDetailEl.classList.remove("active");
       const details = Array.isArray(event.details) ? event.details : [];
@@ -1348,7 +1776,6 @@
     }
 
     function selectPreviewCell(cellElement) {
-      if (!cellElement.classList.contains("changed")) return;
       document.querySelectorAll(".sheet-grid td.selected").forEach((td) => td.classList.remove("selected"));
       cellElement.classList.add("selected");
       const cellName = cellElement.dataset.cell || "Cell";
@@ -1432,41 +1859,73 @@
 
     function stopTimer() { clearInterval(timerInterval); }
 
-    function runFormatting(forceDryRun) {
-      const payload = getPayload(forceDryRun);
+    function setRunButtonsDisabled(disabled) {
+      ["loadSheetBtn", "previewBtn", "runBtn"].forEach((id) => {
+        const button = document.getElementById(id);
+        if (button) button.disabled = disabled;
+      });
+    }
+
+    function runSheetPreview() {
+      const payload = {
+        ...getPayload(true),
+        previewOnly: true,
+        dryRun: true,
+        previewRows: 50,
+        previewColumns: 16,
+      };
 
       if (!payload.targetId) {
-        addLog("❌ Please enter a Sheet or Folder ID.", "error");
+        addLog("❌ חסר קישור או ID של Sheet / תיקייה.", "error");
         return;
       }
 
-      if (payload.operation.type === "extract_comments" && payload.sourceType !== "sheet") {
-        addLog("❌ Extract Sheet Comments currently supports Single Google Sheet only.", "error");
+      activeRunKind = "sheet-preview";
+      logsEl.innerHTML = "";
+      clearPreview();
+      switchOutputView("preview");
+      addLog("📄 טוען נתונים אמיתיים מהגיליון...", "info");
+      document.getElementById("statusDot").classList.add("live");
+      document.getElementById("statusText").textContent = "Loading";
+      summaryActionEl.textContent = "טעינת גיליון";
+      setSummary("read", "קורא את הגיליון לתצוגה מקדימה...", "Loading");
+      setRunButtonsDisabled(true);
+      startTimer();
+      socket.emit("start-agent", payload);
+    }
+
+    function runFormatting(forceDryRun) {
+      const payload = getPayload(forceDryRun);
+      const operations = Array.isArray(payload.operations) && payload.operations.length ? payload.operations : [payload.operation];
+
+      if (!payload.targetId) {
+        addLog("❌ חסר קישור או ID של Sheet / תיקייה.", "error");
         return;
       }
 
+      activeRunKind = forceDryRun ? "dry-run" : "write";
       logsEl.innerHTML = "";
       clearPreview();
 
-      const isCommentsExtraction = payload.operation.type === "extract_comments";
-      const actionLabel = isCommentsExtraction ? "comments extraction" : "formatting action";
+      const isCommentsExtraction = operations.some((operation) => operation.type === "extract_comments");
+      const actionLabel = operations.length > 1 ? "workflow" : operationDisplayName(operations[0]);
 
-      addLog(`🚀 Starting ${actionLabel}: ${payload.operation.type}`, "info");
+      addLog(`🚀 Starting ${actionLabel}: ${operations.map((operation) => operation.type).join(" → ")}`, "info");
       addLog(`📄 Target: ${payload.targetId}`, "dim");
       addLog(`🧪 Dry Run: ${payload.dryRun ? "YES" : "NO"}`, "dim");
 
       if (isCommentsExtraction) {
-        addLog(`💬 Comments source column: ${payload.operation.sourceColumn}`, "dim");
-        addLog(`📝 Output column: ${payload.operation.outputColumn}`, "dim");
+        const commentsOperation = operations.find((operation) => operation.type === "extract_comments");
+        addLog(`💬 Comments source column: ${commentsOperation.sourceColumn}`, "dim");
+        addLog(`📝 Output column: ${commentsOperation.outputColumn}`, "dim");
       }
 
-      document.getElementById("runBtn").disabled = true;
-      document.getElementById("previewBtn").disabled = true;
+      setRunButtonsDisabled(true);
       document.getElementById("statusDot").classList.add("live");
       document.getElementById("statusText").textContent = "Running";
-      summaryActionEl.textContent = payload.operation.type;
+      summaryActionEl.textContent = operations.length > 1 ? `${operations.length} פעולות` : operations[0].type;
 
-      const startMessage = isCommentsExtraction ? "Reading Google Sheet comments..." : "Reading target files and selected tab...";
+      const startMessage = isCommentsExtraction ? "קורא תגובות מהגיליון..." : "קורא קבצים וטאב נבחר...";
       setSummary("read", startMessage, "Running");
       startTimer();
 
@@ -1496,12 +1955,14 @@
     });
 
     socket.on("done", () => {
-      document.getElementById("runBtn").disabled = false;
-      document.getElementById("previewBtn").disabled = false;
+      setRunButtonsDisabled(false);
       document.getElementById("statusDot").classList.remove("live");
       document.getElementById("statusText").textContent = "Finished";
       stopTimer();
-      setSummary("report", "Done. Check the logs and sheet preview for changed files and cells.", "Finished");
+      const finishMessage = activeRunKind === "sheet-preview"
+        ? "הגיליון נטען לתצוגה. אפשר לבחור פעולה ולהמשיך לעריכה."
+        : "Done. Check the logs and sheet preview for changed files and cells.";
+      setSummary("report", finishMessage, "Finished");
       ["read", "plan", "apply", "report"].forEach((item) => {
         const element = document.getElementById(`s-${item}`);
         if (element) {
@@ -1510,7 +1971,10 @@
         }
       });
       const latestPayload = getPayload();
-      const doneLabel = latestPayload.operation.type === "extract_comments" ? "Comments extraction complete" : "Formatting complete";
+      const latestOperations = Array.isArray(latestPayload.operations) && latestPayload.operations.length ? latestPayload.operations : [latestPayload.operation];
+      const doneLabel = activeRunKind === "sheet-preview"
+        ? "Sheet preview loaded"
+        : latestOperations.length > 1 ? "Workflow complete" : latestOperations[0].type === "extract_comments" ? "Comments extraction complete" : "Formatting complete";
       addLog(`\n✅ ${doneLabel}!`, "success");
     });
 
@@ -1523,6 +1987,7 @@
     renderOperationCategories();
     updateSelectedActionInfo();
     syncRangeControls();
+    renderPipeline();
     updatePayloadPreview();
   </script>
 </body>

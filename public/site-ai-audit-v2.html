@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Site Audit V2</title>
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --soft: #f8fafc;
+      --border: #dbe3ef;
+      --text: #111827;
+      --muted: #64748b;
+      --dim: #475569;
+      --accent: #0f766e;
+      --accent-soft: rgba(15, 118, 110, 0.1);
+      --blue: #1d4ed8;
+      --blue-soft: rgba(29, 78, 216, 0.09);
+      --red: #b91c1c;
+      --red-soft: rgba(185, 28, 28, 0.08);
+      --amber: #92400e;
+      --amber-soft: rgba(146, 64, 14, 0.08);
+      --radius: 12px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(15, 118, 110, 0.08), transparent 280px),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    .topbar {
+      min-height: 72px;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(15, 118, 110, 0.24);
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 1.12rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .brand p,
+    .panel-head p,
+    .note {
+      color: var(--dim);
+      line-height: 1.55;
+    }
+
+    .brand p {
+      margin-top: 3px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .badge {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 118, 110, 0.24);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.72rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .layout {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel,
+    .side-panel,
+    .result-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 17px;
+      border-bottom: 1px solid var(--border);
+      background: var(--soft);
+    }
+
+    .panel-head h2 {
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-head p {
+      margin-top: 6px;
+      font-size: 0.86rem;
+    }
+
+    .panel-body {
+      padding: 17px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field label,
+    .section-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      outline: none;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+      direction: ltr;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--dim);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .btn:disabled {
+      opacity: 0.56;
+      cursor: not-allowed;
+    }
+
+    .note {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: var(--soft);
+      font-size: 0.84rem;
+    }
+
+    .stage-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+    }
+
+    .stage-index {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 900;
+      font-size: 0.82rem;
+    }
+
+    .stage strong {
+      display: block;
+      color: var(--text);
+      font-size: 0.84rem;
+    }
+
+    .stage span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .main-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric,
+    .group-card {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: #fff;
+      display: grid;
+      gap: 7px;
+    }
+
+    .metric strong {
+      font-size: 1.45rem;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .metric span,
+    .group-card span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric p,
+    .group-card p {
+      color: var(--dim);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .metric.blue {
+      background: linear-gradient(145deg, var(--blue-soft), #fff);
+      border-color: rgba(29, 78, 216, 0.18);
+    }
+
+    .metric.red {
+      background: linear-gradient(145deg, var(--red-soft), #fff);
+      border-color: rgba(185, 28, 28, 0.2);
+    }
+
+    .metric.amber {
+      background: linear-gradient(145deg, var(--amber-soft), #fff);
+      border-color: rgba(146, 64, 14, 0.2);
+    }
+
+    .group-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .group-card {
+      cursor: pointer;
+    }
+
+    .group-card.selected {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent);
+      background: linear-gradient(145deg, var(--accent-soft), #fff);
+    }
+
+    .group-card input {
+      width: auto;
+      min-height: auto;
+      margin-inline-start: 6px;
+    }
+
+    .examples {
+      display: grid;
+      gap: 5px;
+      margin-top: 3px;
+    }
+
+    .example-url {
+      direction: ltr;
+      text-align: left;
+      color: var(--blue);
+      font-size: 0.72rem;
+      word-break: break-all;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1120px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      text-align: right;
+      color: var(--dim);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--soft);
+      color: var(--text);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    td.url-cell {
+      direction: ltr;
+      text-align: left;
+      word-break: break-all;
+      min-width: 240px;
+      color: var(--blue);
+    }
+
+    .status-pill,
+    .tiny-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 900;
+      white-space: nowrap;
+      margin: 0 0 4px 4px;
+    }
+
+    .status-ok {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: rgba(15, 118, 110, 0.24);
+    }
+
+    .status-problem {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: rgba(185, 28, 28, 0.2);
+    }
+
+    .status-warning {
+      color: var(--amber);
+      background: var(--amber-soft);
+      border-color: rgba(146, 64, 14, 0.2);
+    }
+
+    .log {
+      direction: ltr;
+      text-align: left;
+      min-height: 160px;
+      max-height: 290px;
+      padding: 13px;
+      overflow: auto;
+      border-radius: 11px;
+      background: #0f172a;
+      color: #dbeafe;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .cards,
+      .group-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .topbar,
+      .layout {
+        padding: 14px;
+      }
+
+      .grid-2,
+      .cards,
+      .group-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">V2</div>
+      <div>
+        <h1>AI Site Audit V2</h1>
+        <p>מיפוי אתר, בחירת URLs, ואז בדיקת FAQ מדויקת בטבלה</p>
+      </div>
+    </div>
+    <span class="badge">FAQ AUDIT</span>
+  </header>
+
+  <main class="layout">
+    <aside class="side-panel">
+      <div class="panel-head">
+        <h2>Pipeline</h2>
+        <p>המסך הזה בנוי לפי האסטרטגיה החדשה: קודם ממפים, אחר כך בוחרים, ורק אז בודקים.</p>
+      </div>
+      <div class="panel-body">
+        <div class="stage-list">
+          <div class="stage">
+            <div class="stage-index">1</div>
+            <div><strong>מיפוי אתר</strong><span>robots, sitemap, sitemap מקונן ולינקים פנימיים.</span></div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">2</div>
+            <div><strong>בחירת URLs</strong><span>קבוצות, פילטר לפי path או URLs ידניים.</span></div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">3</div>
+            <div><strong>בדיקת FAQ</strong><span>Rendered כברירת מחדל, כולל סכמה ושאלות גלויות.</span></div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">4</div>
+            <div><strong>טבלת עבודה</strong><span>דוח FAQ פנימי ומדויק, לא דוח לקוח.</span></div>
+          </div>
+        </div>
+
+        <div class="note">
+          זה מסך נפרד לבדיקת FAQ בלבד. הסקירה הכללית של האתר נשארת במסך הקרולר הרגיל, וכאן מתמקדים במיפוי URLs, בחירת עמודים, שאלות גלויות וסכמות FAQPage.
+        </div>
+      </div>
+    </aside>
+
+    <section class="main-stack">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>1. מיפוי האתר</h2>
+          <p>השלב הזה מוצא URLים ומחלק אותם לקבוצות. בלי זה הקרולר מנחש יותר מדי ומפספס עמודים חשובים.</p>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="startUrl">כתובת אתר</label>
+            <input id="startUrl" type="text" value="https://www.stay-master.com" placeholder="https://www.example.com" />
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="maxUrls">מקסימום URLs למיפוי</label>
+              <input id="maxUrls" type="number" min="10" max="5000" value="1000" />
+            </div>
+            <div class="field">
+              <label for="maxDepth">עומק לינקים פנימיים</label>
+              <input id="maxDepth" type="number" min="0" max="6" value="3" />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn primary" id="discoverBtn" type="button" onclick="runDiscovery()">מפה אתר</button>
+            <button class="btn" type="button" onclick="copyDiscoveryCommand()">העתק פקודת מיפוי</button>
+            <button class="btn" type="button" onclick="resetPage()">איפוס</button>
+          </div>
+
+          <div class="log" id="log">Waiting for discovery.</div>
+        </div>
+      </section>
+
+      <section class="result-panel hidden" id="discoveryPanel">
+        <div class="panel-head">
+          <h2>2. תוצאות מיפוי ובחירת URLs</h2>
+          <p id="discoverySubtitle">בחרי קבוצות או הוסיפי URLs ידנית לפני בדיקת FAQ.</p>
+        </div>
+        <div class="panel-body">
+          <div class="cards" id="discoveryMetrics"></div>
+          <div>
+            <div class="section-label">קבוצות שנמצאו</div>
+            <div class="group-grid" id="groupGrid" style="margin-top:8px"></div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="urlIncludes">פילטר path אופציונלי</label>
+              <input id="urlIncludes" type="text" placeholder="/hotel, /faq, london" />
+            </div>
+            <div class="field">
+              <label for="faqMaxPages">מקסימום עמודים לבדיקת FAQ</label>
+              <input id="faqMaxPages" type="number" min="1" max="500" value="50" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="faqRenderMode">מצב בדיקת FAQ</label>
+              <select id="faqRenderMode">
+                <option value="rendered">Rendered browser - מומלץ</option>
+                <option value="static">Static HTML בלבד</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="selectedCount">URLs שנבחרו לפי הכללים</label>
+              <input id="selectedCount" type="text" value="0" readonly />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="manualUrls">URLs ידניים לבדיקה, אחד בכל שורה</label>
+            <textarea id="manualUrls" placeholder="https://www.example.com/faq&#10;https://www.example.com/hotel-a"></textarea>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn primary" id="faqAuditBtn" type="button" onclick="runFaqAudit()">הרץ בדיקת FAQ</button>
+            <button class="btn" type="button" onclick="copySelectedUrls()">העתק URLs שנבחרו</button>
+            <button class="btn" type="button" onclick="copyFaqCommand()">העתק פקודת FAQ</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-panel hidden" id="faqPanel">
+        <div class="panel-head">
+          <h2>3. דוח FAQ פנימי</h2>
+          <p id="faqSubtitle">טבלה מדויקת לעבודה פנימית: עמודים, שאלות גלויות, סכמה, פערים והערות.</p>
+        </div>
+        <div class="panel-body">
+          <div class="cards" id="faqMetrics"></div>
+          <div class="btn-row">
+            <button class="btn primary" type="button" onclick="downloadFaqHtml()">הורד HTML</button>
+            <button class="btn" type="button" onclick="downloadFaqCsv()">הורד CSV</button>
+            <button class="btn" type="button" onclick="downloadFaqJson()">הורד JSON</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>סטטוס</th>
+                  <th>URL</th>
+                  <th>כותרת</th>
+                  <th>Rendered</th>
+                  <th>FAQ גלוי</th>
+                  <th>FAQ בסכמה</th>
+                  <th>FAQPage</th>
+                  <th>שאלות גלויות שלא בסכמה</th>
+                  <th>שאלות בסכמה שלא בעמוד</th>
+                  <th>Schema types</th>
+                  <th>הערות</th>
+                </tr>
+              </thead>
+              <tbody id="faqTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const socket = typeof io === "function" ? io() : null;
+    const groupLabels = {
+      faq: "FAQ",
+      hotel: "מלונות / נכסים",
+      location: "מיקומים / ערים",
+      offer: "מבצעים",
+      blog: "בלוג / תוכן",
+      legal: "משפטי",
+      contact: "יצירת קשר / אודות",
+      booking: "הזמנות",
+      asset: "נכסים סטטיים",
+      other: "אחר"
+    };
+    const statusLabels = {
+      ok: "תקין",
+      "missing-schema": "חסר schema",
+      "missing-visible-faq": "schema בלי FAQ גלוי",
+      mismatch: "פער DOM/schema",
+      "no-faq": "לא נמצא FAQ",
+      "fetch-failed": "כשל טעינה"
+    };
+
+    let collecting = null;
+    let resultLines = [];
+    let lastDiscovery = null;
+    let lastFaqAudit = null;
+
+    function getStartUrl() {
+      return document.getElementById("startUrl").value.trim();
+    }
+
+    function getDiscoveryConfig() {
+      const maxUrls = Number(document.getElementById("maxUrls").value || 1000);
+      return {
+        mode: "site-ai-discovery",
+        startUrl: getStartUrl(),
+        maxUrls,
+        maxDepth: Number(document.getElementById("maxDepth").value || 3),
+        maxFaqCandidateChecks: Math.min(300, Math.max(80, maxUrls * 2)),
+        faqCandidateConcurrency: 12,
+        fetchTimeoutMs: 5000
+      };
+    }
+
+    function getSelectedGroups() {
+      return Array.from(document.querySelectorAll("[data-group-checkbox]:checked")).map((node) => node.value);
+    }
+
+    function getManualUrls() {
+      return document.getElementById("manualUrls").value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    function getUrlIncludes() {
+      return document.getElementById("urlIncludes").value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function getSelectedUrls() {
+      const manual = getManualUrls();
+      if (manual.length) return manual;
+      if (!lastDiscovery) return [];
+
+      const groups = getSelectedGroups();
+      const includes = getUrlIncludes().map((item) => item.toLowerCase());
+
+      return lastDiscovery.urls
+        .filter((item) => {
+          const groupMatch = groups.length ? item.groups.some((group) => groups.includes(group)) : true;
+          const includeMatch = includes.length
+            ? includes.some((needle) => item.url.toLowerCase().includes(needle))
+            : true;
+          return groupMatch && includeMatch;
+        })
+        .map((item) => item.url);
+    }
+
+    function getFaqConfig() {
+      const manual = getManualUrls();
+      return {
+        mode: "site-ai-faq-audit",
+        startUrl: getStartUrl(),
+        urls: manual.length ? manual : undefined,
+        groups: manual.length ? undefined : getSelectedGroups(),
+        urlIncludes: manual.length ? undefined : getUrlIncludes(),
+        maxPages: Number(document.getElementById("faqMaxPages").value || 50),
+        maxDiscoveryUrls: Number(document.getElementById("maxUrls").value || 1000),
+        maxDepth: Number(document.getElementById("maxDepth").value || 3),
+        maxFaqCandidateChecks: Math.min(300, Math.max(80, Number(document.getElementById("maxUrls").value || 1000) * 2)),
+        faqCandidateConcurrency: 12,
+        fetchTimeoutMs: 5000,
+        renderMode: document.getElementById("faqRenderMode").value
+      };
+    }
+
+    function runDiscovery() {
+      const config = getDiscoveryConfig();
+      if (!config.startUrl) {
+        setLog("Missing start URL.");
+        return;
+      }
+      if (!socket) {
+        setLog("Socket.IO is not available. ודאי שהשרת רץ ורענני את העמוד.");
+        return;
+      }
+
+      setBusy("discoverBtn", true, "ממפה אתר...");
+      lastDiscovery = null;
+      lastFaqAudit = null;
+      hide("discoveryPanel");
+      hide("faqPanel");
+      setLog(["RUNNING DISCOVERY", JSON.stringify(config, null, 2), "", "LOGS"].join("\n"));
+      socket.emit("start-agent", config);
+    }
+
+    function runFaqAudit() {
+      const config = getFaqConfig();
+      if (!config.startUrl) {
+        setLog("Missing start URL.");
+        return;
+      }
+      if (!socket) {
+        setLog("Socket.IO is not available. ודאי שהשרת רץ ורענני את העמוד.");
+        return;
+      }
+
+      const selected = getSelectedUrls();
+      document.getElementById("selectedCount").value = String(selected.length);
+      setBusy("faqAuditBtn", true, "בודק FAQ...");
+      hide("faqPanel");
+      setLog(["RUNNING FAQ AUDIT", JSON.stringify(config, null, 2), "", `SELECTED URLS: ${selected.length}`, "", "LOGS"].join("\n"));
+      socket.emit("start-agent", config);
+    }
+
+    function renderDiscovery(result) {
+      lastDiscovery = result;
+      const groups = Array.isArray(result.groups) ? result.groups : [];
+      const urls = Array.isArray(result.urls) ? result.urls : [];
+
+      document.getElementById("discoverySubtitle").textContent =
+        `${result.host || result.normalizedStartUrl || ""} | ${urls.length} URLs | ${groups.length} קבוצות`;
+      document.getElementById("discoveryMetrics").innerHTML = [
+        renderMetric("URLs", urls.length, "כל הכתובות שמופו", "blue"),
+        renderMetric("קבוצות", groups.length, "סיווגים שנמצאו", ""),
+        renderMetric("Sitemap hints", result.robots?.sitemapHints?.length || 0, "סייטמאפים מתוך robots", ""),
+        renderMetric("FAQ candidates", result.faqCandidates?.found || 0, `${result.faqCandidates?.checked || 0} נבדקו בפועל`, ""),
+        renderMetric("Host", result.host || "-", "הדומיין שנבדק", "")
+      ].join("");
+
+      document.getElementById("groupGrid").innerHTML = groups.map(renderGroupCard).join("");
+      show("discoveryPanel");
+      updateSelectedCount();
+      setLog(`DISCOVERY COMPLETE\nURLs: ${urls.length}\nGroups: ${groups.length}`);
+    }
+
+    function renderGroupCard(group) {
+      const selected = ["faq", "hotel", "location"].includes(group.group);
+      const examples = (group.examples || []).slice(0, 4).map((url) => `<div class="example-url">${escapeHtml(url)}</div>`).join("");
+      return `
+        <label class="group-card ${selected ? "selected" : ""}" data-group-card>
+          <span><input data-group-checkbox type="checkbox" value="${escapeHtml(group.group)}" ${selected ? "checked" : ""} onchange="handleGroupChange(this)" /> ${escapeHtml(groupLabels[group.group] || group.group)}</span>
+          <strong>${escapeHtml(group.count)}</strong>
+          <p>URLs בקבוצה</p>
+          <div class="examples">${examples}</div>
+        </label>
+      `;
+    }
+
+    function renderFaqAudit(result) {
+      lastFaqAudit = result;
+      const pages = Array.isArray(result.pages) ? result.pages : [];
+      const summary = result.summary || {};
+
+      document.getElementById("faqSubtitle").textContent =
+        `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} עמודים נבדקו | ${summary.totalVisibleQuestions || 0} שאלות גלויות`;
+      document.getElementById("faqMetrics").innerHTML = [
+        renderMetric("עמודים", summary.pagesChecked || pages.length, "עמודים שנבדקו", "blue"),
+        renderMetric("שאלות גלויות", summary.totalVisibleQuestions || 0, "Q/A שנמצאו בעמודים", ""),
+        renderMetric("שאלות בסכמה", summary.totalSchemaQuestions || 0, "Q/A מתוך FAQPage", ""),
+        renderMetric("פערים", (summary.pagesWithMismatch || 0) + (summary.pagesMissingSchema || 0) + (summary.pagesMissingVisibleFaq || 0), "עמודים שדורשים טיפול", "red")
+      ].join("");
+
+      document.getElementById("faqTableBody").innerHTML = pages.map(renderFaqRow).join("");
+      show("faqPanel");
+      setLog(`FAQ AUDIT COMPLETE\nPages: ${summary.pagesChecked || pages.length}\nVisible Q/A: ${summary.totalVisibleQuestions || 0}\nSchema Q/A: ${summary.totalSchemaQuestions || 0}`);
+    }
+
+    function renderFaqRow(page) {
+      const statusClass = page.auditStatus === "ok"
+        ? "status-ok"
+        : page.auditStatus === "no-faq"
+          ? "status-warning"
+          : "status-problem";
+      return `
+        <tr>
+          <td><span class="status-pill ${statusClass}">${escapeHtml(statusLabels[page.auditStatus] || page.auditStatus)}</span></td>
+          <td class="url-cell">${escapeHtml(page.url)}</td>
+          <td>${escapeHtml(page.title || page.h1 || "-")}</td>
+          <td><span class="tiny-pill">${page.rendered ? "Rendered" : "Static"}</span></td>
+          <td>${escapeHtml(page.visibleQaCount || 0)}${renderQuestionPreview(page.visibleQuestions)}</td>
+          <td>${escapeHtml(page.schemaQaCount || 0)}${renderQuestionPreview(page.schemaQuestions)}</td>
+          <td>${escapeHtml(page.faqPageSchemaCount || 0)}</td>
+          <td>${renderList(page.visibleOnlyQuestions)}</td>
+          <td>${renderList(page.schemaOnlyQuestions)}</td>
+          <td>${renderPills(page.schemaTypes)}</td>
+          <td>${renderList(page.notes)}</td>
+        </tr>
+      `;
+    }
+
+    function renderQuestionPreview(items) {
+      const list = Array.isArray(items) ? items.slice(0, 3) : [];
+      if (!list.length) return "";
+      return `<div>${list.map((item) => `<div>${escapeHtml(item)}</div>`).join("")}</div>`;
+    }
+
+    function renderList(items) {
+      const list = Array.isArray(items) ? items.slice(0, 6) : [];
+      if (!list.length) return "-";
+      return list.map((item) => `<div>${escapeHtml(item)}</div>`).join("");
+    }
+
+    function renderPills(items) {
+      const list = Array.isArray(items) ? items.slice(0, 8) : [];
+      if (!list.length) return "-";
+      return list.map((item) => `<span class="tiny-pill">${escapeHtml(item)}</span>`).join("");
+    }
+
+    function renderMetric(label, value, text, tone) {
+      const className = tone ? `metric ${tone}` : "metric";
+      return `<div class="${className}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><p>${escapeHtml(text)}</p></div>`;
+    }
+
+    function handleGroupChange(input) {
+      input.closest("[data-group-card]")?.classList.toggle("selected", input.checked);
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      document.getElementById("selectedCount").value = String(getSelectedUrls().length);
+    }
+
+    document.getElementById("urlIncludes").addEventListener("input", updateSelectedCount);
+    document.getElementById("manualUrls").addEventListener("input", updateSelectedCount);
+
+    function copySelectedUrls() {
+      const urls = getSelectedUrls();
+      navigator.clipboard?.writeText(urls.join("\n")).then(
+        () => appendLog(`Copied ${urls.length} selected URLs.`),
+        () => appendLog("Copy failed.")
+      );
+    }
+
+    function copyDiscoveryCommand() {
+      const config = getDiscoveryConfig();
+      const command = [
+        "npx tsx src/jobs/site-ai-audit-discovery.ts",
+        "--url", shellQuote(config.startUrl),
+        "--max-urls", String(config.maxUrls),
+        "--max-depth", String(config.maxDepth)
+      ].join(" ");
+      navigator.clipboard?.writeText(command).then(
+        () => appendLog("Discovery command copied."),
+        () => appendLog(command)
+      );
+    }
+
+    function copyFaqCommand() {
+      const config = getFaqConfig();
+      const parts = [
+        "npx tsx src/jobs/site-ai-faq-audit.ts",
+        "--url", shellQuote(config.startUrl),
+        "--max-pages", String(config.maxPages),
+        "--max-depth", String(config.maxDepth)
+      ];
+      if (config.renderMode === "static") parts.push("--static");
+      if (config.urls?.length) parts.push("--urls", shellQuote(config.urls.join(",")));
+      if (config.groups?.length) parts.push("--groups", shellQuote(config.groups.join(",")));
+      if (config.urlIncludes?.length) parts.push("--include", shellQuote(config.urlIncludes.join(",")));
+      const command = parts.join(" ");
+      navigator.clipboard?.writeText(command).then(
+        () => appendLog("FAQ command copied."),
+        () => appendLog(command)
+      );
+    }
+
+    function downloadFaqHtml() {
+      if (!lastFaqAudit) return;
+      const html = `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8" /><title>FAQ Audit</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#111827}table{width:100%;border-collapse:collapse}th,td{border:1px solid #dbe3ef;padding:8px;vertical-align:top;font-size:12px}.url{direction:ltr;text-align:left;word-break:break-all}th{background:#f8fafc}</style></head><body><h1>דוח FAQ פנימי</h1><p>${escapeHtml(lastFaqAudit.normalizedStartUrl || lastFaqAudit.startUrl || "")}</p>${document.querySelector(".table-wrap").innerHTML}</body></html>`;
+      downloadText(`${fileBase()}-faq-audit.html`, html, "text/html;charset=utf-8");
+    }
+
+    function downloadFaqCsv() {
+      if (!lastFaqAudit) return;
+      const rows = [
+        ["status", "url", "title", "rendered", "visibleQaCount", "schemaQaCount", "faqPageSchemaCount", "visibleOnlyQuestions", "schemaOnlyQuestions", "schemaTypes", "notes"]
+      ];
+      (lastFaqAudit.pages || []).forEach((page) => {
+        rows.push([
+          page.auditStatus,
+          page.url,
+          page.title || page.h1 || "",
+          page.rendered ? "rendered" : "static",
+          page.visibleQaCount || 0,
+          page.schemaQaCount || 0,
+          page.faqPageSchemaCount || 0,
+          (page.visibleOnlyQuestions || []).join(" | "),
+          (page.schemaOnlyQuestions || []).join(" | "),
+          (page.schemaTypes || []).join(" | "),
+          (page.notes || []).join(" | ")
+        ]);
+      });
+      downloadText(`${fileBase()}-faq-audit.csv`, rows.map((row) => row.map(csvCell).join(",")).join("\n"), "text/csv;charset=utf-8");
+    }
+
+    function downloadFaqJson() {
+      if (!lastFaqAudit) return;
+      downloadText(`${fileBase()}-faq-audit.json`, JSON.stringify(lastFaqAudit, null, 2), "application/json;charset=utf-8");
+    }
+
+    function fileBase() {
+      const host = (lastFaqAudit?.discovery?.host || new URL(getStartUrl()).host || "site").replace(/[^a-z0-9.-]+/gi, "-");
+      return `${host}-${new Date().toISOString().slice(0, 10)}`;
+    }
+
+    function csvCell(value) {
+      return `"${String(value ?? "").replace(/"/g, '""')}"`;
+    }
+
+    function downloadText(filename, content, mimeType) {
+      const blob = new Blob(["\ufeff", content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function resetPage() {
+      document.getElementById("startUrl").value = "https://www.stay-master.com";
+      document.getElementById("maxUrls").value = "1000";
+      document.getElementById("maxDepth").value = "3";
+      document.getElementById("faqMaxPages").value = "50";
+      document.getElementById("faqRenderMode").value = "rendered";
+      document.getElementById("urlIncludes").value = "";
+      document.getElementById("manualUrls").value = "";
+      hide("discoveryPanel");
+      hide("faqPanel");
+      lastDiscovery = null;
+      lastFaqAudit = null;
+      setLog("Waiting for discovery.");
+    }
+
+    function setLog(text) {
+      const log = document.getElementById("log");
+      log.textContent = text;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function appendLog(text) {
+      const log = document.getElementById("log");
+      log.textContent += `\n${text}`;
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function setBusy(id, busy, label) {
+      const button = document.getElementById(id);
+      button.disabled = busy;
+      if (busy) {
+        button.dataset.originalText = button.textContent;
+        button.textContent = label;
+      } else {
+        button.textContent = button.dataset.originalText || button.textContent;
+      }
+    }
+
+    function show(id) {
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    function hide(id) {
+      document.getElementById(id).classList.add("hidden");
+    }
+
+    function shellQuote(value) {
+      return "'" + String(value || "").replace(/'/g, "'\\''") + "'";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    if (socket) {
+      socket.on("log", (message) => {
+        const text = String(message || "");
+
+        if (text === "SITE_AI_DISCOVERY_RESULT_JSON_START") {
+          collecting = "discovery";
+          resultLines = [];
+          appendLog("Receiving discovery result...");
+          return;
+        }
+
+        if (text === "SITE_AI_DISCOVERY_RESULT_JSON_END") {
+          const raw = resultLines.join("\n");
+          collecting = null;
+          resultLines = [];
+          try {
+            renderDiscovery(JSON.parse(raw));
+          } catch (error) {
+            appendLog(`Discovery parse failed: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          setBusy("discoverBtn", false);
+          return;
+        }
+
+        if (text === "SITE_FAQ_AUDIT_RESULT_JSON_START") {
+          collecting = "faq";
+          resultLines = [];
+          appendLog("Receiving FAQ audit result...");
+          return;
+        }
+
+        if (text === "SITE_FAQ_AUDIT_RESULT_JSON_END") {
+          const raw = resultLines.join("\n");
+          collecting = null;
+          resultLines = [];
+          try {
+            renderFaqAudit(JSON.parse(raw));
+          } catch (error) {
+            appendLog(`FAQ result parse failed: ${error instanceof Error ? error.message : String(error)}`);
+          }
+          setBusy("faqAuditBtn", false);
+          return;
+        }
+
+        if (collecting) {
+          resultLines.push(text);
+          return;
+        }
+
+        appendLog(text);
+      });
+
+      socket.on("done", () => {
+        setBusy("discoverBtn", false);
+        setBusy("faqAuditBtn", false);
+        appendLog("Done.");
+      });
+    }
+  </script>
+</body>
+</html>

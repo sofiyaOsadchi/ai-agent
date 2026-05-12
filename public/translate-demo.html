@@ -7,6 +7,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/translate-chatbot.css">
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
@@ -396,6 +397,53 @@
 
   <div class="main-grid">
     <div class="config-panel">
+      <div class="setup-mode-tabs">
+        <button type="button" class="setup-mode-btn active" id="manualModeBtn" onclick="setSetupMode('manual')">
+          מילוי ידני
+          <span>כל ההגדרות פתוחות לעריכה</span>
+        </button>
+        <button type="button" class="setup-mode-btn" id="chatModeBtn" onclick="setSetupMode('chat')">
+          מילוי בצ׳אט
+          <span>שאלות קצרות והבוט ממלא</span>
+        </button>
+      </div>
+
+      <div class="setup-panel chat-setup hidden" id="chatSetupPanel">
+        <div class="card wide translator-chat-card" id="translatorChatbot">
+          <div class="chatbot-hero">
+            <div>
+              <div class="chatbot-kicker">Quick setup</div>
+              <h2>מילוי תרגום דרך צ׳אט</h2>
+              <p>מתחילים מקישור אחד: Google Sheet או תיקיית Drive. הבוט מזהה לבד את סוג המקור, בונה הגדרות מלאות, ושומר טיוטת עבודה בדפדפן אם רוצים להמשיך אחר כך.</p>
+            </div>
+            <div class="chatbot-actions">
+              <button type="button" class="small-btn" id="chatbotRestartBtn">התחלה מחדש</button>
+              <button type="button" class="small-btn primary" id="chatbotApplyTopBtn">מלא ופתח לעריכה</button>
+            </div>
+          </div>
+          <div class="chatbot-grid">
+            <section class="chatbot-shell" aria-label="Translation setup chatbot">
+              <div class="chatbot-log" id="translationChatLog" aria-live="polite"></div>
+              <div class="chatbot-options" id="translationChatOptions"></div>
+              <form class="chatbot-input-row" id="translationChatForm">
+                <textarea id="translationChatInput" autocomplete="off" dir="auto" rows="1" placeholder="אפשר לענות בעברית או באנגלית..."></textarea>
+                <button type="submit">שליחה</button>
+              </form>
+            </section>
+            <aside class="chatbot-summary">
+              <div class="summary-label">הגדרה נוכחית</div>
+              <div class="chatbot-summary-list" id="translationChatSummary"></div>
+              <p class="chatbot-edit-note">אחרי מילוי, כל ההגדרות ניתנות לעריכה בטאב הידני לפני הרצה.</p>
+              <div class="chatbot-summary-actions">
+                <button type="button" class="small-btn" id="chatbotApplyBtn">מלא ופתח לעריכה</button>
+                <button type="button" class="small-btn primary" id="chatbotRunBtn">מלא והריץ עכשיו</button>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-panel manual-setup" id="manualSetupPanel">
       <div class="card wide">
         <div class="card-head" onclick="toggleCard(this)"><h3>📄 Source Configuration</h3><span class="chevron">▼</span></div>
         <div class="card-body">
@@ -663,6 +711,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
 
     <div class="terminal-panel">
@@ -696,6 +745,7 @@
 
     let totalParts = 1;
     let currentPart = 1;
+    let setupMode = "manual";
     let sourceMode = "sheet";
     let timerInterval = null;
     let startTime = 0;
@@ -757,9 +807,10 @@ TONE: Warm, professional, helpful, and upscale.
 CRITICAL RULES:
 1) Never remove the hotel name if it appears in source.
 2) Official hotel name: "{{hotelName}}".
-3) Do not translate URLs, emails, codes or tokens.
-4) Preserve exact JSON matrix shape.
-5) Keep prices, times and facts exactly as in source.`;
+3) Do not translate, rename or move file names, spreadsheet names, tab names, folder names, IDs, URLs, emails, codes or tokens.
+4) Treat those names and IDs as fixed variables and keep them exactly where they appear.
+5) Preserve exact JSON matrix shape.
+6) Keep prices, times and facts exactly as in source.`;
 
     const DEFAULT_DRAFT_USER = `TASK: Translate EVERY cell in the provided matrix to {{lang}}.
 CONTEXT:
@@ -773,6 +824,7 @@ INSTRUCTIONS:
 - Translate all text content in the rows.
 - Treat each row as a connected context unit: Category + Question + Answer.
 - Translate header row: {{translateHeader}}.
+- Keep file names, sheet names, tab names, folder names and IDs unchanged, as fixed variables.
 - Preserve exact 2D matrix structure.
 - Apply the mandatory glossary rules exactly when relevant.
 
@@ -781,9 +833,13 @@ INPUT DATA (JSON):
 
     const DEFAULT_POLISH_SYSTEM = `ROLE: Senior Editor for a Luxury Hotel Brand ({{lang}}).
 GOAL: Polish translation to sound native and premium, with minimal edits, without changing meaning.
-RULE: Output JSON only.`;
+RULES:
+1) Output JSON only.
+2) Never translate, rename or move file names, spreadsheet names, tab names, folder names, IDs, URLs, emails, codes or tokens.
+3) Treat those names and IDs as fixed variables and keep them exactly where they appear.`;
 
     const DEFAULT_POLISH_USER = `TASK: Polish the DRAFT translation with minimal edits and no meaning changes.
+Keep file names, sheet names, tab names, folder names and IDs unchanged, as fixed variables.
 
 STRICT TERMINOLOGY:
 {{strictTerminology}}
@@ -818,6 +874,14 @@ OUTPUT: return ONLY {"rows":[...]}`;
       const selected = document.getElementById("modelSelect").value;
       if (selected === "custom") return document.getElementById("customModel").value.trim() || "o3";
       return selected;
+    }
+
+    function setSetupMode(mode) {
+      setupMode = mode === "chat" ? "chat" : "manual";
+      document.getElementById("manualModeBtn").classList.toggle("active", setupMode === "manual");
+      document.getElementById("chatModeBtn").classList.toggle("active", setupMode === "chat");
+      document.getElementById("manualSetupPanel").classList.toggle("hidden", setupMode !== "manual");
+      document.getElementById("chatSetupPanel").classList.toggle("hidden", setupMode !== "chat");
     }
 
     function renderLangGrid() {
@@ -1132,6 +1196,93 @@ OUTPUT: return ONLY {"rows":[...]}`;
     document.getElementById("polishUser").value = DEFAULT_POLISH_USER;
 
     renderLangGrid(); renderLangNotes(); renderLangSelects(); renderGlossaryEditor(); renderTermsEditor();
+
+    window.translateDemoBridge = {
+      fillSetupFromChatbot(config) {
+        const next = config || {};
+
+        if (next.sourceType === "folder") setSourceMode("folder");
+        else setSourceMode("sheet");
+
+        document.getElementById("spreadsheetId").value = next.sourceType === "sheet" ? (next.sourceId || "") : "";
+        document.getElementById("sourceFolderId").value = next.sourceType === "folder" ? (next.sourceId || "") : "";
+        document.getElementById("sourceTab").value = next.sourceTab || "";
+
+        const knownModels = Array.from(document.getElementById("modelSelect").options).map((option) => option.value);
+        const model = next.model || "o3";
+        if (knownModels.includes(model)) {
+          document.getElementById("modelSelect").value = model;
+          document.getElementById("customModel").value = "";
+        } else {
+          document.getElementById("modelSelect").value = "custom";
+          document.getElementById("customModel").value = model;
+        }
+        toggleCustomModel();
+
+        selectedLangs.clear();
+        (next.targetLangs || ["de"]).forEach((code) => selectedLangs.add(code));
+        renderLangGrid();
+
+        document.getElementById("translateHeader").classList.toggle("on", next.translateHeader !== false);
+        document.getElementById("splitIntoTwo").classList.toggle("on", next.splitIntoTwo !== false);
+
+        if (next.prompts) {
+          if (typeof next.prompts.draftSystem === "string") document.getElementById("draftSystem").value = next.prompts.draftSystem;
+          if (typeof next.prompts.draftUser === "string") document.getElementById("draftUser").value = next.prompts.draftUser;
+          if (typeof next.prompts.polishSystem === "string") document.getElementById("polishSystem").value = next.prompts.polishSystem;
+          if (typeof next.prompts.polishUser === "string") document.getElementById("polishUser").value = next.prompts.polishUser;
+        }
+
+        if (next.languageNotesByLang) {
+          Object.entries(next.languageNotesByLang).forEach(([lang, note]) => {
+            const el = document.getElementById(`langNote-${lang}`);
+            if (el && note) {
+              const base = el.dataset.chatbotBaseNote || el.value;
+              el.dataset.chatbotBaseNote = base;
+              el.value = `${base}\n\nUser chat notes:\n${note}`;
+            }
+          });
+        }
+
+        if (next.glossaryByLang) {
+          Object.entries(next.glossaryByLang).forEach(([lang, glossary]) => {
+            glossaryState[lang] = {
+              ...(glossaryState[lang] || {}),
+              ...glossary
+            };
+          });
+          renderGlossaryEditor();
+        }
+
+        if (next.terminologyByLang) {
+          Object.entries(next.terminologyByLang).forEach(([lang, profile]) => {
+            const existing = termsState[lang] || { mappings: [], examples: [] };
+            termsState[lang] = {
+              mappings: [
+                ...(existing.mappings || []),
+                ...((profile && profile.mappings) || [])
+              ],
+              examples: [
+                ...(existing.examples || []),
+                ...((profile && profile.examples) || [])
+              ]
+            };
+          });
+          renderTermsEditor();
+        }
+
+        if (typeof addLog === "function") {
+          addLog("ℹ️ Guided chat filled the translation setup.", "info");
+        }
+      },
+      runTranslationFromChatbot() {
+        runTranslation();
+      },
+      setSetupModeFromChatbot(mode) {
+        setSetupMode(mode);
+      }
+    };
   </script>
+  <script src="/translate-chatbot.js"></script>
 </body>
 </html>

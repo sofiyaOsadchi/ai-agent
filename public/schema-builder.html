@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carmelon AI Schema Builder</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg: #faf8fc;
+      --panel: #ffffff;
+      --panel-soft: #fbf7fd;
+      --text: #20152e;
+      --muted: #6c7285;
+      --line: #eadff0;
+      --purple: #7450a8;
+      --purple-dark: #563184;
+      --teal: #57b9ba;
+      --yellow: #f5cf3b;
+      --pink: #d76c9d;
+      --danger: #c45555;
+      --success: #2f8f78;
+      --shadow: 0 18px 50px rgba(69, 49, 94, 0.09);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    .topbar {
+      min-height: 74px;
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.9);
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      direction: ltr;
+    }
+
+    .brand-logo {
+      width: 150px;
+      height: auto;
+      display: block;
+    }
+
+    .brand-badge {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #d9c8e8;
+      border-radius: 10px;
+      color: var(--purple);
+      background: #fbf7fd;
+      font-weight: 900;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      margin-bottom: 0;
+      transform: translateY(5px);
+    }
+
+    .status-pill {
+      border: 1px solid #d9c8e8;
+      color: var(--purple-dark);
+      background: #ffffff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.74rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 430px;
+      gap: 20px;
+      padding: 20px;
+      align-items: start;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 16px;
+    }
+
+    .hero, .card, .output-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 20px 22px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--purple);
+      font-size: 0.75rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 7px;
+      font-size: clamp(1.6rem, 2.4vw, 2.45rem);
+      line-height: 1.06;
+      letter-spacing: 0;
+      color: #261833;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      max-width: 640px;
+    }
+
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-start;
+    }
+
+    .btn {
+      border: 1px solid #dbcde9;
+      background: #ffffff;
+      color: #352044;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { transform: translateY(-1px); border-color: var(--purple); }
+    .btn.primary { background: var(--purple); border-color: var(--purple); color: #ffffff; }
+    .btn.teal { background: var(--teal); border-color: var(--teal); color: #ffffff; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .hero .quick-actions {
+      align-self: start;
+      justify-self: end;
+    }
+
+    .hero .quick-actions .btn {
+      padding: 8px 11px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: #fff;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .source-card {
+      grid-column: 1 / -1;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: 190px minmax(260px, 1fr) 160px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .writeback-card .two-col {
+      grid-template-columns: minmax(105px, 0.75fr) minmax(170px, 1fr);
+    }
+
+    .card-head {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-head h2 {
+      margin: 0;
+      font-size: 0.98rem;
+    }
+
+    .card-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field.wide { grid-column: 1 / -1; }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: #687084;
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .tooltip {
+      width: 18px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid #dccbe9;
+      color: var(--purple);
+      background: #fbf7fd;
+      font-size: 0.7rem;
+      cursor: help;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #ded7e7;
+      border-radius: 11px;
+      background: #ffffff;
+      color: var(--text);
+      padding: 9px 11px;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 4px rgba(116, 80, 168, 0.11);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+      direction: ltr;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .option-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid #e5daed;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .option-row strong {
+      display: block;
+      font-size: 0.9rem;
+      line-height: 1.2;
+    }
+
+    .compact-option {
+      min-height: 40px;
+      padding: 6px 9px;
+    }
+
+    .compact-option .option-copy {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .compact-option strong {
+      font-size: 0.82rem;
+      line-height: 1.1;
+    }
+
+    .info-tip {
+      width: 18px;
+      height: 18px;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid #d9c8e8;
+      border-radius: 50%;
+      color: var(--purple);
+      background: #fbf7fd;
+      font-size: 0.68rem;
+      font-weight: 900;
+      cursor: help;
+    }
+
+    .toggle {
+      width: 38px;
+      height: 22px;
+      border-radius: 999px;
+      background: #dad3e2;
+      position: relative;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    .toggle::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      box-shadow: 0 2px 8px rgba(20, 16, 30, 0.15);
+      transition: transform 0.2s ease;
+    }
+
+    .toggle.on { background: var(--purple); }
+    .toggle.on::after { transform: translateX(16px); }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .sticky-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 15;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px 18px 0 0;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 -10px 30px rgba(69, 49, 94, 0.08);
+    }
+
+    .sticky-actions .btn {
+      padding: 9px 12px;
+      border-radius: 13px;
+      font-size: 0.9rem;
+    }
+
+    .output-panel {
+      position: sticky;
+      top: 94px;
+      min-height: calc(100vh - 116px);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto minmax(240px, 1fr) auto;
+    }
+
+    .terminal-head {
+      padding: 18px 18px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .terminal-head h2 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .summary-strip {
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .stat {
+      border: 1px solid #e4d7ed;
+      border-radius: 14px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 1.35rem;
+    }
+
+    .logs {
+      background: #111827;
+      color: #d7e0ef;
+      padding: 16px;
+      overflow: auto;
+      direction: ltr;
+      text-align: left;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.83rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .result-list {
+      padding: 14px 18px;
+      display: grid;
+      gap: 10px;
+      max-height: 260px;
+      overflow: auto;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .result-card {
+      border: 1px solid #e4d7ed;
+      border-radius: 14px;
+      padding: 12px;
+      background: #fbfafc;
+      cursor: pointer;
+    }
+
+    .result-card.active {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 4px rgba(116, 80, 168, 0.09);
+    }
+
+    .result-card h3 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+    }
+
+    .result-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .schema-preview {
+      grid-column: 1 / -1;
+    }
+
+    .schema-preview textarea {
+      min-height: 270px;
+    }
+
+    .validation-card {
+      grid-column: 1 / -1;
+      overflow: hidden;
+    }
+
+    .validation-card summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .validation-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .validation-card .card-head::after {
+      content: "+";
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid #dccbe9;
+      color: var(--purple);
+      font-weight: 900;
+      margin-left: auto;
+    }
+
+    .validation-card[open] .card-head::after {
+      content: "-";
+    }
+
+    @media (max-width: 1120px) {
+      .layout { grid-template-columns: 1fr; }
+      .output-panel { position: static; min-height: 520px; }
+      .hero { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 760px) {
+      .cards-grid, .source-grid, .two-col, .three-col, .sticky-actions { grid-template-columns: 1fr; }
+      .layout { padding: 12px; }
+      .topbar { padding: 12px 16px; }
+      .brand-logo { width: 132px; }
+      .summary-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+      <div class="brand-badge">AI</div>
+    </div>
+    <div class="status-pill" id="statusPill">Schema workspace</div>
+  </header>
+
+  <main class="layout">
+    <section class="workspace">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Schema Builder</p>
+          <h1>FAQPage Schema Builder</h1>
+          <p>
+            Generate clean JSON-LD from approved questions and answers in Google Sheets. This workspace creates schema only, without editing source content or meta tags.
+          </p>
+        </div>
+        <div class="quick-actions">
+          <button class="btn" type="button" id="saveDraftBtn">Save</button>
+          <button class="btn" type="button" id="loadDraftBtn">Load</button>
+          <button class="btn" type="button" id="resetBtn">Reset</button>
+        </div>
+      </section>
+
+      <div class="cards-grid">
+        <section class="card source-card">
+          <div class="card-head">
+            <h2>Data Source</h2>
+            <span class="hint">Sheet or Drive folder</span>
+          </div>
+          <div class="card-body">
+            <div class="source-grid">
+              <label class="field">
+                <span class="label-row">Source type</span>
+                <select id="sourceType">
+                  <option value="sheet">Single Google Sheet</option>
+                  <option value="folder">Drive Folder</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="label-row">URL or ID</span>
+                <input id="targetId" placeholder="Google Sheet / Drive Folder URL or ID" />
+              </label>
+              <label class="field">
+                <span class="label-row">Tab name</span>
+                <input id="tabName" value="Sheet1" placeholder="First tab if empty" />
+              </label>
+              <input id="maxFiles" type="hidden" value="30" />
+              <div class="option-row compact-option">
+                <div class="option-copy">
+                  <strong>Include subfolders</strong>
+                  <span
+                    class="info-tip"
+                    title="Folder mode scans up to 30 files per run."
+                    aria-label="Folder mode scans up to 30 files per run."
+                  >?</span>
+                </div>
+                <div class="toggle on" id="recursiveToggle" role="switch" aria-label="Recursive folder scan"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Q&A Structure</h2>
+            <span class="hint">Default B/C</span>
+          </div>
+          <div class="card-body">
+            <div class="three-col">
+              <label class="field">
+                <span class="label-row">Question column</span>
+                <input id="questionColumn" value="B" />
+              </label>
+              <label class="field">
+                <span class="label-row">Answer column</span>
+                <input id="answerColumn" value="C" />
+              </label>
+              <label class="field">
+                <span class="label-row">Start row</span>
+                <input id="startRow" type="number" min="1" value="2" />
+              </label>
+            </div>
+            <div class="two-col">
+              <label class="field">
+                <span class="label-row">Max rows to read</span>
+                <input id="maxRows" type="number" min="1" max="5000" value="500" />
+              </label>
+              <label class="field">
+                <span class="label-row">Schema type</span>
+                <select id="schemaType">
+                  <option value="FAQPage">FAQPage</option>
+                </select>
+              </label>
+            </div>
+            <div class="hint">
+              Rows without both a question and an answer are skipped, so category headers and empty rows stay out of the schema.
+            </div>
+          </div>
+        </section>
+
+        <section class="card writeback-card">
+          <div class="card-head">
+            <h2>Writeback</h2>
+            <span class="hint">Single output cell</span>
+          </div>
+          <div class="card-body">
+            <div class="two-col">
+              <label class="field">
+                <span class="label-row">Output cell</span>
+                <input id="outputCell" value="E73" />
+              </label>
+              <div class="option-row compact-option">
+                <div class="option-copy">
+                  <strong>Wrap in script tag</strong>
+                  <span
+                    class="info-tip"
+                    title="Website-ready snippet."
+                    aria-label="Website-ready snippet."
+                  >?</span>
+                </div>
+                <div class="toggle on" id="scriptToggle" role="switch" aria-label="Include script tag"></div>
+              </div>
+            </div>
+            <div class="option-row">
+              <div>
+                <strong>Preview only</strong>
+                <div class="hint">Build schema without writing to the sheet.</div>
+              </div>
+              <div class="toggle" id="previewOnlyToggle" role="switch" aria-label="Preview only"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card schema-preview">
+          <div class="card-head">
+            <h2>Latest Schema Preview</h2>
+            <div class="quick-actions">
+              <button class="btn" type="button" id="copySchemaBtn">Copy schema</button>
+              <button class="btn" type="button" id="downloadJsonBtn">Download JSON</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <textarea id="schemaPreview" readonly placeholder="The generated schema will appear here after a run."></textarea>
+          </div>
+        </section>
+
+        <details class="card validation-card">
+          <summary class="card-head">
+            <h2>External Validation</h2>
+            <span class="hint">Optional checks after schema generation</span>
+          </summary>
+          <div class="card-body">
+            <label class="field">
+              <span class="label-row">
+                Live page URL
+                <span class="tooltip" title="If you add a page URL, the Rich Results button opens Google's test with that URL.">?</span>
+              </span>
+              <input id="pageUrl" placeholder="https://www.example.com/faq" />
+            </label>
+            <div class="two-col">
+              <button class="btn primary" type="button" id="richResultsBtn">Open Google Rich Results</button>
+              <button class="btn" type="button" id="schemaValidatorBtn">Open Schema Validator</button>
+            </div>
+            <div class="hint">
+              Rich Results checks a live page. Schema Validator is useful for manual JSON-LD validation.
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="sticky-actions">
+        <button class="btn" type="button" id="previewBtn">Preview only</button>
+        <button class="btn teal" type="button" id="runBtn">Generate</button>
+      </div>
+    </section>
+
+    <aside class="output-panel">
+      <div class="terminal-head">
+        <h2>Live Output</h2>
+        <button class="btn" type="button" id="clearLogBtn">Clear</button>
+      </div>
+      <div class="summary-strip">
+        <div class="stat"><span>Files</span><strong id="filesStat">0</strong></div>
+        <div class="stat"><span>Schemas</span><strong id="generatedStat">0</strong></div>
+        <div class="stat"><span>Questions</span><strong id="questionsStat">0</strong></div>
+      </div>
+      <pre class="logs" id="logs">Ready.</pre>
+      <div class="result-list" id="resultList"></div>
+    </aside>
+  </main>
+
+  <script>
+    const socket = io();
+    const STORAGE_KEY = "carmelon-schema-builder-config";
+    const richResultsBaseUrl = "https://search.google.com/test/rich-results";
+    const schemaValidatorUrl = "https://validator.schema.org/";
+    let latestResult = null;
+    let latestSchemaText = "";
+    let collectingResult = false;
+    let resultLines = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    function isToggleOn(id) {
+      return $(id).classList.contains("on");
+    }
+
+    function setToggle(id, value) {
+      $(id).classList.toggle("on", Boolean(value));
+    }
+
+    function addLog(message, type = "info") {
+      const logs = $("logs");
+      const prefix = type === "error" ? "ERROR " : type === "dim" ? "INFO  " : "";
+      logs.textContent = logs.textContent === "Ready." ? `${prefix}${message}` : `${logs.textContent}\n${prefix}${message}`;
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function getPayload(previewOnly = false) {
+      return {
+        mode: "schema-builder",
+        sourceType: $("sourceType").value,
+        targetId: $("targetId").value.trim(),
+        tabName: $("tabName").value.trim(),
+        recursive: isToggleOn("recursiveToggle"),
+        maxFiles: Number($("maxFiles").value || 30),
+        schemaType: $("schemaType").value,
+        questionColumn: $("questionColumn").value.trim() || "B",
+        answerColumn: $("answerColumn").value.trim() || "C",
+        startRow: Number($("startRow").value || 2),
+        maxRows: Number($("maxRows").value || 500),
+        outputCell: $("outputCell").value.trim() || "E73",
+        includeScriptTag: isToggleOn("scriptToggle"),
+        previewOnly: previewOnly || isToggleOn("previewOnlyToggle"),
+        dryRun: previewOnly || isToggleOn("previewOnlyToggle"),
+      };
+    }
+
+    function saveConfig() {
+      const config = {
+        ...getPayload(false),
+        pageUrl: $("pageUrl").value.trim(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      addLog("Settings saved in this browser.", "dim");
+    }
+
+    function loadConfig() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        addLog("No saved settings yet.", "dim");
+        return;
+      }
+
+      try {
+        const config = JSON.parse(raw);
+        $("sourceType").value = config.sourceType || "sheet";
+        $("targetId").value = config.targetId || "";
+        $("tabName").value = config.tabName || "Sheet1";
+        $("maxFiles").value = config.maxFiles || 30;
+        $("schemaType").value = config.schemaType || "FAQPage";
+        $("questionColumn").value = config.questionColumn || "B";
+        $("answerColumn").value = config.answerColumn || "C";
+        $("startRow").value = config.startRow || 2;
+        $("maxRows").value = config.maxRows || 500;
+        $("outputCell").value = config.outputCell || "E73";
+        $("pageUrl").value = config.pageUrl || "";
+        setToggle("recursiveToggle", config.recursive !== false);
+        setToggle("scriptToggle", config.includeScriptTag !== false);
+        setToggle("previewOnlyToggle", config.previewOnly === true);
+        addLog("Settings loaded.", "dim");
+      } catch {
+        addLog("Could not load saved settings.", "error");
+      }
+    }
+
+    function resetConfig() {
+      $("sourceType").value = "sheet";
+      $("targetId").value = "";
+      $("tabName").value = "Sheet1";
+      $("maxFiles").value = 30;
+      $("schemaType").value = "FAQPage";
+      $("questionColumn").value = "B";
+      $("answerColumn").value = "C";
+      $("startRow").value = 2;
+      $("maxRows").value = 500;
+      $("outputCell").value = "E73";
+      $("pageUrl").value = "";
+      setToggle("recursiveToggle", true);
+      setToggle("scriptToggle", true);
+      setToggle("previewOnlyToggle", false);
+      addLog("Form reset.", "dim");
+    }
+
+    function setRunning(isRunning) {
+      ["previewBtn", "runBtn"].forEach((id) => {
+        $(id).disabled = isRunning;
+      });
+      $("statusPill").textContent = isRunning ? "Running" : "Schema workspace";
+    }
+
+    function runSchema(previewOnly) {
+      const payload = getPayload(previewOnly);
+
+      if (!payload.targetId) {
+        addLog("Missing Google Sheet or Drive Folder URL / ID.", "error");
+        return;
+      }
+
+      saveConfig();
+      latestResult = null;
+      latestSchemaText = "";
+      $("schemaPreview").value = "";
+      $("resultList").innerHTML = "";
+      $("filesStat").textContent = "0";
+      $("generatedStat").textContent = "0";
+      $("questionsStat").textContent = "0";
+      $("logs").textContent = "";
+
+      setRunning(true);
+      addLog(previewOnly ? "Building schema preview..." : "Generating schema and writing to the sheet...");
+      socket.emit("start-agent", payload);
+    }
+
+    function renderResult(result) {
+      latestResult = result;
+      $("filesStat").textContent = String(result.totalTargets || 0);
+      $("generatedStat").textContent = String(result.generated || 0);
+      $("questionsStat").textContent = String(result.totalQuestions || 0);
+
+      const resultList = $("resultList");
+      resultList.innerHTML = "";
+
+      (result.results || []).forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = `result-card ${index === 0 ? "active" : ""}`;
+        card.innerHTML = `
+          <h3>${escapeHtml(item.fileName || item.spreadsheetId)}</h3>
+          <p>${escapeHtml(item.status)} · ${item.qaCount || 0} questions · ${escapeHtml(item.tabName || "")}!${escapeHtml(item.outputCell || "")}</p>
+        `;
+        card.addEventListener("click", () => {
+          [...resultList.querySelectorAll(".result-card")].forEach((node) => node.classList.remove("active"));
+          card.classList.add("active");
+          setSchemaPreview(item.schemaText || "");
+        });
+        resultList.appendChild(card);
+      });
+
+      const firstSchema = result.results?.find((item) => item.schemaText)?.schemaText || "";
+      setSchemaPreview(firstSchema);
+    }
+
+    function setSchemaPreview(value) {
+      latestSchemaText = value || "";
+      $("schemaPreview").value = latestSchemaText;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    async function copySchema() {
+      if (!latestSchemaText) {
+        addLog("No schema to copy yet.", "dim");
+        return;
+      }
+
+      await navigator.clipboard.writeText(latestSchemaText);
+      addLog("Schema copied.", "dim");
+    }
+
+    function downloadJson() {
+      if (!latestResult) {
+        addLog("No result to download yet.", "dim");
+        return;
+      }
+
+      const blob = new Blob([JSON.stringify(latestResult, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const host = (() => {
+        try {
+          return new URL($("pageUrl").value || "https://schema.local").hostname || "schema";
+        } catch {
+          return "schema";
+        }
+      })();
+      a.href = url;
+      a.download = `${host}-schema-builder-result.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function openRichResults() {
+      const pageUrl = $("pageUrl").value.trim();
+      const url = pageUrl ? `${richResultsBaseUrl}?url=${encodeURIComponent(pageUrl)}` : richResultsBaseUrl;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    function openSchemaValidator() {
+      window.open(schemaValidatorUrl, "_blank", "noopener,noreferrer");
+    }
+
+    ["recursiveToggle", "scriptToggle", "previewOnlyToggle"].forEach((id) => {
+      $(id).addEventListener("click", () => {
+        $(id).classList.toggle("on");
+      });
+    });
+
+    ["sourceType", "targetId", "tabName", "maxFiles", "schemaType", "questionColumn", "answerColumn", "startRow", "maxRows", "outputCell", "pageUrl"].forEach((id) => {
+      $(id).addEventListener("change", saveConfig);
+    });
+
+    $("saveDraftBtn").addEventListener("click", saveConfig);
+    $("loadDraftBtn").addEventListener("click", loadConfig);
+    $("resetBtn").addEventListener("click", resetConfig);
+    $("previewBtn").addEventListener("click", () => runSchema(true));
+    $("runBtn").addEventListener("click", () => runSchema(false));
+    $("copySchemaBtn").addEventListener("click", copySchema);
+    $("downloadJsonBtn").addEventListener("click", downloadJson);
+    $("richResultsBtn").addEventListener("click", openRichResults);
+    $("schemaValidatorBtn").addEventListener("click", openSchemaValidator);
+    $("clearLogBtn").addEventListener("click", () => {
+      $("logs").textContent = "Ready.";
+    });
+
+    socket.on("log", (message) => {
+      if (message.includes("SCHEMA_BUILDER_RESULT_JSON_START")) {
+        collectingResult = true;
+        resultLines = [];
+        return;
+      }
+
+      if (message.includes("SCHEMA_BUILDER_RESULT_JSON_END")) {
+        collectingResult = false;
+        try {
+          renderResult(JSON.parse(resultLines.join("\n")));
+        } catch (error) {
+          addLog(`Failed to parse schema result: ${error.message}`, "error");
+        }
+        return;
+      }
+
+      if (collectingResult) {
+        resultLines.push(message);
+        return;
+      }
+
+      addLog(message);
+    });
+
+    socket.on("preview-event", (event) => {
+      if (event.kind === "plan") {
+        addLog(`${event.title}: ${event.details.join(" | ")}`, "dim");
+      }
+    });
+
+    socket.on("done", () => {
+      setRunning(false);
+      addLog("Done.");
+    });
+
+    loadConfig();
+  </script>
+</body>
+</html>

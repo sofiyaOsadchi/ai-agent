@@ -1,0 +1,2078 @@
+// src/jobs/site-ai-faq-audit.ts
+// Focused FAQ audit for the new crawler V2 flow.
+
+import * as cheerio from "cheerio";
+import { SheetsService } from "../services/sheets.js";
+import {
+  discoverSiteUrls,
+  type SiteDiscoveryResult,
+  type SiteUrlGroup,
+} from "./site-ai-audit-discovery.js";
+
+export type FaqAuditRenderMode = "rendered" | "static";
+export type FaqQA = { q: string; a: string };
+export type FaqTextIssueSeverity = "warning" | "info";
+export type FaqTextIssueScope = "source" | "site";
+
+export type SourceFaqRow = FaqQA & {
+  sourceFile: string;
+  spreadsheetId: string;
+  tabName: string;
+  rowNumber: number;
+  category: string;
+};
+
+export type FaqAnswerMismatch = {
+  question: string;
+  sourceAnswer: string;
+  siteAnswer: string;
+  similarity: number;
+};
+
+export type FaqTextIssue = {
+  scope: FaqTextIssueScope;
+  severity: FaqTextIssueSeverity;
+  type: string;
+  sourceFile?: string;
+  url?: string;
+  rowNumber?: number;
+  question?: string;
+  answerPreview?: string;
+  detail: string;
+  recommendedAction: string;
+};
+
+export type SourceFileComparison = {
+  sourceFile: string;
+  spreadsheetId: string;
+  tabName: string;
+  status: "ok" | "read-failed" | "no-questions" | "no-page-match";
+  matchedPageUrl: string;
+  matchedPageTitle: string;
+  matchedBy: string;
+  sourceQuestionCount: number;
+  siteQuestionCount: number;
+  matchedQuestionCount: number;
+  sourceOnlyQuestions: string[];
+  siteOnlyQuestions: string[];
+  answerMismatches: FaqAnswerMismatch[];
+  duplicateQuestions: string[];
+  qaIssues: FaqTextIssue[];
+  notes: string[];
+};
+
+export type SourceComparisonResult = {
+  enabled: boolean;
+  sourceFilesFound: number;
+  sourceFilesRead: number;
+  sourceFilesFailed: number;
+  totalSourceQuestions: number;
+  matchedPages: number;
+  missingOnSite: number;
+  extraOnSite: number;
+  answerMismatches: number;
+  qaIssueCount: number;
+  files: SourceFileComparison[];
+  issues: FaqTextIssue[];
+  sourceRows: SourceFaqRow[];
+};
+
+export type SiteFaqAuditConfig = {
+  startUrl: string;
+  urls?: string[];
+  groups?: SiteUrlGroup[];
+  urlIncludes?: string[];
+  maxPages?: number;
+  maxDiscoveryUrls?: number;
+  maxFaqCandidateChecks?: number;
+  faqCandidateConcurrency?: number;
+  fetchTimeoutMs?: number;
+  maxDepth?: number;
+  renderMode?: FaqAuditRenderMode;
+  writeGoogleSheet?: boolean;
+  reportTitle?: string;
+  acceptLanguage?: string;
+  userAgent?: string;
+  sourceCompareEnabled?: boolean;
+  sourceInput?: string;
+  sourceFolderId?: string;
+  sourceSpreadsheetIds?: string[];
+  sourceTabName?: string;
+  sourceHeaderRow?: number;
+};
+
+export type FaqAuditStatus =
+  | "ok"
+  | "missing-schema"
+  | "missing-visible-faq"
+  | "mismatch"
+  | "no-faq"
+  | "fetch-failed";
+
+export type FaqAuditPageResult = {
+  url: string;
+  title: string;
+  h1: string;
+  statusCode: number;
+  rendered: boolean;
+  auditStatus: FaqAuditStatus;
+  schemaTypes: string[];
+  faqPageSchemaCount: number;
+  visibleQaCount: number;
+  schemaQaCount: number;
+  visibleQuestions: string[];
+  schemaQuestions: string[];
+  visibleQAs: FaqQA[];
+  schemaQAs: FaqQA[];
+  visibleOnlyQuestions: string[];
+  schemaOnlyQuestions: string[];
+  emptyVisibleAnswers: string[];
+  emptySchemaAnswers: string[];
+  invalidJsonLdCount: number;
+  notes: string[];
+};
+
+export type SiteFaqAuditResult = {
+  startedAt: string;
+  finishedAt: string;
+  startUrl: string;
+  normalizedStartUrl: string;
+  discovery: Pick<SiteDiscoveryResult, "host" | "groups"> | null;
+  selectedUrls: string[];
+  pages: FaqAuditPageResult[];
+  summary: {
+    pagesChecked: number;
+    pagesWithVisibleFaq: number;
+    pagesWithFaqSchema: number;
+    pagesOk: number;
+    pagesMissingSchema: number;
+    pagesMissingVisibleFaq: number;
+    pagesWithMismatch: number;
+    totalVisibleQuestions: number;
+    totalSchemaQuestions: number;
+  };
+  sourceComparison?: SourceComparisonResult;
+  googleSheet?: {
+    id: string;
+    url: string;
+  };
+};
+
+type QA = FaqQA;
+type PageFetchResult = { url: string; status: number; html: string; rendered: boolean };
+type JsonLdExtraction = { objects: unknown[]; invalidCount: number; types: string[] };
+type SourceFileRef = { id: string; name: string };
+type NormalizedSiteFaqAuditConfig = {
+  startUrl: string;
+  urls: string[];
+  groups: SiteUrlGroup[];
+  urlIncludes: string[];
+  maxPages: number;
+  maxDiscoveryUrls: number;
+  maxFaqCandidateChecks: number;
+  faqCandidateConcurrency: number;
+  fetchTimeoutMs: number;
+  maxDepth: number;
+  renderMode: FaqAuditRenderMode;
+  writeGoogleSheet: boolean;
+  reportTitle: string;
+  acceptLanguage: string;
+  userAgent: string;
+  sourceCompareEnabled: boolean;
+  sourceInput: string;
+  sourceFolderId: string;
+  sourceSpreadsheetIds: string[];
+  sourceTabName: string;
+  sourceHeaderRow: number;
+};
+
+const DEFAULT_MAX_PAGES = 50;
+const DEFAULT_MAX_DISCOVERY_URLS = 1000;
+const DEFAULT_MAX_DEPTH = 3;
+const DEFAULT_ACCEPT_LANGUAGE = "en-GB,en;q=0.9";
+const DEFAULT_USER_AGENT =
+  "Mozilla/5.0 SiteFaqAuditBot/0.2 (+https://carmelon.local)";
+
+const FAQ_GROUPS: SiteUrlGroup[] = ["faq", "hotel", "location"];
+
+export class SiteFaqAuditJob {
+  async run(input: SiteFaqAuditConfig): Promise<SiteFaqAuditResult> {
+    const startedAt = new Date().toISOString();
+    const config = this.normalizeConfig(input);
+    const normalizedStartUrl = this.normalizeUrl(config.startUrl);
+    const selected = await this.selectUrls(normalizedStartUrl, config);
+    const pages: FaqAuditPageResult[] = [];
+
+    for (const url of selected.urls.slice(0, config.maxPages)) {
+      pages.push(await this.auditPage(url, config));
+    }
+
+    const result: SiteFaqAuditResult = {
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      startUrl: input.startUrl,
+      normalizedStartUrl,
+      discovery: selected.discovery
+        ? { host: selected.discovery.host, groups: selected.discovery.groups }
+        : null,
+      selectedUrls: selected.urls,
+      pages,
+      summary: this.summarize(pages),
+    };
+
+    if (config.sourceCompareEnabled) {
+      result.sourceComparison = await this.compareAgainstSources(result, config);
+    }
+
+    if (config.writeGoogleSheet) {
+      result.googleSheet = await this.writeGoogleSheetReport(result, config);
+    }
+
+    return result;
+  }
+
+  private normalizeConfig(input: SiteFaqAuditConfig): NormalizedSiteFaqAuditConfig {
+    if (!input.startUrl) {
+      throw new Error("Missing startUrl");
+    }
+
+    return {
+      startUrl: input.startUrl,
+      urls: input.urls ?? [],
+      groups: input.groups?.length ? input.groups : FAQ_GROUPS,
+      urlIncludes: input.urlIncludes ?? [],
+      maxPages: Math.max(1, Math.min(500, Number(input.maxPages ?? DEFAULT_MAX_PAGES))),
+      maxDiscoveryUrls: Math.max(1, Math.min(5000, Number(input.maxDiscoveryUrls ?? DEFAULT_MAX_DISCOVERY_URLS))),
+      maxFaqCandidateChecks: Math.max(0, Math.min(5000, Number(input.maxFaqCandidateChecks ?? 300))),
+      faqCandidateConcurrency: Math.max(1, Math.min(20, Number(input.faqCandidateConcurrency ?? 12))),
+      fetchTimeoutMs: Math.max(1000, Math.min(30000, Number(input.fetchTimeoutMs ?? 5000))),
+      maxDepth: Math.max(0, Math.min(6, Number(input.maxDepth ?? DEFAULT_MAX_DEPTH))),
+      renderMode: input.renderMode ?? "rendered",
+      writeGoogleSheet: Boolean(input.writeGoogleSheet),
+      reportTitle: input.reportTitle || "",
+      acceptLanguage: input.acceptLanguage || DEFAULT_ACCEPT_LANGUAGE,
+      userAgent: input.userAgent || DEFAULT_USER_AGENT,
+      sourceCompareEnabled: Boolean(input.sourceCompareEnabled),
+      sourceInput: input.sourceInput || "",
+      sourceFolderId: input.sourceFolderId || "",
+      sourceSpreadsheetIds: input.sourceSpreadsheetIds ?? [],
+      sourceTabName: input.sourceTabName || "",
+      sourceHeaderRow: Math.max(0, Math.min(50, Number(input.sourceHeaderRow ?? 0))),
+    };
+  }
+
+  private async selectUrls(
+    normalizedStartUrl: string,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<{ urls: string[]; discovery: SiteDiscoveryResult | null }> {
+    if (config.urls.length) {
+      return {
+        urls: this.uniqueUrls(config.urls.map((url) => this.normalizeUrl(url))),
+        discovery: null,
+      };
+    }
+
+    const discovery = await discoverSiteUrls({
+      startUrl: normalizedStartUrl,
+      maxUrls: config.maxDiscoveryUrls,
+      maxDepth: config.maxDepth,
+      maxFaqCandidateChecks: config.maxFaqCandidateChecks,
+      faqCandidateConcurrency: config.faqCandidateConcurrency,
+      fetchTimeoutMs: config.fetchTimeoutMs,
+      acceptLanguage: config.acceptLanguage,
+      userAgent: config.userAgent,
+    });
+
+    const includes = config.urlIncludes.map((item) => item.toLowerCase()).filter(Boolean);
+    const urls = discovery.urls
+      .filter((item) => {
+        const groupMatch = item.groups.some((group) => config.groups.includes(group));
+        const includeMatch = includes.length
+          ? includes.some((needle) => item.url.toLowerCase().includes(needle))
+          : true;
+        return groupMatch && includeMatch;
+      })
+      .map((item) => item.url);
+
+    return {
+      urls: this.uniqueUrls(urls),
+      discovery,
+    };
+  }
+
+  private async auditPage(
+    url: string,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<FaqAuditPageResult> {
+    let fetched: PageFetchResult;
+
+    try {
+      fetched = await this.fetchPage(url, config);
+    } catch (error) {
+      return {
+        url,
+        title: "",
+        h1: "",
+        statusCode: 0,
+        rendered: config.renderMode === "rendered",
+        auditStatus: "fetch-failed",
+        schemaTypes: [],
+        faqPageSchemaCount: 0,
+        visibleQaCount: 0,
+        schemaQaCount: 0,
+        visibleQuestions: [],
+        schemaQuestions: [],
+        visibleQAs: [],
+        schemaQAs: [],
+        visibleOnlyQuestions: [],
+        schemaOnlyQuestions: [],
+        emptyVisibleAnswers: [],
+        emptySchemaAnswers: [],
+        invalidJsonLdCount: 0,
+        notes: [error instanceof Error ? error.message : String(error)],
+      };
+    }
+
+    const $ = cheerio.load(fetched.html);
+    const title = this.cleanText($("head > title").first().text());
+    const h1 = this.cleanText($("h1").first().text());
+    const jsonLd = this.extractJsonLd($);
+    const schemaQAs = this.extractFaqSchemaQAs(jsonLd.objects);
+    const visibleQAs = this.extractVisibleQAs($);
+    const gap = this.compareQAs(visibleQAs, schemaQAs);
+    const emptyVisibleAnswers = visibleQAs.filter((item) => item.a.length < 8).map((item) => item.q);
+    const emptySchemaAnswers = schemaQAs.filter((item) => item.a.length < 8).map((item) => item.q);
+    const faqPageSchemaCount = this.countFaqPageObjects(jsonLd.objects);
+    const auditStatus = this.getAuditStatus(visibleQAs, schemaQAs, gap);
+    const notes = this.buildPageNotes({
+      auditStatus,
+      rendered: fetched.rendered,
+      visibleCount: visibleQAs.length,
+      schemaCount: schemaQAs.length,
+      invalidJsonLdCount: jsonLd.invalidCount,
+      faqPageSchemaCount,
+      visibleOnlyQuestions: gap.visibleOnly,
+      schemaOnlyQuestions: gap.schemaOnly,
+      emptyVisibleAnswers,
+      emptySchemaAnswers,
+    });
+
+    return {
+      url,
+      title,
+      h1,
+      statusCode: fetched.status,
+      rendered: fetched.rendered,
+      auditStatus,
+      schemaTypes: jsonLd.types,
+      faqPageSchemaCount,
+      visibleQaCount: visibleQAs.length,
+      schemaQaCount: schemaQAs.length,
+      visibleQuestions: visibleQAs.map((item) => item.q),
+      schemaQuestions: schemaQAs.map((item) => item.q),
+      visibleQAs,
+      schemaQAs,
+      visibleOnlyQuestions: gap.visibleOnly,
+      schemaOnlyQuestions: gap.schemaOnly,
+      emptyVisibleAnswers,
+      emptySchemaAnswers,
+      invalidJsonLdCount: jsonLd.invalidCount,
+      notes,
+    };
+  }
+
+  private getAuditStatus(
+    visibleQAs: QA[],
+    schemaQAs: QA[],
+    gap: { visibleOnly: string[]; schemaOnly: string[] }
+  ): FaqAuditStatus {
+    if (!visibleQAs.length && !schemaQAs.length) return "no-faq";
+    if (visibleQAs.length && !schemaQAs.length) return "missing-schema";
+    if (!visibleQAs.length && schemaQAs.length) return "missing-visible-faq";
+    if (gap.visibleOnly.length || gap.schemaOnly.length) return "mismatch";
+    return "ok";
+  }
+
+  private buildPageNotes(input: {
+    auditStatus: FaqAuditStatus;
+    rendered: boolean;
+    visibleCount: number;
+    schemaCount: number;
+    invalidJsonLdCount: number;
+    faqPageSchemaCount: number;
+    visibleOnlyQuestions?: string[];
+    schemaOnlyQuestions?: string[];
+    emptyVisibleAnswers?: string[];
+    emptySchemaAnswers?: string[];
+  }): string[] {
+    const notes: string[] = [];
+
+    if (input.rendered) {
+      notes.push("Checked after browser rendering.");
+    } else {
+      notes.push("Checked static HTML only.");
+    }
+
+    if (input.invalidJsonLdCount) {
+      notes.push(`${input.invalidJsonLdCount} invalid JSON-LD script(s) found.`);
+    }
+
+    if (input.auditStatus === "missing-schema") {
+      notes.push("Visible FAQ exists, but FAQPage schema was not found.");
+    }
+
+    if (input.auditStatus === "missing-visible-faq") {
+      notes.push("FAQPage schema exists, but matching visible FAQ was not found.");
+    }
+
+    if (input.auditStatus === "mismatch") {
+      notes.push("Visible FAQ and FAQPage schema are not in sync.");
+    }
+
+    if (input.visibleOnlyQuestions?.length) {
+      notes.push(`${input.visibleOnlyQuestions.length} visible question(s) are missing from FAQPage schema.`);
+    }
+
+    if (input.schemaOnlyQuestions?.length) {
+      notes.push(`${input.schemaOnlyQuestions.length} schema question(s) were not found as visible FAQ questions.`);
+    }
+
+    if (input.emptyVisibleAnswers?.length) {
+      notes.push(`${input.emptyVisibleAnswers.length} visible question(s) have missing or very short answers.`);
+    }
+
+    if (input.emptySchemaAnswers?.length) {
+      notes.push(`${input.emptySchemaAnswers.length} schema question(s) have missing or very short answers.`);
+    }
+
+    notes.push(`Visible Q/A: ${input.visibleCount}; Schema Q/A: ${input.schemaCount}; FAQPage objects: ${input.faqPageSchemaCount}.`);
+    return notes;
+  }
+
+  private summarize(pages: FaqAuditPageResult[]): SiteFaqAuditResult["summary"] {
+    return {
+      pagesChecked: pages.length,
+      pagesWithVisibleFaq: pages.filter((page) => page.visibleQaCount > 0).length,
+      pagesWithFaqSchema: pages.filter((page) => page.schemaQaCount > 0).length,
+      pagesOk: pages.filter((page) => page.auditStatus === "ok").length,
+      pagesMissingSchema: pages.filter((page) => page.auditStatus === "missing-schema").length,
+      pagesMissingVisibleFaq: pages.filter((page) => page.auditStatus === "missing-visible-faq").length,
+      pagesWithMismatch: pages.filter((page) => page.auditStatus === "mismatch").length,
+      totalVisibleQuestions: pages.reduce((sum, page) => sum + page.visibleQaCount, 0),
+      totalSchemaQuestions: pages.reduce((sum, page) => sum + page.schemaQaCount, 0),
+    };
+  }
+
+  private extractJsonLd($: cheerio.Root): JsonLdExtraction {
+    const objects: unknown[] = [];
+    const types = new Set<string>();
+    let invalidCount = 0;
+
+    $('script[type="application/ld+json"]').each((_, element) => {
+      const raw = $(element).contents().text();
+      if (!raw.trim()) return;
+
+      try {
+        const parsed = JSON.parse(raw);
+        this.flattenJsonLd(parsed).forEach((item) => {
+          objects.push(item);
+          this.collectSchemaTypes(item, types);
+        });
+      } catch {
+        invalidCount += 1;
+      }
+    });
+
+    return {
+      objects,
+      invalidCount,
+      types: Array.from(types).sort(),
+    };
+  }
+
+  private flattenJsonLd(value: unknown): unknown[] {
+    const out: unknown[] = [];
+    const visit = (item: unknown) => {
+      if (!item || typeof item !== "object") return;
+      if (Array.isArray(item)) {
+        item.forEach(visit);
+        return;
+      }
+
+      out.push(item);
+      const obj = item as Record<string, unknown>;
+      if (Array.isArray(obj["@graph"])) obj["@graph"].forEach(visit);
+      if (Array.isArray(obj.mainEntity)) obj.mainEntity.forEach(visit);
+      if (obj.mainEntity && !Array.isArray(obj.mainEntity)) visit(obj.mainEntity);
+    };
+
+    visit(value);
+    return out;
+  }
+
+  private collectSchemaTypes(value: unknown, out: Set<string>) {
+    if (!value || typeof value !== "object") return;
+    const obj = value as Record<string, unknown>;
+    const rawType = obj["@type"];
+    if (typeof rawType === "string") out.add(rawType);
+    if (Array.isArray(rawType)) {
+      rawType.forEach((item) => {
+        if (typeof item === "string") out.add(item);
+      });
+    }
+  }
+
+  private extractFaqSchemaQAs(objects: unknown[]): QA[] {
+    const qas: QA[] = [];
+
+    for (const obj of objects) {
+      if (!obj || typeof obj !== "object") continue;
+      const record = obj as Record<string, unknown>;
+
+      if (this.hasType(record, "FAQPage")) {
+        const mainEntity = record.mainEntity || record.mainEntityOfPage || [];
+        const items = Array.isArray(mainEntity) ? mainEntity : [mainEntity];
+        items.forEach((item) => {
+          const qa = this.schemaQuestionToQA(item);
+          if (qa) qas.push(qa);
+        });
+        continue;
+      }
+
+      const qa = this.schemaQuestionToQA(record);
+      if (qa) qas.push(qa);
+    }
+
+    return this.dedupeQAs(qas);
+  }
+
+  private countFaqPageObjects(objects: unknown[]): number {
+    return objects.filter((obj) => {
+      return Boolean(obj && typeof obj === "object" && this.hasType(obj as Record<string, unknown>, "FAQPage"));
+    }).length;
+  }
+
+  private schemaQuestionToQA(value: unknown): QA | null {
+    if (!value || typeof value !== "object") return null;
+    const obj = value as Record<string, unknown>;
+    const hasQuestionShape = this.hasType(obj, "Question") || Boolean(obj.acceptedAnswer || obj.acceptedAnswers || obj.answer);
+    if (!hasQuestionShape) return null;
+
+    const q = this.cleanText(String(obj.name || obj.question || ""));
+    const acceptedAnswer = obj.acceptedAnswer || obj.acceptedAnswers || obj.answer;
+    const a = this.cleanText(this.answerToText(acceptedAnswer));
+
+    if (!q) return null;
+    return { q, a };
+  }
+
+  private answerToText(value: unknown): string {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.map((item) => this.answerToText(item)).join(" ");
+    if (typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      return String(obj.text || obj.articleBody || obj.name || "");
+    }
+    return "";
+  }
+
+  private hasType(obj: Record<string, unknown>, expected: string): boolean {
+    const rawType = obj["@type"];
+    const types = Array.isArray(rawType) ? rawType : [rawType];
+    return types.some((item) => typeof item === "string" && item.toLowerCase() === expected.toLowerCase());
+  }
+
+  private extractVisibleQAs($: cheerio.Root): QA[] {
+    const items: QA[] = [];
+    const push = (qRaw: string, aRaw: string) => {
+      const q = this.cleanText(qRaw);
+      const a = this.cleanText(aRaw);
+      if (!q || q.length < 3) return;
+      if (!this.isLikelyFaqQuestion(q)) return;
+      items.push({ q, a });
+    };
+
+    $("details").each((_, element) => {
+      const $details = $(element);
+      const question = $details.find("summary").first().text();
+      const answer = $details.clone().find("summary").remove().end().text();
+      push(question, answer);
+    });
+
+    $('[itemscope][itemtype*="Question"]').each((_, element) => {
+      const $item = $(element);
+      const question = $item.find('[itemprop="name"]').first().text();
+      const answer = $item.find('[itemprop="acceptedAnswer"] [itemprop="text"], [itemprop="answer"] [itemprop="text"], [itemprop="text"]').first().text();
+      push(question, answer);
+    });
+
+    $("[aria-controls]").each((_, element) => {
+      const $trigger = $(element);
+      const id = $trigger.attr("aria-controls");
+      if (!id) return;
+      const $panel = $(`#${this.escapeSelector(id)}`);
+      if (!$panel.length) return;
+      if (!this.looksFaqRelated($trigger, $panel)) return;
+      push($trigger.text(), $panel.text());
+    });
+
+    $(".faq, .faqs, [class*='faq'], [id*='faq'], [data-faq], [data-faq-item], .accordion, [class*='accordion']").each((_, scope) => {
+      const $scope = $(scope);
+      $scope.find("details, [itemscope][itemtype*='Question']").remove();
+      $scope.find(".faq-item, .faq__item, [data-faq-item], .accordion-item, .accordion__item, li, article").each((__, element) => {
+        const $item = $(element);
+        const question = $item.find("summary, button, h2, h3, h4, [data-question], .question, .faq-question, .accordion-title").first().text();
+        const answer =
+          $item.find("[data-answer], .answer, .faq-answer, .accordion-body, .accordion__panel, [class*='panel'], [class*='content']").first().text()
+          || $item.clone()
+            .find("summary, button, h1, h2, h3, h4, h5, h6, [data-question], .question, .faq-question, .accordion-title")
+            .remove()
+            .end()
+            .text();
+        push(question, answer);
+      });
+    });
+
+    return this.dedupeQAs(items);
+  }
+
+  private isLikelyFaqQuestion(value: string): boolean {
+    const text = this.cleanText(value);
+    if (!text) return false;
+    if (text.length > 240) return false;
+    if (/[?？؟]\s*$/.test(text)) return true;
+
+    return /^(what|when|where|who|why|how|which|does|do|is|are|can|could|should|will|would|may|am|has|have|had|did|כמה|איך|מתי|איפה|האם|מה|מי|למה|איזה|אילו)\b/i.test(text);
+  }
+
+  private looksFaqRelated($trigger: cheerio.Cheerio, $panel: cheerio.Cheerio): boolean {
+    const text = `${$trigger.attr("class") || ""} ${$trigger.attr("id") || ""} ${$panel.attr("class") || ""} ${$panel.attr("id") || ""}`.toLowerCase();
+    return /faq|question|answer|accordion|collapse/.test(text);
+  }
+
+  private compareQAs(visibleQAs: QA[], schemaQAs: QA[]): { visibleOnly: string[]; schemaOnly: string[] } {
+    const visibleSet = new Set(visibleQAs.map((item) => this.norm(item.q)));
+    const schemaSet = new Set(schemaQAs.map((item) => this.norm(item.q)));
+
+    return {
+      visibleOnly: visibleQAs.filter((item) => !schemaSet.has(this.norm(item.q))).map((item) => item.q),
+      schemaOnly: schemaQAs.filter((item) => !visibleSet.has(this.norm(item.q))).map((item) => item.q),
+    };
+  }
+
+  private async fetchPage(
+    url: string,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<PageFetchResult> {
+    if (config.renderMode === "rendered") {
+      try {
+        return await this.fetchRenderedPage(url, config);
+      } catch {
+        return await this.fetchStaticPage(url, config, false);
+      }
+    }
+
+    return await this.fetchStaticPage(url, config, false);
+  }
+
+  private async fetchStaticPage(
+    url: string,
+    config: NormalizedSiteFaqAuditConfig,
+    rendered: boolean
+  ): Promise<PageFetchResult> {
+    const response = await fetch(url, {
+      headers: {
+        "user-agent": config.userAgent,
+        "accept-language": config.acceptLanguage,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`GET ${url} -> ${response.status}`);
+    }
+
+    return {
+      url,
+      status: response.status,
+      html: await response.text(),
+      rendered,
+    };
+  }
+
+  private async fetchRenderedPage(
+    url: string,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<PageFetchResult> {
+    const mod: any = await (Function("return import('playwright')")() as Promise<any>);
+    const browser = await mod.chromium.launch({ headless: true });
+    const page = await browser.newPage();
+
+    await page.setExtraHTTPHeaders({
+      "accept-language": config.acceptLanguage,
+      "user-agent": config.userAgent,
+    });
+    await page.setViewportSize({ width: 1365, height: 900 });
+    const response = await page.goto(url, { waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForSelector("body", { timeout: 20_000 }).catch(() => {});
+    await this.openFaqControls(page);
+    const html = await page.content();
+    await browser.close();
+
+    return {
+      url,
+      status: response?.status?.() ?? 200,
+      html,
+      rendered: true,
+    };
+  }
+
+  private async openFaqControls(page: any): Promise<void> {
+    const selectors = [
+      "summary",
+      "[aria-controls]",
+      "[data-faq-item] button",
+      "[data-accordion-trigger]",
+      ".accordion-button",
+      ".accordion__button",
+      ".accordion-header button",
+    ];
+
+    for (const selector of selectors) {
+      const loc = page.locator(selector);
+      const count = await loc.count().catch(() => 0);
+      for (let index = 0; index < Math.min(count, 80); index++) {
+        try {
+          await loc.nth(index).click({ force: true, timeout: 1000 });
+          await page.waitForTimeout(40);
+        } catch {
+          // Best effort only.
+        }
+      }
+    }
+
+    await page.locator("details").evaluateAll((nodes: any[]) => {
+      nodes.forEach((node: any) => {
+        node.open = true;
+      });
+    }).catch(() => {});
+  }
+
+  private async compareAgainstSources(
+    result: SiteFaqAuditResult,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<SourceComparisonResult> {
+    const sheets = new SheetsService("info@carmelon.co.il");
+    const sourceFiles = await this.resolveSourceFiles(config, sheets);
+    const files: SourceFileComparison[] = [];
+    const sourceRows: SourceFaqRow[] = [];
+
+    for (const sourceFile of sourceFiles) {
+      try {
+        const rows = await this.readSourceRows(sheets, sourceFile, config);
+        sourceRows.push(...rows);
+
+        if (!rows.length) {
+          files.push({
+            sourceFile: sourceFile.name,
+            spreadsheetId: sourceFile.id,
+            tabName: config.sourceTabName || "",
+            status: "no-questions",
+            matchedPageUrl: "",
+            matchedPageTitle: "",
+            matchedBy: "",
+            sourceQuestionCount: 0,
+            siteQuestionCount: 0,
+            matchedQuestionCount: 0,
+            sourceOnlyQuestions: [],
+            siteOnlyQuestions: [],
+            answerMismatches: [],
+            duplicateQuestions: [],
+            qaIssues: [],
+            notes: ["No source FAQ questions were detected in the configured tab."],
+          });
+          continue;
+        }
+
+        files.push(this.compareSourceFileToSite(sourceFile, rows, result.pages));
+      } catch (error) {
+        files.push({
+          sourceFile: sourceFile.name,
+          spreadsheetId: sourceFile.id,
+          tabName: config.sourceTabName || "",
+          status: "read-failed",
+          matchedPageUrl: "",
+          matchedPageTitle: "",
+          matchedBy: "",
+          sourceQuestionCount: 0,
+          siteQuestionCount: 0,
+          matchedQuestionCount: 0,
+          sourceOnlyQuestions: [],
+          siteOnlyQuestions: [],
+          answerMismatches: [],
+          duplicateQuestions: [],
+          qaIssues: [],
+          notes: [error instanceof Error ? error.message : String(error)],
+        });
+      }
+    }
+
+    const siteIssues = this.buildSiteQualityIssues(result.pages);
+    const issues = [...siteIssues, ...files.flatMap((file) => file.qaIssues)];
+
+    return {
+      enabled: true,
+      sourceFilesFound: sourceFiles.length,
+      sourceFilesRead: files.filter((file) => file.status !== "read-failed").length,
+      sourceFilesFailed: files.filter((file) => file.status === "read-failed").length,
+      totalSourceQuestions: sourceRows.length,
+      matchedPages: files.filter((file) => Boolean(file.matchedPageUrl)).length,
+      missingOnSite: files.reduce((sum, file) => sum + file.sourceOnlyQuestions.length, 0),
+      extraOnSite: files.reduce((sum, file) => sum + file.siteOnlyQuestions.length, 0),
+      answerMismatches: files.reduce((sum, file) => sum + file.answerMismatches.length, 0),
+      qaIssueCount: issues.length,
+      files,
+      issues,
+      sourceRows,
+    };
+  }
+
+  private async resolveSourceFiles(
+    config: NormalizedSiteFaqAuditConfig,
+    sheets: SheetsService
+  ): Promise<SourceFileRef[]> {
+    const parsed = this.parseSourceInput(config);
+    const out: SourceFileRef[] = [];
+
+    for (const folderId of parsed.folderIds) {
+      const files = await sheets.listSpreadsheetsInFolderWithNamesRecursive(folderId);
+      out.push(...files.map((file) => ({ id: file.id, name: file.name })));
+    }
+
+    for (const id of parsed.spreadsheetIds) {
+      const name = await sheets.getSpreadsheetTitle(id).catch(() => id);
+      out.push({ id, name });
+    }
+
+    const seen = new Set<string>();
+    return out.filter((file) => {
+      if (!file.id || seen.has(file.id)) return false;
+      seen.add(file.id);
+      return true;
+    });
+  }
+
+  private parseSourceInput(config: NormalizedSiteFaqAuditConfig): { folderIds: string[]; spreadsheetIds: string[] } {
+    const folderIds: string[] = [];
+    const spreadsheetIds: string[] = [];
+    const inputs = [
+      config.sourceFolderId,
+      ...config.sourceSpreadsheetIds,
+      ...config.sourceInput.split(/\r?\n|,/),
+    ].map((item) => item.trim()).filter(Boolean);
+
+    for (const value of inputs) {
+      const spreadsheetId = this.extractSpreadsheetId(value);
+      if (spreadsheetId) {
+        spreadsheetIds.push(spreadsheetId);
+        continue;
+      }
+
+      const folderId = this.extractFolderId(value);
+      if (folderId) {
+        folderIds.push(folderId);
+      }
+    }
+
+    return {
+      folderIds: Array.from(new Set(folderIds)),
+      spreadsheetIds: Array.from(new Set(spreadsheetIds)),
+    };
+  }
+
+  private extractSpreadsheetId(value: string): string {
+    const clean = value.trim();
+    const urlMatch = clean.match(/\/spreadsheets\/d\/([A-Za-z0-9-_]+)/);
+    if (urlMatch?.[1]) return urlMatch[1];
+    if (/^[A-Za-z0-9-_]{30,}$/.test(clean) && !/folders/i.test(clean)) return clean;
+    return "";
+  }
+
+  private extractFolderId(value: string): string {
+    const clean = value.trim();
+    const urlMatch = clean.match(/\/folders\/([A-Za-z0-9-_]+)/);
+    if (urlMatch?.[1]) return urlMatch[1];
+    const idParam = clean.match(/[?&]id=([A-Za-z0-9-_]+)/);
+    if (idParam?.[1]) return idParam[1];
+    return "";
+  }
+
+  private async readSourceRows(
+    sheets: SheetsService,
+    sourceFile: SourceFileRef,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<SourceFaqRow[]> {
+    const tabName = config.sourceTabName.trim() || await sheets.getFirstSheetTitle(sourceFile.id);
+    const rows = await sheets.readValues(sourceFile.id, `${this.quoteA1Sheet(tabName)}!A:Z`);
+    const headerIndex = config.sourceHeaderRow > 0
+      ? config.sourceHeaderRow - 1
+      : this.detectSourceHeaderRow(rows);
+    const header = rows[headerIndex] || [];
+    const columns = this.detectSourceColumns(header);
+    const out: SourceFaqRow[] = [];
+
+    for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex] || [];
+      const q = this.cleanText(row[columns.question] || "");
+      if (!q || !this.isLikelyFaqQuestion(q)) continue;
+
+      const answerSource = columns.finalAnswer >= 0 && this.cleanText(row[columns.finalAnswer] || "")
+        ? row[columns.finalAnswer]
+        : row[columns.answer] || "";
+      const a = this.cleanText(answerSource || "");
+
+      out.push({
+        sourceFile: sourceFile.name,
+        spreadsheetId: sourceFile.id,
+        tabName,
+        rowNumber: rowIndex + 1,
+        category: columns.category >= 0 ? this.cleanText(row[columns.category] || "") : "",
+        q,
+        a,
+      });
+    }
+
+    return out;
+  }
+
+  private detectSourceHeaderRow(rows: string[][]): number {
+    for (let index = 0; index < Math.min(rows.length, 10); index++) {
+      const headers = (rows[index] || []).map((cell) => this.normalizeHeader(cell));
+      const hasQuestion = headers.some((cell) => cell === "question" || cell === "שאלה");
+      const hasAnswer = headers.some((cell) => cell === "answer" || cell === "finalanswer" || cell === "תשובה");
+      if (hasQuestion && hasAnswer) return index;
+    }
+
+    return 0;
+  }
+
+  private detectSourceColumns(header: string[]): { category: number; question: number; answer: number; finalAnswer: number } {
+    const headers = header.map((cell) => this.normalizeHeader(cell));
+    const find = (candidates: string[]) => headers.findIndex((cell) => candidates.includes(cell));
+    const question = find(["question", "questions", "שאלה", "שאלות"]);
+    const answer = find(["answer", "answers", "תשובה", "תשובות"]);
+    const finalAnswer = find(["finalanswer", "finalanswers", "final", "תשובהסופית"]);
+    const category = find(["category", "section", "topic", "קטגוריה", "נושא"]);
+
+    return {
+      category: category >= 0 ? category : 0,
+      question: question >= 0 ? question : 1,
+      answer: answer >= 0 ? answer : 2,
+      finalAnswer,
+    };
+  }
+
+  private compareSourceFileToSite(
+    sourceFile: SourceFileRef,
+    sourceRows: SourceFaqRow[],
+    pages: FaqAuditPageResult[]
+  ): SourceFileComparison {
+    const match = this.findBestPageMatch(sourceFile.name, pages);
+    const duplicateQuestions = this.findDuplicateQuestions(sourceRows);
+    const qaIssues = this.buildQualityIssues(
+      sourceRows,
+      { scope: "source", sourceFile: sourceFile.name }
+    );
+
+    if (!match.page) {
+      return {
+        sourceFile: sourceFile.name,
+        spreadsheetId: sourceFile.id,
+        tabName: sourceRows[0]?.tabName || "",
+        status: "no-page-match",
+        matchedPageUrl: "",
+        matchedPageTitle: "",
+        matchedBy: "",
+        sourceQuestionCount: sourceRows.length,
+        siteQuestionCount: 0,
+        matchedQuestionCount: 0,
+        sourceOnlyQuestions: sourceRows.map((row) => row.q),
+        siteOnlyQuestions: [],
+        answerMismatches: [],
+        duplicateQuestions,
+        qaIssues,
+        notes: ["No matching FAQ page was found for this source file name."],
+      };
+    }
+
+    const siteQAs = this.getSiteQAsForComparison(match.page);
+    const sourceMap = this.qaMap(sourceRows);
+    const siteMap = this.qaMap(siteQAs);
+    const sourceOnlyQuestions = sourceRows
+      .filter((row) => !siteMap.has(this.norm(row.q)))
+      .map((row) => row.q);
+    const siteOnlyQuestions = siteQAs
+      .filter((row) => !sourceMap.has(this.norm(row.q)))
+      .map((row) => row.q);
+    const answerMismatches: FaqAnswerMismatch[] = [];
+    const matchedQuestionKeys = Array.from(sourceMap.keys()).filter((key) => siteMap.has(key));
+
+    for (const key of matchedQuestionKeys) {
+      const source = sourceMap.get(key)?.[0];
+      const site = siteMap.get(key)?.[0];
+      if (!source || !site || !source.a || !site.a) continue;
+      const similarity = this.textSimilarity(source.a, site.a);
+      if (similarity < 0.9) {
+        answerMismatches.push({
+          question: source.q,
+          sourceAnswer: source.a,
+          siteAnswer: site.a,
+          similarity,
+        });
+      }
+    }
+
+    return {
+      sourceFile: sourceFile.name,
+      spreadsheetId: sourceFile.id,
+      tabName: sourceRows[0]?.tabName || "",
+      status: "ok",
+      matchedPageUrl: match.page.url,
+      matchedPageTitle: match.page.title || match.page.h1 || "",
+      matchedBy: match.matchedBy,
+      sourceQuestionCount: sourceRows.length,
+      siteQuestionCount: siteQAs.length,
+      matchedQuestionCount: matchedQuestionKeys.length,
+      sourceOnlyQuestions,
+      siteOnlyQuestions,
+      answerMismatches,
+      duplicateQuestions,
+      qaIssues,
+      notes: [
+        `Matched by ${match.matchedBy}.`,
+        `Compared source questions to ${match.page.visibleQAs.length ? "visible FAQ" : "schema FAQ"}.`,
+      ],
+    };
+  }
+
+  private findBestPageMatch(
+    sourceFileName: string,
+    pages: FaqAuditPageResult[]
+  ): { page: FaqAuditPageResult | null; matchedBy: string } {
+    let best: { page: FaqAuditPageResult | null; score: number } = { page: null, score: 0 };
+
+    for (const page of pages) {
+      const score = this.sourcePageMatchScore(sourceFileName, page);
+      if (score > best.score) best = { page, score };
+    }
+
+    if (!best.page || best.score < 60) return { page: null, matchedBy: "" };
+    return {
+      page: best.page,
+      matchedBy: best.score >= 95 ? "file-name-url" : "file-name-tokens",
+    };
+  }
+
+  private sourcePageMatchScore(sourceFileName: string, page: FaqAuditPageResult): number {
+    const sourceSlug = this.slugify(sourceFileName);
+    const pageText = this.slugify(`${page.url} ${page.title} ${page.h1}`);
+    if (sourceSlug && pageText.includes(sourceSlug)) return 100;
+
+    const tokens = sourceSlug
+      .split("-")
+      .filter((token) => token.length > 1 && !["faq", "sheet", "questions", "question", "source"].includes(token));
+    const significant = tokens.filter((token) => !["master", "hotel", "apartments", "apartment"].includes(token));
+    if (!tokens.length) return 0;
+    if (significant.length && !significant.some((token) => pageText.includes(token))) return 0;
+
+    const matched = tokens.filter((token) => pageText.includes(token)).length;
+    return Math.round((matched / tokens.length) * 100);
+  }
+
+  private getSiteQAsForComparison(page: FaqAuditPageResult): QA[] {
+    return page.visibleQAs.length ? page.visibleQAs : page.schemaQAs;
+  }
+
+  private buildSiteQualityIssues(pages: FaqAuditPageResult[]): FaqTextIssue[] {
+    const issues: FaqTextIssue[] = [];
+
+    for (const page of pages) {
+      issues.push(...this.buildQualityIssues(page.visibleQAs, { scope: "site", url: page.url }));
+      if (page.invalidJsonLdCount) {
+        issues.push({
+          scope: "site",
+          severity: "warning",
+          type: "invalid-json-ld",
+          url: page.url,
+          detail: `${page.invalidJsonLdCount} invalid JSON-LD script(s) were detected.`,
+          recommendedAction: "Validate the JSON-LD syntax and fix malformed structured data blocks.",
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private buildQualityIssues(
+    qas: Array<QA & Partial<SourceFaqRow>>,
+    meta: { scope: FaqTextIssueScope; sourceFile?: string; url?: string }
+  ): FaqTextIssue[] {
+    const issues: FaqTextIssue[] = [];
+    const duplicateMap = new Map<string, Array<QA & Partial<SourceFaqRow>>>();
+
+    for (const item of qas) {
+      const key = this.norm(item.q);
+      if (!key) continue;
+      duplicateMap.set(key, [...(duplicateMap.get(key) || []), item]);
+    }
+
+    for (const group of duplicateMap.values()) {
+      if (group.length < 2) continue;
+      issues.push(this.textIssue(meta, group[0], "duplicate-question", `Question appears ${group.length} times in the same ${meta.scope === "source" ? "source file" : "page"}.`, "Keep one canonical Q/A or intentionally split the wording so duplicates are clear."));
+    }
+
+    for (const item of qas) {
+      const question = this.cleanText(item.q);
+      const answer = this.cleanText(item.a);
+
+      if (!answer || answer.length < 8) {
+        issues.push(this.textIssue(meta, item, "short-answer", "Answer is empty or very short.", "Add a complete answer before publishing or adding it to schema."));
+      }
+
+      if (this.hasHtmlEntityResidue(question) || this.hasHtmlEntityResidue(answer)) {
+        issues.push(this.textIssue(meta, item, "html-entity", "HTML entity residue is visible in the text.", "Decode entities such as &#8217; before publishing."));
+      }
+
+      if (this.hasUnbalancedDoubleQuotes(question) || this.hasUnbalancedDoubleQuotes(answer)) {
+        issues.push(this.textIssue(meta, item, "unbalanced-quotes", "Double quotation marks look unbalanced.", "Review the sentence and close or remove the stray quote."));
+      }
+
+      if (/[?!]{2,}|\.{3,}|,,|;;/.test(question) || /[?!]{2,}|,,|;;/.test(answer)) {
+        issues.push(this.textIssue(meta, item, "repeated-punctuation", "Repeated punctuation was detected.", "Clean obvious punctuation typos."));
+      }
+
+      if (/^[?!.,:;]/.test(question)) {
+        issues.push(this.textIssue(meta, item, "leading-punctuation", "Question starts with punctuation.", "Move punctuation to the end of the question."));
+      }
+
+      if (this.startsLikeQuestion(question) && !/[?؟？]\s*$/.test(question)) {
+        issues.push(this.textIssue(meta, item, "missing-question-mark", "Question looks like a question but does not end with a question mark.", "Add a question mark or rewrite the sentence as a statement."));
+      }
+
+      if (/[�]/.test(question) || /[�]/.test(answer)) {
+        issues.push(this.textIssue(meta, item, "replacement-character", "Replacement character was detected.", "Check encoding before publishing."));
+      }
+
+      if (/\b(TODO|TBD|lorem ipsum)\b/i.test(question) || /\b(TODO|TBD|lorem ipsum)\b/i.test(answer)) {
+        issues.push(this.textIssue(meta, item, "placeholder-text", "Placeholder text was detected.", "Replace placeholder text with final customer-facing content."));
+      }
+    }
+
+    return issues;
+  }
+
+  private textIssue(
+    meta: { scope: FaqTextIssueScope; sourceFile?: string; url?: string },
+    item: QA & Partial<SourceFaqRow>,
+    type: string,
+    detail: string,
+    recommendedAction: string
+  ): FaqTextIssue {
+    return {
+      scope: meta.scope,
+      severity: "warning",
+      type,
+      sourceFile: meta.sourceFile,
+      url: meta.url,
+      rowNumber: item.rowNumber,
+      question: item.q,
+      answerPreview: this.cleanText(item.a || "").slice(0, 300),
+      detail,
+      recommendedAction,
+    };
+  }
+
+  private findDuplicateQuestions(qas: Array<QA>): string[] {
+    const byQuestion = new Map<string, QA[]>();
+    for (const item of qas) {
+      const key = this.norm(item.q);
+      byQuestion.set(key, [...(byQuestion.get(key) || []), item]);
+    }
+
+    return Array.from(byQuestion.values())
+      .filter((items) => items.length > 1)
+      .map((items) => items[0]?.q || "")
+      .filter(Boolean);
+  }
+
+  private qaMap<T extends QA>(qas: T[]): Map<string, T[]> {
+    const out = new Map<string, T[]>();
+    for (const item of qas) {
+      const key = this.norm(item.q);
+      if (!key) continue;
+      out.set(key, [...(out.get(key) || []), item]);
+    }
+    return out;
+  }
+
+  private textSimilarity(a: string, b: string): number {
+    const aTokens = new Set(this.norm(a).split(" ").filter((token) => token.length > 2));
+    const bTokens = new Set(this.norm(b).split(" ").filter((token) => token.length > 2));
+    if (!aTokens.size && !bTokens.size) return 1;
+    if (!aTokens.size || !bTokens.size) return 0;
+    const intersection = Array.from(aTokens).filter((token) => bTokens.has(token)).length;
+    const union = new Set([...aTokens, ...bTokens]).size;
+    return union ? intersection / union : 0;
+  }
+
+  private normalizeHeader(value: string): string {
+    return this.cleanText(value).toLowerCase().replace(/[^a-zא-ת0-9]+/g, "");
+  }
+
+  private quoteA1Sheet(tabName: string): string {
+    return `'${tabName.replace(/'/g, "''")}'`;
+  }
+
+  private slugify(value: string): string {
+    return this.cleanText(value)
+      .toLowerCase()
+      .replace(/&/g, " and ")
+      .replace(/[^a-z0-9א-ת]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  private hasHtmlEntityResidue(value: string): boolean {
+    return /&(?:#[0-9]+|#x[0-9a-f]+|[a-z]+);/i.test(value);
+  }
+
+  private hasUnbalancedDoubleQuotes(value: string): boolean {
+    const normalized = value.replace(/[“”„‟]/g, "\"");
+    const count = (normalized.match(/"/g) || []).length;
+    return count % 2 === 1;
+  }
+
+  private startsLikeQuestion(value: string): boolean {
+    return /^(what|when|where|who|why|how|which|does|do|is|are|can|could|should|will|would|may|am|has|have|had|did|כמה|איך|מתי|איפה|האם|מה|מי|למה|איזה|אילו)\b/i.test(this.cleanText(value));
+  }
+
+  private async writeGoogleSheetReport(
+    result: SiteFaqAuditResult,
+    config: NormalizedSiteFaqAuditConfig
+  ): Promise<{ id: string; url: string }> {
+    const sheets = new SheetsService("info@carmelon.co.il");
+    const title = config.reportTitle
+      || `FAQ Audit - ${new URL(result.normalizedStartUrl).host} - ${new Date().toISOString().slice(0, 10)}`;
+    const spreadsheetId = await sheets.createSpreadsheet(title);
+    const firstTab = await sheets.getFirstSheetTitle(spreadsheetId);
+
+    await sheets.renameSheet(spreadsheetId, firstTab, "Summary");
+    await sheets.ensureTab(spreadsheetId, "לטיפול");
+    await sheets.ensureTab(spreadsheetId, "Pages");
+    await sheets.ensureTab(spreadsheetId, "Gaps");
+    await sheets.ensureTab(spreadsheetId, "Questions");
+    if (result.sourceComparison?.enabled) {
+      await sheets.ensureTab(spreadsheetId, "Source Compare");
+      await sheets.ensureTab(spreadsheetId, "QA Checks");
+      await sheets.ensureTab(spreadsheetId, "Source Questions");
+    }
+
+    await sheets.writeValues(spreadsheetId, this.a1("Summary", "A1"), this.buildSummaryRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("לטיפול", "A1"), this.buildActionItemRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Pages", "A1"), this.buildPageRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Gaps", "A1"), this.buildGapRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Questions", "A1"), this.buildQuestionRows(result));
+    if (result.sourceComparison?.enabled) {
+      await sheets.writeValues(spreadsheetId, this.a1("Source Compare", "A1"), this.buildSourceCompareRows(result));
+      await sheets.writeValues(spreadsheetId, this.a1("QA Checks", "A1"), this.buildQualityIssueRows(result));
+      await sheets.writeValues(spreadsheetId, this.a1("Source Questions", "A1"), this.buildSourceQuestionRows(result));
+    }
+
+    const formatTasks = [
+      sheets.formatSheetLikeFAQ(spreadsheetId, "Summary").catch(() => {}),
+      sheets.formatSheetLikeFAQ(spreadsheetId, "לטיפול").catch(() => {}),
+      sheets.formatSheetLikeFAQ(spreadsheetId, "Pages").catch(() => {}),
+      sheets.formatSheetLikeFAQ(spreadsheetId, "Gaps").catch(() => {}),
+      sheets.formatSheetLikeFAQ(spreadsheetId, "Questions").catch(() => {}),
+    ];
+
+    if (result.sourceComparison?.enabled) {
+      formatTasks.push(
+        sheets.formatSheetLikeFAQ(spreadsheetId, "Source Compare").catch(() => {}),
+        sheets.formatSheetLikeFAQ(spreadsheetId, "QA Checks").catch(() => {}),
+        sheets.formatSheetLikeFAQ(spreadsheetId, "Source Questions").catch(() => {}),
+      );
+    }
+
+    await Promise.all(formatTasks);
+
+    return {
+      id: spreadsheetId,
+      url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+    };
+  }
+
+  private buildSummaryRows(result: SiteFaqAuditResult): string[][] {
+    const rows = [
+      ["FAQ Audit Summary", ""],
+      ["Site", result.normalizedStartUrl || result.startUrl],
+      ["Checked at", result.finishedAt],
+      ["Pages checked", String(result.summary.pagesChecked)],
+      ["Pages OK", String(result.summary.pagesOk)],
+      ["Pages with mismatch", String(result.summary.pagesWithMismatch)],
+      ["Pages missing schema", String(result.summary.pagesMissingSchema)],
+      ["Pages missing visible FAQ", String(result.summary.pagesMissingVisibleFaq)],
+      ["Visible Q/A total", String(result.summary.totalVisibleQuestions)],
+      ["Schema Q/A total", String(result.summary.totalSchemaQuestions)],
+      ["", ""],
+      ["How to read this report", "Start with the לטיפול tab. It combines all actionable issues from DOM/schema gaps, source-file comparison, and light QA checks."],
+    ];
+
+    if (result.sourceComparison?.enabled) {
+      rows.push(
+        ["", ""],
+        ["Source comparison", "Enabled"],
+        ["Source files found", String(result.sourceComparison.sourceFilesFound)],
+        ["Source files read", String(result.sourceComparison.sourceFilesRead)],
+        ["Source questions", String(result.sourceComparison.totalSourceQuestions)],
+        ["Matched source files to FAQ pages", String(result.sourceComparison.matchedPages)],
+        ["Questions missing on site", String(result.sourceComparison.missingOnSite)],
+        ["Extra questions on site", String(result.sourceComparison.extraOnSite)],
+        ["Answer mismatches", String(result.sourceComparison.answerMismatches)],
+        ["QA light-check issues", String(result.sourceComparison.qaIssueCount)],
+        ["Source tabs", "Use Source Compare for file-level matching, QA Checks for obvious text problems, and Source Questions for the raw source rows."]
+      );
+    }
+
+    return rows;
+  }
+
+  private buildPageRows(result: SiteFaqAuditResult): string[][] {
+    return [
+      [
+        "Status",
+        "URL",
+        "Title",
+        "Rendered",
+        "Visible Q/A",
+        "Schema Q/A",
+        "FAQPage objects",
+        "Visible-only count",
+        "Schema-only count",
+        "Main issue",
+        "Recommended action",
+        "Schema types",
+        "Notes",
+      ],
+      ...result.pages.map((page) => [
+        page.auditStatus,
+        page.url,
+        page.title || page.h1 || "",
+        page.rendered ? "Rendered" : "Static",
+        String(page.visibleQaCount),
+        String(page.schemaQaCount),
+        String(page.faqPageSchemaCount),
+        String(page.visibleOnlyQuestions.length),
+        String(page.schemaOnlyQuestions.length),
+        this.pageIssueSummary(page),
+        this.pageRecommendedAction(page),
+        page.schemaTypes.join(", "),
+        page.notes.join(" | "),
+      ]),
+    ];
+  }
+
+  private buildGapRows(result: SiteFaqAuditResult): string[][] {
+    const rows: string[][] = [[
+      "Gap type",
+      "URL",
+      "Title",
+      "Question",
+      "Why it matters",
+      "Recommended action",
+    ]];
+
+    for (const page of result.pages) {
+      for (const question of page.visibleOnlyQuestions) {
+        rows.push([
+          "Visible question missing from schema",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "Users can see this FAQ, but AI/search tools may not receive it as structured FAQPage data.",
+          "Add the question and its answer to FAQPage JSON-LD, or remove it from the visible FAQ if it should not be indexed.",
+        ]);
+      }
+
+      for (const question of page.schemaOnlyQuestions) {
+        rows.push([
+          "Schema question missing from visible FAQ",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "Structured data includes a Q/A that the user may not be able to see on the page.",
+          "Show the same Q/A visibly on the page, or remove it from FAQPage schema.",
+        ]);
+      }
+    }
+
+    if (rows.length === 1) {
+      rows.push(["No gaps", "", "", "", "Visible FAQ and schema are aligned.", "No action needed."]);
+    }
+
+    return rows;
+  }
+
+  private buildQuestionRows(result: SiteFaqAuditResult): string[][] {
+    const rows: string[][] = [[
+      "Source",
+      "URL",
+      "Title",
+      "Question",
+      "Answer preview",
+    ]];
+
+    for (const page of result.pages) {
+      for (const item of page.visibleQAs) {
+        rows.push(["Visible", page.url, page.title || page.h1 || "", item.q, item.a.slice(0, 500)]);
+      }
+
+      for (const item of page.schemaQAs) {
+        rows.push(["Schema", page.url, page.title || page.h1 || "", item.q, item.a.slice(0, 500)]);
+      }
+    }
+
+    return rows;
+  }
+
+  private buildActionItemRows(result: SiteFaqAuditResult): string[][] {
+    const rows: string[][] = [[
+      "תחום",
+      "סוג בעיה",
+      "עדיפות",
+      "סטטוס",
+      "קובץ מקור",
+      "URL",
+      "כותרת",
+      "שאלה",
+      "תשובת מקור",
+      "תשובת אתר / סכמה",
+      "מה הבעיה",
+      "מה לעשות",
+      "הערות",
+    ]];
+
+    for (const page of result.pages) {
+      if (page.auditStatus === "fetch-failed") {
+        rows.push([
+          "פער עמוד/סכמה",
+          "כשל טעינת עמוד",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          "",
+          "",
+          "",
+          "העמוד לא נטען ולכן לא ניתן לבדוק את ה-FAQ או את הסכמה.",
+          "לבדוק שהעמוד זמין, שאין חסימה, ולהריץ בדיקה חוזרת.",
+          page.notes.join(" | "),
+        ]);
+        continue;
+      }
+
+      if (page.auditStatus === "missing-schema") {
+        rows.push([
+          "פער עמוד/סכמה",
+          "FAQ גלוי ללא FAQPage schema",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          "",
+          "",
+          "",
+          `נמצאו ${page.visibleQaCount} שאלות גלויות, אבל לא נמצאה FAQPage schema.`,
+          "להוסיף FAQPage JSON-LD שמכיל את אותן שאלות ותשובות שמופיעות בעמוד.",
+          page.notes.join(" | "),
+        ]);
+      }
+
+      if (page.auditStatus === "missing-visible-faq") {
+        rows.push([
+          "פער עמוד/סכמה",
+          "FAQPage schema ללא FAQ גלוי",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          "",
+          "",
+          "",
+          `נמצאו ${page.schemaQaCount} שאלות בסכמה, אבל לא נמצאה תצוגת FAQ גלויה בעמוד.`,
+          "להציג את אותן שאלות בעמוד או להסיר אותן מהסכמה אם הן לא אמורות להיות גלויות.",
+          page.notes.join(" | "),
+        ]);
+      }
+
+      if (page.auditStatus === "no-faq") {
+        rows.push([
+          "פער עמוד/סכמה",
+          "לא נמצא FAQ",
+          "בינונית",
+          "לבדיקה",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          "",
+          "",
+          "",
+          "לא זוהו שאלות FAQ גלויות ולא זוהתה FAQPage schema.",
+          "לוודא אם העמוד אכן אמור לכלול FAQ. אם כן, להוסיף FAQ גלוי וסכמה.",
+          page.notes.join(" | "),
+        ]);
+      }
+
+      for (const question of page.visibleOnlyQuestions) {
+        const visible = page.visibleQAs.find((item) => this.norm(item.q) === this.norm(question));
+        rows.push([
+          "פער עמוד/סכמה",
+          "שאלה גלויה חסרה בסכמה",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "",
+          visible?.a || "",
+          "השאלה מופיעה בעמוד, אבל לא קיימת ב-FAQPage schema.",
+          "להוסיף את השאלה והתשובה ל-FAQPage JSON-LD או להסיר אותה מהעמוד אם אינה אמורה להתפרסם.",
+          "",
+        ]);
+      }
+
+      for (const question of page.schemaOnlyQuestions) {
+        const schema = page.schemaQAs.find((item) => this.norm(item.q) === this.norm(question));
+        rows.push([
+          "פער עמוד/סכמה",
+          "שאלה בסכמה חסרה בעמוד",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "",
+          schema?.a || "",
+          "השאלה קיימת ב-FAQPage schema, אבל לא נמצאה כ-FAQ גלוי בעמוד.",
+          "להציג את אותה שאלה ותשובה בעמוד או להסיר אותה מהסכמה.",
+          "",
+        ]);
+      }
+
+      for (const question of page.emptyVisibleAnswers) {
+        rows.push([
+          "בדיקת QA קלה",
+          "תשובה גלויה קצרה או חסרה",
+          "בינונית",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "",
+          "",
+          "השאלה הגלויה כוללת תשובה חסרה או קצרה מדי.",
+          "להשלים תשובה מלאה לפני פרסום או הטמעה בסכמה.",
+          "",
+        ]);
+      }
+
+      for (const question of page.emptySchemaAnswers) {
+        rows.push([
+          "בדיקת QA קלה",
+          "תשובת סכמה קצרה או חסרה",
+          "בינונית",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          question,
+          "",
+          "",
+          "השאלה בסכמה כוללת תשובה חסרה או קצרה מדי.",
+          "להשלים את acceptedAnswer.text או להסיר את השאלה מהסכמה.",
+          "",
+        ]);
+      }
+
+      if (page.invalidJsonLdCount) {
+        rows.push([
+          "בדיקת QA קלה",
+          "JSON-LD לא תקין",
+          "גבוהה",
+          "לטיפול",
+          "",
+          page.url,
+          page.title || page.h1 || "",
+          "",
+          "",
+          "",
+          `${page.invalidJsonLdCount} בלוקים של JSON-LD לא נקראו בגלל שגיאת סינטקס.`,
+          "להריץ ולידציה ל-JSON-LD ולתקן פסיקים, סוגריים, גרשיים או escaping.",
+          "",
+        ]);
+      }
+    }
+
+    const comparison = result.sourceComparison;
+    if (comparison?.enabled) {
+      for (const file of comparison.files) {
+        if (file.status === "read-failed") {
+          rows.push([
+            "פער מקור/הטמעה",
+            "כשל קריאת קובץ מקור",
+            "גבוהה",
+            "לטיפול",
+            file.sourceFile,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "לא ניתן היה לקרוא את קובץ המקור ולכן לא בוצעה השוואה.",
+            "לבדוק הרשאות, טאב מקור, ושקובץ Google Sheet תקין.",
+            file.notes.join(" | "),
+          ]);
+        }
+
+        if (file.status === "no-page-match") {
+          rows.push([
+            "פער מקור/הטמעה",
+            "לא נמצא עמוד FAQ מתאים לקובץ מקור",
+            "גבוהה",
+            "לטיפול",
+            file.sourceFile,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "קובץ המקור נקרא, אבל לא נמצא לו עמוד FAQ מתאים באתר.",
+            "לבדוק שהעמוד קיים, שה-URL נסרק, וששם הקובץ תואם לשם הנכס.",
+            file.notes.join(" | "),
+          ]);
+        }
+
+        if (file.status === "no-questions") {
+          rows.push([
+            "פער מקור/הטמעה",
+            "לא נמצאו שאלות בקובץ מקור",
+            "בינונית",
+            "לבדיקה",
+            file.sourceFile,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "קובץ המקור נקרא אבל לא זוהו בו שאלות FAQ.",
+            "לבדוק את שורת הכותרות, שם הטאב, ועמודות Question/Answer.",
+            file.notes.join(" | "),
+          ]);
+        }
+
+        for (const question of file.sourceOnlyQuestions) {
+          rows.push([
+            "פער מקור/הטמעה",
+            "שאלה מהמקור חסרה באתר",
+            "גבוהה",
+            "לטיפול",
+            file.sourceFile,
+            file.matchedPageUrl,
+            file.matchedPageTitle,
+            question,
+            "",
+            "",
+            "השאלה קיימת בקובץ המקור אבל לא נמצאה בעמוד ה-FAQ שהוטמע באתר.",
+            "להוסיף את השאלה והתשובה לעמוד ולסכמה, או לאשר שהיא הוסרה בכוונה.",
+            `Tab: ${file.tabName}`,
+          ]);
+        }
+
+        for (const question of file.siteOnlyQuestions) {
+          rows.push([
+            "פער מקור/הטמעה",
+            "שאלה באתר לא קיימת במקור",
+            "בינונית",
+            "לבדיקה",
+            file.sourceFile,
+            file.matchedPageUrl,
+            file.matchedPageTitle,
+            question,
+            "",
+            "",
+            "השאלה נמצאה באתר אבל לא נמצאה בקובץ המקור.",
+            "לבדוק אם זו תוספת מאושרת. אם לא, להסיר או להחליף לפי קובץ המקור.",
+            `Tab: ${file.tabName}`,
+          ]);
+        }
+
+        for (const mismatch of file.answerMismatches) {
+          rows.push([
+            "פער מקור/הטמעה",
+            "תשובה שונה מהמקור",
+            "גבוהה",
+            "לטיפול",
+            file.sourceFile,
+            file.matchedPageUrl,
+            file.matchedPageTitle,
+            mismatch.question,
+            mismatch.sourceAnswer,
+            mismatch.siteAnswer,
+            `השאלה קיימת גם במקור וגם באתר, אבל התשובה שונה. דמיון משוער: ${Math.round(mismatch.similarity * 100)}%.`,
+            "להשוות ידנית ולאשר אם התשובה באתר נכונה. אם לא, להחזיר לנוסח המקור.",
+            `Tab: ${file.tabName}`,
+          ]);
+        }
+
+        for (const question of file.duplicateQuestions) {
+          rows.push([
+            "בדיקת QA קלה",
+            "שאלה כפולה בקובץ מקור",
+            "בינונית",
+            "לטיפול",
+            file.sourceFile,
+            file.matchedPageUrl,
+            file.matchedPageTitle,
+            question,
+            "",
+            "",
+            "אותה שאלה מופיעה יותר מפעם אחת בקובץ המקור.",
+            "להשאיר נוסח אחד או לוודא שהכפילות מכוונת ומנוסחת אחרת.",
+            `Tab: ${file.tabName}`,
+          ]);
+        }
+      }
+
+      for (const issue of comparison.issues) {
+        if (issue.scope === "source" && issue.type === "duplicate-question") continue;
+
+        rows.push([
+          "בדיקת QA קלה",
+          this.issueTypeLabel(issue.type),
+          issue.type === "invalid-json-ld" ? "גבוהה" : "נמוכה",
+          "לבדיקה",
+          issue.sourceFile || "",
+          issue.url || "",
+          "",
+          issue.question || "",
+          issue.scope === "source" ? issue.answerPreview || "" : "",
+          issue.scope === "site" ? issue.answerPreview || "" : "",
+          issue.detail,
+          issue.recommendedAction,
+          issue.rowNumber ? `Row ${issue.rowNumber}` : "",
+        ]);
+      }
+    }
+
+    if (rows.length === 1) {
+      rows.push([
+        "אין בעיות",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "לא נמצאו בעיות שמיועדות לטיפול.",
+        "אין פעולה נדרשת.",
+        "",
+      ]);
+    }
+
+    return rows;
+  }
+
+  private issueTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      "duplicate-question": "שאלה כפולה",
+      "short-answer": "תשובה קצרה או חסרה",
+      "html-entity": "HTML entity בטקסט",
+      "unbalanced-quotes": "מרכאות לא מאוזנות",
+      "repeated-punctuation": "פיסוק כפול או חשוד",
+      "leading-punctuation": "פיסוק בתחילת שאלה",
+      "missing-question-mark": "חסר סימן שאלה",
+      "replacement-character": "בעיית קידוד",
+      "placeholder-text": "טקסט placeholder",
+      "invalid-json-ld": "JSON-LD לא תקין",
+    };
+
+    return labels[type] || type;
+  }
+
+  private buildSourceCompareRows(result: SiteFaqAuditResult): string[][] {
+    const comparison = result.sourceComparison;
+    const rows: string[][] = [[
+      "Status",
+      "Source file",
+      "Source spreadsheet ID",
+      "Source tab",
+      "Matched page URL",
+      "Matched page title",
+      "Matched by",
+      "Source Q/A",
+      "Site Q/A",
+      "Matched questions",
+      "Missing on site",
+      "Extra on site",
+      "Answer mismatches",
+      "Duplicate source questions",
+      "Light QA issues",
+      "Missing on site - examples",
+      "Extra on site - examples",
+      "Answer mismatch - examples",
+      "Notes",
+    ]];
+
+    if (!comparison?.files.length) {
+      rows.push(["No source files", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "No source files were provided or found."]);
+      return rows;
+    }
+
+    for (const file of comparison.files) {
+      rows.push([
+        file.status,
+        file.sourceFile,
+        file.spreadsheetId,
+        file.tabName,
+        file.matchedPageUrl,
+        file.matchedPageTitle,
+        file.matchedBy,
+        String(file.sourceQuestionCount),
+        String(file.siteQuestionCount),
+        String(file.matchedQuestionCount),
+        String(file.sourceOnlyQuestions.length),
+        String(file.siteOnlyQuestions.length),
+        String(file.answerMismatches.length),
+        String(file.duplicateQuestions.length),
+        String(file.qaIssues.length),
+        file.sourceOnlyQuestions.slice(0, 12).join(" | "),
+        file.siteOnlyQuestions.slice(0, 12).join(" | "),
+        file.answerMismatches.slice(0, 8).map((item) => `${item.question} (similarity ${Math.round(item.similarity * 100)}%)`).join(" | "),
+        file.notes.join(" | "),
+      ]);
+    }
+
+    return rows;
+  }
+
+  private buildQualityIssueRows(result: SiteFaqAuditResult): string[][] {
+    const rows: string[][] = [[
+      "Scope",
+      "Severity",
+      "Type",
+      "Source file",
+      "URL",
+      "Row",
+      "Question",
+      "Answer preview",
+      "Issue",
+      "Recommended action",
+    ]];
+
+    const issues = result.sourceComparison?.issues || [];
+    if (!issues.length) {
+      rows.push(["No issues", "", "", "", "", "", "", "", "No obvious text QA issues were found.", "No action needed."]);
+      return rows;
+    }
+
+    for (const issue of issues) {
+      rows.push([
+        issue.scope,
+        issue.severity,
+        issue.type,
+        issue.sourceFile || "",
+        issue.url || "",
+        issue.rowNumber ? String(issue.rowNumber) : "",
+        issue.question || "",
+        issue.answerPreview || "",
+        issue.detail,
+        issue.recommendedAction,
+      ]);
+    }
+
+    return rows;
+  }
+
+  private buildSourceQuestionRows(result: SiteFaqAuditResult): string[][] {
+    const rows: string[][] = [[
+      "Source file",
+      "Spreadsheet ID",
+      "Tab",
+      "Row",
+      "Category",
+      "Question",
+      "Answer",
+    ]];
+
+    for (const row of result.sourceComparison?.sourceRows || []) {
+      rows.push([
+        row.sourceFile,
+        row.spreadsheetId,
+        row.tabName,
+        String(row.rowNumber),
+        row.category,
+        row.q,
+        row.a,
+      ]);
+    }
+
+    return rows;
+  }
+
+  private pageIssueSummary(page: FaqAuditPageResult): string {
+    if (page.auditStatus === "ok") return "Visible FAQ and FAQPage schema are aligned.";
+    if (page.auditStatus === "no-faq") return "No visible FAQ or FAQPage schema was detected.";
+    if (page.auditStatus === "missing-schema") return "Visible FAQ exists, but FAQPage schema is missing.";
+    if (page.auditStatus === "missing-visible-faq") return "FAQPage schema exists, but visible FAQ was not detected.";
+
+    const parts: string[] = [];
+    if (page.visibleOnlyQuestions.length) parts.push(`${page.visibleOnlyQuestions.length} visible question(s) missing from schema`);
+    if (page.schemaOnlyQuestions.length) parts.push(`${page.schemaOnlyQuestions.length} schema question(s) missing from visible FAQ`);
+    return parts.join("; ") || "Visible FAQ and FAQPage schema differ.";
+  }
+
+  private pageRecommendedAction(page: FaqAuditPageResult): string {
+    if (page.auditStatus === "ok") return "No action needed.";
+    if (page.auditStatus === "missing-schema") return "Add FAQPage JSON-LD that mirrors the visible questions and answers.";
+    if (page.auditStatus === "missing-visible-faq") return "Make schema Q/A visible on the page or remove hidden Q/A from schema.";
+    if (page.auditStatus === "no-faq") return "Confirm whether this page should contain FAQ content.";
+    return "Use the Gaps tab to align visible FAQ questions with FAQPage schema questions one by one.";
+  }
+
+  private a1(tabTitle: string, range: string): string {
+    return `'${tabTitle.replace(/'/g, "''")}'!${range}`;
+  }
+
+  private uniqueUrls(urls: string[]): string[] {
+    return Array.from(new Set(urls.map((url) => this.normalizeUrl(url))));
+  }
+
+  private dedupeQAs(items: QA[]): QA[] {
+    const seen = new Set<string>();
+    const out: QA[] = [];
+
+    for (const item of items) {
+      const key = `${this.norm(item.q)}||${this.norm(item.a)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+    }
+
+    return out;
+  }
+
+  private escapeSelector(value: string): string {
+    return String(value).replace(/([!"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
+  }
+
+  private normalizeUrl(rawUrl: string): string {
+    const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    const url = new URL(withProtocol);
+    url.hash = "";
+    if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
+    return url.toString();
+  }
+
+  private cleanText(value: string): string {
+    const decoded = cheerio.load(`<span>${String(value || "")}</span>`)("span").text();
+    return decoded
+      .replace(/[“”„‟]/g, "\"")
+      .replace(/[‘’‚‛`´]/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private norm(value: string): string {
+    return this.cleanText(value)
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\p{P}\p{S}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+}
+
+export async function runSiteFaqAudit(input: SiteFaqAuditConfig): Promise<SiteFaqAuditResult> {
+  const job = new SiteFaqAuditJob();
+  return await job.run(input);
+}
+
+function readCliConfig(argv: string[]): SiteFaqAuditConfig | null {
+  const get = (name: string) => {
+    const index = argv.indexOf(name);
+    return index >= 0 ? argv[index + 1] : undefined;
+  };
+  const has = (name: string) => argv.includes(name);
+  const url = get("--url");
+  if (!url) return null;
+
+  const urls = get("--urls")
+    ?.split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const groups = get("--groups")
+    ?.split(",")
+    .map((item) => item.trim() as SiteUrlGroup)
+    .filter(Boolean);
+  const urlIncludes = get("--include")
+    ?.split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return {
+    startUrl: url,
+    urls,
+    groups,
+    urlIncludes,
+    maxPages: Number(get("--max-pages") || DEFAULT_MAX_PAGES),
+    maxDiscoveryUrls: Number(get("--max-discovery-urls") || DEFAULT_MAX_DISCOVERY_URLS),
+    maxFaqCandidateChecks: Number(get("--max-faq-candidate-checks") || 300),
+    faqCandidateConcurrency: Number(get("--faq-candidate-concurrency") || 12),
+    fetchTimeoutMs: Number(get("--fetch-timeout-ms") || 5000),
+    maxDepth: Number(get("--max-depth") || DEFAULT_MAX_DEPTH),
+    renderMode: has("--static") ? "static" : "rendered",
+    sourceCompareEnabled: has("--source-compare"),
+    sourceInput: get("--source-input") || "",
+    sourceFolderId: get("--source-folder") || "",
+    sourceSpreadsheetIds: get("--source-sheets")
+      ?.split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    sourceTabName: get("--source-tab") || "",
+    sourceHeaderRow: Number(get("--source-header-row") || 0),
+  };
+}
+
+async function runCli() {
+  const config = readCliConfig(process.argv.slice(2));
+  if (!config) return;
+
+  const result = await runSiteFaqAudit(config);
+  console.log(JSON.stringify(result, null, 2));
+}
+
+const directRunPath = process.argv[1] || "";
+if (/site-ai-faq-audit\.(ts|js)$/.test(directRunPath)) {
+  runCli().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "snapshot": "node scripts/local-version.mjs snapshot",
+    "snapshot:list": "node scripts/local-version.mjs list",
+    "snapshot:restore": "node scripts/local-version.mjs restore",
+    "snapshot:prune": "node scripts/local-version.mjs prune",
 "start": "node dist/server-demo.js",
     "translate": "MODE=translate tsx src/index.ts",
     "rewrite": "MODE=rewrite tsx src/index.ts",
