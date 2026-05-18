@@ -52,6 +52,7 @@ import { discoverSiteUrls } from "./jobs/site-ai-audit-discovery.js";
 import { runSiteFaqAudit } from "./jobs/site-ai-faq-audit.js";
 import { analyzeSiteAuditWithAi } from "./jobs/subjobs/site-ai-audit-ai-analysis.js";
 import { SchemaBuilderJob } from "./jobs/schema-builder-job.js";
+import { MetaTagsJob } from "./jobs/meta-tags-job.js";
 
 
 
@@ -81,7 +82,7 @@ const HOTELS = [
   // ← התרגום
 const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
-    { spreadsheet: "https://docs.google.com/spreadsheets/d/1bWOSs2K0Xs6gochInvlhlM0aA63EFxVq6fUHq-ofEek/edit?usp=sharing" },
+    { spreadsheet: "https://docs.google.com/spreadsheets/d/1NfBNjiesq7sZ9VjGnVTDIKDnX5vN_ZA4eFoHPO5OPms/edit?usp=sharing" },
 
 
 ];
@@ -772,6 +773,7 @@ if (TRANSLATE_FOLDER.trim()) {
     console.log(chalk.green("✅ translate-demo completed"));
   } catch (e) {
     console.log(chalk.red("❌ translate-demo failed:"), e);
+    process.exitCode = 1;
   }
 
 } else if (MODE === "design-formatting") {
@@ -795,6 +797,17 @@ if (TRANSLATE_FOLDER.trim()) {
     console.log(chalk.green("✅ schema-builder completed"));
   } catch (e) {
     console.log(chalk.red("❌ schema-builder failed:"), e);
+  }
+
+} else if (MODE === "meta-tags") {
+  const payload = JSON.parse(process.env.DYNAMIC_PAYLOAD || "{}");
+  const job = new MetaTagsJob(agent, sheets);
+
+  try {
+    await job.run(payload);
+    console.log(chalk.green("✅ meta-tags completed"));
+  } catch (e) {
+    console.log(chalk.red("❌ meta-tags failed:"), e);
   }
 
 } else if (MODE === "rewrite") {

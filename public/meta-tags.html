@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meta Tags Studio</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root {
+      --bg: #fdfcf9;
+      --surface: #ffffff;
+      --surface-warm: #fbf8f2;
+      --surface-soft: #fffdf9;
+      --border: #ebe3d6;
+      --border-strong: #d8ccb8;
+      --ink: #1a1410;
+      --text: #3a342e;
+      --dim: #6b6557;
+      --muted: #948c7e;
+      --blue: #4a7fc7;
+      --blue-soft: #e7eef9;
+      --orange: #d97a3c;
+      --orange-soft: #f8eadc;
+      --green: #6f9355;
+      --green-soft: #eaf1df;
+      --red: #b94d4d;
+      --red-soft: #f8e7e3;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    .demo-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 32px;
+      background: rgba(251, 250, 247, 0.9);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .brand-home-link:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 4px;
+    }
+
+    .brand-logo {
+      width: auto;
+      height: 32px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-copy {
+      min-width: 0;
+      padding-inline-start: 14px;
+      border-inline-start: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      margin: 0 0 2px;
+      color: var(--blue);
+      font: 600 0.66rem/1.2 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.25;
+      font-weight: 450;
+    }
+
+    .badge {
+      padding: 7px 14px;
+      border-radius: 999px;
+      color: var(--dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font: 600 0.68rem/1.2 var(--mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .main-grid {
+      width: calc(100% - 60px);
+      max-width: 1480px;
+      height: calc(100vh - 64px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(720px, 1fr) minmax(390px, 0.44fr);
+      gap: 24px;
+      padding: 18px 0;
+    }
+
+    .workspace,
+    .output-panel {
+      min-width: 0;
+    }
+
+    .workspace {
+      overflow-y: auto;
+      padding-bottom: 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      scrollbar-gutter: stable;
+    }
+
+    .card,
+    .output-panel {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .card {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-rows: auto auto;
+    }
+
+    .card-head,
+    .terminal-bar {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .card-title,
+    .terminal-title,
+    .section-title {
+      margin: 0;
+      color: var(--ink);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.92rem;
+    }
+
+    .card-title::before,
+    .terminal-title::before,
+    .section-title::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      display: inline-block;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .card-body {
+      padding: 16px 18px;
+      background: var(--surface);
+    }
+
+    .mode-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface-warm);
+    }
+
+    .mode-button {
+      min-height: 54px;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      background: transparent;
+      color: var(--dim);
+      text-align: center;
+      display: grid;
+      place-items: center;
+      gap: 3px;
+    }
+
+    .mode-button strong {
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .mode-button span {
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .mode-button.active {
+      background: var(--surface);
+      border-color: var(--border-strong);
+      color: var(--ink);
+    }
+
+    .source-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      min-height: 30px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-warm);
+      color: var(--dim);
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .source-note::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.1);
+    }
+
+    .primary-source {
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: var(--surface-warm);
+    }
+
+    .primary-source .field-label {
+      color: var(--ink);
+      font-size: 0.68rem;
+    }
+
+    .primary-source input {
+      min-height: 52px;
+      border-color: var(--border-strong);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .primary-source input::placeholder {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .source-feedback-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .language-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .language-button {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-warm);
+      color: var(--dim);
+      font-size: 0.8rem;
+      font-weight: 750;
+    }
+
+    .language-button.active {
+      border-color: rgba(74, 127, 199, 0.25);
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .language-button .flag {
+      font-size: 0.92rem;
+      line-height: 1;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .optional-context {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-warm);
+      overflow: hidden;
+    }
+
+    .optional-context summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      color: var(--ink);
+      font-size: 0.86rem;
+      font-weight: 800;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .optional-context summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .optional-context summary::after {
+      content: "Open";
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font: 600 0.62rem/1 var(--mono);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .optional-context[open] summary::after {
+      content: "Close";
+    }
+
+    .optional-context-body {
+      padding: 0 12px 12px;
+    }
+
+    .field-label {
+      color: var(--muted);
+      font: 600 0.64rem/1.2 var(--mono);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 10px 12px;
+      outline: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      box-shadow: none;
+    }
+
+    textarea {
+      line-height: 1.5;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--border-strong);
+      box-shadow: 0 0 0 3px rgba(74, 127, 199, 0.08);
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--dim);
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 11px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-warm);
+      color: var(--dim);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .chip.active {
+      border-color: rgba(74, 127, 199, 0.22);
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .chip::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.55;
+    }
+
+    .template-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .token-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .token {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-warm);
+      color: var(--dim);
+      padding: 6px 9px;
+      font: 600 0.68rem/1 var(--mono);
+    }
+
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .quality-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-warm);
+      padding: 12px;
+    }
+
+    .quality-label {
+      color: var(--muted);
+      font: 600 0.62rem/1.2 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .quality-value {
+      margin-top: 5px;
+      color: var(--ink);
+      font-size: 1.2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .quality-card.good .quality-value { color: var(--green); }
+    .quality-card.warn .quality-value { color: var(--orange); }
+    .quality-card.bad .quality-value { color: var(--red); }
+
+    .writeback-panel {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-warm);
+      padding: 12px;
+    }
+
+    .serp-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-soft);
+      padding: 16px;
+    }
+
+    .serp-url {
+      color: var(--green);
+      font-size: 0.75rem;
+      line-height: 1.4;
+      word-break: break-all;
+    }
+
+    .serp-title {
+      margin: 7px 0 5px;
+      color: #1a57b8;
+      font-size: 1.08rem;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .serp-desc {
+      color: var(--dim);
+      font-size: 0.86rem;
+      line-height: 1.48;
+    }
+
+    .output-actions,
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .btn {
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--dim);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .btn:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-warm);
+      color: var(--ink);
+    }
+
+    .btn.primary {
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff;
+    }
+
+    .btn.blue {
+      background: var(--blue-soft);
+      border-color: rgba(74, 127, 199, 0.22);
+      color: var(--blue);
+    }
+
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .terminal-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.86rem;
+    }
+
+    .terminal-title::before {
+      flex: 0 0 auto;
+    }
+
+    .terminal-clear {
+      min-height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--dim);
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+
+    .output-summary {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .summary-current {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-warm);
+      padding: 12px;
+    }
+
+    .summary-kicker {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font: 600 0.64rem/1.2 var(--mono);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .summary-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .summary-main {
+      margin-top: 8px;
+      color: var(--ink);
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .terminal-body {
+      flex: 1;
+      min-height: 0;
+      margin: 14px;
+      padding: 15px;
+      overflow: auto;
+      border-radius: 14px;
+      background: #15110d;
+      color: #e7dccd;
+      font: 500 0.76rem/1.7 var(--mono);
+      white-space: pre-wrap;
+    }
+
+    .log-line.dim { color: #9f9387; }
+    .log-line.info { color: #9dbfec; }
+    .log-line.success { color: #9bcf8d; }
+    .log-line.warn { color: #e4a46a; }
+
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+      font-size: 0.78rem;
+    }
+
+    .result-table th,
+    .result-table td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .result-table th {
+      color: var(--muted);
+      background: var(--surface-warm);
+      font: 600 0.62rem/1.2 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .result-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .editable-output {
+      width: 100%;
+      min-height: 70px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1120px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .output-panel {
+        min-height: 680px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .demo-header {
+        padding: 12px 16px;
+      }
+
+      .subtitle,
+      .badge {
+        display: none;
+      }
+
+      .main-grid {
+        width: calc(100% - 28px);
+        padding: 14px 0;
+      }
+
+      .two-col,
+      .three-col,
+      .quality-grid,
+      .output-actions,
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="demo-header">
+    <div class="brand-lockup">
+      <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+      </a>
+      <div class="brand-copy">
+        <p class="eyebrow">SEO Studio</p>
+        <h1>Meta Tags Studio</h1>
+        <p class="subtitle">Create search-ready titles, descriptions, H1s and social tags from templates or an AI brief.</p>
+      </div>
+    </div>
+    <span class="badge">Draft workspace</span>
+  </header>
+
+  <main class="main-grid">
+    <section class="workspace">
+      <div class="mode-switch" role="tablist" aria-label="Generation mode">
+        <button class="mode-button active" type="button" data-mode="template">
+          <strong>Template mode</strong>
+          <span>Fast, consistent, rule-based output</span>
+        </button>
+        <button class="mode-button" type="button" data-mode="ai">
+          <strong>AI assisted</strong>
+          <span>Richer wording and optional variations</span>
+        </button>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Source & Page Context</h2>
+          <span class="badge">Step 1</span>
+        </div>
+        <div class="card-body grid">
+          <label class="field primary-source">
+            <span class="field-label">Google Sheet or Drive folder</span>
+            <input id="sourceLink" type="text" placeholder="Paste a Google Sheet or Drive folder URL / ID" />
+            <div class="source-feedback-row">
+              <span class="hint">Paste one source. The agent detects file vs folder automatically.</span>
+              <span class="source-note" id="detectedSource">No source detected yet</span>
+            </div>
+          </label>
+
+          <details class="optional-context">
+            <summary>Optional context</summary>
+            <div class="optional-context-body two-col grid">
+              <label class="field">
+                <span class="field-label">Brand / property</span>
+                <input id="brandName" type="text" placeholder="Optional brand or property name" />
+              </label>
+              <label class="field">
+                <span class="field-label">Website domain</span>
+                <input id="domain" type="text" value="example.com" placeholder="Optional domain for preview URLs" />
+              </label>
+            </div>
+          </details>
+
+          <details class="optional-context" id="manualTopicsDetails">
+            <summary>Manual topics fallback</summary>
+            <div class="optional-context-body">
+              <label class="field" id="manualPagesPanel">
+                <span class="field-label">Pages or topics</span>
+                <textarea id="pageList" rows="4">Homepage
+Rooms and suites
+FAQ
+Contact</textarea>
+                <span class="hint">Use this only when there is no Sheet or Drive folder. One line becomes one metadata topic.</span>
+              </label>
+            </div>
+          </details>
+
+          <div class="field">
+            <span class="field-label">Output languages</span>
+            <div class="language-picker" id="languagePicker" aria-label="Output languages">
+              <button class="language-button active" type="button" data-lang="en"><span class="flag">🇬🇧</span>English</button>
+              <button class="language-button" type="button" data-lang="he"><span class="flag">🇮🇱</span>Hebrew</button>
+              <button class="language-button" type="button" data-lang="de"><span class="flag">🇩🇪</span>German</button>
+              <button class="language-button" type="button" data-lang="fr"><span class="flag">🇫🇷</span>French</button>
+              <button class="language-button" type="button" data-lang="es"><span class="flag">🇪🇸</span>Spanish</button>
+              <button class="language-button" type="button" data-lang="it"><span class="flag">🇮🇹</span>Italian</button>
+            </div>
+            <span class="hint">Choose one or more. Each selected language creates its own output row.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Generation Rules</h2>
+          <span class="badge">Step 2</span>
+        </div>
+        <div class="card-body grid">
+          <div class="two-col grid">
+            <label class="field">
+              <span class="field-label">Title max</span>
+              <input id="titleMax" type="number" min="35" max="80" value="60" />
+            </label>
+            <label class="field">
+              <span class="field-label">Description max</span>
+              <input id="descMax" type="number" min="110" max="180" value="155" />
+            </label>
+          </div>
+
+          <div class="chips" aria-label="Optional rules">
+            <button type="button" class="chip active" data-rule="brandInTitle">Brand in title</button>
+            <button type="button" class="chip active" data-rule="includeH1">Create H1</button>
+            <button type="button" class="chip active" data-rule="openGraph">Open Graph tags</button>
+            <button type="button" class="chip" data-rule="avoidGeneric">Avoid generic wording</button>
+            <button type="button" class="chip" data-rule="cta">Soft CTA</button>
+          </div>
+
+          <div class="template-panel" id="templatePanel">
+            <div class="template-row">
+              <label class="field">
+                <span class="field-label">Title template</span>
+                <input id="titleTemplate" type="text" value="{{page}} | FAQ" />
+              </label>
+              <button class="btn blue" type="button" id="applyPresetBtn">Use hotel preset</button>
+            </div>
+            <label class="field" style="margin-top: 12px;">
+              <span class="field-label">Description template</span>
+              <textarea id="descTemplate" rows="3">Explore {{page}}. Find essential details, services, location information and practical guidance before you book.</textarea>
+            </label>
+            <div class="token-bar" aria-label="Template tokens">
+              <span class="token">{{page}}</span>
+              <span class="token">{{brand}}</span>
+              <span class="token">{{domain}}</span>
+            </div>
+          </div>
+
+          <div class="ai-panel hidden" id="aiPanel">
+            <div class="two-col grid">
+              <label class="field">
+                <span class="field-label">Voice</span>
+                <select id="voice">
+                  <option value="clear" selected>Clear and helpful</option>
+                  <option value="premium">Premium and polished</option>
+                  <option value="direct">Direct and practical</option>
+                  <option value="warm">Warm and inviting</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">Priority keyword</span>
+                <input id="primaryKeyword" type="text" placeholder="Example: boutique hotel in Berlin" />
+              </label>
+            </div>
+            <label class="field" style="margin-top: 12px;">
+              <span class="field-label">AI variants per page</span>
+              <select id="variantCount">
+                <option value="1">1 variant</option>
+                <option value="2" selected>2 variants</option>
+                <option value="3">3 variants</option>
+              </select>
+            </label>
+            <label class="field" style="margin-top: 12px;">
+              <span class="field-label">AI brief</span>
+              <textarea id="aiBrief" rows="4" placeholder="Tell the generator what must be emphasized, avoided, or kept consistent.">Keep the tags factual, search-friendly and useful for users deciding whether this page answers their need.</textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Output Destination</h2>
+          <span class="badge">Step 3</span>
+        </div>
+        <div class="card-body grid">
+          <div class="writeback-panel grid">
+            <label class="field">
+              <span class="field-label">Where to place generated tags</span>
+              <select id="outputMode">
+                <option value="newTab" selected>Create or update a Meta Tags tab</option>
+                <option value="firstTabRange">Write to the first tab</option>
+                <option value="existingRange">Write to a named tab</option>
+              </select>
+              <span class="hint" id="outputModeHint">Writing back is available for Single Sheet and Drive folder sources. Manual pages stay in preview/export mode.</span>
+            </label>
+            <div class="two-col grid hidden" id="writebackFields">
+              <label class="field" id="outputTabNameField">
+                <span class="field-label">Tab name</span>
+                <input id="outputTabName" type="text" value="Meta Tags" placeholder="Meta Tags" />
+              </label>
+              <label class="field">
+                <span class="field-label">Start column</span>
+                <input id="outputStartColumn" type="text" value="A" placeholder="A" />
+              </label>
+              <label class="field">
+                <span class="field-label">Start row</span>
+                <input id="outputStartRow" type="number" min="1" value="1" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Live Preview</h2>
+          <span class="badge" id="previewBadge">4 pages</span>
+        </div>
+        <div class="card-body grid">
+          <div class="quality-grid">
+            <div class="quality-card" id="titleScoreCard">
+              <div class="quality-label">Title length</div>
+              <div class="quality-value" id="titleScore">0</div>
+            </div>
+            <div class="quality-card" id="descScoreCard">
+              <div class="quality-label">Description length</div>
+              <div class="quality-value" id="descScore">0</div>
+            </div>
+            <div class="quality-card" id="keywordScoreCard">
+              <div class="quality-label">Keyword fit</div>
+              <div class="quality-value" id="keywordScore">-</div>
+            </div>
+            <div class="quality-card good">
+              <div class="quality-label">Output rows</div>
+              <div class="quality-value" id="rowScore">0</div>
+            </div>
+          </div>
+
+          <div class="serp-card" aria-label="Search result preview">
+            <div class="serp-url" id="serpUrl">https://example.com/homepage</div>
+            <div class="serp-title" id="serpTitle">Homepage | Carmelon Hotel</div>
+            <div class="serp-desc" id="serpDesc">Explore Homepage at Carmelon Hotel. Find essential details, services, location information and practical guest guidance before you book.</div>
+          </div>
+
+          <div class="button-row">
+            <button class="btn" type="button" id="saveSetupBtn">Save setup</button>
+            <button class="btn" type="button" id="loadSetupBtn">Load setup</button>
+            <button class="btn primary" type="button" id="generateBtn">Generate tags</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2 class="card-title">Generated Tags</h2>
+          <div class="output-actions">
+            <button class="btn" type="button" id="copyCsvBtn">Copy CSV</button>
+            <button class="btn" type="button" id="copyJsonBtn">Copy JSON</button>
+            <button class="btn" type="button" id="clearBtn">Clear</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Language</th>
+                <th>Page</th>
+                <th>Meta title</th>
+                <th>Meta description</th>
+                <th>H1</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody">
+              <tr>
+                <td colspan="5">Generate tags to see editable output rows.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <aside class="output-panel">
+      <div class="terminal-bar">
+        <span class="terminal-title">Meta Tags Agent - Live Output</span>
+        <button class="terminal-clear" type="button" id="clearLogBtn">Clear</button>
+      </div>
+      <div class="output-summary">
+        <div class="summary-current">
+          <div class="summary-kicker">Current step</div>
+          <div class="summary-main" id="summaryText">Waiting for setup</div>
+        </div>
+      </div>
+      <div class="terminal-body" id="terminalLog">
+        <div class="log-line dim">Choose a mode, fill the page context and generate a clean metadata draft.</div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/meta-tags.js"></script>
+</body>
+</html>

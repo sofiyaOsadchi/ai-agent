@@ -18,17 +18,17 @@
   const STORAGE_KEY = "translate-demo-chat-workspaces-v1";
 
   const DEFAULT_CHAT_DRAFT_PROMPT = [
-    "תרגם את כל התאים במדויק לשפת היעד, תוך שמירה מלאה על מבנה הטבלה, סדר השורות והעמודות.",
-    "שמור שמות מלון, מותג, קבצים, טאבים, תיקיות, IDs, URLs, אימיילים, קודים ומספרים בדיוק כפי שהם מופיעים במקור.",
-    "השתמש במונחי glossary באופן עקבי, אל תקצר תשובות, ואל תוסיף מידע שלא קיים במקור.",
-    "התוצאה צריכה להישמע טבעית בשפת היעד אבל להישאר נאמנה לגמרי למקור.",
+    "Translate every cell accurately into the target language while preserving the table structure, row order, and column order.",
+    "Keep hotel names, brand names, file names, tabs, folders, IDs, URLs, emails, codes, and numbers exactly as they appear in the source.",
+    "Apply glossary terms consistently, do not shorten answers, and do not add information that is not present in the source.",
+    "The result should sound natural in the target language while staying fully faithful to the source.",
   ].join("\n");
 
   const DEFAULT_CHAT_POLISH_PROMPT = [
-    "ערוך את תרגום הדראפט כעורך לוקליזציה מקצועי: שפר טבעיות, זרימה וניסוח בלי לשנות עובדות או משמעות.",
-    "שמור על מבנה JSON/טבלה זהה, ועל כל שמות הקבצים, הטאבים, התיקיות, IDs, URLs, קודים ומספרים בדיוק במקום שבו הופיעו.",
-    "תקן ניסוחים מסורבלים, שמור על ניסוח מלונאי ברור ומקצועי, ויישם את כללי terminology בלי לפגוע במידע המקורי.",
-    "אל תקצר, אל תרחיב, ואל תוסיף הבטחות או פרטים שלא מופיעים במקור.",
+    "Edit the draft translation as a professional localization editor: improve naturalness, flow, and wording without changing facts or meaning.",
+    "Preserve the exact JSON/table structure, and keep all file names, tabs, folders, IDs, URLs, codes, and numbers exactly where they appear.",
+    "Fix awkward wording, keep the copy clear and professional for hospitality, and apply terminology rules without changing the original information.",
+    "Do not shorten, expand, or add promises or details that are not present in the source.",
   ].join("\n");
 
   const baseState = {
@@ -122,7 +122,7 @@
   }
 
   function setPrimaryButton(label) {
-    if (els.submitBtn) els.submitBtn.textContent = label || "שליחה";
+    if (els.submitBtn) els.submitBtn.textContent = label || "Send";
   }
 
   function setInput(placeholder, value = "") {
@@ -152,26 +152,26 @@
   function askSourceId() {
     state.step = "sourceId";
     setStepUi("sourceId");
-    bot("הדבק/י כאן קישור או ID של Google Sheet או תיקיית Drive.\nאני מזהה לבד וממשיך לשאלה הבאה.");
+    bot("Paste a Google Sheet or Drive Folder URL / ID.\nI will detect the source type automatically and continue to the next step.");
     setInput("Google Sheet / Drive Folder URL or ID", state.sourceId);
-    setPrimaryButton("המשך");
+    setPrimaryButton("Continue");
     setOptions([]);
   }
 
   function askSourceTab() {
     state.step = "sourceTab";
     setStepUi("sourceTab");
-    bot("איזה טאב לקרוא מתוך הגיליון? אם לא בטוח, אפשר להשאיר ריק ואשתמש בזיהוי אוטומטי.");
-    setInput("לדוגמה: Sheet1, או להשאיר ריק", state.sourceTab);
-    setPrimaryButton("המשך");
+    bot("Which tab should be read from the sheet? If you are not sure, leave it empty and I will use automatic detection.");
+    setInput("Example: Sheet1, or leave empty", state.sourceTab);
+    setPrimaryButton("Continue");
     setOptions([
-      { label: "זיהוי אוטומטי", onClick: () => setSourceTab("") },
+      { label: "Auto-detect", onClick: () => setSourceTab("") },
     ]);
   }
 
   function setSourceTab(value) {
     state.sourceTab = value.trim();
-    user(state.sourceTab || "זיהוי אוטומטי");
+    user(state.sourceTab || "Auto-detect");
     renderSummary();
     askLanguages();
   }
@@ -179,9 +179,9 @@
   function askLanguages() {
     state.step = "languages";
     setStepUi("languages");
-    bot("לאילו שפות לתרגם?\nבחר/י שפה אחת או יותר, ואז לחצי על הכפתור הראשי למטה.");
-    setInput("אפשר גם לכתוב: גרמנית, ספרדית, עברית או de, es, he");
-    setPrimaryButton("המשך");
+    bot("Which target languages should be translated?\nChoose one or more languages, then use the primary button below.");
+    setInput("You can also type: German, Spanish, Hebrew, or de, es, he");
+    setPrimaryButton("Continue");
     renderLanguageOptions();
   }
 
@@ -208,7 +208,7 @@
 
   function continueLanguages() {
     if (!state.targetLangs.length) {
-      bot("צריך לבחור לפחות שפת יעד אחת.");
+      bot("Select at least one target language.");
       return;
     }
 
@@ -220,15 +220,15 @@
   function askModel() {
     state.step = "model";
     setStepUi("model");
-    bot(`איזה מודל להריץ?\n${DEFAULT_MODEL} כבר נבחר כברירת מחדל. אפשר פשוט ללחוץ על הכפתור הראשי למטה.`);
-    setInput("אפשר לכתוב מודל אחר, או להשאיר ריק ולהמשיך עם o3");
-    setPrimaryButton(`המשך עם ${state.model}`);
+    bot(`Which model should run?\n${DEFAULT_MODEL} is selected by default. You can simply continue with the primary button below.`);
+    setInput("Type another model, or leave empty to continue with o3");
+    setPrimaryButton(`Continue with ${state.model}`);
     renderModelOptions();
   }
 
   function renderModelOptions() {
     setOptions(MODEL_OPTIONS.map((model) => ({
-      label: model === DEFAULT_MODEL ? `${model} - מומלץ` : model,
+      label: model === DEFAULT_MODEL ? `${model} - recommended` : model,
       selected: state.model === model,
       onClick: () => selectModel(model),
     })));
@@ -236,7 +236,7 @@
 
   function selectModel(model) {
     state.model = isDefault(model) ? DEFAULT_MODEL : model.trim() || DEFAULT_MODEL;
-    setPrimaryButton(`המשך עם ${state.model}`);
+    setPrimaryButton(`Continue with ${state.model}`);
     renderModelOptions();
     renderSummary();
   }
@@ -251,70 +251,70 @@
   function askDraftPrompt() {
     state.step = "draftPrompt";
     setStepUi("draftPrompt");
-    bot("הנחיות לדראפט\nשמתי פרומפט רציני יותר כנקודת פתיחה. אפשר לערוך אותו כאן או בסרגל הימני.");
-    setInput("ערוך/י את הנחיית הדראפט", state.draftPrompt || DEFAULT_CHAT_DRAFT_PROMPT);
-    setPrimaryButton("המשך עם הנחיית הדראפט");
+    bot("Draft instructions\nA strong starter prompt is already in place. You can edit it here or in the right setup panel.");
+    setInput("Edit the draft instructions", state.draftPrompt || DEFAULT_CHAT_DRAFT_PROMPT);
+    setPrimaryButton("Continue with draft instructions");
     setOptions([
-      { label: "ללא תוספת לדראפט", onClick: () => skipOptional("draftPrompt") },
+      { label: "No extra draft notes", onClick: () => skipOptional("draftPrompt") },
     ]);
   }
 
   function askPolishPrompt() {
     state.step = "polishPrompt";
     setStepUi("polishPrompt");
-    bot("הנחיות לפוליש\nשמתי פרומפט רציני יותר כנקודת פתיחה. אפשר לערוך אותו כאן או בסרגל הימני.");
-    setInput("ערוך/י את הנחיית הפוליש", state.polishPrompt || DEFAULT_CHAT_POLISH_PROMPT);
-    setPrimaryButton("המשך עם הנחיית הפוליש");
+    bot("Polish instructions\nA strong starter prompt is already in place. You can edit it here or in the right setup panel.");
+    setInput("Edit the polish instructions", state.polishPrompt || DEFAULT_CHAT_POLISH_PROMPT);
+    setPrimaryButton("Continue with polish instructions");
     setOptions([
-      { label: "ללא תוספת לפוליש", onClick: () => skipOptional("polishPrompt") },
+      { label: "No extra polish notes", onClick: () => skipOptional("polishPrompt") },
     ]);
   }
 
   function askGlossaryChoice() {
     state.step = "glossaryChoice";
     setStepUi("glossaryChoice");
-    bot("יש מילים שצריך לתרגם תמיד באותה צורה?\nכתבי פשוט: מקור = תרגום. אם אין, אפשר לדלג.");
-    setInput("לדוגמה: Aparthotel = Aparthotel", state.glossaryLines);
-    setPrimaryButton("המשך");
+    bot("Are there terms that must always be translated the same way?\nUse a simple format: source = translation. If not, you can skip this.");
+    setInput("Example: Aparthotel = Aparthotel", state.glossaryLines);
+    setPrimaryButton("Continue");
     setOptions([
-      { label: "להוסיף מילים קבועות", onClick: askGlossaryLines },
-      { label: "לדלג על מילים קבועות", onClick: () => skipOptional("glossary") },
+      { label: "Add fixed terms", onClick: askGlossaryLines },
+      { label: "Skip fixed terms", onClick: () => skipOptional("glossary") },
     ]);
   }
 
   function askGlossaryLines() {
     state.step = "glossaryLines";
     setStepUi("glossaryLines");
-    user("להוסיף מילים קבועות");
-    bot("מעולה. כתבי כל כלל בשורה נפרדת, בפורמט פשוט:\nמקור = תרגום");
+    user("Add fixed terms");
+    bot("Great. Write each rule on a separate line, using this simple format:\nsource = translation");
     setInput("Aparthotel = Aparthotel; Free Wi-Fi = Kostenloses WLAN", state.glossaryLines);
-    setPrimaryButton("המשך");
+    setPrimaryButton("Continue");
     setOptions([
-      { label: "לדלג על מילים קבועות", onClick: () => skipOptional("glossary") },
+      { label: "Skip fixed terms", onClick: () => skipOptional("glossary") },
     ]);
   }
 
   function askTerminologyChoice() {
     state.step = "terminologyChoice";
     setStepUi("terminologyChoice");
-    bot("יש מילים או ניסוחים שלא תרצי שהמודל ישתמש בהם?\nכתבי פשוט: לא להשתמש = להשתמש במקום. אם אין, אפשר לדלג.");
-    setInput("לדוגמה: Haus = Hotel | ניסוח מתאים יותר למלון", state.terminologyLines);
-    setPrimaryButton("המשך");
+    bot("Are there words or phrases the model should avoid?\nUse a simple format: avoid = use instead. If not, you can skip this.");
+    setInput("Example: Haus = Hotel | Better hospitality wording", state.terminologyLines);
+    setPrimaryButton("Continue");
     setOptions([
-      { label: "להוסיף כללי ניסוח", onClick: askTerminologyLines },
-      { label: "לדלג על כללי ניסוח", onClick: () => skipOptional("terminology") },
+      { label: "Add wording rules", onClick: askTerminologyLines },
+      { label: "Skip wording rules", onClick: () => skipOptional("terminology") },
     ]);
   }
 
   function askTerminologyLines() {
     state.step = "terminologyLines";
     setStepUi("terminologyLines");
-    user("להוסיף כללי ניסוח");
-    bot("כתבי כל כלל בשורה נפרדת:\nלא להשתמש = להשתמש במקום\nאפשר להוסיף סיבה אחרי |");
-    setInput("Haus = Hotel | ניסוח מתאים יותר למלון", state.terminologyLines);
-    setPrimaryButton("המשך");
+    user("Add wording rules");
+    bot("Write each rule on a separate line:\navoid = use instead\nYou can add a reason after |");
+    setInput("Haus = Hotel | Better hospitality wording", state.terminologyLines);
+    setPrimaryButton("Continue");
     setOptions([
-      { label: "לדלג על כללי ניסוח", onClick: () => skipOptional("terminology") },
+      { label: "Skip wording rules", onClick: () => skipOptional("terminology") },
     ]);
   }
 
@@ -322,12 +322,12 @@
     state.step = "complete";
     state.complete = true;
     setStepUi("complete");
-    bot("ההגדרה מוכנה. אפשר לשמור את העבודה, למלא את הטופס הידני כדי לערוך כל שדה, או להריץ מיד.");
-    setInput("ההגדרה מוכנה");
-    setPrimaryButton("מלא ופתח לעריכה ידנית");
+    bot("The setup is ready. You can save this work, fill the manual form for editing, or run it now.");
+    setInput("Setup ready");
+    setPrimaryButton("Fill and open manual editing");
     setOptions([
-      { label: "מלא והריץ עכשיו", confirm: true, onClick: () => applyToForm(true) },
-      { label: "התחלה מחדש", onClick: restart },
+      { label: "Fill and run now", confirm: true, onClick: () => applyToForm(true) },
+      { label: "Restart", onClick: restart },
     ]);
     renderSummary();
   }
@@ -351,7 +351,7 @@
   function skipOptional(kind) {
     if (kind === "draftPrompt") {
       state.draftPrompt = "";
-      user("דראפט: ללא תוספת");
+      user("Draft: no extra notes");
       renderSummary();
       askPolishPrompt();
       return;
@@ -359,7 +359,7 @@
 
     if (kind === "polishPrompt") {
       state.polishPrompt = "";
-      user("פוליש: ללא תוספת");
+      user("Polish: no extra notes");
       renderSummary();
       askGlossaryChoice();
       return;
@@ -367,7 +367,7 @@
 
     if (kind === "glossary") {
       state.glossaryLines = "";
-      user("לדלג על מילים קבועות");
+      user("Skip fixed terms");
       renderSummary();
       askTerminologyChoice();
       return;
@@ -375,7 +375,7 @@
 
     if (kind === "terminology") {
       state.terminologyLines = "";
-      user("לדלג על כללי ניסוח");
+      user("Skip wording rules");
       renderSummary();
       completeFlow();
     }
@@ -387,7 +387,7 @@
     if (state.step === "sourceId") {
       const nextSourceId = raw || state.sourceId.trim();
       if (!nextSourceId) {
-        bot("צריך URL או ID של המקור כדי להמשיך.");
+        bot("A source URL or ID is required to continue.");
         return;
       }
       state.sourceId = nextSourceId;
@@ -407,7 +407,7 @@
       if (raw) {
         const parsed = parseLanguageCodes(raw);
         if (!parsed.length) {
-          bot("לא זיהיתי את השפות. אפשר לכתוב למשל: גרמנית, ספרדית, עברית או de, es, he.");
+          bot("I could not detect the languages. Try German, Spanish, Hebrew, or de, es, he.");
           return;
         }
         state.targetLangs = parsed;
@@ -427,7 +427,7 @@
         return;
       }
       state.draftPrompt = raw;
-      user("עודכנו הנחיות הדראפט");
+      user("Draft instructions updated");
       renderSummary();
       askPolishPrompt();
       return;
@@ -439,7 +439,7 @@
         return;
       }
       state.polishPrompt = raw;
-      user("עודכנו הנחיות הפוליש");
+      user("Polish instructions updated");
       renderSummary();
       askGlossaryChoice();
       return;
@@ -485,37 +485,25 @@
   function parseLanguageCodes(raw) {
     const aliases = new Map([
       ["english", "en"],
-      ["אנגלית", "en"],
       ["german", "de"],
       ["deutsch", "de"],
-      ["גרמנית", "de"],
       ["french", "fr"],
       ["francais", "fr"],
       ["français", "fr"],
-      ["צרפתית", "fr"],
       ["spanish", "es"],
-      ["ספרדית", "es"],
       ["italian", "it"],
-      ["איטלקית", "it"],
       ["dutch", "nl"],
-      ["הולנדית", "nl"],
       ["polish", "pl"],
-      ["פולנית", "pl"],
       ["russian", "ru"],
-      ["רוסית", "ru"],
       ["hebrew", "he"],
-      ["עברית", "he"],
       ["chinese", "zh"],
-      ["סינית", "zh"],
       ["arabic", "ar"],
-      ["ערבית", "ar"],
     ]);
 
     const valid = new Set(LANGUAGE_OPTIONS.map((item) => item.code));
     const tokens = String(raw || "")
       .split(/[,;\n\s/]+/)
       .map((item) => item.trim().toLowerCase())
-      .map((item) => item.startsWith("ו") ? item.slice(1) : item)
       .filter(Boolean);
 
     return tokens
@@ -525,11 +513,11 @@
   }
 
   function isDefault(raw) {
-    return /^(default|ברירת מחדל|רגיל|מומלץ)$/i.test(String(raw || "").trim());
+    return /^(default|recommended)$/i.test(String(raw || "").trim());
   }
 
   function isSkip(raw) {
-    return /^(skip|none|no|default|דלג|לדלג|אין|לא|בלי|ברירת מחדל|ללא תוספת)$/i.test(String(raw || "").trim());
+    return /^(skip|none|no|default|no extra notes)$/i.test(String(raw || "").trim());
   }
 
   function parseGlossary(lines) {
@@ -637,18 +625,18 @@
 
   function applyToForm(shouldRun) {
     if (!window.translateDemoBridge?.fillSetupFromChatbot) {
-      bot("הטופס עדיין נטען. נסה/י שוב בעוד רגע.");
+      bot("The form is still loading. Try again in a moment.");
       return;
     }
 
     if (!state.sourceId.trim()) {
-      bot("חסר לי עדיין URL או ID של Google Sheet / Drive Folder.");
+      bot("I still need a Google Sheet or Drive Folder URL / ID.");
       return;
     }
 
     if (!state.complete) {
       state.complete = true;
-      bot("מילאתי את הטופס עם המידע שאספנו עד עכשיו. עברו לטאב הידני כדי לערוך כל שדה לפני הרצה.");
+      bot("I filled the form with the information collected so far. Open the manual tab to edit any field before running.");
     }
 
     window.translateDemoBridge.fillSetupFromChatbot(buildBridgePayload());
@@ -666,27 +654,25 @@
 
     els.summary.innerHTML = `
       <div class="chatbot-save-panel" dir="auto">
-        <label class="summary-edit-field">
-          <span>שם עבודה לשמירה</span>
-          <input type="text" id="chatWorkspaceName" value="${escapeHtml(state.workName)}" placeholder="לדוגמה: תרגום FAQ איטלקית" />
-        </label>
-        <div class="save-actions">
-          <button type="button" class="small-btn primary" id="chatSaveWorkBtn">שמור עבודה</button>
-          <select id="chatSavedWorksSelect">
-            <option value="">עבודות שמורות בדפדפן</option>
+        <div class="chatbot-save-head">
+          <span>Saved plans</span>
+          <button type="button" class="small-btn primary" id="chatSaveWorkBtn">Save</button>
+        </div>
+        <input type="text" id="chatWorkspaceName" value="${escapeHtml(state.workName)}" placeholder="Plan name" />
+        <select id="chatSavedWorksSelect">
+            <option value="">Saved browser workspaces</option>
             ${savedWorks.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("")}
-          </select>
+        </select>
+        <div class="chatbot-save-actions">
+          <button type="button" class="small-btn" id="chatLoadWorkBtn">Load</button>
+          <button type="button" class="small-btn" id="chatDeleteWorkBtn">Delete</button>
         </div>
-        <div class="save-actions">
-          <button type="button" class="small-btn" id="chatLoadWorkBtn">טען</button>
-          <button type="button" class="small-btn" id="chatDeleteWorkBtn">מחק</button>
-        </div>
-        <p class="chatbot-save-note">השמירה היא בדפדפן הזה בלבד, בלי DB. מתאימה לחזרה מאותה עמדה במחשב הזה.</p>
+        <p class="chatbot-save-note">Browser only. No shared database.</p>
       </div>
 
       <div class="chatbot-summary-form" dir="auto">
         <label class="summary-edit-field">
-          <span>מקור</span>
+          <span>Source</span>
           <select id="chatSummarySourceType">
             <option value="sheet"${state.sourceType === "sheet" ? " selected" : ""}>Google Sheet</option>
             <option value="folder"${state.sourceType === "folder" ? " selected" : ""}>Drive Folder</option>
@@ -694,38 +680,38 @@
         </label>
         <label class="summary-edit-field">
           <span>URL / ID</span>
-          <input type="text" id="chatSummarySourceId" value="${escapeHtml(state.sourceId)}" placeholder="עדיין חסר" />
+          <input type="text" id="chatSummarySourceId" value="${escapeHtml(state.sourceId)}" placeholder="Still missing" />
         </label>
         <label class="summary-edit-field">
-          <span>טאב</span>
-          <input type="text" id="chatSummarySourceTab" value="${escapeHtml(state.sourceTab)}" placeholder="זיהוי אוטומטי" />
+          <span>Tab</span>
+          <input type="text" id="chatSummarySourceTab" value="${escapeHtml(state.sourceTab)}" placeholder="Auto-detect" />
         </label>
         <label class="summary-edit-field">
-          <span>שפות</span>
+          <span>Languages</span>
           <input type="text" id="chatSummaryLangs" value="${escapeHtml(state.targetLangs.join(", "))}" placeholder="de, it, he" />
         </label>
         <label class="summary-edit-field">
-          <span>מודל</span>
+          <span>Model</span>
           <input type="text" id="chatSummaryModel" value="${escapeHtml(state.model)}" />
         </label>
         <label class="summary-edit-field">
-          <span>דראפט</span>
+          <span>Draft</span>
           <textarea id="chatSummaryDraft" rows="4">${escapeHtml(state.draftPrompt)}</textarea>
         </label>
         <label class="summary-edit-field">
-          <span>פוליש</span>
+          <span>Polish</span>
           <textarea id="chatSummaryPolish" rows="4">${escapeHtml(state.polishPrompt)}</textarea>
         </label>
         <label class="summary-edit-field">
-          <span>מילים קבועות</span>
+          <span>Fixed terms</span>
           <textarea id="chatSummaryGlossary" rows="2" placeholder="Aparthotel = Aparthotel">${escapeHtml(state.glossaryLines)}</textarea>
         </label>
         <label class="summary-edit-field">
-          <span>מילים לא רצויות</span>
-          <textarea id="chatSummaryTerms" rows="2" placeholder="Haus = Hotel | ניסוח מתאים יותר">${escapeHtml(state.terminologyLines)}</textarea>
+          <span>Wording to avoid</span>
+          <textarea id="chatSummaryTerms" rows="2" placeholder="Haus = Hotel | Better wording">${escapeHtml(state.terminologyLines)}</textarea>
         </label>
         <div class="summary-static-note">
-          שמות קבצים, טאבים ו-IDs נשמרים כמו שהם.
+          File names, tabs, and IDs are preserved exactly as provided.
         </div>
       </div>
     `;
@@ -766,7 +752,7 @@
     });
     byId("chatSummaryModel")?.addEventListener("input", (event) => {
       state.model = event.target.value.trim() || DEFAULT_MODEL;
-      if (state.step === "model") setPrimaryButton(`המשך עם ${state.model}`);
+      if (state.step === "model") setPrimaryButton(`Continue with ${state.model}`);
     });
     byId("chatSummaryDraft")?.addEventListener("input", (event) => { state.draftPrompt = event.target.value; });
     byId("chatSummaryPolish")?.addEventListener("input", (event) => { state.polishPrompt = event.target.value; });
@@ -798,14 +784,14 @@
   }
 
   function saveCurrentWork() {
-    const name = String(state.workName || "").trim() || `תרגום ${new Date().toLocaleString("he-IL")}`;
+    const name = String(state.workName || "").trim() || `Translation ${new Date().toLocaleString("en-US")}`;
     const id = slugify(name);
     const works = listSavedWorks().filter((item) => item.id !== id);
     works.unshift({ id, name, state: getWorkSnapshot(), updatedAt: new Date().toISOString() });
     writeSavedWorks(works.slice(0, 30));
     state.workName = name;
     renderSummary();
-    bot(`שמרתי את העבודה "${name}" בדפדפן הזה.`);
+    bot(`Saved "${name}" in this browser.`);
   }
 
   function loadSavedWork(id) {
@@ -815,7 +801,7 @@
     Object.assign(state, { ...baseState, ...item.state, workName: item.name || item.state.workName || "" });
     state.targetLangs = Array.isArray(state.targetLangs) ? state.targetLangs : ["de"];
     els.log.innerHTML = "";
-    bot(`טענתי את העבודה "${item.name}". ממשיכים מאותה נקודה.`);
+    bot(`Loaded "${item.name}". Continuing from the saved point.`);
     renderSummary();
     showCurrentStep();
   }
@@ -824,7 +810,7 @@
     const item = listSavedWorks().find((saved) => saved.id === id);
     writeSavedWorks(listSavedWorks().filter((saved) => saved.id !== id));
     renderSummary();
-    if (item) bot(`מחקתי את העבודה השמורה "${item.name}".`);
+    if (item) bot(`Deleted the saved workspace "${item.name}".`);
   }
 
   function slugify(value) {
@@ -832,7 +818,7 @@
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9א-ת\u0590-\u05ff_-]/g, "")
+      .replace(/[^a-z0-9_-]/g, "")
       .slice(0, 64);
     return base || `work-${Date.now()}`;
   }

@@ -682,7 +682,9 @@ const rows = this.toRectMatrix(rawRows, width);
           })
         : this.defaultDraftUser(lang, chunkRows, translateHeader, docTitle, glossaryRules);
 
-     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, selectedModel);
+     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, selectedModel, {
+       useWebSearch: false,
+     });
 
 let draftRows = this.parseJsonMatrixOrThrow(draftResult);
 draftRows = this.enforceSameShape(chunkRows, draftRows);
@@ -755,7 +757,9 @@ const draftJsonClean = JSON.stringify({ rows: draftRows });
             languageNotes,
           });
 
-      const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, selectedModel);
+      const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, selectedModel, {
+        useWebSearch: false,
+      });
 
 let finalRows = this.parseJsonMatrixOrThrow(finalJson);
 finalRows = this.enforceSameShape(chunkRows, finalRows);
@@ -767,6 +771,8 @@ return finalRows;
 
 
     // 4) Process languages
+    const failedLanguages: string[] = [];
+
     for (const lang of cfg.targetLangs) {
       const newTitle = `${sourceTab} – ${lang.toUpperCase()}`;
       console.log(chalk.blue(`🚀 Starting translation chain for ${lang} (${newTitle})...`));
@@ -805,8 +811,12 @@ return finalRows;
         );
       } catch (err) {
         console.error(chalk.red(`❌ Failed to process language ${lang}:`), err);
-        continue;
+        failedLanguages.push(lang);
       }
+    }
+
+    if (failedLanguages.length) {
+      throw new Error(`Translation failed for: ${failedLanguages.join(", ")}`);
     }
   }
 }

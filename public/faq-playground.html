@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Carmelon FAQ Creator Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
@@ -80,6 +82,19 @@
       max-width: 34vw;
       height: auto;
       display: block;
+    }
+
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .brand-home-link:focus-visible {
+      outline: 2px solid var(--purple);
+      outline-offset: 4px;
     }
 
     .brand-copy {
@@ -225,8 +240,12 @@
     }
 
     .setup-grid {
-      grid-template-columns: 1fr;
-      align-items: stretch;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 0.46fr);
+      align-items: start;
+    }
+
+    #subjects {
+      min-height: 118px;
     }
 
     .control-grid {
@@ -234,7 +253,15 @@
     }
 
     .setup-controls {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: minmax(230px, 1.28fr) minmax(240px, 1.18fr) minmax(180px, 1fr) minmax(180px, 1fr);
+    }
+
+    .setup-controls > .field:nth-child(4) {
+      grid-column: 1 / -1;
+    }
+
+    .question-range-select {
+      max-width: 260px;
     }
 
     .wide-field {
@@ -366,6 +393,18 @@
       background: var(--purple-soft);
     }
 
+    .quick-reply.is-selected {
+      border-color: var(--green);
+      color: var(--ink);
+      background: var(--teal-soft);
+    }
+
+    .quick-reply-done {
+      border-color: var(--ink);
+      color: #fff;
+      background: var(--ink);
+    }
+
     .chat-composer {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -416,39 +455,75 @@
 
     .output-grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      grid-template-columns: 1fr;
+      gap: 8px;
     }
 
     .artifact-card {
       display: grid;
-      gap: 10px;
-      min-height: 138px;
-      padding: 16px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "type title actions"
+        "type desc actions"
+        "type url actions";
+      align-items: center;
+      gap: 4px 10px;
+      min-height: 0;
+      padding: 10px 12px;
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 12px;
       background: #fff;
     }
 
+    .artifact-card > .badge.teal {
+      grid-area: type;
+      align-self: start;
+      margin-top: 1px;
+    }
+
     .artifact-card h3 {
+      grid-area: title;
       margin: 0;
-      font-size: 17px;
-      line-height: 1.35;
+      min-width: 0;
+      font-size: 14px;
+      line-height: 1.25;
     }
 
     .artifact-card p {
+      grid-area: desc;
       margin: 0;
       color: var(--muted);
-      line-height: 1.5;
+      font-size: 12px;
+      line-height: 1.35;
       overflow-wrap: anywhere;
     }
 
+    .artifact-card p.ltr {
+      grid-area: url;
+      max-width: 100%;
+      overflow: hidden;
+      color: var(--muted);
+      font-family: var(--vx-mono, monospace);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .artifact-actions {
+      grid-area: actions;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-      margin-top: auto;
+      justify-content: flex-end;
+      margin-top: 0;
+    }
+
+    .artifact-actions .ghost-btn,
+    .artifact-actions .badge {
+      min-height: 30px;
+      padding-inline: 9px;
+      font-size: 11px;
     }
 
     .empty-output {
@@ -464,7 +539,7 @@
 
     .compact-combo {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 108px;
+      grid-template-columns: minmax(150px, 1fr) 88px;
       gap: 8px;
     }
 
@@ -476,14 +551,168 @@
       align-content: start;
     }
 
-    .source-panel,
-    .naming-panel {
-      grid-column: span 2;
+    .source-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .source-panel > span {
+      display: none;
+    }
+
+    .source-panel .source-picker {
+      margin-bottom: 0;
+    }
+
+    .source-group {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .source-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .source-panel-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .source-panel-title::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .source-panel-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .source-rules {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .source-rules summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .source-rules summary::after {
+      content: "Open";
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .source-rules[open] summary::after {
+      content: "Close";
+    }
+
+    .source-rules:not([open]) textarea {
+      display: none !important;
+    }
+
+    .source-panel .textarea {
+      min-height: 74px;
+      max-height: 110px;
+      margin-top: 8px;
+      resize: vertical;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .compact-panel .textarea {
       min-height: 70px;
       padding: 10px 12px;
+    }
+
+    .compact-panel.source-panel .textarea {
+      min-height: 74px;
+    }
+
+    .naming-panel {
+      align-self: stretch;
+    }
+
+    .setup-grid .naming-panel {
+      grid-column: auto;
+    }
+
+    .compact-panel.naming-panel .compact-combo {
+      grid-template-columns: 1fr !important;
+      gap: 10px;
+    }
+
+    .naming-details {
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .naming-details summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .naming-details summary::after {
+      content: "Open";
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .naming-details[open] summary::after {
+      content: "Close";
+    }
+
+    .naming-details:not([open]) input {
+      display: none !important;
+    }
+
+    .naming-details .input {
+      margin-top: 8px;
     }
 
     .compact-panel .compact-combo {
@@ -849,6 +1078,59 @@
       gap: 14px;
     }
 
+    .prompt-advanced {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .prompt-advanced summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 44px;
+      padding: 0 12px;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .prompt-advanced summary::after {
+      content: "Open";
+      min-width: 52px;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .prompt-advanced[open] summary {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .prompt-advanced[open] summary::after {
+      content: "Close";
+    }
+
+    .prompt-advanced-body {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+    }
+
     .mini-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -873,12 +1155,13 @@
     }
 
     .category-description-input {
-      min-height: 28px;
+      min-height: 42px;
       resize: none;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
       text-align: right;
+      overflow: hidden;
     }
 
     .category-target-select {
@@ -890,12 +1173,155 @@
       font-weight: 900;
     }
 
+    .category-summary-title {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .category-color-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--vx-blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.1);
+    }
+
+    .category-color-dot.tone-green {
+      background: var(--vx-green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .category-color-dot.tone-orange {
+      background: var(--vx-orange);
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
+    }
+
+    .category-color-dot.tone-ink {
+      background: var(--vx-ink);
+      box-shadow: 0 0 0 4px rgba(26, 20, 16, 0.08);
+    }
+
+    .subject-history {
+      display: none;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 8px;
+      padding: 8px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 12px;
+      background: var(--vx-surface-warm);
+    }
+
+    .subject-history.is-visible {
+      display: flex;
+    }
+
+    .subject-history-label {
+      color: var(--vx-muted);
+      font: 500 0.64rem/1.2 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .subject-history-btn {
+      min-height: 30px;
+      max-width: 260px;
+      padding: 0 10px;
+      overflow: hidden;
+      border: 1px solid var(--vx-border);
+      border-radius: 999px;
+      background: var(--vx-surface);
+      color: var(--vx-dim);
+      font: 500 0.76rem/1.2 var(--vx-font);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .prompt-help {
       display: block;
       margin-bottom: 8px;
       color: var(--muted);
       font-size: 12px;
       line-height: 1.45;
+    }
+
+    .prompt-editor {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      background: var(--surface-soft);
+    }
+
+    .prompt-editor-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .prompt-editor-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .prompt-editor-kicker::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .prompt-editor-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .prompt-editor-note {
+      margin: 0;
+      max-width: 420px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .prompt-variable-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .prompt-variable-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .prompt-editor .prompt-text {
+      min-height: 330px;
+      border-color: var(--border-strong) !important;
+      background: #fff !important;
     }
 
     .badge {
@@ -951,6 +1377,41 @@
       margin-top: 8px;
     }
 
+    .has-tooltip {
+      position: relative;
+    }
+
+    .has-tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      z-index: 30;
+      width: max-content;
+      max-width: 230px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      background: var(--ink);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.35;
+      text-align: left;
+      text-transform: none;
+      letter-spacing: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 4px);
+      transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+
+    .has-tooltip:hover::after,
+    .has-tooltip:focus-visible::after {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
     .var-btn {
       min-height: 32px;
       padding: 0 10px;
@@ -995,6 +1456,7 @@
     .run-strip > div:first-child {
       flex: 1 1 auto;
       min-width: 340px;
+      padding-left: 12px;
     }
 
     .run-strip .actions-row {
@@ -1091,6 +1553,714 @@
       display: none;
     }
 
+    /* ============ VERAXO-STYLE FAQ BUILDER UI PASS ============ */
+    :root {
+      --vx-bg: #fdfcf9;
+      --vx-surface: #ffffff;
+      --vx-surface-warm: #fbf8f2;
+      --vx-surface-soft: #fffdf9;
+      --vx-border: #ebe3d6;
+      --vx-border-soft: #f1eadf;
+      --vx-border-strong: #d8ccb8;
+      --vx-ink: #1a1410;
+      --vx-text: #3a342e;
+      --vx-dim: #6b6557;
+      --vx-muted: #948c7e;
+      --vx-accent: #4a7fc7;
+      --vx-accent-soft: #e7eef9;
+      --vx-blue: #4a7fc7;
+      --vx-blue-soft: #e7eef9;
+      --vx-orange: #d97a3c;
+      --vx-orange-soft: #f8eadc;
+      --vx-green: #6f9355;
+      --vx-green-soft: #eaf1df;
+      --vx-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --vx-mono: "JetBrains Mono", monospace;
+
+      --bg: var(--vx-bg);
+      --surface: var(--vx-surface);
+      --surface-soft: var(--vx-surface-soft);
+      --surface-tint: var(--vx-surface-warm);
+      --ink: var(--vx-ink);
+      --text: var(--vx-text);
+      --muted: var(--vx-muted);
+      --border: var(--vx-border);
+      --border-strong: var(--vx-border-strong);
+      --purple: var(--vx-accent);
+      --purple-dark: var(--vx-accent);
+      --purple-soft: var(--vx-accent-soft);
+      --teal: var(--vx-green);
+      --teal-soft: var(--vx-green-soft);
+      --orange: var(--vx-orange);
+      --orange-soft: var(--vx-orange-soft);
+      --rose: var(--vx-orange);
+      --green: var(--vx-green);
+      --shadow: none;
+      --radius: 18px;
+      --radius-sm: 10px;
+    }
+
+    html,
+    body {
+      background: var(--vx-bg) !important;
+      color: var(--vx-text) !important;
+      font-family: var(--vx-font) !important;
+      font-weight: 450;
+      letter-spacing: -0.005em;
+    }
+
+    .topbar {
+      min-height: 64px;
+      padding: 14px 32px !important;
+      background: rgba(251, 250, 247, 0.88) !important;
+      border-bottom: 1px solid var(--vx-border) !important;
+      box-shadow: none !important;
+      backdrop-filter: blur(20px) !important;
+    }
+
+    .brand {
+      gap: 12px !important;
+    }
+
+    .brand-logo {
+      width: auto !important;
+      height: 32px !important;
+      max-width: none !important;
+    }
+
+    .brand-copy {
+      border-inline-start: 1px solid var(--vx-border) !important;
+      padding-inline-start: 14px !important;
+    }
+
+    .brand-copy h1 {
+      color: var(--vx-ink);
+      font: 600 0.98rem/1.15 var(--vx-font);
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      color: var(--vx-muted) !important;
+      font: 450 0.78rem/1.45 var(--vx-font);
+    }
+
+    .eyebrow {
+      color: var(--vx-blue) !important;
+      font: 500 0.68rem/1.2 var(--vx-mono) !important;
+      letter-spacing: 0.04em !important;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      min-height: 31px;
+      padding: 0 12px;
+      background: var(--vx-surface) !important;
+      border: 1px solid var(--vx-border) !important;
+      color: var(--vx-dim) !important;
+      font: 500 0.7rem/1.2 var(--vx-mono);
+      box-shadow: none !important;
+    }
+
+    .page {
+      width: min(1480px, calc(100% - 64px)) !important;
+      grid-template-columns: minmax(0, 1fr) 400px !important;
+      gap: 24px !important;
+      margin-top: 36px !important;
+      margin-bottom: 80px !important;
+    }
+
+    .rail {
+      top: 88px !important;
+      gap: 16px !important;
+    }
+
+    .panel,
+    .rail-card,
+    .builder-tabs,
+    .chat-box,
+    .chat-summary,
+    .category-card,
+    .task-card,
+    .artifact-card,
+    .micro-card,
+    .compact-panel,
+    .info-strip,
+    .strip-metric {
+      background: var(--vx-surface) !important;
+      border: 1px solid var(--vx-border) !important;
+      box-shadow: none !important;
+    }
+
+    .panel:hover,
+    .rail-card:hover,
+    .category-card:hover,
+    .task-card:hover {
+      border-color: var(--vx-border) !important;
+      box-shadow: none !important;
+    }
+
+    .panel-head,
+    .card-body {
+      border-color: var(--vx-border) !important;
+    }
+
+    .panel-head {
+      padding: 20px 22px 16px !important;
+      background: transparent !important;
+    }
+
+    .panel-head h2,
+    .rail-card h3,
+    .chat-summary h3,
+    .summary-main h3,
+    .artifact-card h3,
+    .terminal-head h3,
+    .info-strip h3 {
+      color: var(--vx-ink) !important;
+      font-weight: 600 !important;
+      letter-spacing: -0.01em;
+    }
+
+    .panel-body {
+      padding: 20px 22px !important;
+      background: var(--vx-surface) !important;
+    }
+
+    .builder-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 5px !important;
+      gap: 6px !important;
+      margin-bottom: 20px !important;
+      border-radius: 16px !important;
+      background: var(--vx-surface-warm) !important;
+      border-color: var(--vx-border-strong) !important;
+    }
+
+    .view-tab {
+      min-height: 52px;
+      border-radius: 12px !important;
+      border: 1px solid var(--vx-border-soft) !important;
+      background: rgba(255, 255, 255, 0.46) !important;
+      color: var(--vx-dim) !important;
+      font: 500 0.9rem/1.2 var(--vx-font);
+      box-shadow: none !important;
+    }
+
+    .view-tab.active {
+      background: var(--vx-surface) !important;
+      color: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      box-shadow: none !important;
+    }
+
+    .view-tab:hover {
+      transform: none !important;
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border-strong) !important;
+    }
+
+    .input,
+    .textarea,
+    .select,
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      border: 1px solid var(--vx-border) !important;
+      border-radius: 10px !important;
+      background: var(--vx-surface) !important;
+      color: var(--vx-ink) !important;
+      box-shadow: none !important;
+      font-family: var(--vx-font) !important;
+      font-size: 0.9rem !important;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .input,
+    .select,
+    input[type="text"],
+    input[type="number"],
+    select {
+      color: var(--vx-dim) !important;
+    }
+
+    .textarea,
+    textarea {
+      color: var(--vx-text) !important;
+      font-weight: 450;
+    }
+
+    .input::placeholder,
+    .textarea::placeholder,
+    textarea::placeholder,
+    input::placeholder {
+      color: var(--vx-muted) !important;
+      opacity: 1;
+    }
+
+    .prompt-text,
+    .terminal,
+    .var-btn {
+      font-family: var(--vx-mono) !important;
+    }
+
+    .prompt-text {
+      color: var(--vx-ink) !important;
+      font-size: 0.82rem !important;
+      font-weight: 500;
+      line-height: 1.55;
+    }
+
+    .input:hover,
+    .textarea:hover,
+    .select:hover,
+    input:hover,
+    textarea:hover,
+    select:hover {
+      border-color: var(--vx-border-strong) !important;
+    }
+
+    .input:focus,
+    .textarea:focus,
+    .select:focus,
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--vx-ink) !important;
+      box-shadow: none !important;
+    }
+
+    .field span,
+    .field-label,
+    .chat-summary-item span,
+    .strip-metric span {
+      color: var(--vx-muted) !important;
+      font: 500 0.68rem/1.2 var(--vx-mono) !important;
+      letter-spacing: 0.04em !important;
+    }
+
+    .hint,
+    .info-strip p,
+    .summary-main p,
+    .rail-card p,
+    .rail-card li,
+    .artifact-card p,
+    .read-only-note,
+    .chat-summary-item,
+    .subtitle {
+      color: var(--vx-muted) !important;
+      font-weight: 450;
+    }
+
+    .seg-btn,
+    .btn,
+    .ghost-btn,
+    .var-btn,
+    .quick-reply {
+      border: 1px solid var(--vx-border) !important;
+      border-radius: 999px !important;
+      background: var(--vx-surface) !important;
+      color: var(--vx-dim) !important;
+      box-shadow: none !important;
+      font-family: var(--vx-font);
+      font-weight: 500;
+      transform: none !important;
+    }
+
+    .seg-btn:hover,
+    .btn:hover,
+    .ghost-btn:hover,
+    .var-btn:hover,
+    .quick-reply:hover {
+      border-color: var(--vx-border-strong) !important;
+      background: var(--vx-surface-warm) !important;
+      transform: none !important;
+    }
+
+    .quick-reply.is-selected {
+      border-color: rgba(111, 147, 85, 0.32) !important;
+      background: var(--vx-green-soft) !important;
+      color: var(--vx-ink) !important;
+    }
+
+    .quick-reply-done {
+      border-color: var(--vx-ink) !important;
+      background: var(--vx-ink) !important;
+      color: #fff !important;
+    }
+
+    .seg-btn.active,
+    .btn,
+    .btn.secondary {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
+      box-shadow: none !important;
+    }
+
+    .ghost-btn,
+    .quick-reply,
+    .var-btn {
+      min-height: 36px;
+    }
+
+    .source-chip,
+    .badge,
+    .var-btn,
+    .chat-summary-item,
+    .summary-static-note,
+    .read-only-note {
+      background: var(--vx-surface-warm) !important;
+      border-color: var(--vx-border-soft) !important;
+      color: var(--vx-dim) !important;
+      box-shadow: none !important;
+    }
+
+    .source-chip {
+      font-size: 0.76rem !important;
+      font-weight: 600 !important;
+      color: var(--vx-dim) !important;
+    }
+
+    .source-chip:has(input:checked),
+    .badge.active {
+      background: var(--vx-blue-soft) !important;
+      border-color: rgba(74, 127, 199, 0.22) !important;
+      color: var(--vx-blue) !important;
+      box-shadow: none !important;
+    }
+
+    .category-card.is-selected,
+    .task-card.is-active {
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border) !important;
+      color: var(--vx-text) !important;
+      box-shadow: none !important;
+    }
+
+    .category-card[open],
+    .task-card[open] {
+      border-color: var(--vx-border-strong) !important;
+    }
+
+    .category-card[open] .card-body,
+    .task-card[open] .card-body {
+      background: var(--vx-surface) !important;
+    }
+
+    .badge.teal {
+      background: var(--vx-green-soft) !important;
+      border-color: rgba(111, 147, 85, 0.24) !important;
+      color: var(--vx-green) !important;
+    }
+
+    .badge.orange {
+      background: var(--vx-orange-soft) !important;
+      border-color: rgba(217, 122, 60, 0.2) !important;
+      color: var(--vx-orange) !important;
+    }
+
+    .panel-head h2::before,
+    .rail-card h3::before,
+    .terminal-head h3::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin-inline-end: 8px;
+      border-radius: 50%;
+      background: var(--vx-blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
+      vertical-align: 0.08em;
+    }
+
+    #workflowPanel .panel-head h2::before,
+    .rail-card:nth-of-type(2) h3::before {
+      background: var(--vx-green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    #categoryPanel .panel-head h2::before,
+    .rail-card:nth-of-type(3) h3::before {
+      background: var(--vx-orange);
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
+    }
+
+    #outputsPanel .panel-head h2::before,
+    .terminal-head h3::before {
+      background: var(--vx-blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
+    }
+
+    .info-strip {
+      background: var(--vx-surface-warm) !important;
+      border-radius: 14px !important;
+      align-items: center !important;
+    }
+
+    .info-strip > div:first-child {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .info-strip > div:first-child p:last-child {
+      max-width: 560px;
+    }
+
+    .strip-metrics {
+      flex: 0 0 auto;
+      display: grid !important;
+      grid-template-columns: repeat(4, 72px);
+      gap: 7px !important;
+      justify-content: end !important;
+      align-items: stretch;
+      flex-wrap: nowrap !important;
+    }
+
+    .header-metrics {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(86px, max-content));
+      gap: 8px;
+      align-items: stretch;
+      justify-content: end;
+    }
+
+    #setupPanel .panel-head {
+      align-items: center !important;
+    }
+
+    .strip-metric,
+    .metric {
+      border-radius: 12px !important;
+      background: var(--vx-surface) !important;
+    }
+
+    .strip-metric {
+      min-width: 0 !important;
+      width: auto;
+      padding: 7px 8px !important;
+    }
+
+    .strip-metric strong,
+    .metric strong {
+      color: var(--vx-ink);
+      font-weight: 600;
+    }
+
+    .strip-metric span {
+      font-size: 0.6rem !important;
+      white-space: nowrap;
+      letter-spacing: 0.02em !important;
+    }
+
+    .strip-metric strong {
+      margin-top: 3px !important;
+      font-size: 1rem !important;
+    }
+
+    .card-summary {
+      padding: 14px 16px !important;
+    }
+
+    .summary-main h3 {
+      font-size: 1rem !important;
+    }
+
+    .category-title-input,
+    .category-description-input {
+      color: var(--vx-ink) !important;
+      text-align: left !important;
+    }
+
+    .category-summary-title .category-title-input {
+      font-size: 1rem !important;
+      line-height: 1.25 !important;
+    }
+
+    .category-description-input {
+      color: var(--vx-muted) !important;
+    }
+
+    .task-config-grid {
+      grid-template-columns: minmax(280px, 1fr) 176px !important;
+      align-items: end;
+    }
+
+    .task-model-field {
+      max-width: 176px;
+      justify-self: end;
+    }
+
+    .task-model-field .select {
+      min-height: 42px !important;
+      padding-inline: 11px !important;
+      font-size: 0.86rem !important;
+    }
+
+    .switch-ui {
+      width: 32px !important;
+      height: 18px !important;
+      padding: 3px !important;
+      background: #d6cdba !important;
+      border: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .switch-ui::after {
+      width: 12px !important;
+      height: 12px !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    }
+
+    .switch input:checked + .switch-ui {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+    }
+
+    .switch input:checked + .switch-ui::after {
+      transform: translateX(14px) !important;
+    }
+
+    .caret {
+      color: var(--vx-muted) !important;
+      border-color: var(--vx-border-soft) !important;
+      background: var(--vx-surface-warm) !important;
+    }
+
+    details[open] .caret {
+      background: var(--vx-blue-soft) !important;
+      color: var(--vx-blue) !important;
+    }
+
+    .chat-shell {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.42fr) !important;
+      gap: 0 !important;
+      border: 1px solid var(--vx-border);
+      border-radius: 18px;
+      height: clamp(500px, 58vh, 600px);
+      overflow: hidden;
+      background: var(--vx-surface) !important;
+    }
+
+    .chat-box,
+    .chat-summary {
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: var(--vx-surface-soft) !important;
+    }
+
+    .chat-box {
+      display: grid !important;
+      grid-template-rows: minmax(320px, 1fr) auto auto;
+      min-height: 0;
+    }
+
+    .chat-summary {
+      border-inline-start: 1px solid var(--vx-border) !important;
+      padding: 18px !important;
+      overflow-y: auto;
+    }
+
+    .chat-log,
+    .quick-replies,
+    .chat-composer {
+      background: var(--vx-surface-soft) !important;
+      border-color: var(--vx-border) !important;
+    }
+
+    .chat-log {
+      height: auto !important;
+      min-height: 0;
+    }
+
+    .chat-input {
+      min-height: 48px !important;
+      height: 48px !important;
+      resize: none !important;
+    }
+
+    .chat-input.is-long-answer {
+      min-height: 96px !important;
+      height: 96px !important;
+    }
+
+    #faqChatSendBtn {
+      min-height: 48px !important;
+      padding: 0 18px !important;
+    }
+
+    .chat-message {
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border-soft) !important;
+      box-shadow: 0 8px 24px rgba(26, 20, 16, 0.035) !important;
+      color: var(--vx-dim) !important;
+    }
+
+    .chat-message.user {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
+    }
+
+    .run-strip {
+      bottom: 14px;
+      padding: 12px 14px 12px 22px !important;
+      border: 1px solid #c8b9a3 !important;
+      border-radius: 18px !important;
+      background: rgba(255, 255, 255, 0.96) !important;
+      box-shadow: 0 -12px 34px rgba(26, 20, 16, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset !important;
+      backdrop-filter: blur(18px);
+      position: sticky;
+      overflow: hidden;
+    }
+
+    .run-strip::before {
+      content: "";
+      position: absolute;
+      inset: 10px auto 10px 10px;
+      width: 5px;
+      border-radius: 999px;
+      background: var(--vx-ink);
+      box-shadow: none;
+    }
+
+    .run-strip strong {
+      color: var(--vx-ink);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      margin-left: 8px;
+    }
+
+    .run-strip p {
+      color: var(--vx-dim) !important;
+      margin-left: 8px;
+    }
+
+    .run-strip .btn,
+    .run-strip .ghost-btn {
+      border-radius: 10px !important;
+    }
+
+    .terminal {
+      background: #15110d !important;
+      color: rgba(255, 255, 255, 0.82) !important;
+      border-radius: 14px !important;
+      font: 400 0.78rem/1.65 var(--vx-mono) !important;
+    }
+
+    .terminal:empty::before {
+      color: rgba(255, 255, 255, 0.48) !important;
+    }
+
+    .dot {
+      background: var(--vx-green) !important;
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12) !important;
+    }
+
     @media (max-width: 1180px) {
       .page {
         grid-template-columns: 1fr;
@@ -1160,9 +2330,26 @@
         grid-template-columns: 1fr;
       }
 
+      .setup-grid {
+        grid-template-columns: 1fr;
+      }
+
       .source-panel,
       .naming-panel {
         grid-column: auto;
+      }
+
+      .source-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .task-config-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .task-model-field {
+        max-width: none;
+        justify-self: stretch;
       }
 
       .run-strip .actions-row {
@@ -1192,33 +2379,35 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+      <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+      </a>
       <div class="brand-copy">
         <p class="eyebrow">Creator Studio</p>
         <h1>FAQ Workflow Builder</h1>
-        <p class="subtitle">בונים שאלות, תשובות ו־QA לפי קטגוריות אמיתיות, עם שליטה במודל ובפרומפטים.</p>
+        <p class="subtitle">Build FAQ questions, answers, and QA checks by real user categories, with full control over models and prompts.</p>
       </div>
     </div>
-    <span class="status-pill" id="saveStatus">נשמר מקומית</span>
+    <span class="status-pill" id="saveStatus">Saved locally</span>
   </header>
 
   <main class="page">
     <section class="workspace">
       <nav class="builder-tabs" aria-label="FAQ builder views">
-        <button class="view-tab active" type="button" data-view-tab="builder">עריכה ידנית</button>
-        <button class="view-tab" type="button" data-view-tab="chat">מילוי בצ׳אט</button>
+        <button class="view-tab active" type="button" data-view-tab="builder">Manual editing</button>
+        <button class="view-tab" type="button" data-view-tab="chat">Guided chat</button>
       </nav>
 
       <section class="panel hidden" id="chatPanel" data-chat-section>
         <div class="panel-head">
           <div>
             <p class="eyebrow">Guided setup</p>
-            <h2>מילוי דרך צ׳אט</h2>
-            <p class="subtitle">שיחה קצרה בעברית שממלאת את ההגדרות המרכזיות. אחרי הסיום אפשר לעבור לעריכה ידנית ולדייק כל פרט.</p>
+            <h2>Guided chat setup</h2>
+            <p class="subtitle">A short guided flow that fills the core settings. When it is done, everything stays editable in the manual builder.</p>
           </div>
           <div class="toolbar">
-            <button class="ghost-btn" type="button" id="chatResetBtn">התחלה מחדש</button>
-            <button class="ghost-btn" type="button" id="chatOpenBuilderBtnTop">פתח לעריכה</button>
+            <button class="ghost-btn" type="button" id="chatResetBtn">Restart</button>
+            <button class="ghost-btn" type="button" id="chatOpenBuilderBtnTop">Open editor</button>
           </div>
         </div>
         <div class="panel-body">
@@ -1227,16 +2416,16 @@
               <div class="chat-log" id="faqChatLog"></div>
               <div class="quick-replies" id="faqChatQuickReplies"></div>
               <form class="chat-composer" id="faqChatForm">
-                <textarea class="textarea chat-input" id="faqChatInput" rows="1" placeholder="כתבי כאן תשובה קצרה..."></textarea>
-                <button class="btn secondary" id="faqChatSendBtn" type="submit">שליחה</button>
+                <textarea class="textarea chat-input" id="faqChatInput" rows="1" placeholder="Type a short answer..."></textarea>
+                <button class="btn secondary" id="faqChatSendBtn" type="submit">Send</button>
               </form>
             </div>
             <aside class="chat-summary">
               <p class="eyebrow">Setup preview</p>
-              <h3>מה הצ׳אט כבר מילא</h3>
+              <h3>What the chat filled</h3>
               <div class="chat-summary-list" id="faqChatSummary"></div>
-              <button class="ghost-btn" type="button" id="chatOpenBuilderBtn">פתח לעריכה ידנית</button>
-              <button class="ghost-btn" type="button" id="chatSavePlanBtn">שמור תוכנית JSON</button>
+              <button class="ghost-btn" type="button" id="chatOpenBuilderBtn">Open manual editor</button>
+              <button class="ghost-btn" type="button" id="chatSavePlanBtn">Save JSON plan</button>
             </aside>
           </div>
         </div>
@@ -1246,80 +2435,71 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Step 1</p>
-            <h2>הגדרת העבודה</h2>
-            <p class="subtitle">הכניסי מלון, עמוד או נושא. אפשר כמה שורות, כל שורה תרוץ כעבודה נפרדת.</p>
+            <h2>Workflow setup</h2>
+            <p class="subtitle">Enter a hotel, page, product, or topic. Use multiple lines when each subject should run as a separate job.</p>
           </div>
-          <div class="preset-row" aria-label="FAQ presets">
-            <button class="seg-btn active" type="button" data-preset="hotel">מלונות</button>
-            <button class="seg-btn" type="button" data-preset="local">עסק מקומי</button>
+          <div class="header-metrics" aria-label="Workflow summary">
+            <div class="strip-metric">
+              <span>Subjects</span>
+              <strong id="subjectCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Categories</span>
+              <strong id="categoryCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Tasks</span>
+              <strong id="taskCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Model</span>
+              <strong id="modelShort">o3</strong>
+            </div>
           </div>
         </div>
 
         <div class="panel-body">
-          <div class="info-strip">
-            <div>
-              <p class="eyebrow">How it works</p>
-              <h3>שרשרת עבודה קצרה וברורה</h3>
-              <p>מגדירים נושאים, בוחרים מודל וכללים כלליים, ואז עורכים את הפרומפטים והקטגוריות רק אם צריך.</p>
-            </div>
-            <div class="strip-metrics">
-              <div class="strip-metric">
-                <span>נושאים</span>
-                <strong id="subjectCount">0</strong>
-              </div>
-              <div class="strip-metric">
-                <span>קטגוריות</span>
-                <strong id="categoryCount">0</strong>
-              </div>
-              <div class="strip-metric">
-                <span>משימות</span>
-                <strong id="taskCount">0</strong>
-              </div>
-              <div class="strip-metric">
-                <span>מודל</span>
-                <strong id="modelShort">o3</strong>
-              </div>
-            </div>
-          </div>
-
           <div class="grid setup-grid">
             <label class="field">
-              <span>מלונות / נושאים</span>
-              <textarea id="subjects" class="textarea ltr" rows="4" placeholder="Leonardo Royal Berlin&#10;Bachar House&#10;master Wola"></textarea>
-              <span class="hint">שורה חדשה או פסיק מפרידים בין נושאים. ההגדרה נשמרת בדפדפן כדי להמשיך מאותה נקודה.</span>
+              <span>Hotels / topics</span>
+              <textarea id="subjects" class="textarea ltr" rows="3" placeholder="Leonardo Royal Berlin&#10;Bachar House&#10;master Wola"></textarea>
+              <span class="hint">Use a new line or comma between subjects. The setup is saved in this browser so you can continue later.</span>
+              <div class="subject-history" id="subjectHistory" aria-label="Previous subject sets"></div>
             </label>
+            <input id="namingPolicy" type="hidden" value="natural_exact" />
+            <input id="namingRules" type="hidden" value="Do not shorten or translate the name" />
           </div>
 
           <div class="grid control-grid setup-controls" style="margin-top: 18px;">
             <label class="field">
-              <span>מודל ראשי</span>
+              <span>Main model</span>
               <select id="globalModel" class="select ltr">
-                <option value="o3">o3 - balanced reasoning</option>
-                <option value="gpt-5.5">gpt-5.5 - deep strategy</option>
-                <option value="gpt-5.4">gpt-5.4 - strong daily work</option>
-                <option value="gpt-5.4-mini">gpt-5.4-mini - quick draft</option>
+                <option value="o3">o3 - balanced</option>
+                <option value="gpt-5.5">gpt-5.5 - deep</option>
+                <option value="gpt-5.4">gpt-5.4 - strong</option>
+                <option value="gpt-5.4-mini">gpt-5.4-mini - quick</option>
               </select>
             </label>
 
             <label class="field">
-              <span>יעד שאלות</span>
-              <div class="compact-combo">
-                <select id="questionCountMode" class="select">
-                  <option value="target">יעד מספרי</option>
-                  <option value="as_found">כמה שנמצא</option>
-                  <option value="quality_first">ללא יעד קשיח</option>
-                </select>
-                <input id="questionCount" class="input ltr" type="number" min="1" max="120" step="1" value="30" />
-              </div>
+              <span>Question target</span>
+              <select id="questionRangePreset" class="select question-range-select">
+                <option value="10-15">Lean · 10-15</option>
+                <option value="20-30" selected>Standard · 20-30</option>
+                <option value="30-45">Deep · 30-45</option>
+                <option value="45-60">Full · 45-60</option>
+              </select>
+              <input id="questionCountMode" type="hidden" value="target" />
+              <input id="questionCount" type="hidden" value="20-30" />
             </label>
 
             <label class="field">
-              <span>שפת התוצר</span>
+              <span>Output language</span>
               <select id="outputLanguage" class="select">
                 <option value="English (UK)">English (UK)</option>
                 <option value="English (US)">English (US)</option>
                 <option value="English">English</option>
-                <option value="Hebrew">עברית</option>
+                <option value="Hebrew">Hebrew</option>
                 <option value="German">Deutsch</option>
                 <option value="French">Français</option>
                 <option value="Spanish">Español</option>
@@ -1327,37 +2507,33 @@
             </label>
 
             <label class="field">
-              <span>קהל יעד</span>
+              <span>Audience</span>
               <input id="audience" class="input ltr" value="Guests before booking, guests before arrival, and in-house guests" />
             </label>
 
             <div class="field compact-panel source-panel">
-              <span>מקורות כלליים</span>
-              <div class="source-picker" id="sourceOptions">
-                <label class="source-chip"><input type="checkbox" value="Official website" checked />אתר רשמי</label>
-                <label class="source-chip"><input type="checkbox" value="Google Business Profile" />GBP</label>
-                <label class="source-chip"><input type="checkbox" value="OTAs" />OTAs</label>
-                <label class="source-chip"><input type="checkbox" value="Public reviews" />ביקורות</label>
-                <label class="source-chip"><input type="checkbox" value="Competitors" />מתחרים</label>
+              <span>Global sources</span>
+              <div class="source-group">
+                <div class="source-panel-head">
+                  <h3 class="source-panel-title">Research sources</h3>
+                  <span class="source-panel-note">Choose where the agent may look for FAQ intent.</span>
+                </div>
+                <div class="source-picker" id="sourceOptions">
+                  <label class="source-chip"><input type="checkbox" value="Official website" checked />Official website</label>
+                  <label class="source-chip"><input type="checkbox" value="Google Business Profile" />GBP</label>
+                  <label class="source-chip"><input type="checkbox" value="OTAs" />OTAs</label>
+                  <label class="source-chip"><input type="checkbox" value="Public reviews" />Reviews</label>
+                  <label class="source-chip"><input type="checkbox" value="Competitors" />Competitors</label>
+                </div>
               </div>
-              <textarea id="sourceInstructions" class="textarea ltr" rows="2">Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.</textarea>
-            </div>
-
-            <div class="field compact-panel naming-panel">
-              <span>שם הנכס / המוצר</span>
-              <div class="compact-combo">
-                <select id="namingPolicy" class="select">
-                  <option value="natural_exact">שם מדויק, טבעי</option>
-                  <option value="light">מעט אזכורים</option>
-                  <option value="strict">שם מדויק בכל שאלה רלוונטית</option>
-                  <option value="custom">הנחיה מותאמת</option>
-                </select>
-                <input id="namingRules" class="input" value="לא לקצר או לתרגם את השם" />
-              </div>
+              <details class="source-rules">
+                <summary>Advanced source policy</summary>
+                <textarea id="sourceInstructions" class="textarea ltr" rows="3">Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.</textarea>
+              </details>
             </div>
 
             <div class="read-only-note wide-field">
-              <span>שם הגיליון נוצר אוטומטית לפי הנושא:</span>
+              <span>The sheet name is generated automatically from the subject:</span>
               <strong id="sheetNamePreview">Creator: {{subject}}</strong>
             </div>
           </div>
@@ -1368,12 +2544,12 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Step 3</p>
-            <h2>שרשרת הפרומפטים</h2>
-            <p class="subtitle">אפשר להשאיר את הדיפולט, או לפתוח כל שלב ולערוך ידנית. השלבים שומרים על IDs כדי שהייצוא לגוגל שיט יעבוד.</p>
+            <h2>Prompt workflow</h2>
+            <p class="subtitle">Keep the defaults, or open any step and edit it manually. Step IDs stay stable so Google Sheets export keeps working.</p>
           </div>
           <div class="toolbar">
-            <button class="ghost-btn" type="button" id="expandTasksBtn">פתח משימות</button>
-            <button class="ghost-btn" type="button" id="collapseTasksBtn">סגור משימות</button>
+            <button class="ghost-btn" type="button" id="expandTasksBtn">Expand tasks</button>
+            <button class="ghost-btn" type="button" id="collapseTasksBtn">Collapse tasks</button>
           </div>
         </div>
         <div class="panel-body">
@@ -1385,24 +2561,24 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Optional</p>
-            <h2>קטגוריות לשלב יצירת השאלות</h2>
-            <p class="subtitle">פתיחה רק כשצריך לדייק את סוגי השאלות. העריכה כאן מוזנת לפרומפט של משימת השאלות.</p>
+            <h2>Question-generation categories</h2>
+            <p class="subtitle">Open this only when you need to refine the types of questions. These settings feed the question-generation prompt.</p>
           </div>
           <div class="toolbar">
             <label class="field" style="min-width: 180px;">
-              <span>טווח לכל הקטגוריות</span>
+              <span>Range for all categories</span>
               <select id="globalCategoryTarget" class="select">
-                <option value="inherit">ללא שינוי</option>
-                <option value="2-4">2-4 שאלות</option>
-                <option value="3-5">3-5 שאלות</option>
-                <option value="4-6">4-6 שאלות</option>
-                <option value="as_found">כמה שנמצא</option>
-                <option value="quality_first">ללא יעד קשיח</option>
+                <option value="inherit">No change</option>
+                <option value="2-4">2-4 questions</option>
+                <option value="3-5">3-5 questions</option>
+                <option value="4-6">4-6 questions</option>
+                <option value="as_found">As many as found</option>
+                <option value="quality_first">No fixed target</option>
               </select>
             </label>
-            <button class="ghost-btn" type="button" id="applyCategoryTargetBtn">החל</button>
-            <button class="ghost-btn" type="button" id="expandCategoriesBtn">פתח הכל</button>
-            <button class="ghost-btn" type="button" id="collapseCategoriesBtn">סגור הכל</button>
+            <button class="ghost-btn" type="button" id="applyCategoryTargetBtn">Apply</button>
+            <button class="ghost-btn" type="button" id="expandCategoriesBtn">Expand all</button>
+            <button class="ghost-btn" type="button" id="collapseCategoriesBtn">Collapse all</button>
           </div>
         </div>
         <div class="panel-body">
@@ -1414,11 +2590,11 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Outputs</p>
-            <h2>תוצרים וקבצים</h2>
-            <p class="subtitle">כאן יופיעו הגיליונות שנוצרו מהריצה וקבצי תוכנית העבודה שנשמרו מהמסך.</p>
+            <h2>Outputs and files</h2>
+            <p class="subtitle">Created Google Sheets and saved workflow JSON files will appear here after runs or exports.</p>
           </div>
           <div class="toolbar">
-            <button class="ghost-btn" type="button" id="clearArtifactsBtn">נקה רשימה</button>
+            <button class="ghost-btn" type="button" id="clearArtifactsBtn">Clear list</button>
           </div>
         </div>
         <div class="panel-body">
@@ -1430,7 +2606,7 @@
         <div class="panel-body terminal-wrap">
           <div class="terminal-head">
             <h3>Run log</h3>
-            <button class="ghost-btn" type="button" data-clear-log>נקה</button>
+            <button class="ghost-btn" type="button" data-clear-log>Clear</button>
           </div>
           <div class="terminal" id="logsMobile"></div>
         </div>
@@ -1438,16 +2614,16 @@
 
       <div class="run-strip">
         <div>
-          <strong id="runSummary">מוכן להרצה</strong>
-          <p id="runDetails">בחרי נושא אחד לפחות ואז הריצי את ה־FAQ workflow.</p>
+          <strong id="runSummary">Ready to run</strong>
+          <p id="runDetails">Choose at least one subject, then run the FAQ workflow.</p>
         </div>
         <div class="actions-row">
           <input id="importPlanInput" type="file" accept="application/json,.json" hidden />
-          <button class="ghost-btn" type="button" id="resetBtn">איפוס</button>
-          <button class="ghost-btn" type="button" id="downloadPlanBtn">שמור JSON</button>
-          <button class="ghost-btn" type="button" id="importPlanBtn">טען JSON</button>
-          <button class="ghost-btn" type="button" id="copyPlanBtn">העתק תוכנית</button>
-          <button class="btn secondary" type="button" id="runBtn">הרץ FAQ Workflow</button>
+          <button class="ghost-btn" type="button" id="resetBtn">Reset</button>
+          <button class="ghost-btn" type="button" id="downloadPlanBtn">Save JSON</button>
+          <button class="ghost-btn" type="button" id="importPlanBtn">Load JSON</button>
+          <button class="ghost-btn" type="button" id="copyPlanBtn">Copy plan</button>
+          <button class="btn secondary" type="button" id="runBtn">Run FAQ Workflow</button>
         </div>
       </div>
     </section>
@@ -1455,24 +2631,24 @@
     <aside class="rail">
       <section class="rail-card">
         <p class="eyebrow">Reading map</p>
-        <h3>מה חשוב בבניית FAQ טוב</h3>
+        <h3>What matters in a good FAQ</h3>
         <ul class="rail-list">
-          <li><span class="dot"></span><span>מתחילים מכוונת משתמש: לפני הזמנה, לפני הגעה, במהלך שהייה ואחרי יציאה.</span></li>
-          <li><span class="dot"></span><span>שאלה טובה היא ספציפית לעמוד או לנכס, ולא כותרת כללית כמו “Amenities”.</span></li>
-          <li><span class="dot"></span><span>תשובה טובה קצרה, ניתנת לאימות, ומסמנת כשחסר מקור אמין.</span></li>
-          <li><span class="dot"></span><span>הקטגוריות הן כלי עבודה פנימי: הן מכוונות את המודל, אבל לא אמורות להפוך לשאלות כלליות.</span></li>
+          <li><span class="dot"></span><span>Start from user intent: before booking, before arrival, during the stay, and after checkout.</span></li>
+          <li><span class="dot"></span><span>A good question is specific to the page or property, not a generic heading like “Amenities”.</span></li>
+          <li><span class="dot"></span><span>A good answer is short, verifiable, and clearly marks facts that still need a reliable source.</span></li>
+          <li><span class="dot"></span><span>Categories are internal guidance for the model. They should not turn into generic questions.</span></li>
         </ul>
       </section>
 
       <section class="rail-card">
         <p class="eyebrow">Workflow</p>
-        <h3>מה ירוץ עכשיו</h3>
+        <h3>What will run now</h3>
         <div class="chips" id="workflowChips"></div>
       </section>
 
       <section class="rail-card">
         <p class="eyebrow">Variables</p>
-        <h3>משתנים זמינים</h3>
+        <h3>Available variables</h3>
         <div class="chips">
           <span class="badge active">{{subject}}</span>
           <span class="badge active">{{last}}</span>
@@ -1482,7 +2658,7 @@
           <span class="badge orange">{{language}}</span>
           <span class="badge orange">{{namingRules}}</span>
         </div>
-        <p style="margin: 12px 0 0;">המשתנים של התצוגה מוחלפים לפני השליחה. `{{subject}}`, `{{last}}` ו־`{{answersTsv}}` נשמרים לשרת בזמן הריצה.</p>
+        <p style="margin: 12px 0 0;">Preview variables are replaced before sending. `{{subject}}`, `{{last}}`, and `{{answersTsv}}` are preserved for the server at runtime.</p>
       </section>
 
       <section class="rail-card terminal-wrap">
@@ -1491,7 +2667,7 @@
             <p class="eyebrow">Live</p>
             <h3>Run log</h3>
           </div>
-          <button class="ghost-btn" type="button" data-clear-log>נקה</button>
+          <button class="ghost-btn" type="button" data-clear-log>Clear</button>
         </div>
         <div class="terminal" id="logs"></div>
       </section>
@@ -1502,6 +2678,7 @@
     const socket = io();
     const STORAGE_KEY = "carmelon.faqPlayground.v3";
     const OUTPUTS_STORAGE_KEY = "carmelon.faqPlayground.outputs.v1";
+    const SUBJECT_HISTORY_KEY = "carmelon.faqPlayground.subjectHistory.v1";
 
     const MODEL_OPTIONS = [
       { value: "inherit", label: "Use global model" },
@@ -1511,12 +2688,14 @@
       { value: "gpt-5.4-mini", label: "gpt-5.4-mini" }
     ];
 
+    const QUESTION_RANGES = ["10-15", "20-30", "30-45", "45-60"];
+
     const CATEGORY_LIBRARY = [
       {
         id: "general",
         title: "General Information",
-        label: "מידע כללי",
-        description: "מה המקום, למי הוא מתאים, מה חשוב לדעת לפני שמתחילים.",
+        label: "General information",
+        description: "What the place is, who it is for, and what users should know before they start.",
         countMode: "target",
         count: 5,
         enabled: true,
@@ -1529,8 +2708,8 @@
       {
         id: "booking",
         title: "Booking & Payment",
-        label: "הזמנה ותשלום",
-        description: "מחירים, ביטול, פיקדון, אמצעי תשלום ומדיניות הזמנה.",
+        label: "Booking and payment",
+        description: "Prices, cancellation, deposits, payment methods, and booking policies.",
         countMode: "target",
         count: 4,
         enabled: true,
@@ -1543,8 +2722,8 @@
       {
         id: "checkin",
         title: "Check-in & Check-out",
-        label: "צ'ק אין וצ'ק אאוט",
-        description: "זמני כניסה, קוד גישה, איחור, שמירת מזוודות ועזיבה.",
+        label: "Check-in and check-out",
+        description: "Arrival times, access codes, late arrivals, luggage storage, and departure.",
         countMode: "target",
         count: 4,
         enabled: true,
@@ -1557,8 +2736,8 @@
       {
         id: "rooms",
         title: "Rooms & Amenities",
-        label: "חדרים ומתקנים",
-        description: "סוגי חדרים, מטבח, Wi-Fi, מיזוג, ניקיון, כביסה ונגישות.",
+        label: "Rooms and amenities",
+        description: "Room types, kitchen, Wi-Fi, air conditioning, cleaning, laundry, and accessibility.",
         countMode: "target",
         count: 6,
         enabled: true,
@@ -1571,8 +2750,8 @@
       {
         id: "location",
         title: "Location & Transportation",
-        label: "מיקום והגעה",
-        description: "שכונה, תחבורה ציבורית, חניה, אטרקציות ונקודות עניין.",
+        label: "Location and transportation",
+        description: "Neighbourhood, public transport, parking, attractions, and nearby points of interest.",
         countMode: "target",
         count: 4,
         enabled: true,
@@ -1585,8 +2764,8 @@
       {
         id: "food",
         title: "Food & Dining",
-        label: "אוכל וארוחות",
-        description: "ארוחת בוקר, מסעדות, מטבחון, בתי קפה ואפשרויות סביב הנכס.",
+        label: "Food and dining",
+        description: "Breakfast, restaurants, kitchenettes, cafes, and nearby dining options.",
         countMode: "target",
         count: 3,
         enabled: true,
@@ -1599,8 +2778,8 @@
       {
         id: "policies",
         title: "Policies & House Rules",
-        label: "מדיניות וכללים",
-        description: "עישון, חיות מחמד, ילדים, רעש, אורחים נוספים וכללים חשובים.",
+        label: "Policies and rules",
+        description: "Smoking, pets, children, noise, additional guests, and important rules.",
         countMode: "target",
         count: 4,
         enabled: true,
@@ -1613,8 +2792,8 @@
       {
         id: "trust",
         title: "Trust & Support",
-        label: "אמון ושירות",
-        description: "שירות לקוחות, אבטחה, חוות דעת, אמינות ותמיכה בזמן אמת.",
+        label: "Trust and support",
+        description: "Customer service, security, reviews, reliability, and real-time support.",
         countMode: "as_found",
         count: 3,
         enabled: false,
@@ -1811,6 +2990,64 @@
         .replace(/'/g, "&#039;");
     }
 
+    function compactSubjectValue(value) {
+      return String(value || "")
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .join("\n");
+    }
+
+    function loadSubjectHistory() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(SUBJECT_HISTORY_KEY) || "[]");
+        return Array.isArray(stored) ? stored.filter(Boolean).slice(0, 6) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveSubjectHistory(items) {
+      localStorage.setItem(SUBJECT_HISTORY_KEY, JSON.stringify(items.slice(0, 6)));
+    }
+
+    function rememberSubjects(value = $("subjects")?.value) {
+      const clean = compactSubjectValue(value);
+      if (!clean) return;
+      const next = [clean, ...loadSubjectHistory().filter((item) => item !== clean)];
+      saveSubjectHistory(next);
+      renderSubjectHistory(false);
+    }
+
+    function subjectHistoryLabel(value) {
+      const items = compactSubjectValue(value).split("\n").filter(Boolean);
+      if (!items.length) return "Previous setup";
+      const label = items.slice(0, 2).join(", ");
+      return items.length > 2 ? `${label} +${items.length - 2}` : label;
+    }
+
+    function renderSubjectHistory(show = false) {
+      const historyEl = $("subjectHistory");
+      if (!historyEl) return;
+      const current = compactSubjectValue($("subjects")?.value || "");
+      const history = loadSubjectHistory().filter((item) => item && item !== current);
+      if (!history.length) {
+        historyEl.classList.remove("is-visible");
+        historyEl.innerHTML = "";
+        return;
+      }
+
+      historyEl.innerHTML = `
+        <span class="subject-history-label">Previous</span>
+        ${history.map((item) => `
+          <button class="subject-history-btn" type="button" data-subject-history="${encodeURIComponent(item)}" title="${escapeHtml(item.replace(/\n/g, ", "))}">
+            ${escapeHtml(subjectHistoryLabel(item))}
+          </button>
+        `).join("")}
+      `;
+      historyEl.classList.toggle("is-visible", show);
+    }
+
     function loadSavedState() {
       try {
         return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -1851,8 +3088,8 @@
       outputArtifacts.unshift({
         id: artifactId(),
         createdAt: new Date().toISOString(),
-        type: artifact.type || "קובץ",
-        title: artifact.title || "תוצר חדש",
+        type: artifact.type || "File",
+        title: artifact.title || "New output",
         description: artifact.description || "",
         url,
         fileName: artifact.fileName || ""
@@ -1867,7 +3104,7 @@
       if (!outputArtifacts.length) {
         artifactList.innerHTML = `
           <div class="empty-output">
-            עדיין אין תוצרים. אחרי הרצה יוצגו כאן Google Sheets שנוצרו, וקבצי JSON שתשמרי מהמסך.
+            No outputs yet. Created Google Sheets and JSON files saved from this screen will appear here after a run.
           </div>
         `;
         return;
@@ -1875,15 +3112,15 @@
 
       artifactList.innerHTML = outputArtifacts.map((artifact) => {
         const date = new Date(artifact.createdAt);
-        const dateLabel = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+        const dateLabel = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" });
         const urlAction = artifact.url
-          ? `<a class="ghost-btn" href="${escapeHtml(artifact.url)}" target="_blank" rel="noreferrer">פתח</a>`
+          ? `<a class="ghost-btn" href="${escapeHtml(artifact.url)}" target="_blank" rel="noreferrer">Open</a>`
           : "";
         return `
           <article class="artifact-card">
             <span class="badge teal">${escapeHtml(artifact.type)}</span>
             <h3>${escapeHtml(artifact.title)}</h3>
-            <p>${escapeHtml(artifact.description || artifact.fileName || "תוצר שנשמר מהבילדר.")}</p>
+            <p>${escapeHtml(artifact.description || artifact.fileName || "Output saved from the builder.")}</p>
             ${artifact.url ? `<p class="ltr">${escapeHtml(artifact.url)}</p>` : ""}
             <div class="artifact-actions">
               ${urlAction}
@@ -1906,24 +3143,49 @@
         addOutputArtifact({
           type: "Google Sheet",
           title: activeRunSubject ? `FAQ Sheet: ${activeRunSubject}` : "FAQ Google Sheet",
-          description: "גיליון שנוצר מהרצת FAQ Workflow.",
+          description: "Sheet created by the FAQ Workflow run.",
           url: sheetMatch[1]
         });
       }
     }
 
+    function hasHebrewText(value) {
+      return /[\u0590-\u05ff]/.test(String(value || ""));
+    }
+
     function mergeTasks(savedTasks) {
       const savedById = new Map((Array.isArray(savedTasks) ? savedTasks : []).map((task) => [Number(task.id), task]));
-      return DEFAULT_TASKS.map((task) => ({ ...task, ...(savedById.get(task.id) || {}) }));
+      return DEFAULT_TASKS.map((task) => {
+        const saved = savedById.get(task.id) || {};
+        const merged = { ...task, ...saved };
+        ["name", "description", "systemPrompt", "userPrompt"].forEach((key) => {
+          if (hasHebrewText(saved[key])) {
+            merged[key] = task[key];
+          }
+        });
+        return merged;
+      });
     }
 
     function mergeCategories(savedCategories) {
       const savedById = savedCategories && typeof savedCategories === "object" ? savedCategories : {};
-      return CATEGORY_LIBRARY.map((category) => ({
-        ...category,
-        ...(savedById[category.id] || {}),
-        intents: Array.isArray(savedById[category.id]?.intents) ? savedById[category.id].intents : category.intents
-      }));
+      return CATEGORY_LIBRARY.map((category) => {
+        const saved = savedById[category.id] || {};
+        const merged = {
+          ...category,
+          ...saved,
+          intents: Array.isArray(saved.intents) ? saved.intents : category.intents
+        };
+        ["label", "description"].forEach((key) => {
+          if (hasHebrewText(saved[key])) {
+            merged[key] = category[key];
+          }
+        });
+        if (Array.isArray(saved.intents) && saved.intents.some(hasHebrewText)) {
+          merged.intents = category.intents;
+        }
+        return merged;
+      });
     }
 
     const savedState = loadSavedState();
@@ -1942,16 +3204,36 @@
       });
     }
 
+    function normalizeQuestionRange(value, fallback = "20-30") {
+      const clean = String(value || "").trim();
+      if (QUESTION_RANGES.includes(clean)) return clean;
+      const numeric = Number(clean);
+      if (Number.isFinite(numeric)) {
+        if (numeric <= 15) return "10-15";
+        if (numeric <= 30) return "20-30";
+        if (numeric <= 45) return "30-45";
+        return "45-60";
+      }
+      return fallback;
+    }
+
+    function applyQuestionRange(value) {
+      const range = normalizeQuestionRange(value);
+      $("questionRangePreset").value = range;
+      $("questionCountMode").value = "target";
+      $("questionCount").value = range;
+    }
+
     function applySavedControls() {
       $("subjects").value = savedState.subjects || "";
       $("globalModel").value = savedState.controls?.globalModel || "o3";
-      $("questionCountMode").value = savedState.controls?.questionCountMode || "target";
-      $("questionCount").value = savedState.controls?.questionCount || "30";
+      applyQuestionRange(savedState.controls?.questionCount || savedState.controls?.questionRangePreset || "20-30");
       $("outputLanguage").value = savedState.controls?.outputLanguage || "English (UK)";
       $("audience").value = savedState.controls?.audience || "Guests before booking, guests before arrival, and in-house guests";
       $("sourceInstructions").value = savedState.controls?.sourceInstructions || "Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.";
       $("namingPolicy").value = savedState.controls?.namingPolicy || "natural_exact";
-      $("namingRules").value = savedState.controls?.namingRules || "לא לקצר או לתרגם את השם";
+      const savedNamingRules = savedState.controls?.namingRules || "";
+      $("namingRules").value = hasHebrewText(savedNamingRules) ? "Do not shorten or translate the name" : savedNamingRules || "Do not shorten or translate the name";
       applySourceOptions(savedState.controls?.sourceOptions);
       const savedPreset = savedState.controls?.preset;
       setActivePreset(savedPreset === "local" ? "local" : "hotel", false);
@@ -1975,25 +3257,18 @@
       categoryContainer.innerHTML = categoryDrafts.map((category, index) => {
         const selected = category.enabled ? "is-selected" : "";
         const target = categoryTargetValue(category);
+        const dotTone = ["", "tone-green", "tone-orange", "tone-ink"][index % 4];
         return `
           <details class="category-card ${selected}" id="category-${category.id}">
             <summary class="card-summary">
               <div class="summary-main">
-                <input class="category-title-input" id="cat-label-${category.id}" value="${escapeHtml(category.label)}" onclick="event.stopPropagation()" />
-                <textarea class="category-description-input" id="cat-description-${category.id}" rows="1" onclick="event.stopPropagation()">${escapeHtml(category.description)}</textarea>
-                <div class="task-meta">
-                  <span class="badge">${escapeHtml(category.title)}</span>
-                  <select class="select category-target-select" id="cat-target-${category.id}" onclick="event.stopPropagation()">
-                    <option value="2-4" ${target === "2-4" ? "selected" : ""}>2-4 שאלות</option>
-                    <option value="3-5" ${target === "3-5" ? "selected" : ""}>3-5 שאלות</option>
-                    <option value="4-6" ${target === "4-6" ? "selected" : ""}>4-6 שאלות</option>
-                    <option value="as_found" ${target === "as_found" ? "selected" : ""}>כמה שנמצא</option>
-                    <option value="quality_first" ${target === "quality_first" ? "selected" : ""}>ללא יעד קשיח</option>
-                  </select>
+                <div class="category-summary-title">
+                  <span class="category-color-dot ${dotTone}" aria-hidden="true"></span>
+                  <input class="category-title-input" id="cat-label-${category.id}" value="${escapeHtml(category.label)}" onclick="event.stopPropagation()" />
                 </div>
               </div>
               <div class="summary-controls">
-                <label class="switch" title="כלול קטגוריה">
+                <label class="switch" title="Include category">
                   <input type="checkbox" id="cat-enabled-${category.id}" ${category.enabled ? "checked" : ""} data-category-toggle="${category.id}" onclick="event.stopPropagation()" />
                   <span class="switch-ui"></span>
                 </label>
@@ -2003,7 +3278,21 @@
             <div class="card-body">
               <div class="mini-grid">
                 <label class="field">
-                  <span>נושאים לשאלות</span>
+                  <span>Description</span>
+                  <textarea class="category-description-input" id="cat-description-${category.id}" rows="2" onclick="event.stopPropagation()">${escapeHtml(category.description)}</textarea>
+                </label>
+                <label class="field">
+                  <span>Question range</span>
+                  <select class="select category-target-select" id="cat-target-${category.id}" onclick="event.stopPropagation()">
+                    <option value="2-4" ${target === "2-4" ? "selected" : ""}>2-4 questions</option>
+                    <option value="3-5" ${target === "3-5" ? "selected" : ""}>3-5 questions</option>
+                    <option value="4-6" ${target === "4-6" ? "selected" : ""}>4-6 questions</option>
+                    <option value="as_found" ${target === "as_found" ? "selected" : ""}>As many as found</option>
+                    <option value="quality_first" ${target === "quality_first" ? "selected" : ""}>No fixed target</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Question intents</span>
                   <textarea class="textarea ltr" id="cat-intents-${category.id}" rows="3">${escapeHtml(category.intents.join("\n"))}</textarea>
                 </label>
               </div>
@@ -2017,20 +3306,19 @@
     function renderTasks() {
       tasksContainer.innerHTML = taskDrafts.map((task) => {
         const active = task.enabled ? "is-active" : "";
-        const open = task.enabled && task.id <= 2 ? "open" : "";
         return `
-          <details class="task-card ${active}" id="card-${task.id}" ${open}>
+          <details class="task-card ${active}" id="card-${task.id}">
             <summary class="card-summary">
               <div class="summary-main">
                 <h3>#${task.id} ${escapeHtml(task.name)}</h3>
                 <div class="task-meta">
                   <span class="badge ${task.enabled ? "active" : ""}" id="task-badge-${task.id}">${task.enabled ? "Active" : "Skipped"}</span>
-                  <span class="badge teal">ID נשמר</span>
+                  <span class="badge teal has-tooltip" tabindex="0" data-tooltip="The task ID stays fixed so saved plans and Google Sheets export keep the same step order.">ID kept</span>
                   <span class="badge">Task ${task.id}</span>
                 </div>
               </div>
               <div class="summary-controls">
-                <label class="switch" title="הפעל משימה">
+                <label class="switch" title="Enable task">
                   <input type="checkbox" id="enable-${task.id}" ${task.enabled ? "checked" : ""} data-task-toggle="${task.id}" onclick="event.stopPropagation()" />
                   <span class="switch-ui"></span>
                 </label>
@@ -2038,34 +3326,40 @@
               </div>
             </summary>
             <div class="card-body">
-              <div class="grid control-grid">
-                <label class="field">
-                  <span>שם משימה</span>
-                  <input class="input" id="name-${task.id}" value="${escapeHtml(task.name)}" />
-                </label>
-                <label class="field">
-                  <span>מודל למשימה</span>
-                  <select class="select ltr" id="model-${task.id}">${modelOptions(task.model || "inherit")}</select>
-                </label>
-                <label class="field">
-                  <span>סגנון כתיבה</span>
+              <input type="hidden" id="name-${task.id}" value="${escapeHtml(task.name)}" />
+              <div class="grid control-grid task-config-grid">
+                <label class="field task-tone-field">
+                  <span>Writing style</span>
                   <input class="input ltr" id="tone-${task.id}" value="${escapeHtml(task.tone || "")}" />
+                </label>
+                <label class="field task-model-field">
+                  <span>Task model</span>
+                  <select class="select ltr" id="model-${task.id}">${modelOptions(task.model || "inherit")}</select>
                 </label>
               </div>
 
               <label class="field">
-                <span>מקורות / מדיניות</span>
+                <span>Sources / policy</span>
                 <input class="input ltr" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
               </label>
 
-              <label class="field">
-                <span>הנחיות רקע למודל</span>
-                <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
-              </label>
+              <details class="prompt-advanced">
+                <summary>Model background instructions</summary>
+                <div class="prompt-advanced-body">
+                  <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
+                </div>
+              </details>
 
-              <label class="field">
-                <span>הנחיות עבודה</span>
-                <div class="toolbar" style="margin-bottom: 8px;">
+              <div class="prompt-editor">
+                <div class="prompt-editor-head">
+                  <div>
+                    <span class="prompt-editor-kicker">Prompt</span>
+                    <h4 class="prompt-editor-title">Agent work instructions</h4>
+                  </div>
+                  <p class="prompt-editor-note">Primary prompt for this workflow step.</p>
+                </div>
+                <div class="prompt-variable-row">
+                  <span class="prompt-variable-label">Variables</span>
                   <button class="var-btn" type="button" data-insert-var="{{subject}}" data-task-id="${task.id}">{{subject}}</button>
                   <button class="var-btn" type="button" data-insert-var="{{last}}" data-task-id="${task.id}">{{last}}</button>
                   <button class="var-btn" type="button" data-insert-var="{{answersTsv}}" data-task-id="${task.id}">{{answersTsv}}</button>
@@ -2074,9 +3368,9 @@
                   <button class="var-btn" type="button" data-insert-var="{{language}}" data-task-id="${task.id}">{{language}}</button>
                   <button class="var-btn" type="button" data-insert-var="{{namingRules}}" data-task-id="${task.id}">{{namingRules}}</button>
                 </div>
-                <span class="prompt-help">המשתנים הם קיצורי דרך שנשמרים בפרומפט; subject ו-last מוחלפים בזמן הריצה.</span>
+                <span class="prompt-help">Variables are shortcuts preserved in the prompt; subject and last are replaced at runtime.</span>
                 <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(task.user || "")}</textarea>
-              </label>
+              </div>
             </div>
           </details>
         `;
@@ -2139,19 +3433,27 @@
         return "No fixed number. Prioritize quality, coverage and source confidence over quantity.";
       }
 
+      if (String(count || "").includes("-")) {
+        return `Aim for ${count} final questions. It is acceptable to return fewer if good source-grounded questions do not exist.`;
+      }
+
       return `Aim for about ${count || 30} final questions. It is acceptable to return fewer if good source-grounded questions do not exist.`;
     }
 
     function describeQuestionTargetForUi(mode, count) {
       if (mode === "as_found") {
-        return "המודל יחזיר רק שאלות טובות שנמצאו בפועל, בלי למלא בכוח.";
+        return "The model will return only useful questions actually found in the source material, without forcing filler.";
       }
 
       if (mode === "quality_first") {
-        return "אין יעד קשיח: איכות, כיסוי ואמינות מקור קודמים לכמות.";
+        return "No fixed target: quality, coverage, and source confidence come before quantity.";
       }
 
-      return `יעד עבודה: בערך ${count || 30} שאלות טובות. אם אין מספיק מידע אמין, אפשר להחזיר פחות.`;
+      if (String(count || "").includes("-")) {
+        return `Working target: ${count} strong questions. Return fewer if there is not enough reliable information.`;
+      }
+
+      return `Working target: about ${count || 30} strong questions. Return fewer if there is not enough reliable information.`;
     }
 
     function describeCategoryTarget(target) {
@@ -2248,6 +3550,7 @@
           globalModel: $("globalModel").value,
           questionCountMode: $("questionCountMode").value,
           questionCount: $("questionCount").value,
+          questionRangePreset: $("questionRangePreset").value,
           outputLanguage: $("outputLanguage").value,
           audience: $("audience").value,
           sourceOptions: getSelectedSourceOptions(),
@@ -2263,7 +3566,12 @@
 
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
-      $("saveStatus").textContent = "נשמר מקומית";
+      $("saveStatus").textContent = "Saved locally";
+    }
+
+    function saveStateWithSubjectMemory() {
+      rememberSubjects();
+      saveState();
     }
 
     function updateCardStates() {
@@ -2296,20 +3604,19 @@
       $("categoryCount").textContent = selectedCategories.length;
       $("taskCount").textContent = enabledTasks.length;
       $("modelShort").textContent = model.replace("gpt-", "");
-      $("questionCount").disabled = $("questionCountMode").value !== "target";
       $("sheetNamePreview").textContent = subjects.length
         ? subjects.slice(0, 3).map((subject) => `Creator: ${subject}`).join(" | ")
-        : "נבנה אוטומטית משם הנושא";
+        : "Generated automatically from the subject name";
       $("runSummary").textContent = subjects.length
-        ? `מוכן להרצה: ${subjects.length} נושאים, ${enabledTasks.length} משימות`
-        : "מוכן להרצה";
+        ? `Ready to run: ${subjects.length} subjects, ${enabledTasks.length} tasks`
+        : "Ready to run";
       $("runDetails").textContent = selectedCategories.length
-        ? `${selectedCategories.length} קטגוריות פעילות. ${questionTarget}`
-        : "בחרי לפחות קטגוריה אחת כדי לתת למודל כיוון ברור.";
+        ? `${selectedCategories.length} active categories. ${questionTarget}`
+        : "Choose at least one category to give the model clear direction.";
 
       $("workflowChips").innerHTML = enabledTasks
         .map((task) => `<span class="badge active">#${task.id} ${escapeHtml(task.name)}</span>`)
-        .join("") || `<span class="badge">אין משימות פעילות</span>`;
+        .join("") || `<span class="badge">No active tasks</span>`;
 
       updateCardStates();
     }
@@ -2366,15 +3673,16 @@
     }
 
     function runWorkflow() {
+      rememberSubjects();
       const subjects = getSubjects();
       if (!subjects.length) {
-        alert("צריך להכניס לפחות מלון, עמוד או נושא אחד.");
+        alert("Enter at least one hotel, page, product, or topic.");
         return;
       }
 
       const tasks = collectTasksForPayload();
       if (!tasks.some((task) => task.enabled === true)) {
-        alert("צריך להפעיל לפחות משימה אחת.");
+        alert("Enable at least one task.");
         return;
       }
 
@@ -2389,7 +3697,7 @@
       };
 
       runBtn.disabled = true;
-      runBtn.textContent = "מריץ FAQ Workflow...";
+      runBtn.textContent = "Running FAQ Workflow...";
       appendLog(`> Starting FAQ workflow for ${subjects.length} subject(s).`);
       appendLog(`> Global model: ${$("globalModel").value}`);
       appendLog(`> Active tasks: ${tasks.filter((task) => task.enabled).map((task) => `#${task.id}`).join(", ")}`);
@@ -2398,8 +3706,8 @@
 
     function copyCategoryPlan() {
       navigator.clipboard?.writeText(buildCategoryPlan());
-      $("saveStatus").textContent = "תוכנית הועתקה";
-      setTimeout(() => ($("saveStatus").textContent = "נשמר מקומית"), 1600);
+      $("saveStatus").textContent = "Plan copied";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1600);
     }
 
     function safeFileName(value) {
@@ -2412,6 +3720,7 @@
 
     function downloadWorkPlan() {
       saveState();
+      rememberSubjects();
       const subjects = getSubjects();
       const payload = {
         kind: "carmelon-faq-work-plan",
@@ -2431,12 +3740,12 @@
       URL.revokeObjectURL(url);
       addOutputArtifact({
         type: "Work plan JSON",
-        title: "תוכנית עבודה שנשמרה",
-        description: "קובץ JSON שאפשר לטעון חזרה למסך ולהמשיך מאותה נקודה.",
+        title: "Saved work plan",
+        description: "JSON file that can be loaded back into this screen to continue from the same point.",
         fileName
       });
-      $("saveStatus").textContent = "JSON נשמר";
-      setTimeout(() => ($("saveStatus").textContent = "נשמר מקומית"), 1600);
+      $("saveStatus").textContent = "JSON saved";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1600);
     }
 
     function importWorkPlan(file) {
@@ -2450,17 +3759,17 @@
             throw new Error("Invalid FAQ work plan");
           }
           localStorage.setItem(STORAGE_KEY, JSON.stringify(importedState));
-          $("saveStatus").textContent = "תוכנית נטענה";
+          $("saveStatus").textContent = "Plan loaded";
           location.reload();
         } catch (error) {
-          alert(`לא הצלחתי לטעון את קובץ ה-JSON: ${error.message}`);
+          alert(`Could not load the JSON file: ${error.message}`);
         }
       };
       reader.readAsText(file);
     }
 
     function resetStudio() {
-      if (!confirm("לאפס את ההגדרות של FAQ Playground בדפדפן?")) return;
+      if (!confirm("Reset the FAQ Playground settings in this browser?")) return;
       localStorage.removeItem(STORAGE_KEY);
       location.reload();
     }
@@ -2546,6 +3855,21 @@
       saveState();
     }
 
+    function applyChatTaskPrompts(taskPrompts = {}) {
+      if (!taskPrompts || typeof taskPrompts !== "object") return;
+
+      Object.entries(taskPrompts).forEach(([taskId, prompt]) => {
+        const element = $(`user-${taskId}`);
+        const cleanPrompt = String(prompt || "").trim();
+        if (element && cleanPrompt) {
+          element.value = cleanPrompt;
+        }
+      });
+
+      updateSummary();
+      saveState();
+    }
+
     function applyCustomCategories(rawText) {
       let rows = String(rawText || "")
         .split(/\n+/)
@@ -2565,7 +3889,7 @@
 
       const parsed = rows.map((line, index) => {
         const [namePart, ...detailParts] = line.split(/\s[-:–]\s/);
-        const name = (namePart || `קטגוריה ${index + 1}`).trim();
+        const name = (namePart || `Category ${index + 1}`).trim();
         const detail = detailParts.join(" - ").trim();
         const intents = (detail || name)
           .split(/[,;|]/)
@@ -2575,7 +3899,7 @@
         return {
           label: name,
           title: name,
-          description: detail || "קטגוריה מותאמת שנוצרה דרך הצ׳אט.",
+          description: detail || "Custom category created through the chat.",
           intents: intents.length ? intents : [name]
         };
       });
@@ -2607,6 +3931,9 @@
 
     document.addEventListener("change", (event) => {
       if (event.target.matches("input, textarea, select")) {
+        if (event.target.id === "questionRangePreset") {
+          applyQuestionRange(event.target.value);
+        }
         updateSummary();
         saveState();
       }
@@ -2655,6 +3982,31 @@
       document.querySelectorAll(".task-card").forEach((card) => { card.open = false; });
     });
 
+    $("subjects").addEventListener("focus", () => renderSubjectHistory(true));
+    $("subjects").addEventListener("click", () => renderSubjectHistory(true));
+    $("subjects").addEventListener("blur", () => {
+      window.setTimeout(() => {
+        if (!document.activeElement?.closest?.("#subjectHistory")) {
+          rememberSubjects();
+        }
+      }, 120);
+    });
+
+    $("subjectHistory").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-subject-history]");
+      if (!button) return;
+      $("subjects").value = decodeURIComponent(button.dataset.subjectHistory || "");
+      $("subjectHistory").classList.remove("is-visible");
+      updateSummary();
+      saveState();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#subjects") && !event.target.closest("#subjectHistory")) {
+        $("subjectHistory")?.classList.remove("is-visible");
+      }
+    });
+
     document.querySelectorAll("[data-view-tab]").forEach((button) => {
       button.addEventListener("click", () => setStudioView(button.dataset.viewTab || "builder"));
     });
@@ -2679,7 +4031,7 @@
 
     socket.on("done", () => {
       runBtn.disabled = false;
-      runBtn.textContent = "הרץ FAQ Workflow";
+      runBtn.textContent = "Run FAQ Workflow";
       appendLog("> Done.", "success");
     });
 
@@ -2704,6 +4056,7 @@
       setTasksEnabled,
       setStudioView,
       applyChatPromptGuidance,
+      applyChatTaskPrompts,
       applyCustomCategories,
       updateSummary
     };

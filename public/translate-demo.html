@@ -6,7 +6,7 @@
   <title>AI Translation Engine - Live Demo</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/translate-chatbot.css">
   <script src="/socket.io/socket.io.js"></script>
 
@@ -380,13 +380,840 @@
     @media (max-width: 1320px) { .main-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; padding: 14px; } .help-grid { grid-template-columns: 1fr; } }
     @media (max-width: 1080px) { .main-grid { grid-template-columns: 1fr; min-height: auto; } .config-panel { grid-template-columns: 1fr; } .terminal-panel { position: static; min-height: 360px; max-height: 420px; } }
     @media (max-width: 640px) { .demo-header { height: auto; padding: 14px 16px; align-items: flex-start; } .brand h1 { font-size: 1rem; } .brand p, .badge { display: none; } .main-grid { padding: 12px; } .input-row, .source-toggle, .editable-row, .editable-row.terms { grid-template-columns: 1fr; } .tabs { display: flex; width: 100%; } .tab { flex: 1; min-width: 0; } .terminal-panel { min-height: 320px; max-height: 380px; } }
+
+    /* ============ VERAXO-STYLE TRANSLATOR UI PASS ============ */
+    :root {
+      --vx-bg: #fcfbf8;
+      --vx-surface: #ffffff;
+      --vx-surface-warm: #fbf8f2;
+      --vx-surface-soft: #fcf9f3;
+      --vx-border: #ebe3d6;
+      --vx-border-soft: #f1eadf;
+      --vx-border-strong: #d8ccb8;
+      --vx-ink: #1a1410;
+      --vx-text: #3a342e;
+      --vx-dim: #6b6557;
+      --vx-muted: #948c7e;
+      --vx-faint: #b8b0a0;
+      --vx-violet: #6e57c4;
+      --vx-violet-soft: #f0ecfa;
+      --vx-blue: #4a7fc7;
+      --vx-blue-soft: #e7eef9;
+      --vx-orange: #d97a3c;
+      --vx-orange-soft: #f8eadc;
+      --vx-green: #6f9355;
+      --vx-green-soft: #eaf1df;
+      --vx-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --vx-serif: "Instrument Serif", Georgia, serif;
+      --vx-mono: "JetBrains Mono", monospace;
+
+      --bg: var(--vx-bg);
+      --surface: var(--vx-surface);
+      --surface-soft: var(--vx-surface-soft);
+      --surface-tint: var(--vx-surface-warm);
+      --border: var(--vx-border);
+      --border-active: var(--vx-border-strong);
+      --text: var(--vx-ink);
+      --text-dim: var(--vx-dim);
+      --text-muted: var(--vx-muted);
+      --accent: var(--vx-violet);
+      --accent-strong: var(--vx-violet);
+      --accent-dim: var(--vx-violet-soft);
+      --accent-glow: transparent;
+      --green: var(--vx-green);
+      --green-dim: var(--vx-green-soft);
+      --blue: var(--vx-blue);
+      --blue-dim: var(--vx-blue-soft);
+      --purple-dim: var(--vx-violet-soft);
+      --amber-dim: var(--vx-orange-soft);
+      --terminal: #15110d;
+      --terminal-soft: #191511;
+      --radius: 18px;
+      --font: var(--vx-font);
+      --mono: var(--vx-mono);
+    }
+
+    html,
+    body {
+      background: var(--vx-bg) !important;
+      color: var(--vx-text) !important;
+      font-family: var(--vx-font) !important;
+      font-weight: 450;
+      letter-spacing: -0.005em;
+    }
+
+    body {
+      background: var(--vx-bg) !important;
+    }
+
+    .demo-header {
+      height: 64px !important;
+      padding: 14px 32px !important;
+      background: rgba(251, 250, 247, 0.88) !important;
+      border-bottom: 1px solid var(--vx-border) !important;
+      box-shadow: none !important;
+      backdrop-filter: blur(20px) !important;
+    }
+
+    .brand {
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: auto;
+      height: 32px;
+      display: block;
+    }
+
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+    }
+
+    .brand h1 {
+      color: var(--vx-ink);
+      font: 600 0.98rem/1.15 var(--vx-font);
+      letter-spacing: -0.01em;
+    }
+
+    .brand p {
+      color: var(--vx-muted);
+      font: 450 0.72rem/1.25 var(--vx-font);
+    }
+
+    .badge {
+      padding: 5px 12px;
+      background: var(--vx-surface);
+      border: 1px solid var(--vx-border);
+      color: var(--vx-dim);
+      font: 500 0.7rem/1.2 var(--vx-mono);
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    .main-grid {
+      grid-template-columns: minmax(0, 1fr) 400px !important;
+      gap: 24px !important;
+      min-height: calc(100vh - 64px);
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 36px 32px 80px !important;
+    }
+
+    .config-panel,
+    .manual-setup {
+      gap: 20px !important;
+    }
+
+    .setup-mode-tabs,
+    .card,
+    .terminal-panel {
+      background: var(--vx-surface) !important;
+      border: 1px solid var(--vx-border) !important;
+      border-radius: 18px !important;
+      box-shadow: none !important;
+    }
+
+    .card:hover {
+      border-color: var(--vx-border) !important;
+      box-shadow: none !important;
+    }
+
+    .card-head,
+    .stage-head,
+    .tool-head {
+      background: transparent !important;
+      border-bottom: 1px solid var(--vx-border) !important;
+    }
+
+    .tool-head {
+      cursor: pointer;
+    }
+
+    .tool-head::after {
+      content: "Open";
+      flex: 0 0 auto;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      border: 1px solid var(--vx-border-soft);
+      color: var(--vx-muted);
+      font: 500 0.66rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tool-block:not(.is-collapsed) .tool-head::after {
+      content: "Close";
+    }
+
+    .tool-block.is-collapsed .tool-head {
+      border-bottom: 0 !important;
+    }
+
+    .tool-block.is-collapsed .tool-body {
+      display: none !important;
+    }
+
+    .language-note-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .language-note-block {
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 10px;
+      background: var(--vx-surface);
+      overflow: hidden;
+    }
+
+    .language-note-head {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 12px;
+      border: 0;
+      background: var(--vx-surface-warm);
+      color: var(--vx-ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font: 500 0.82rem/1.2 var(--vx-font);
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .language-note-code {
+      color: var(--vx-muted);
+      font: 500 0.66rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .language-note-head::after {
+      content: "Open";
+      color: var(--vx-muted);
+      font: 500 0.62rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .language-note-block:not(.is-collapsed) .language-note-head::after {
+      content: "Close";
+    }
+
+    .language-note-body {
+      padding: 12px;
+      border-top: 1px solid var(--vx-border-soft);
+    }
+
+    .language-note-block.is-collapsed .language-note-body {
+      display: none;
+    }
+
+    .card-head {
+      min-height: 54px;
+      padding: 18px 22px 14px !important;
+    }
+
+    .card-head h3,
+    .terminal-title,
+    .summary-title,
+    .stage-title,
+    .tool-title {
+      color: var(--vx-ink) !important;
+    }
+
+    .card-head h3 {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font: 600 0.98rem/1.25 var(--vx-font) !important;
+    }
+
+    .card-head h3::before,
+    .stage-title::before,
+    .terminal-title::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--vx-violet);
+      box-shadow: 0 0 0 4px rgba(110, 87, 196, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .manual-setup > .card:nth-of-type(1) .card-head h3::before { background: var(--vx-blue); box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12); }
+    .manual-setup > .card:nth-of-type(2) .card-head h3::before { background: var(--vx-orange); box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12); }
+    .manual-setup > .card:nth-of-type(3) .card-head h3::before { background: var(--vx-green); box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12); }
+
+    .languages-card {
+      grid-column: 1 / -1;
+    }
+
+    .languages-card .lang-grid {
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+    }
+
+    .card-body,
+    .tool-body,
+    .stage-body {
+      background: var(--vx-surface) !important;
+      padding: 20px 22px !important;
+    }
+
+    .field-label {
+      color: var(--vx-dim);
+      font: 500 0.78rem/1.2 var(--vx-font);
+      letter-spacing: -0.005em;
+      text-transform: none;
+    }
+
+    .field-hint,
+    .tool-copy,
+    .stage-desc,
+    .help-card p,
+    .help-card ul {
+      color: var(--vx-muted) !important;
+      font-weight: 450;
+    }
+
+    input[type="text"],
+    textarea,
+    select,
+    .save-actions select {
+      border: 1px solid var(--vx-border) !important;
+      border-radius: 10px !important;
+      background: var(--vx-surface) !important;
+      color: var(--vx-ink) !important;
+      box-shadow: none !important;
+      font-family: var(--vx-font) !important;
+      font-weight: 450;
+    }
+
+    textarea {
+      font-family: var(--vx-mono) !important;
+    }
+
+    input[type="text"]:hover,
+    textarea:hover,
+    select:hover {
+      border-color: var(--vx-border-strong) !important;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--vx-ink) !important;
+      box-shadow: none !important;
+    }
+
+    .source-toggle,
+    .tabs,
+    .setup-mode-tabs {
+      background: var(--vx-surface-soft) !important;
+      border: 1px solid var(--vx-border) !important;
+      box-shadow: none !important;
+    }
+
+    .setup-mode-tabs {
+      padding: 5px !important;
+      gap: 6px !important;
+      background: var(--vx-surface-warm) !important;
+      border-color: var(--vx-border-strong) !important;
+      border-radius: 16px !important;
+    }
+
+    .source-btn,
+    .tab,
+    .setup-mode-btn,
+    .small-btn,
+    .row-btn,
+    .terminal-clear {
+      background: transparent;
+      color: var(--vx-dim);
+      border-color: var(--vx-border);
+      box-shadow: none;
+      font-family: var(--vx-font);
+      font-weight: 500;
+    }
+
+    button:focus,
+    button:focus-visible {
+      outline: none !important;
+      box-shadow: 0 0 0 3px rgba(110, 87, 196, 0.12) !important;
+    }
+
+    .source-btn.active,
+    .tab.active,
+    .setup-mode-btn.active {
+      background: var(--vx-surface) !important;
+      color: var(--vx-ink) !important;
+      box-shadow: none !important;
+      border: 1px solid var(--vx-border) !important;
+    }
+
+    .setup-mode-btn {
+      min-height: 52px;
+      border-radius: 12px;
+      border: 1px solid var(--vx-border-soft) !important;
+      font-size: 0.9rem;
+      cursor: pointer;
+      opacity: 1;
+      transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+    }
+
+    .setup-mode-btn:not(.active) {
+      background: rgba(255, 255, 255, 0.46) !important;
+      color: var(--vx-dim) !important;
+    }
+
+    .setup-mode-btn span {
+      color: var(--vx-muted);
+      font-weight: 450;
+    }
+
+    .setup-mode-btn:not(.active):hover {
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border-strong) !important;
+      color: var(--vx-ink) !important;
+    }
+
+    .setup-mode-btn.active {
+      border-color: var(--vx-ink) !important;
+      opacity: 1;
+    }
+
+    .setup-mode-btn.active span,
+    .setup-mode-btn:not(.active):hover span {
+      color: var(--vx-dim);
+    }
+
+    .source-toggle {
+      display: none !important;
+    }
+
+    .source-detect-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      margin-top: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      color: var(--vx-muted);
+      font: 500 0.72rem/1.2 var(--vx-font);
+    }
+
+    .source-detect-note::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--vx-blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.1);
+    }
+
+    .toggle-row {
+      width: fit-content;
+      min-height: 34px !important;
+      padding: 6px 0 !important;
+      justify-content: flex-start !important;
+      gap: 10px !important;
+    }
+
+    .toggle-row > div:first-child {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .toggle-row + .toggle-row,
+    .toggle-row[style] {
+      margin-top: 2px !important;
+      padding-top: 7px !important;
+    }
+
+    .source-options-row {
+      border-top: 1px solid var(--vx-border);
+      margin-top: 12px;
+      padding-top: 12px;
+    }
+
+    .toggle-label {
+      font-size: 0.82rem !important;
+      font-weight: 600 !important;
+      line-height: 1.2 !important;
+    }
+
+    .toggle-row .field-hint {
+      display: inline !important;
+      margin: 0 !important;
+      font-size: 0.76rem !important;
+      line-height: 1.2 !important;
+    }
+
+    .toggle {
+      width: 32px !important;
+      height: 18px !important;
+      background: #d6cdba !important;
+      box-shadow: none !important;
+    }
+
+    .toggle::after {
+      width: 12px !important;
+      height: 12px !important;
+      top: 3px !important;
+      left: 3px !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+    }
+
+    .toggle.on {
+      background: var(--vx-ink) !important;
+    }
+
+    .toggle.on::after {
+      transform: translateX(14px) !important;
+    }
+
+    .lang-chip,
+    .pipeline-step,
+    .var-tag,
+    .help-card,
+    .tool-block,
+    .info-box,
+    .sub-toggle {
+      background: var(--vx-surface-warm) !important;
+      border: 1px solid var(--vx-border-soft) !important;
+      color: var(--vx-dim) !important;
+      box-shadow: none !important;
+    }
+
+    .lang-chip.active {
+      background: var(--vx-violet-soft) !important;
+      border-color: rgba(110, 87, 196, 0.22) !important;
+      color: var(--vx-violet) !important;
+    }
+
+    .lang-code {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      border: 1px solid var(--vx-border-soft);
+      color: var(--vx-muted);
+      font: 500 0.62rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+    }
+
+    .lang-chip.active .lang-code {
+      background: var(--vx-surface);
+      border-color: rgba(110, 87, 196, 0.18);
+      color: var(--vx-violet);
+    }
+
+    .lang-flag {
+      font-size: 1rem;
+      line-height: 1;
+      filter: saturate(0.92);
+    }
+
+    .manual-plan-card .card-body {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) auto;
+      align-items: end;
+      gap: 12px;
+      padding-top: 16px !important;
+      padding-bottom: 16px !important;
+    }
+
+    .manual-plan-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .manual-plan-status {
+      grid-column: 1 / -1;
+      min-height: 16px;
+      color: var(--vx-muted);
+      font: 450 0.72rem/1.35 var(--vx-font);
+    }
+
+    .pipeline-step.active,
+    .pipeline-step.done {
+      background: var(--vx-green-soft) !important;
+      border-color: rgba(111, 147, 85, 0.24) !important;
+      color: var(--vx-green) !important;
+    }
+
+    .pipeline-arrow,
+    .chevron {
+      color: var(--vx-muted) !important;
+    }
+
+    .stage-card,
+    .stage-card.draft-stage,
+    .stage-card.polish-stage {
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border) !important;
+    }
+
+    .stage-head {
+      padding: 18px 22px 14px !important;
+      display: grid;
+      gap: 10px;
+    }
+
+    .stage-kicker {
+      width: fit-content;
+      padding: 6px 11px !important;
+      background: var(--vx-blue-soft) !important;
+      border: 1px solid rgba(74, 127, 199, 0.2) !important;
+      color: var(--vx-blue) !important;
+      font: 500 0.68rem/1.2 var(--vx-mono);
+      letter-spacing: 0.04em;
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.06);
+    }
+
+    .polish-stage .stage-kicker {
+      background: var(--vx-orange-soft) !important;
+      border-color: rgba(217, 122, 60, 0.2) !important;
+      color: var(--vx-orange) !important;
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.06);
+    }
+
+    .stage-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font: 600 1rem/1.3 var(--vx-font) !important;
+      letter-spacing: -0.01em;
+    }
+
+    .draft-stage .stage-title::before {
+      background: var(--vx-blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
+    }
+
+    .polish-stage .stage-title::before {
+      background: var(--vx-orange);
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
+    }
+
+    .small-btn.primary,
+    .chatbot-input-row button,
+    .run-btn {
+      background: var(--vx-ink) !important;
+      border: 1px solid var(--vx-ink) !important;
+      color: #ffffff !important;
+      box-shadow: none !important;
+    }
+
+    .run-btn {
+      padding: 13px 16px !important;
+      border-radius: 10px !important;
+      font: 500 0.92rem/1.2 var(--vx-font) !important;
+      transform: none !important;
+    }
+
+    .run-btn:hover {
+      background: #000000 !important;
+      transform: none !important;
+    }
+
+    .add-btn {
+      background: var(--vx-violet-soft) !important;
+      border-color: rgba(110, 87, 196, 0.18) !important;
+      color: var(--vx-violet) !important;
+    }
+
+    .terminal-panel {
+      position: sticky;
+      top: 88px;
+      height: calc(100vh - 116px) !important;
+      min-height: 520px !important;
+      max-height: calc(100vh - 116px) !important;
+      overflow: hidden !important;
+      background: var(--vx-surface) !important;
+      color: var(--vx-text) !important;
+    }
+
+    .terminal-bar,
+    .terminal-summary,
+    .stats-bar {
+      background: transparent !important;
+      border-color: var(--vx-border) !important;
+    }
+
+    .terminal-dots {
+      display: none;
+    }
+
+    .terminal-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font: 600 0.98rem/1.25 var(--vx-font) !important;
+      color: var(--vx-ink) !important;
+    }
+
+    .terminal-title::before {
+      background: var(--vx-green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .terminal-clear {
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--vx-surface);
+      color: var(--vx-dim);
+    }
+
+    .summary-pill,
+    .summary-meta,
+    .s-step,
+    .stats-bar {
+      color: var(--vx-muted) !important;
+    }
+
+    .summary-pill {
+      background: var(--vx-surface-warm) !important;
+      border: 1px solid var(--vx-border-soft) !important;
+      font-weight: 500;
+    }
+
+    .summary-main {
+      color: var(--vx-dim) !important;
+    }
+
+    .summary-steps {
+      display: none !important;
+    }
+
+    .summary-current {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 11px 12px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 10px;
+      background: var(--vx-surface-warm);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-current::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--vx-green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
+    }
+
+    .summary-current-label {
+      color: var(--vx-muted);
+      font: 500 0.66rem/1.2 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding-left: 18px;
+    }
+
+    .summary-current-value {
+      color: var(--vx-ink);
+      font: 600 0.86rem/1.25 var(--vx-font);
+    }
+
+    .meta-val {
+      color: var(--vx-ink) !important;
+      font-weight: 500;
+    }
+
+    .s-step.active {
+      color: var(--vx-violet) !important;
+    }
+
+    .s-step.active .dot {
+      background: var(--vx-violet) !important;
+      box-shadow: 0 0 0 4px rgba(110, 87, 196, 0.12) !important;
+    }
+
+    .s-step.done {
+      color: var(--vx-green) !important;
+    }
+
+    .s-step.done .dot,
+    .stat-dot.live {
+      background: var(--vx-green) !important;
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.14) !important;
+    }
+
+    .terminal-body {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      background: #15110d !important;
+      color: rgba(255, 255, 255, 0.82) !important;
+      margin: 0 14px;
+      padding: 16px 22px !important;
+      border-radius: 14px;
+      font: 400 0.78rem/1.65 var(--vx-mono) !important;
+    }
+
+    @media (max-width: 1080px) {
+      .main-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .terminal-panel {
+        position: static !important;
+        height: 460px !important;
+        min-height: 460px !important;
+        max-height: 460px !important;
+      }
+
+      .manual-plan-card .card-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .demo-header {
+        padding: 12px 18px !important;
+      }
+
+      .brand-logo {
+        height: 28px;
+      }
+
+      .main-grid {
+        padding: 24px 18px 60px !important;
+      }
+    }
   </style>
 </head>
 
 <body>
   <header class="demo-header">
     <div class="brand">
-      <div class="brand-icon">🌐</div>
+      <a class="brand-home-link" href="./index.html" aria-label="Back to home">
+        <img class="brand-logo" src="./carmelon-logo-header-x2.png" alt="Carmelon" />
+      </a>
       <div>
         <h1>AI Translation Engine</h1>
         <p>Controlled translation workflow for sheets and folders</p>
@@ -399,12 +1226,12 @@
     <div class="config-panel">
       <div class="setup-mode-tabs">
         <button type="button" class="setup-mode-btn active" id="manualModeBtn" onclick="setSetupMode('manual')">
-          מילוי ידני
-          <span>כל ההגדרות פתוחות לעריכה</span>
+          Manual setup
+          <span>All settings are open for editing</span>
         </button>
         <button type="button" class="setup-mode-btn" id="chatModeBtn" onclick="setSetupMode('chat')">
-          מילוי בצ׳אט
-          <span>שאלות קצרות והבוט ממלא</span>
+          Guided chat
+          <span>Short questions that fill the form</span>
         </button>
       </div>
 
@@ -413,12 +1240,12 @@
           <div class="chatbot-hero">
             <div>
               <div class="chatbot-kicker">Quick setup</div>
-              <h2>מילוי תרגום דרך צ׳אט</h2>
-              <p>מתחילים מקישור אחד: Google Sheet או תיקיית Drive. הבוט מזהה לבד את סוג המקור, בונה הגדרות מלאות, ושומר טיוטת עבודה בדפדפן אם רוצים להמשיך אחר כך.</p>
+              <h2>Guided translation setup</h2>
+              <p>Start with one Google Sheet or Drive Folder link. The assistant detects the source type, builds the setup, and can save a browser-only draft for later.</p>
             </div>
             <div class="chatbot-actions">
-              <button type="button" class="small-btn" id="chatbotRestartBtn">התחלה מחדש</button>
-              <button type="button" class="small-btn primary" id="chatbotApplyTopBtn">מלא ופתח לעריכה</button>
+              <button type="button" class="small-btn" id="chatbotRestartBtn">Restart</button>
+              <button type="button" class="small-btn primary" id="chatbotApplyTopBtn">Fill and edit</button>
             </div>
           </div>
           <div class="chatbot-grid">
@@ -426,17 +1253,17 @@
               <div class="chatbot-log" id="translationChatLog" aria-live="polite"></div>
               <div class="chatbot-options" id="translationChatOptions"></div>
               <form class="chatbot-input-row" id="translationChatForm">
-                <textarea id="translationChatInput" autocomplete="off" dir="auto" rows="1" placeholder="אפשר לענות בעברית או באנגלית..."></textarea>
-                <button type="submit">שליחה</button>
+                <textarea id="translationChatInput" autocomplete="off" dir="auto" rows="1" placeholder="Type your answer here..."></textarea>
+                <button type="submit">Send</button>
               </form>
             </section>
             <aside class="chatbot-summary">
-              <div class="summary-label">הגדרה נוכחית</div>
+              <div class="summary-label">Current setup</div>
               <div class="chatbot-summary-list" id="translationChatSummary"></div>
-              <p class="chatbot-edit-note">אחרי מילוי, כל ההגדרות ניתנות לעריכה בטאב הידני לפני הרצה.</p>
+              <p class="chatbot-edit-note">After filling, every setting remains editable in the manual tab before running.</p>
               <div class="chatbot-summary-actions">
-                <button type="button" class="small-btn" id="chatbotApplyBtn">מלא ופתח לעריכה</button>
-                <button type="button" class="small-btn primary" id="chatbotRunBtn">מלא והריץ עכשיו</button>
+                <button type="button" class="small-btn" id="chatbotApplyBtn">Fill and edit</button>
+                <button type="button" class="small-btn primary" id="chatbotRunBtn">Fill and run</button>
               </div>
             </aside>
           </div>
@@ -444,17 +1271,38 @@
       </div>
 
       <div class="setup-panel manual-setup" id="manualSetupPanel">
+      <div class="card wide manual-plan-card">
+        <div class="card-head static"><h3>Saved Translation Plans</h3></div>
+        <div class="card-body">
+          <div>
+            <label class="field-label">Plan name</label>
+            <input type="text" id="manualPlanName" placeholder="Example: German FAQ translation" />
+          </div>
+          <div>
+            <label class="field-label">Load saved plan</label>
+            <select id="manualSavedPlans"></select>
+          </div>
+          <div class="manual-plan-actions">
+            <button type="button" class="small-btn primary" onclick="saveManualPlan()">Save</button>
+            <button type="button" class="small-btn" onclick="loadManualPlan()">Load</button>
+            <button type="button" class="small-btn" onclick="resetManualPlanForm()">Reset</button>
+          </div>
+          <div class="manual-plan-status" id="manualPlanStatus">Saved plans stay in this browser.</div>
+        </div>
+      </div>
+
       <div class="card wide">
-        <div class="card-head" onclick="toggleCard(this)"><h3>📄 Source Configuration</h3><span class="chevron">▼</span></div>
+        <div class="card-head" onclick="toggleCard(this)"><h3>Source Configuration</h3><span class="chevron">▼</span></div>
         <div class="card-body">
           <div class="source-toggle">
             <button type="button" class="source-btn active" id="modeSheet" onclick="setSourceMode('sheet')">Single Sheet</button>
             <button type="button" class="source-btn" id="modeFolder" onclick="setSourceMode('folder')">Drive Folder</button>
           </div>
           <div class="input-group" id="sheetSourceGroup">
-            <label class="field-label">Google Spreadsheet URL or ID</label>
-            <input type="text" id="spreadsheetId" placeholder="Paste a Google Sheets URL or ID" />
-            <p class="field-hint">You can paste either the full Google Sheets URL or only the spreadsheet ID.</p>
+            <label class="field-label">Google Sheet or Drive Folder URL / ID</label>
+            <input type="text" id="spreadsheetId" placeholder="Paste a Google Sheet or Drive Folder URL / ID" oninput="updateDetectedSource()" />
+            <p class="field-hint">Paste one source. Sheet links and Drive folder links are detected automatically. Bare IDs default to Sheet.</p>
+            <div class="source-detect-note" id="sourceDetectNote">Detected source: Single Sheet</div>
           </div>
           <div class="input-group hidden" id="folderSourceGroup">
             <label class="field-label">Google Drive Folder URL or ID</label>
@@ -481,48 +1329,30 @@
               <p class="field-hint">Use a model that your backend allowlist and OpenAI account support.</p>
             </div>
           </div>
-          <div class="toggle-row">
-            <div><span class="toggle-label">Translate Header Row</span><p class="field-hint">Usually useful when the first row contains FAQ table headers.</p></div>
-            <div class="toggle on" id="translateHeader" onclick="this.classList.toggle('on')"></div>
-          </div>
-          <div class="toggle-row" style="border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px;">
-            <div><span class="toggle-label">Split sheet into 2 parts, like production</span><p class="field-hint">Recommended for big spreadsheets to reduce risk and improve stability.</p></div>
+          <div class="toggle-row source-options-row">
+            <div><span class="toggle-label">Split into 2 parts</span><p class="field-hint">for large sheets</p></div>
             <div class="toggle on" id="splitIntoTwo" onclick="this.classList.toggle('on')"></div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-head" onclick="toggleCard(this)"><h3>🎯 Target Languages</h3><span class="chevron">▼</span></div>
+      <div class="card languages-card">
+        <div class="card-head" onclick="toggleCard(this)"><h3>Target Languages</h3><span class="chevron">▼</span></div>
         <div class="card-body"><div class="lang-grid" id="langGrid"></div><p class="field-hint" style="margin-top:10px;">Tip: For the demo, pick 1-2 languages to keep the live run fast.</p></div>
-      </div>
-
-      <div class="card">
-        <div class="card-head static"><h3>⚡ Translation Pipeline</h3></div>
-        <div class="card-body">
-          <div class="pipeline" id="pipeline">
-            <div class="pipeline-step" id="step-read">📥 Read</div><span class="pipeline-arrow">→</span>
-            <div class="pipeline-step" id="step-glossary">📚 Glossary</div><span class="pipeline-arrow">→</span>
-            <div class="pipeline-step" id="step-draft">✍️ Draft</div><span class="pipeline-arrow">→</span>
-            <div class="pipeline-step" id="step-terms">📖 Terms</div><span class="pipeline-arrow">→</span>
-            <div class="pipeline-step" id="step-polish">✨ Polish</div><span class="pipeline-arrow">→</span>
-            <div class="pipeline-step" id="step-write">📤 Write</div>
-          </div>
-        </div>
       </div>
 
       <div class="card wide stage-card draft-stage">
         <div class="stage-head">
           <div class="stage-kicker">Step 1 · Draft</div>
-          <div class="stage-title">✍️ Draft stage - first translation</div>
+          <div class="stage-title">Draft stage - first translation</div>
           <p class="stage-desc">
             This stage creates the first translation from the source rows. Attach the glossary here when you want terms to be translated consistently from the start.
           </p>
         </div>
 
         <div class="stage-body">
-          <div class="tool-block soft-draft">
-            <div class="tool-head">
+          <div class="tool-block soft-draft is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
                 <div class="tool-title">Draft instructions</div>
                 <p class="tool-copy">Tell the AI how to create the first translation. Keep this focused on accuracy, structure, and source preservation.</p>
@@ -555,12 +1385,12 @@
             </div>
           </div>
 
-          <div class="tool-block soft-draft">
-            <div class="tool-head">
+          <div class="tool-block soft-draft is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
-                <div class="tool-title">📚 Glossary - exact translations before Draft</div>
+                <div class="tool-title">Glossary - exact translations before Draft</div>
                 <p class="tool-copy">
-                  פה תכתבו איך אתם רוצים שמונחים יתורגמו בצורה אחידה. לדוגמה: כשמופיע "Aparthotel", תמיד לתרגם אותו באותה צורה.
+                  Define exact translations for terms that must stay consistent. Example: whenever "Aparthotel" appears, translate it the same way.
                 </p>
               </div>
             </div>
@@ -599,15 +1429,15 @@
       <div class="card wide stage-card polish-stage">
         <div class="stage-head">
           <div class="stage-kicker">Step 2 · Polish</div>
-          <div class="stage-title">✨ Polish stage - improve the draft</div>
+          <div class="stage-title">Polish stage - improve the draft</div>
           <p class="stage-desc">
             This stage receives the draft translation and improves wording, tone, and naturalness without changing facts. Attach language notes and terminology here.
           </p>
         </div>
 
         <div class="stage-body">
-          <div class="tool-block soft-polish">
-            <div class="tool-head">
+          <div class="tool-block soft-polish is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
                 <div class="tool-title">Polish instructions</div>
                 <p class="tool-copy">Tell the AI how to polish the draft. Focus on natural language, brand tone, and factual consistency.</p>
@@ -641,11 +1471,11 @@
             </div>
           </div>
 
-          <div class="tool-block soft-polish">
-            <div class="tool-head">
+          <div class="tool-block soft-polish is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
-                <div class="tool-title">📝 Language Notes - style for Polish</div>
-                <p class="tool-copy">פה תכתבו איך אתם רוצים שהשפה תישמע: רשמי, טבעי, קצר, מלונאי, מקומי, או כללי ניסוח מיוחדים.</p>
+                <div class="tool-title">Language Notes - style for Polish</div>
+                <p class="tool-copy">Define how the language should sound: formal, natural, concise, hospitality-focused, local, or any special wording rules.</p>
               </div>
             </div>
             <div class="tool-body" id="langNotesBody">
@@ -656,11 +1486,11 @@
             </div>
           </div>
 
-          <div class="tool-block soft-polish">
-            <div class="tool-head">
+          <div class="tool-block soft-polish is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
-                <div class="tool-title">📖 Terminology - wording to avoid after Draft</div>
-                <p class="tool-copy">פה תכתבו ממה להימנע ואיך לתקן. לדוגמה: לא להשתמש ב-"Haus", להשתמש ב-"Hotel".</p>
+                <div class="tool-title">Terminology - wording to avoid after Draft</div>
+                <p class="tool-copy">Define wording to avoid and what to use instead. Example: do not use "Haus"; use "Hotel".</p>
               </div>
             </div>
             <div class="tool-body">
@@ -695,10 +1525,10 @@
         </div>
       </div>
 
-      <button class="run-btn" id="runBtn" onclick="runTranslation()">🚀 Run Translation</button>
+      <button class="run-btn" id="runBtn" onclick="runTranslation()">Run Translation</button>
 
       <div class="card wide">
-        <div class="card-head collapsed" onclick="toggleCard(this)"><h3>💡 How to Guide the AI</h3><span class="chevron">▼</span></div>
+        <div class="card-head collapsed" onclick="toggleCard(this)"><h3>How to Guide the AI</h3><span class="chevron">▼</span></div>
         <div class="card-body hidden">
           <div class="info-box">This guide is intentionally at the bottom. Configure the tool first, then use this section when you need to understand what each area controls.</div>
           <div class="help-grid">
@@ -719,18 +1549,14 @@
       <div class="terminal-summary" id="summaryCard">
         <div class="summary-top"><div class="summary-title">What’s happening</div><div class="summary-pill" id="summaryPill">Idle</div></div>
         <div class="summary-main" id="summaryMain">Enter a Spreadsheet ID, choose languages, then click "Run Translation".</div>
-        <div class="summary-steps" id="summarySteps">
-          <div class="s-step" id="s-read"><span class="dot"></span>Reading sheet</div>
-          <div class="s-step" id="s-glossary"><span class="dot"></span>Preparing glossary</div>
-          <div class="s-step" id="s-draft"><span class="dot"></span>Creating draft</div>
-          <div class="s-step" id="s-terms"><span class="dot"></span>Applying terminology</div>
-          <div class="s-step" id="s-polish"><span class="dot"></span>Polishing</div>
-          <div class="s-step" id="s-write"><span class="dot"></span>Writing back</div>
+        <div class="summary-current">
+          <span class="summary-current-label">Current step</span>
+          <span class="summary-current-value" id="summaryCurrentStep">Waiting for run</span>
         </div>
         <div class="summary-meta"><div>Language: <span class="meta-val" id="summaryLang">-</span></div><div>Part: <span class="meta-val" id="summaryPart">-</span></div><div>Time: <span class="meta-val" id="summaryTime">0s</span></div></div>
       </div>
       <div class="terminal-body" id="logs"></div>
-      <div class="stats-bar"><div class="stat"><span class="stat-dot" id="statusDot"></span><span id="statusText">Idle</span></div><div class="stat" id="timerStat" style="display:none">⏱️ <span id="elapsedTime">0s</span></div><div class="stat" id="langStat" style="display:none">🌐 <span id="currentLang">-</span></div></div>
+      <div class="stats-bar"><div class="stat"><span class="stat-dot" id="statusDot"></span><span id="statusText">Idle</span></div><div class="stat" id="timerStat" style="display:none">Time <span id="elapsedTime">0s</span></div><div class="stat" id="langStat" style="display:none">Lang <span id="currentLang">-</span></div></div>
     </div>
   </div>
 
@@ -739,6 +1565,7 @@
     const logsEl = document.getElementById("logs");
     const summaryMainEl = document.getElementById("summaryMain");
     const summaryPillEl = document.getElementById("summaryPill");
+    const summaryCurrentStepEl = document.getElementById("summaryCurrentStep");
     const summaryLangEl = document.getElementById("summaryLang");
     const summaryTimeEl = document.getElementById("summaryTime");
     const summaryPartEl = document.getElementById("summaryPart");
@@ -774,7 +1601,7 @@
       nl: "Polite, clear Dutch. Avoid unnecessary English.",
       pl: "Polite, neutral Polish. Keep syntax clear.",
       ru: "Formal, neutral Russian. Keep hotel terms consistent.",
-      he: "עברית רשמית, ברורה וזורמת. ניסוח טבעי וניטרלי.",
+      he: "Formal, clear Hebrew. Natural and neutral wording.",
       zh: "简体中文，正式专业、自然流畅。",
       ar: "عربية فصحى حديثة، رسمية وواضحة."
     };
@@ -799,6 +1626,10 @@
       nl: { mappings: [], examples: [] }, pl: { mappings: [], examples: [] }, ru: { mappings: [], examples: [] },
       he: { mappings: [], examples: [] }, zh: { mappings: [], examples: [] }, ar: { mappings: [], examples: [] }
     };
+
+    const MANUAL_PLAN_STORAGE_KEY = "translate-demo-manual-plans-v1";
+    const DEFAULT_GLOSSARY_STATE = clone(glossaryState);
+    const DEFAULT_TERMS_STATE = clone(termsState);
 
     const DEFAULT_DRAFT_SYSTEM = `ROLE: You are an expert Hospitality Copywriter & Localization Specialist translating to {{lang}}.
 GOAL: Create natural content that sounds like it was originally written in {{lang}}, not translated.
@@ -861,8 +1692,9 @@ OUTPUT: return ONLY {"rows":[...]}`;
       sourceMode = mode;
       document.getElementById("modeSheet").classList.toggle("active", mode === "sheet");
       document.getElementById("modeFolder").classList.toggle("active", mode === "folder");
-      document.getElementById("sheetSourceGroup").classList.toggle("hidden", mode !== "sheet");
-      document.getElementById("folderSourceGroup").classList.toggle("hidden", mode !== "folder");
+      document.getElementById("sheetSourceGroup").classList.remove("hidden");
+      document.getElementById("folderSourceGroup").classList.add("hidden");
+      updateDetectedSource();
     }
 
     function toggleCustomModel() {
@@ -886,7 +1718,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
 
     function renderLangGrid() {
       const grid = document.getElementById("langGrid");
-      grid.innerHTML = LANGUAGES.map((lang) => `<div class="lang-chip ${selectedLangs.has(lang.code) ? "active" : ""}" onclick="toggleLang('${lang.code}', this)"><span>${lang.flag}</span><span>${lang.label}</span></div>`).join("");
+      grid.innerHTML = LANGUAGES.map((lang) => `<div class="lang-chip ${selectedLangs.has(lang.code) ? "active" : ""}" onclick="toggleLang('${lang.code}', this)"><span class="lang-flag">${lang.flag}</span><span class="lang-code">${lang.code.toUpperCase()}</span><span>${lang.label}</span></div>`).join("");
     }
 
     function toggleLang(code, el) {
@@ -895,7 +1727,21 @@ OUTPUT: return ONLY {"rows":[...]}`;
     }
 
     function renderLangNotes() {
-      document.getElementById("langNotesContainer").innerHTML = LANGUAGES.map((lang) => `<div class="input-group"><label class="field-label">${lang.flag} ${lang.label} (${lang.code})</label><textarea id="langNote-${lang.code}" rows="3">${DEFAULT_NOTES[lang.code] || ""}</textarea></div>`).join("");
+      document.getElementById("langNotesContainer").innerHTML = `
+        <div class="language-note-list">
+          ${LANGUAGES.map((lang) => `
+            <div class="language-note-block is-collapsed">
+              <button type="button" class="language-note-head" onclick="toggleLanguageNote(this)">
+                <span>${lang.label}</span>
+                <span class="language-note-code">${lang.code}</span>
+              </button>
+              <div class="language-note-body">
+                <textarea id="langNote-${lang.code}" rows="3">${DEFAULT_NOTES[lang.code] || ""}</textarea>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
     }
 
     function renderLangSelects() {
@@ -1012,6 +1858,18 @@ OUTPUT: return ONLY {"rows":[...]}`;
       body.classList.toggle("hidden", !shouldOpen);
     }
 
+    function toggleToolBlock(headEl) {
+      const block = headEl.closest(".tool-block");
+      if (!block) return;
+      block.classList.toggle("is-collapsed");
+    }
+
+    function toggleLanguageNote(headEl) {
+      const block = headEl.closest(".language-note-block");
+      if (!block) return;
+      block.classList.toggle("is-collapsed");
+    }
+
     function switchTab(tab, btn) {
       document.querySelectorAll(".card.wide .tab").forEach((tabEl) => tabEl.classList.remove("active"));
       btn.classList.add("active");
@@ -1029,6 +1887,46 @@ OUTPUT: return ONLY {"rows":[...]}`;
       return value.match(/\/folders\/([a-zA-Z0-9-_]+)/)?.[1] || value.match(/[?&]id=([a-zA-Z0-9-_]+)/)?.[1] || value.match(/^([a-zA-Z0-9-_]{20,})$/)?.[1] || "";
     }
 
+    function detectSourceInput(raw) {
+      const value = String(raw || "").trim();
+      const lower = value.toLowerCase();
+
+      if (!value) {
+        return { sourceType: "sheet", sourceId: "", label: "Detected source: Single Sheet" };
+      }
+
+      const isFolder =
+        lower.includes("/folders/") ||
+        lower.includes("drive.google.com/drive/folders") ||
+        lower.includes("drive.google.com/open") ||
+        lower.includes("drive.google.com/drive/u/") && lower.includes("folders");
+
+      if (isFolder) {
+        return {
+          sourceType: "folder",
+          sourceId: extractFolderId(value),
+          label: "Detected source: Drive Folder"
+        };
+      }
+
+      return {
+        sourceType: "sheet",
+        sourceId: extractSpreadsheetId(value),
+        label: "Detected source: Single Sheet"
+      };
+    }
+
+    function updateDetectedSource() {
+      const note = document.getElementById("sourceDetectNote");
+      if (!note) return;
+
+      const detected = detectSourceInput(document.getElementById("spreadsheetId").value);
+      sourceMode = detected.sourceType;
+      document.getElementById("modeSheet").classList.toggle("active", detected.sourceType === "sheet");
+      document.getElementById("modeFolder").classList.toggle("active", detected.sourceType === "folder");
+      note.textContent = detected.label;
+    }
+
     function collectNotes() {
       const notes = {};
       LANGUAGES.forEach((lang) => { const el = document.getElementById(`langNote-${lang.code}`); notes[lang.code] = el ? el.value : ""; });
@@ -1038,7 +1936,165 @@ OUTPUT: return ONLY {"rows":[...]}`;
     function collectGlossaryByLang() { saveGlossaryFromUi(); return clone(glossaryState); }
     function collectTerminologyByLang() { saveTermsFromUi(); return clone(termsState); }
 
+    function setManualPlanStatus(text) {
+      const el = document.getElementById("manualPlanStatus");
+      if (el) el.textContent = text || "Saved plans stay in this browser.";
+    }
+
+    function listManualPlans() {
+      try {
+        const items = JSON.parse(localStorage.getItem(MANUAL_PLAN_STORAGE_KEY) || "[]");
+        return Array.isArray(items)
+          ? items.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+          : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeManualPlans(items) {
+      localStorage.setItem(MANUAL_PLAN_STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function renderManualPlanOptions(selectedId = "") {
+      const select = document.getElementById("manualSavedPlans");
+      if (!select) return;
+      const plans = listManualPlans();
+      select.innerHTML = `<option value="">Saved browser plans</option>${plans.map((plan) => `<option value="${escapeHtml(plan.id)}"${plan.id === selectedId ? " selected" : ""}>${escapeHtml(plan.name)}</option>`).join("")}`;
+    }
+
+    function manualPlanSnapshot() {
+      return {
+        sourceValue: document.getElementById("spreadsheetId").value.trim(),
+        sourceType: sourceMode,
+        sourceTab: document.getElementById("sourceTab").value.trim(),
+        model: document.getElementById("modelSelect").value,
+        customModel: document.getElementById("customModel").value.trim(),
+        targetLangs: Array.from(selectedLangs),
+        splitIntoTwo: document.getElementById("splitIntoTwo").classList.contains("on"),
+        prompts: {
+          draftSystem: document.getElementById("draftSystem").value,
+          draftUser: document.getElementById("draftUser").value,
+          polishSystem: document.getElementById("polishSystem").value,
+          polishUser: document.getElementById("polishUser").value
+        },
+        languageNotes: collectNotes(),
+        glossaryMode,
+        termsMode,
+        activeGlossaryLang,
+        activeTermsLang,
+        glossaryByLang: collectGlossaryByLang(),
+        terminologyByLang: collectTerminologyByLang()
+      };
+    }
+
+    function saveManualPlan() {
+      try {
+        const nameInput = document.getElementById("manualPlanName");
+        const name = (nameInput.value || "").trim() || `Translation plan ${new Date().toLocaleString("en-US")}`;
+        const id = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "").slice(0, 64) || `plan-${Date.now()}`;
+        const plans = listManualPlans().filter((plan) => plan.id !== id);
+        plans.unshift({ id, name, data: manualPlanSnapshot(), updatedAt: new Date().toISOString() });
+        writeManualPlans(plans.slice(0, 30));
+        nameInput.value = name;
+        renderManualPlanOptions(id);
+        setManualPlanStatus(`Saved "${name}" in this browser.`);
+      } catch (error) {
+        setManualPlanStatus(`Could not save: ${error.message}`);
+      }
+    }
+
+    function applyManualPlan(data) {
+      const next = data || {};
+      document.getElementById("spreadsheetId").value = next.sourceValue || "";
+      updateDetectedSource();
+      document.getElementById("sourceTab").value = next.sourceTab || "";
+
+      const knownModels = Array.from(document.getElementById("modelSelect").options).map((option) => option.value);
+      const model = next.model || "o3";
+      document.getElementById("modelSelect").value = knownModels.includes(model) ? model : "custom";
+      document.getElementById("customModel").value = next.customModel || (!knownModels.includes(model) ? model : "");
+      toggleCustomModel();
+
+      selectedLangs.clear();
+      (next.targetLangs || ["de"]).forEach((code) => selectedLangs.add(code));
+      renderLangGrid();
+
+      document.getElementById("splitIntoTwo").classList.toggle("on", next.splitIntoTwo !== false);
+
+      const prompts = next.prompts || {};
+      document.getElementById("draftSystem").value = typeof prompts.draftSystem === "string" ? prompts.draftSystem : DEFAULT_DRAFT_SYSTEM;
+      document.getElementById("draftUser").value = typeof prompts.draftUser === "string" ? prompts.draftUser : DEFAULT_DRAFT_USER;
+      document.getElementById("polishSystem").value = typeof prompts.polishSystem === "string" ? prompts.polishSystem : DEFAULT_POLISH_SYSTEM;
+      document.getElementById("polishUser").value = typeof prompts.polishUser === "string" ? prompts.polishUser : DEFAULT_POLISH_USER;
+
+      Object.entries(next.languageNotes || DEFAULT_NOTES).forEach(([lang, note]) => {
+        const el = document.getElementById(`langNote-${lang}`);
+        if (el) el.value = note || "";
+      });
+
+      glossaryMode = next.glossaryMode || "simple";
+      termsMode = next.termsMode || "simple";
+      activeGlossaryLang = next.activeGlossaryLang || "de";
+      activeTermsLang = next.activeTermsLang || "de";
+      Object.keys(glossaryState).forEach((key) => delete glossaryState[key]);
+      Object.assign(glossaryState, clone(next.glossaryByLang || DEFAULT_GLOSSARY_STATE));
+      Object.keys(termsState).forEach((key) => delete termsState[key]);
+      Object.assign(termsState, clone(next.terminologyByLang || DEFAULT_TERMS_STATE));
+      renderLangSelects();
+      document.getElementById("glossarySimpleTab").classList.toggle("active", glossaryMode === "simple");
+      document.getElementById("glossaryAdvancedTab").classList.toggle("active", glossaryMode === "advanced");
+      document.getElementById("glossarySimple").classList.toggle("hidden", glossaryMode !== "simple");
+      document.getElementById("glossaryAdvanced").classList.toggle("hidden", glossaryMode !== "advanced");
+      document.getElementById("termsSimpleTab").classList.toggle("active", termsMode === "simple");
+      document.getElementById("termsAdvancedTab").classList.toggle("active", termsMode === "advanced");
+      document.getElementById("termsSimple").classList.toggle("hidden", termsMode !== "simple");
+      document.getElementById("termsAdvanced").classList.toggle("hidden", termsMode !== "advanced");
+      renderGlossaryEditor();
+      renderTermsEditor();
+    }
+
+    function loadManualPlan() {
+      const id = document.getElementById("manualSavedPlans").value;
+      const plan = listManualPlans().find((item) => item.id === id);
+      if (!plan?.data) {
+        setManualPlanStatus("Choose a saved plan to load.");
+        return;
+      }
+      try {
+        applyManualPlan(plan.data);
+        document.getElementById("manualPlanName").value = plan.name || "";
+        setManualPlanStatus(`Loaded "${plan.name}".`);
+      } catch (error) {
+        setManualPlanStatus(`Could not load: ${error.message}`);
+      }
+    }
+
+    function resetManualPlanForm() {
+      applyManualPlan({
+        sourceValue: "",
+        sourceTab: "",
+        model: "o3",
+        customModel: "",
+        targetLangs: ["de"],
+        splitIntoTwo: true,
+        prompts: {
+          draftSystem: DEFAULT_DRAFT_SYSTEM,
+          draftUser: DEFAULT_DRAFT_USER,
+          polishSystem: DEFAULT_POLISH_SYSTEM,
+          polishUser: DEFAULT_POLISH_USER
+        },
+        languageNotes: DEFAULT_NOTES,
+        glossaryByLang: DEFAULT_GLOSSARY_STATE,
+        terminologyByLang: DEFAULT_TERMS_STATE
+      });
+      document.getElementById("manualPlanName").value = "";
+      document.getElementById("manualSavedPlans").value = "";
+      setManualPlanStatus("Manual setup reset to defaults.");
+    }
+
     function clearTerminal() { logsEl.innerHTML = ""; resetSummary(); }
+    let runHadError = false;
 
     function addLog(text, cls = "") {
       const clean = String(text || "").replace(/\x1B\[\d+m/g, "");
@@ -1047,8 +2103,14 @@ OUTPUT: return ONLY {"rows":[...]}`;
         const div = document.createElement("div");
         div.className = "log-line";
         div.textContent = line;
-        if (cls) div.classList.add(cls);
-        else if (line.includes("❌") || line.toLowerCase().includes("error") || line.toLowerCase().includes("failed")) div.classList.add("error");
+        if (cls) {
+          if (cls === "error") runHadError = true;
+          div.classList.add(cls);
+        }
+        else if (line.includes("❌") || line.toLowerCase().includes("error") || line.toLowerCase().includes("failed")) {
+          runHadError = true;
+          div.classList.add("error");
+        }
         else if (line.includes("✅") || line.toLowerCase().includes("success") || line.toLowerCase().includes("complete")) div.classList.add("success");
         else if (line.includes("🚀") || line.includes("ℹ️")) div.classList.add("info");
         else if (line.includes("[TERMS]") || line.includes("[GLOSSARY]")) div.classList.add("dim");
@@ -1060,30 +2122,27 @@ OUTPUT: return ONLY {"rows":[...]}`;
     function setSummary(step, text, pillText = null) {
       if (text) summaryMainEl.textContent = text;
       if (pillText) summaryPillEl.textContent = pillText;
-      const steps = ["read", "glossary", "draft", "terms", "polish", "write"];
-      const idx = steps.indexOf(step);
-      steps.forEach((item, index) => {
-        const el = document.getElementById(`s-${item}`);
-        if (!el) return;
-        el.classList.remove("active", "done", "error");
-        if (idx === -1) return;
-        if (index < idx) el.classList.add("done");
-        else if (index === idx) el.classList.add("active");
-      });
+      const labels = {
+        read: "Reading source",
+        glossary: "Preparing glossary",
+        draft: "Creating draft",
+        terms: "Applying terminology",
+        polish: "Polishing copy",
+        write: "Writing results",
+      };
+      summaryCurrentStepEl.textContent = labels[step] || "Waiting for run";
     }
 
     function setSummaryError(text) {
       summaryMainEl.textContent = text || "Something went wrong. Please check the logs below.";
       summaryPillEl.textContent = "Error";
-      const active = document.querySelector(".s-step.active");
-      if (active) { active.classList.remove("active"); active.classList.add("error"); }
-      else document.getElementById("s-read")?.classList.add("error");
+      summaryCurrentStepEl.textContent = "Needs attention";
     }
 
     function resetSummary() {
       summaryPillEl.textContent = "Idle";
       summaryMainEl.textContent = "Enter a Spreadsheet ID, choose languages, then click \"Run Translation\".";
-      ["read", "glossary", "draft", "terms", "polish", "write"].forEach((item) => document.getElementById(`s-${item}`)?.classList.remove("active", "done", "error"));
+      summaryCurrentStepEl.textContent = "Waiting for run";
       ["step-read", "step-glossary", "step-draft", "step-terms", "step-polish", "step-write"].forEach((id) => document.getElementById(id)?.classList.remove("active", "done"));
       summaryLangEl.textContent = "-"; summaryPartEl.textContent = "-"; summaryTimeEl.textContent = "0s";
     }
@@ -1116,12 +2175,11 @@ OUTPUT: return ONLY {"rows":[...]}`;
     function withPart(text) { return totalParts > 1 ? `Part ${currentPart}/${totalParts}: ${text}` : text; }
 
     function runTranslation() {
-      const rawSpreadsheet = document.getElementById("spreadsheetId").value.trim();
-      const rawFolder = document.getElementById("sourceFolderId").value.trim();
-      const spreadsheetId = extractSpreadsheetId(rawSpreadsheet);
-      const sourceFolderId = extractFolderId(rawFolder);
-      if (sourceMode === "sheet" && !spreadsheetId) { addLog("❌ Please enter a Spreadsheet URL or ID.", "error"); return; }
-      if (sourceMode === "folder" && !sourceFolderId) { addLog("❌ Please enter a Drive Folder URL or ID.", "error"); return; }
+      const detectedSource = detectSourceInput(document.getElementById("spreadsheetId").value.trim());
+      sourceMode = detectedSource.sourceType;
+      const spreadsheetId = detectedSource.sourceType === "sheet" ? detectedSource.sourceId : "";
+      const sourceFolderId = detectedSource.sourceType === "folder" ? detectedSource.sourceId : "";
+      if (!detectedSource.sourceId) { addLog("❌ Please enter a Google Sheet or Drive Folder URL / ID.", "error"); return; }
       if (selectedLangs.size === 0) { addLog("❌ Please select at least one target language.", "error"); return; }
 
       let glossaryByLang = null; let terminologyByLang = null;
@@ -1136,7 +2194,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
         sourceTab: document.getElementById("sourceTab").value.trim(),
         model: getSelectedModel(),
         targetLangs: Array.from(selectedLangs),
-        translateHeader: document.getElementById("translateHeader").classList.contains("on"),
+        translateHeader: true,
         splitIntoTwo: document.getElementById("splitIntoTwo").classList.contains("on"),
         prompts: {
           draftSystem: document.getElementById("draftSystem").value,
@@ -1148,8 +2206,9 @@ OUTPUT: return ONLY {"rows":[...]}`;
       };
 
       const runBtn = document.getElementById("runBtn");
-      runBtn.disabled = true; runBtn.textContent = "⏳ Translation Running...";
+      runBtn.disabled = true; runBtn.textContent = "Translation Running...";
       logsEl.innerHTML = "";
+      runHadError = false;
       addLog(`🚀 Starting translation: ${payload.targetLangs.join(", ").toUpperCase()}`, "info");
       addLog(sourceMode === "sheet" ? `📄 Spreadsheet: ${spreadsheetId}` : `📁 Drive folder: ${sourceFolderId}`, "dim");
       addLog(`🤖 Model: ${payload.model}`, "dim");
@@ -1183,10 +2242,16 @@ OUTPUT: return ONLY {"rows":[...]}`;
     });
 
     socket.on("done", () => {
-      const runBtn = document.getElementById("runBtn"); runBtn.disabled = false; runBtn.textContent = "🚀 Run Translation";
-      document.getElementById("statusDot").classList.remove("live"); document.getElementById("statusText").textContent = "Finished"; stopTimer();
+      const runBtn = document.getElementById("runBtn"); runBtn.disabled = false; runBtn.textContent = "Run Translation";
+      document.getElementById("statusDot").classList.remove("live"); stopTimer();
+      if (runHadError) {
+        document.getElementById("statusText").textContent = "Failed";
+        setSummaryError("Translation failed. Please check the terminal log before running again.");
+        addLog("❌ Translation did not complete successfully.", "error");
+        return;
+      }
+      document.getElementById("statusText").textContent = "Finished";
       setPipelineStep("step-write"); setSummary("write", "Done. Your spreadsheet should now contain the translated content.", "Finished");
-      ["read", "glossary", "draft", "terms", "polish", "write"].forEach((item) => { const el = document.getElementById(`s-${item}`); if (el) { el.classList.remove("active"); el.classList.add("done"); } });
       addLog("✅ All translations complete!", "success");
     });
 
@@ -1195,7 +2260,11 @@ OUTPUT: return ONLY {"rows":[...]}`;
     document.getElementById("polishSystem").value = DEFAULT_POLISH_SYSTEM;
     document.getElementById("polishUser").value = DEFAULT_POLISH_USER;
 
-    renderLangGrid(); renderLangNotes(); renderLangSelects(); renderGlossaryEditor(); renderTermsEditor();
+    renderLangGrid(); renderLangNotes(); renderLangSelects(); renderGlossaryEditor(); renderTermsEditor(); renderManualPlanOptions();
+    document.getElementById("manualSavedPlans")?.addEventListener("change", (event) => {
+      const plan = listManualPlans().find((item) => item.id === event.target.value);
+      if (plan) document.getElementById("manualPlanName").value = plan.name || "";
+    });
 
     window.translateDemoBridge = {
       fillSetupFromChatbot(config) {
@@ -1204,8 +2273,9 @@ OUTPUT: return ONLY {"rows":[...]}`;
         if (next.sourceType === "folder") setSourceMode("folder");
         else setSourceMode("sheet");
 
-        document.getElementById("spreadsheetId").value = next.sourceType === "sheet" ? (next.sourceId || "") : "";
+        document.getElementById("spreadsheetId").value = next.sourceId || "";
         document.getElementById("sourceFolderId").value = next.sourceType === "folder" ? (next.sourceId || "") : "";
+        updateDetectedSource();
         document.getElementById("sourceTab").value = next.sourceTab || "";
 
         const knownModels = Array.from(document.getElementById("modelSelect").options).map((option) => option.value);
@@ -1223,7 +2293,6 @@ OUTPUT: return ONLY {"rows":[...]}`;
         (next.targetLangs || ["de"]).forEach((code) => selectedLangs.add(code));
         renderLangGrid();
 
-        document.getElementById("translateHeader").classList.toggle("on", next.translateHeader !== false);
         document.getElementById("splitIntoTwo").classList.toggle("on", next.splitIntoTwo !== false);
 
         if (next.prompts) {

@@ -7,199 +7,252 @@
   <title>Carmelon AI Hub</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --bg: #fbfafc;
+      --bg: #f4f1ec;
       --surface: #ffffff;
-      --surface-soft: #f8f5fa;
-      --border: #e6ddea;
-      --border-strong: #d7c8e1;
-      --text: #20172d;
-      --heading: #2d2340;
-      --text-dim: #536072;
-      --text-muted: #788294;
-      --accent: #7650a8;
-      --accent-strong: #60358f;
-      --accent-soft: rgba(118, 80, 168, 0.1);
-      --teal-soft: rgba(72, 185, 189, 0.12);
-      --yellow-soft: rgba(241, 196, 15, 0.14);
-      --orange-soft: rgba(239, 143, 53, 0.12);
-      --pink-soft: rgba(217, 81, 138, 0.12);
-      --radius: 18px;
-      --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --surface-soft: #faf8f4;
+      --border: #e4ddd1;
+      --border-strong: #d4cabb;
+      --border-hover: #b9ad97;
+      --violet: #5b3a96;
+      --violet-soft: #ede6f6;
+      --violet-dim: rgba(91, 58, 150, 0.08);
+      --c-pink: #d9518a;
+      --c-yellow: #f1c40f;
+      --c-orange: #ef8f35;
+      --c-lime: #a3c142;
+      --c-cyan: #48b9bd;
+      --c-pink-soft: #f7e1ea;
+      --c-yellow-soft: #fbf0c9;
+      --c-orange-soft: #fbe4d1;
+      --c-lime-soft: #ecf2d4;
+      --c-cyan-soft: #d8eef0;
+      --ink: #20172d;
+      --ink-2: #2d2340;
+      --text: #3a3145;
+      --text-dim: #6b6478;
+      --text-muted: #968fa3;
+      --text-faint: #b8b2c4;
+      --radius: 14px;
+      --radius-lg: 22px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: "Instrument Serif", Georgia, serif;
       --mono: "JetBrains Mono", monospace;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
+      background: var(--bg);
       font-family: var(--font);
       color: var(--text);
-      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    body { min-height: 100vh; }
 
     a {
       color: inherit;
+      text-decoration: none;
     }
 
     .shell {
-      width: min(1180px, calc(100% - 32px));
+      width: 100%;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 32px 0 52px;
+      padding: 36px 28px 72px;
     }
 
     .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 34px;
+      gap: 22px;
+      margin: -36px -28px 44px;
+      padding: 16px 28px;
+      background: rgba(244, 241, 236, 0.82);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(20px);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       min-width: 0;
     }
 
     .brand-logo {
-      width: 168px;
+      width: 158px;
       height: auto;
       display: block;
       object-fit: contain;
     }
 
     .brand-ai {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border-radius: 15px;
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      color: var(--accent-strong);
-      box-shadow: 0 10px 26px rgba(32, 23, 45, 0.055);
-      font-size: 0.9rem;
-      font-weight: 900;
-      letter-spacing: 0.04em;
+      align-self: flex-end;
+      margin: 0 0 8px -4px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border-strong);
+      color: var(--violet);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .badge {
-      padding: 7px 12px;
+      padding: 7px 14px;
       border-radius: 999px;
-      color: var(--accent-strong);
-      background: #ffffff;
-      border: 1px solid var(--border-strong);
-      font-size: 0.68rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
+      color: var(--violet);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
       white-space: nowrap;
     }
 
     .hero {
-      margin-bottom: 30px;
+      margin-bottom: 46px;
+      padding: 4px 8px 0;
     }
 
     .hero-kicker {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
-      padding: 6px 10px;
+      margin-bottom: 28px;
+      padding: 5px 12px 5px 10px;
       border-radius: 999px;
-      color: var(--accent-strong);
-      background: var(--accent-soft);
-      border: 1px solid var(--border-strong);
-      font-size: 0.72rem;
-      font-weight: 900;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-kicker::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--c-cyan);
+      box-shadow: 9px 0 0 var(--c-yellow), 18px 0 0 var(--c-pink);
+      margin-right: 20px;
     }
 
     .hero h1 {
-      max-width: 760px;
+      max-width: 1000px;
       margin: 0;
-      color: var(--heading);
-      font-size: clamp(2.15rem, 5vw, 4rem);
-      line-height: 1;
-      letter-spacing: 0;
-      font-weight: 900;
+      color: var(--ink);
+      font-size: clamp(2.15rem, 4.65vw, 3.9rem);
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+      font-weight: 800;
+    }
+
+    .hero-agent-word {
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--violet);
+      letter-spacing: -0.015em;
     }
 
     .hero p {
-      max-width: 720px;
-      margin: 16px 0 0;
-      color: var(--text-dim);
-      font-size: 1.02rem;
-      line-height: 1.6;
-      font-weight: 600;
+      max-width: 690px;
+      margin: 24px 0 0;
+      color: var(--text);
+      font-size: 1.05rem;
+      line-height: 1.56;
+      font-weight: 400;
     }
 
     .tool-section {
-      margin-top: 34px;
+      margin-top: 48px;
     }
 
     .section-head {
       display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 14px;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding: 0 8px;
     }
 
     .section-title {
       margin: 0;
-      color: var(--text-muted);
-      font-size: 0.76rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      color: var(--ink);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      text-transform: none;
     }
 
     .section-copy {
       max-width: 520px;
       margin: 0;
-      color: var(--text-muted);
-      font-size: 0.86rem;
+      color: var(--text-dim);
+      font-size: 0.92rem;
       line-height: 1.55;
-      font-weight: 700;
+      font-weight: 500;
       text-align: left;
+    }
+
+    .section-head::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      margin: 0 4px 8px;
+      order: 2;
+    }
+
+    .section-copy {
+      order: 3;
     }
 
     .cards {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
+      gap: 14px;
     }
 
     .tool-card {
-      min-height: 210px;
+      position: relative;
+      min-height: 220px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      text-decoration: none;
       color: inherit;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px;
-      box-shadow: 0 10px 28px rgba(32, 23, 45, 0.055);
+      border-radius: var(--radius-lg);
+      padding: 24px;
       transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
     }
 
     .tool-card:hover {
-      transform: translateY(-3px);
-      border-color: var(--border-strong);
-      box-shadow: 0 16px 36px rgba(32, 23, 45, 0.085);
-      background: #fffefe;
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+      box-shadow: 0 18px 40px -18px rgba(45, 35, 60, 0.2);
     }
 
     .tool-card.disabled {
@@ -214,79 +267,86 @@
 
     .tool-top {
       display: grid;
-      gap: 13px;
+      gap: 20px;
     }
 
     .tool-icon {
       width: 44px;
       height: 44px;
-      border-radius: 14px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
-      color: var(--accent-strong);
-      background: var(--surface-soft);
-      border: 1px solid var(--border);
-      font-size: 0.95rem;
-      font-weight: 900;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
       letter-spacing: 0.02em;
+      border: none;
     }
 
-    .tool-card.builder .tool-icon,
-    .tool-card.audit .tool-icon {
-      background: var(--accent-soft);
+    .tool-card.builder .tool-icon {
+      background: var(--violet-soft);
+      color: var(--violet);
     }
 
     .tool-card.editing .tool-icon {
-      background: var(--pink-soft);
-      color: #a93669;
+      background: var(--c-pink-soft);
+      color: var(--c-pink);
     }
 
     .tool-card.translate .tool-icon,
-    .tool-card.sheets .tool-icon {
-      background: var(--teal-soft);
-      color: #277f83;
+    .tool-card.utility .tool-icon {
+      background: var(--c-cyan-soft);
+      color: var(--c-cyan);
     }
 
     .tool-card.schema .tool-icon {
-      background: var(--yellow-soft);
-      color: #8a6600;
+      background: var(--c-yellow-soft);
+      color: #9b7608;
+    }
+
+    .tool-card.meta .tool-icon {
+      background: var(--c-orange-soft);
+      color: var(--c-orange);
+    }
+
+    .tool-card.audit .tool-icon {
+      background: var(--c-lime-soft);
+      color: #738f2e;
     }
 
     .tool-card.reports .tool-icon {
-      background: var(--orange-soft);
-      color: #a45516;
-    }
-
-    .tool-card.utility .tool-icon {
-      background: var(--teal-soft);
-      color: #277f83;
+      background: var(--c-orange-soft);
+      color: var(--c-orange);
     }
 
     .tool-pill {
+      display: inline-flex;
       width: fit-content;
+      margin-bottom: 7px;
       padding: 5px 9px;
       border-radius: 999px;
       background: var(--surface-soft);
       border: 1px solid var(--border);
       color: var(--text-muted);
       font-size: 0.68rem;
-      font-weight: 900;
+      font-weight: 700;
     }
 
     .tool-title {
       margin: 0;
-      font-size: 1.08rem;
-      line-height: 1.2;
-      font-weight: 900;
-      letter-spacing: 0;
+      color: var(--ink);
+      font-size: 1.14rem;
+      line-height: 1.22;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
     .tool-description {
       margin: 8px 0 0;
-      color: var(--text-dim);
+      color: var(--text);
       font-size: 0.88rem;
-      line-height: 1.52;
-      font-weight: 600;
+      line-height: 1.5;
+      font-weight: 400;
     }
 
     .tool-footer {
@@ -294,23 +354,29 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-top: 18px;
-      padding-top: 14px;
+      margin-top: 20px;
+      padding-top: 20px;
       border-top: 1px solid var(--border);
     }
 
     .tool-mode {
       font-family: var(--mono);
       color: var(--text-muted);
-      font-size: 0.72rem;
-      font-weight: 700;
+      font-size: 0.7rem;
+      font-weight: 500;
     }
 
     .tool-action {
-      color: var(--accent-strong);
+      color: var(--ink);
       font-size: 0.82rem;
-      font-weight: 900;
+      font-weight: 600;
       white-space: nowrap;
+      transition: color 0.16s ease, transform 0.16s ease;
+    }
+
+    .tool-card:hover .tool-action {
+      color: var(--violet);
+      transform: translateX(2px);
     }
 
     .tool-card.disabled .tool-action {
@@ -319,14 +385,14 @@
 
     .note {
       margin-top: 28px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.76);
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      background: var(--surface-soft);
       border: 1px solid var(--border);
-      color: var(--text-muted);
-      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-size: 0.84rem;
       line-height: 1.55;
-      font-weight: 700;
+      font-weight: 400;
     }
 
     @media (max-width: 980px) {
@@ -337,12 +403,12 @@
 
     @media (max-width: 640px) {
       .shell {
-        width: min(100% - 24px, 1180px);
-        padding-top: 22px;
+        padding: 24px 16px 56px;
       }
 
       .topbar {
-        align-items: flex-start;
+        margin: -24px -16px 28px;
+        padding: 12px 16px;
       }
 
       .brand-logo {
@@ -355,6 +421,10 @@
 
       .section-head {
         display: block;
+      }
+
+      .section-head::after {
+        display: none;
       }
 
       .section-copy {
@@ -386,9 +456,9 @@
 
     <section class="hero">
       <div class="hero-kicker">Agent Control Center</div>
-      <h1>Choose the workflow you want to run.</h1>
+      <h1>Pick the workflow.<br />Let the <span class="hero-agent-word">agent</span> run the structure.</h1>
       <p>
-        Start with the job you need, move into the right workspace, and let the agent handle the structured work behind it.
+        Start with the job you need, move into the right workspace, and let the agent handle the schema-driven work behind it — FAQ chains, translation pipelines, sheet operations and report builds.
       </p>
     </section>
 
@@ -463,6 +533,23 @@
           </div>
           <div class="tool-footer">
             <span class="tool-mode">mode: schema-builder</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
+
+        <a class="tool-card meta" href="/meta-tags.html">
+          <div class="tool-top">
+            <div class="tool-icon">SEO</div>
+            <div>
+              <span class="tool-pill">Meta</span>
+              <h3 class="tool-title">Meta Tags Studio</h3>
+              <p class="tool-description">
+                Create meta titles, descriptions, H1s and social tags from templates or an AI-assisted brief.
+              </p>
+            </div>
+          </div>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: meta-tags</span>
             <span class="tool-action">Open -></span>
           </div>
         </a>

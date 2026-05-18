@@ -21,6 +21,7 @@ interface Task {
   model?: string;
   response?: string;
   system?: string;
+  useWebSearch?: boolean;
    usedWebSearch?: boolean;
   webSearchCallsCount?: number;
 }
@@ -37,14 +38,15 @@ export class AIAgent {
     });
   }
 
-  addTask(prompt: string, model: string = "o3"): void {
+  addTask(prompt: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): void {
     if (!this.safety.canAddTask(this.tasks.length)) return;
 
     this.taskCounter++;
     this.tasks.push({
       id: this.taskCounter,
       prompt,
-      model
+      model,
+      useWebSearch: options.useWebSearch
     });
 
     console.log(
@@ -54,7 +56,7 @@ export class AIAgent {
     );
   }
 
-  addTaskWithSystem(userPrompt: string, system?: string, model: string = "o3"): void {
+  addTaskWithSystem(userPrompt: string, system?: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): void {
   if (!this.safety.canAddTask(this.tasks.length)) return;
 
   this.taskCounter++;
@@ -62,6 +64,7 @@ export class AIAgent {
     id: this.taskCounter,
     prompt: userPrompt,
     model,
+    useWebSearch: options.useWebSearch,
     
     system, // נשמר על המשימה
   });
@@ -83,17 +86,22 @@ const shouldUseResponsesApi =
   model.startsWith("o") ||
   model.startsWith("gpt-5");
 
+const responseRequest: any = {
+  model,
+  input: [
+    { role: "user" as const, content: task.prompt },
+  ],
+  instructions: task.system,
+  store: false,
+};
+
+if (task.useWebSearch !== false) {
+  responseRequest.tools = [{ type: "web_search_preview" as const }];
+  responseRequest.tool_choice = "auto";
+}
+
 const completion = shouldUseResponsesApi
-  ? await this.openai.responses.create({
-      model,
-      tools: [{ type: "web_search_preview" as const }],
-      tool_choice: "auto",
-      input: [
-        { role: "user" as const, content: task.prompt },
-      ],
-      instructions: task.system,
-      store: false,
-    })
+  ? await this.openai.responses.create(responseRequest)
   : await this.openai.chat.completions.create({
       model,
       messages: [
@@ -211,15 +219,15 @@ if (shouldUseResponsesApi) {
   }
 
 
-  async run(prompt: string, model: string = "o3"): Promise<string> {
+  async run(prompt: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): Promise<string> {
   this.clearTasks();
-  this.addTask(prompt, model);
+  this.addTask(prompt, model, options);
   await this.executeChain();
   return this.getLastResult() ?? "";
 }
-async runWithSystem(userPrompt: string, system?: string, model: string = "o3"): Promise<string> {
+async runWithSystem(userPrompt: string, system?: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): Promise<string> {
   this.clearTasks();
-  this.addTaskWithSystem(userPrompt, system, model);
+  this.addTaskWithSystem(userPrompt, system, model, options);
   await this.executeChain();
   return this.getLastResult() ?? "";
 }

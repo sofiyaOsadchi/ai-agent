@@ -39,6 +39,7 @@ function buildPayloadData(mode: string, config: any): any {
     mode === "ai-editing" ||
     mode === "client-reports" ||
     mode === "client-reports-edit" ||
+    mode === "meta-tags" ||
     mode === "schema-builder" ||
     mode === "site-ai-audit" ||
     mode === "site-ai-discovery" ||
@@ -82,6 +83,13 @@ function buildDynamicEnv(mode: string, config: any, payloadData: any): Record<st
     dynamicEnv.DYNAMIC_TARGET_ID = "";
     dynamicEnv.DYNAMIC_INPUT_TYPE = "none";
     dynamicEnv.DYNAMIC_LANGS = "";
+    return dynamicEnv;
+  }
+
+  if (mode === "meta-tags") {
+    dynamicEnv.DYNAMIC_TARGET_ID = config?.spreadsheetId || config?.folderId || "";
+    dynamicEnv.DYNAMIC_INPUT_TYPE = config?.sourceType || "manual";
+    dynamicEnv.DYNAMIC_LANGS = config?.language || "";
     return dynamicEnv;
   }
 

@@ -1,43 +1,52 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI FAQ Audit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #fdfcf9;
       --surface: #ffffff;
-      --soft: #f8fafc;
-      --border: #dbe3ef;
-      --text: #111827;
-      --muted: #64748b;
-      --dim: #475569;
-      --accent: #0f766e;
-      --accent-soft: rgba(15, 118, 110, 0.1);
-      --blue: #1d4ed8;
-      --blue-soft: rgba(29, 78, 216, 0.09);
-      --red: #b91c1c;
-      --red-soft: rgba(185, 28, 28, 0.08);
-      --amber: #92400e;
-      --amber-soft: rgba(146, 64, 14, 0.08);
-      --radius: 12px;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --surface-warm: #fbf8f2;
+      --surface-soft: #fffdf9;
+      --border: #ebe3d6;
+      --border-strong: #d8ccb8;
+      --ink: #1a1410;
+      --text: #3a342e;
+      --muted: #948c7e;
+      --dim: #6b6557;
+      --blue: #4a7fc7;
+      --blue-soft: #e7eef9;
+      --green: #6f9355;
+      --green-soft: #eaf1df;
+      --orange: #d97a3c;
+      --orange-soft: #f8eadc;
+      --amber: var(--orange);
+      --amber-soft: var(--orange-soft);
+      --red: #b94d4d;
+      --red-soft: #f8e7e3;
+      --dark: #17110d;
+      --radius: 18px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", monospace;
     }
 
     * { box-sizing: border-box; }
 
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
-      background:
-        linear-gradient(180deg, rgba(15, 118, 110, 0.08), transparent 280px),
-        var(--bg);
+      min-height: 100%;
+      background: var(--bg);
       color: var(--text);
       font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     button,
@@ -48,15 +57,18 @@
     }
 
     .topbar {
-      min-height: 72px;
-      padding: 18px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      min-height: 64px;
+      padding: 14px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      background: rgba(255, 255, 255, 0.92);
+      gap: 18px;
+      background: rgba(251, 250, 247, 0.92);
       border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(20px);
     }
 
     .brand {
@@ -66,16 +78,38 @@
       min-width: 0;
     }
 
-    .mark {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border-radius: 13px;
-      background: var(--accent-soft);
-      border: 1px solid rgba(15, 118, 110, 0.24);
-      color: var(--accent);
-      font-weight: 900;
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .brand-home-link:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 4px;
+    }
+
+    .brand-logo {
+      width: auto;
+      height: 32px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-copy {
+      min-width: 0;
+      padding-inline-start: 14px;
+      border-inline-start: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      margin: 0 0 2px;
+      color: var(--blue);
+      font: 600 0.66rem/1.2 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     h1,
@@ -86,9 +120,11 @@
     }
 
     h1 {
-      font-size: 1.12rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
     .brand p,
@@ -99,27 +135,37 @@
     }
 
     .brand p {
+      max-width: 760px;
       margin-top: 3px;
-      font-size: 0.82rem;
-      font-weight: 700;
+      color: var(--dim);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      font-weight: 500;
     }
 
     .badge {
-      padding: 7px 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 0 14px;
       border-radius: 999px;
-      border: 1px solid rgba(15, 118, 110, 0.24);
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 0.72rem;
-      font-weight: 900;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--dim);
+      font: 600 0.68rem/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
       white-space: nowrap;
     }
 
     .layout {
-      padding: 18px;
+      width: min(1480px, calc(100% - 56px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
       display: grid;
-      grid-template-columns: 390px minmax(0, 1fr);
-      gap: 18px;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 22px;
       align-items: start;
     }
 
@@ -129,44 +175,63 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--surface);
-      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
       overflow: hidden;
     }
 
+    .side-panel {
+      position: sticky;
+      top: 88px;
+    }
+
     .panel-head {
-      padding: 17px;
+      padding: 18px 20px;
       border-bottom: 1px solid var(--border);
-      background: var(--soft);
+      background: var(--surface);
     }
 
     .panel-head h2 {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ink);
       font-size: 1rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .panel-head h2::before,
+    .compare-block h3::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px var(--green-soft);
+      flex: 0 0 auto;
     }
 
     .panel-head p {
       margin-top: 6px;
-      font-size: 0.86rem;
+      font-size: 0.82rem;
     }
 
     .panel-body {
-      padding: 17px;
+      padding: 20px;
       display: grid;
-      gap: 14px;
+      gap: 16px;
     }
 
     .field {
       display: grid;
-      gap: 7px;
+      gap: 8px;
     }
 
     .field label,
     .section-label {
       color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 900;
-      letter-spacing: 0.06em;
+      font: 600 0.66rem/1.2 var(--mono);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
@@ -174,13 +239,15 @@
     select,
     textarea {
       width: 100%;
-      min-height: 42px;
-      padding: 10px 12px;
+      min-height: 44px;
+      padding: 10px 14px;
       border: 1px solid var(--border);
-      border-radius: 11px;
+      border-radius: 8px;
       outline: none;
-      background: #fff;
-      color: var(--text);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 600;
     }
 
     textarea {
@@ -190,14 +257,15 @@
       text-align: left;
       font-family: var(--mono);
       font-size: 0.78rem;
+      font-weight: 500;
       line-height: 1.55;
     }
 
     input:focus,
     select:focus,
     textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--accent-soft);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-soft);
     }
 
     .grid-2 {
@@ -214,19 +282,19 @@
 
     .btn {
       min-height: 42px;
-      padding: 0 14px;
+      padding: 0 16px;
       border: 1px solid var(--border);
-      border-radius: 11px;
-      background: #fff;
+      border-radius: 999px;
+      background: var(--surface);
       color: var(--dim);
-      font-weight: 900;
+      font-weight: 700;
       cursor: pointer;
     }
 
     .btn.primary {
       color: #fff;
-      background: var(--accent);
-      border-color: var(--accent);
+      background: var(--dark);
+      border-color: var(--dark);
     }
 
     .btn:disabled {
@@ -237,18 +305,18 @@
     .note {
       padding: 12px;
       border: 1px solid var(--border);
-      border-radius: 11px;
-      background: var(--soft);
+      border-radius: 12px;
+      background: var(--surface-warm);
       font-size: 0.84rem;
     }
 
     .source-options {
       display: grid;
       gap: 11px;
-      padding: 13px;
-      border: 1px solid rgba(15, 118, 110, 0.2);
-      border-radius: 11px;
-      background: linear-gradient(145deg, var(--accent-soft), #fff);
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-warm);
     }
 
     .inline-check {
@@ -270,8 +338,12 @@
     }
 
     .compare-block h3 {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ink);
       font-size: 0.96rem;
-      font-weight: 900;
+      font-weight: 800;
     }
 
     .muted-small {
@@ -292,8 +364,8 @@
       align-items: start;
       padding: 11px;
       border: 1px solid var(--border);
-      border-radius: 11px;
-      background: #fff;
+      border-radius: 12px;
+      background: var(--surface-soft);
     }
 
     .stage-index {
@@ -302,9 +374,9 @@
       display: grid;
       place-items: center;
       border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-weight: 900;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 800;
       font-size: 0.82rem;
     }
 
@@ -335,27 +407,27 @@
 
     .metric,
     .group-card {
-      padding: 13px;
+      padding: 14px;
       border: 1px solid var(--border);
-      border-radius: 11px;
-      background: #fff;
+      border-radius: 12px;
+      background: var(--surface-soft);
       display: grid;
       gap: 7px;
     }
 
     .metric strong {
-      font-size: 1.45rem;
+      color: var(--ink);
+      font-size: 1.25rem;
       line-height: 1;
-      font-weight: 900;
+      font-weight: 800;
     }
 
     .metric span,
     .group-card span {
       color: var(--muted);
-      font-size: 0.72rem;
-      font-weight: 900;
+      font: 600 0.66rem/1.2 var(--mono);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.07em;
     }
 
     .metric p,
@@ -366,18 +438,18 @@
     }
 
     .metric.blue {
-      background: linear-gradient(145deg, var(--blue-soft), #fff);
-      border-color: rgba(29, 78, 216, 0.18);
+      background: var(--blue-soft);
+      border-color: #c7d8f0;
     }
 
     .metric.red {
-      background: linear-gradient(145deg, var(--red-soft), #fff);
-      border-color: rgba(185, 28, 28, 0.2);
+      background: var(--red-soft);
+      border-color: #edc7bf;
     }
 
     .metric.amber {
-      background: linear-gradient(145deg, var(--amber-soft), #fff);
-      border-color: rgba(146, 64, 14, 0.2);
+      background: var(--orange-soft);
+      border-color: #efcfb2;
     }
 
     .group-grid {
@@ -391,9 +463,8 @@
     }
 
     .group-card.selected {
-      border-color: var(--accent);
-      box-shadow: inset 0 0 0 1px var(--accent);
-      background: linear-gradient(145deg, var(--accent-soft), #fff);
+      border-color: #c7d8f0;
+      background: var(--blue-soft);
     }
 
     .group-card input {
@@ -419,7 +490,7 @@
     .table-wrap {
       overflow: auto;
       border: 1px solid var(--border);
-      border-radius: 11px;
+      border-radius: 12px;
     }
 
     table {
@@ -434,7 +505,7 @@
       padding: 10px;
       border-bottom: 1px solid var(--border);
       vertical-align: top;
-      text-align: right;
+      text-align: left;
       color: var(--dim);
       font-size: 0.78rem;
       line-height: 1.45;
@@ -444,8 +515,8 @@
       position: sticky;
       top: 0;
       z-index: 1;
-      background: var(--soft);
-      color: var(--text);
+      background: var(--surface-warm);
+      color: var(--ink);
       font-size: 0.72rem;
       font-weight: 900;
       letter-spacing: 0.04em;
@@ -469,7 +540,7 @@
       padding: 3px 8px;
       border-radius: 999px;
       border: 1px solid var(--border);
-      background: var(--soft);
+      background: var(--surface-warm);
       color: var(--muted);
       font-size: 0.7rem;
       font-weight: 900;
@@ -478,9 +549,9 @@
     }
 
     .status-ok {
-      color: var(--accent);
-      background: var(--accent-soft);
-      border-color: rgba(15, 118, 110, 0.24);
+      color: var(--green);
+      background: var(--green-soft);
+      border-color: #cfdec1;
     }
 
     .status-problem {
@@ -498,13 +569,13 @@
     .log {
       direction: ltr;
       text-align: left;
-      min-height: 160px;
-      max-height: 290px;
-      padding: 13px;
+      min-height: 220px;
+      max-height: 340px;
+      padding: 16px;
       overflow: auto;
-      border-radius: 11px;
-      background: #0f172a;
-      color: #dbeafe;
+      border-radius: 14px;
+      background: var(--dark);
+      color: #e9dfd3;
       font-family: var(--mono);
       font-size: 0.74rem;
       line-height: 1.6;
@@ -527,9 +598,13 @@
     }
 
     @media (max-width: 680px) {
-      .topbar,
-      .layout {
+      .topbar {
         padding: 14px;
+      }
+
+      .layout {
+        width: calc(100% - 28px);
+        padding: 14px 0;
       }
 
       .grid-2,
@@ -543,43 +618,46 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="mark">FAQ</div>
-      <div>
+      <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+      </a>
+      <div class="brand-copy">
+        <p class="eyebrow">Audit Studio</p>
         <h1>AI FAQ Audit</h1>
-        <p>מסך נפרד למיפוי האתר ובדיקה מדויקת של עמודי FAQ, שאלות גלויות וסכמות FAQPage</p>
+        <p>Map a site, select URLs, and verify visible FAQ content against FAQPage schema.</p>
       </div>
     </div>
-    <span class="badge">FAQ AUDIT</span>
+    <span class="badge">Internal QA</span>
   </header>
 
   <main class="layout">
     <aside class="side-panel">
       <div class="panel-head">
-        <h2>Pipeline</h2>
-        <p>המסך הזה בנוי לפי האסטרטגיה החדשה: קודם ממפים, אחר כך בוחרים, ורק אז בודקים.</p>
+        <h2>Audit Workflow</h2>
+        <p>Map first, choose the right pages, then audit only the URLs that matter.</p>
       </div>
       <div class="panel-body">
         <div class="stage-list">
           <div class="stage">
             <div class="stage-index">1</div>
-            <div><strong>מיפוי אתר</strong><span>robots, sitemap, sitemap מקונן ולינקים פנימיים.</span></div>
+            <div><strong>Site discovery</strong><span>Robots.txt, sitemap files, nested sitemaps and internal links.</span></div>
           </div>
           <div class="stage">
             <div class="stage-index">2</div>
-            <div><strong>בחירת URLs</strong><span>קבוצות, פילטר לפי path או URLs ידניים.</span></div>
+            <div><strong>URL selection</strong><span>Groups, path filters or a manual list when you need precision.</span></div>
           </div>
           <div class="stage">
             <div class="stage-index">3</div>
-            <div><strong>בדיקת FAQ</strong><span>Rendered כברירת מחדל, כולל סכמה ושאלות גלויות.</span></div>
+            <div><strong>FAQ audit</strong><span>Rendered browser checks visible Q&A, schema and mismatches.</span></div>
           </div>
           <div class="stage">
             <div class="stage-index">4</div>
-            <div><strong>טבלת עבודה</strong><span>דוח FAQ פנימי ומדויק, לא דוח לקוח.</span></div>
+            <div><strong>Working report</strong><span>An internal QA table for fixes, gaps and follow-up.</span></div>
           </div>
         </div>
 
         <div class="note">
-          זה מסך נפרד לבדיקת FAQ בלבד. הסקירה הכללית של האתר נשארת במסך הקרולר הרגיל, וכאן מתמקדים במיפוי URLs, בחירת עמודים, שאלות גלויות וסכמות FAQPage.
+          This workspace is focused on FAQ quality only. Use the main crawler for broad site audits; use this screen for URL mapping, visible questions and FAQPage schema.
         </div>
       </div>
     </aside>
@@ -587,30 +665,30 @@
     <section class="main-stack">
       <section class="panel">
         <div class="panel-head">
-          <h2>1. מיפוי האתר</h2>
-          <p>השלב הזה מוצא URLים ומחלק אותם לקבוצות. בלי זה הקרולר מנחש יותר מדי ומפספס עמודים חשובים.</p>
+          <h2>1. Site Discovery</h2>
+          <p>Find internal URLs and organize them into page groups before running the FAQ audit.</p>
         </div>
         <div class="panel-body">
           <div class="field">
-            <label for="startUrl">כתובת אתר</label>
+            <label for="startUrl">Website URL</label>
             <input id="startUrl" type="text" value="https://www.stay-master.com" placeholder="https://www.example.com" />
           </div>
 
           <div class="grid-2">
             <div class="field">
-              <label for="maxUrls">מקסימום URLs למיפוי</label>
+              <label for="maxUrls">Max URLs to map</label>
               <input id="maxUrls" type="number" min="10" max="5000" value="1000" />
             </div>
             <div class="field">
-              <label for="maxDepth">עומק לינקים פנימיים</label>
+              <label for="maxDepth">Internal link depth</label>
               <input id="maxDepth" type="number" min="0" max="6" value="3" />
             </div>
           </div>
 
           <div class="btn-row">
-            <button class="btn primary" id="discoverBtn" type="button" onclick="runDiscovery()">מפה אתר</button>
-            <button class="btn" type="button" onclick="copyDiscoveryCommand()">העתק פקודת מיפוי</button>
-            <button class="btn" type="button" onclick="resetPage()">איפוס</button>
+            <button class="btn primary" id="discoverBtn" type="button" onclick="runDiscovery()">Map Site</button>
+            <button class="btn" type="button" onclick="copyDiscoveryCommand()">Copy Discovery Command</button>
+            <button class="btn" type="button" onclick="resetPage()">Reset</button>
           </div>
 
           <div class="log" id="log">Waiting for discovery.</div>
@@ -619,109 +697,109 @@
 
       <section class="result-panel hidden" id="discoveryPanel">
         <div class="panel-head">
-          <h2>2. תוצאות מיפוי ובחירת URLs</h2>
-          <p id="discoverySubtitle">בחרי קבוצות או הוסיפי URLs ידנית לפני בדיקת FAQ.</p>
+          <h2>2. Discovery Results & URL Selection</h2>
+          <p id="discoverySubtitle">Choose groups or add manual URLs before running the FAQ audit.</p>
         </div>
         <div class="panel-body">
           <div class="cards" id="discoveryMetrics"></div>
           <div>
-            <div class="section-label">קבוצות שנמצאו</div>
+            <div class="section-label">Detected Groups</div>
             <div class="group-grid" id="groupGrid" style="margin-top:8px"></div>
           </div>
 
           <div class="grid-2">
             <div class="field">
-              <label for="urlIncludes">פילטר path אופציונלי</label>
+              <label for="urlIncludes">Optional path filter</label>
               <input id="urlIncludes" type="text" placeholder="/hotel, /faq, london" />
             </div>
             <div class="field">
-              <label for="faqMaxPages">מקסימום עמודים לבדיקת FAQ</label>
+              <label for="faqMaxPages">Max FAQ pages to audit</label>
               <input id="faqMaxPages" type="number" min="1" max="500" value="50" />
             </div>
           </div>
 
           <div class="grid-2">
             <div class="field">
-              <label for="faqRenderMode">מצב בדיקת FAQ</label>
+              <label for="faqRenderMode">FAQ audit mode</label>
               <select id="faqRenderMode">
-                <option value="rendered">Rendered browser - מומלץ</option>
-                <option value="static">Static HTML בלבד</option>
+                <option value="rendered">Rendered browser - recommended</option>
+                <option value="static">Static HTML only</option>
               </select>
             </div>
             <div class="field">
-              <label for="selectedCount">URLs שנבחרו לפי הכללים</label>
+              <label for="selectedCount">URLs selected by rules</label>
               <input id="selectedCount" type="text" value="0" readonly />
             </div>
           </div>
 
           <div class="field">
-            <label for="manualUrls">URLs ידניים לבדיקה, אחד בכל שורה</label>
+            <label for="manualUrls">Manual URLs to audit, one per line</label>
             <textarea id="manualUrls" placeholder="https://www.example.com/faq&#10;https://www.example.com/hotel-a"></textarea>
           </div>
 
           <div class="source-options">
             <label class="inline-check" for="sourceCompareEnabled">
               <input id="sourceCompareEnabled" type="checkbox" />
-              השווה מול קבצי מקור
+              Compare against source FAQ files
             </label>
             <p class="muted-small">
-              אופציונלי: הדביקי קישור לתיקיית Drive עם קבצי FAQ מקוריים, או קישורי Google Sheets אחד בכל שורה. הדוח יתאים כל קובץ לעמוד FAQ לפי שם המלון ויבדוק שאלות, תשובות וטעויות בולטות.
+              Optional: paste a Drive folder with original FAQ files, or Google Sheet links one per line. The report matches each file to a site page and checks missing questions, answer changes and obvious copy issues.
             </p>
             <div class="field">
-              <label for="sourceInput">תיקיית מקור או קבצי Google Sheets</label>
+              <label for="sourceInput">Source folder or Google Sheets</label>
               <textarea id="sourceInput" placeholder="https://drive.google.com/drive/folders/...&#10;https://docs.google.com/spreadsheets/d/..."></textarea>
             </div>
             <div class="grid-2">
               <div class="field">
-                <label for="sourceTabName">טאב מקור</label>
-                <input id="sourceTabName" type="text" placeholder="ריק = הטאב הראשון בכל קובץ" />
+                <label for="sourceTabName">Source tab</label>
+                <input id="sourceTabName" type="text" placeholder="Blank = first tab in each file" />
               </div>
               <div class="field">
-                <label for="sourceHeaderRow">שורת כותרות</label>
+                <label for="sourceHeaderRow">Header row</label>
                 <input id="sourceHeaderRow" type="number" min="0" max="50" value="0" />
               </div>
             </div>
           </div>
 
           <div class="btn-row">
-            <button class="btn primary" id="faqAuditBtn" type="button" onclick="runFaqAudit()">הרץ בדיקת FAQ</button>
-            <button class="btn" type="button" onclick="copySelectedUrls()">העתק URLs שנבחרו</button>
-            <button class="btn" type="button" onclick="copyFaqCommand()">העתק פקודת FAQ</button>
+            <button class="btn primary" id="faqAuditBtn" type="button" onclick="runFaqAudit()">Run FAQ Audit</button>
+            <button class="btn" type="button" onclick="copySelectedUrls()">Copy Selected URLs</button>
+            <button class="btn" type="button" onclick="copyFaqCommand()">Copy FAQ Command</button>
           </div>
         </div>
       </section>
 
       <section class="result-panel hidden" id="faqPanel">
         <div class="panel-head">
-          <h2>3. דוח FAQ פנימי</h2>
-          <p id="faqSubtitle">טבלה מדויקת לעבודה פנימית: עמודים, שאלות גלויות, סכמה, פערים והערות.</p>
+          <h2>3. Internal FAQ Report</h2>
+          <p id="faqSubtitle">A working QA table for pages, visible questions, schema, gaps and notes.</p>
         </div>
         <div class="panel-body">
           <div class="cards" id="faqMetrics"></div>
           <div class="btn-row">
-            <button class="btn primary" id="googleSheetBtn" type="button" onclick="createGoogleSheetReport()">צור Google Sheet</button>
-            <button class="btn primary" type="button" onclick="downloadFaqHtml()">הורד HTML</button>
-            <button class="btn" type="button" onclick="downloadFaqCsv()">הורד CSV</button>
-            <button class="btn" type="button" onclick="downloadFaqJson()">הורד JSON</button>
+            <button class="btn primary" id="googleSheetBtn" type="button" onclick="createGoogleSheetReport()">Create Google Sheet</button>
+            <button class="btn primary" type="button" onclick="downloadFaqHtml()">Download HTML</button>
+            <button class="btn" type="button" onclick="downloadFaqCsv()">Download CSV</button>
+            <button class="btn" type="button" onclick="downloadFaqJson()">Download JSON</button>
           </div>
           <div class="note hidden" id="googleSheetLink"></div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>סטטוס</th>
+                  <th>Status</th>
                   <th>URL</th>
-                  <th>כותרת</th>
-                  <th>בעיה מרכזית</th>
-                  <th>פעולה מומלצת</th>
+                  <th>Title</th>
+                  <th>Main issue</th>
+                  <th>Recommended action</th>
                   <th>Rendered</th>
-                  <th>FAQ גלוי</th>
-                  <th>FAQ בסכמה</th>
+                  <th>Visible FAQ</th>
+                  <th>Schema FAQ</th>
                   <th>FAQPage</th>
-                  <th>שאלות גלויות שלא בסכמה</th>
-                  <th>שאלות בסכמה שלא בעמוד</th>
+                  <th>Visible only</th>
+                  <th>Schema only</th>
                   <th>Schema types</th>
-                  <th>הערות</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
               <tbody id="faqTableBody"></tbody>
@@ -730,24 +808,24 @@
 
           <div class="compare-block hidden" id="sourceComparePanel">
             <div>
-              <h3>4. השוואה מול קבצי מקור</h3>
-              <p class="muted-small">השוואה בין קבצי ה־FAQ המקוריים לבין מה שנמצא באתר בפועל.</p>
+              <h3>4. Source File Comparison</h3>
+              <p class="muted-small">Compare the original FAQ files against what was actually found on the site.</p>
             </div>
             <div class="cards" id="sourceCompareMetrics"></div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>סטטוס</th>
-                    <th>קובץ מקור</th>
-                    <th>עמוד באתר</th>
-                    <th>מקור Q/A</th>
-                    <th>אתר Q/A</th>
-                    <th>חסר באתר</th>
-                    <th>מיותר באתר</th>
-                    <th>שינויי תשובה</th>
-                    <th>בדיקות קלות</th>
-                    <th>הערות</th>
+                    <th>Status</th>
+                    <th>Source file</th>
+                    <th>Site page</th>
+                    <th>Source Q/A</th>
+                    <th>Site Q/A</th>
+                    <th>Missing on site</th>
+                    <th>Extra on site</th>
+                    <th>Answer changes</th>
+                    <th>QA checks</th>
+                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody id="sourceCompareBody"></tbody>
@@ -757,20 +835,20 @@
 
           <div class="compare-block hidden" id="qaChecksPanel">
             <div>
-              <h3>5. בדיקות קלות</h3>
-              <p class="muted-small">בעיות בולטות בלבד: כפילויות, תשובות קצרות, מרכאות/סימני שאלה חשודים, HTML entities וטקסט placeholder.</p>
+              <h3>5. Light QA Checks</h3>
+              <p class="muted-small">Obvious issues only: duplicates, short answers, suspicious punctuation, HTML entities and placeholder text.</p>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>מקור</th>
-                    <th>סוג</th>
-                    <th>קובץ / URL</th>
-                    <th>שורה</th>
-                    <th>שאלה</th>
-                    <th>בעיה</th>
-                    <th>מה לעשות</th>
+                    <th>Source</th>
+                    <th>Type</th>
+                    <th>File / URL</th>
+                    <th>Row</th>
+                    <th>Question</th>
+                    <th>Issue</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody id="qaChecksBody"></tbody>
@@ -786,23 +864,23 @@
     const socket = typeof io === "function" ? io() : null;
     const groupLabels = {
       faq: "FAQ",
-      hotel: "מלונות / נכסים",
-      location: "מיקומים / ערים",
-      offer: "מבצעים",
-      blog: "בלוג / תוכן",
-      legal: "משפטי",
-      contact: "יצירת קשר / אודות",
-      booking: "הזמנות",
-      asset: "נכסים סטטיים",
-      other: "אחר"
+      hotel: "Hotels / Properties",
+      location: "Locations / Cities",
+      offer: "Offers",
+      blog: "Blog / Content",
+      legal: "Legal",
+      contact: "Contact / About",
+      booking: "Booking",
+      asset: "Static assets",
+      other: "Other"
     };
     const statusLabels = {
-      ok: "תקין",
-      "missing-schema": "חסר schema",
-      "missing-visible-faq": "schema בלי FAQ גלוי",
-      mismatch: "פער DOM/schema",
-      "no-faq": "לא נמצא FAQ",
-      "fetch-failed": "כשל טעינה"
+      ok: "OK",
+      "missing-schema": "Missing schema",
+      "missing-visible-faq": "Schema without visible FAQ",
+      mismatch: "DOM / schema mismatch",
+      "no-faq": "No FAQ found",
+      "fetch-failed": "Fetch failed"
     };
 
     let collecting = null;
@@ -900,11 +978,11 @@
         return;
       }
       if (!socket) {
-        setLog("Socket.IO is not available. ודאי שהשרת רץ ורענני את העמוד.");
+        setLog("Socket.IO is not available. Make sure the server is running, then refresh the page.");
         return;
       }
 
-      setBusy("discoverBtn", true, "ממפה אתר...");
+      setBusy("discoverBtn", true, "Mapping site...");
       lastDiscovery = null;
       lastFaqAudit = null;
       hide("discoveryPanel");
@@ -920,13 +998,13 @@
         return;
       }
       if (!socket) {
-        setLog("Socket.IO is not available. ודאי שהשרת רץ ורענני את העמוד.");
+        setLog("Socket.IO is not available. Make sure the server is running, then refresh the page.");
         return;
       }
 
       const selected = getSelectedUrls();
       document.getElementById("selectedCount").value = String(selected.length);
-      setBusy("faqAuditBtn", true, "בודק FAQ...");
+      setBusy("faqAuditBtn", true, "Auditing FAQ...");
       hide("faqPanel");
       setLog(["RUNNING FAQ AUDIT", JSON.stringify(config, null, 2), "", `SELECTED URLS: ${selected.length}`, "", "LOGS"].join("\n"));
       socket.emit("start-agent", config);
@@ -938,13 +1016,13 @@
       const urls = Array.isArray(result.urls) ? result.urls : [];
 
       document.getElementById("discoverySubtitle").textContent =
-        `${result.host || result.normalizedStartUrl || ""} | ${urls.length} URLs | ${groups.length} קבוצות`;
+        `${result.host || result.normalizedStartUrl || ""} | ${urls.length} URLs | ${groups.length} groups`;
       document.getElementById("discoveryMetrics").innerHTML = [
-        renderMetric("URLs", urls.length, "כל הכתובות שמופו", "blue"),
-        renderMetric("קבוצות", groups.length, "סיווגים שנמצאו", ""),
-        renderMetric("Sitemap hints", result.robots?.sitemapHints?.length || 0, "סייטמאפים מתוך robots", ""),
-        renderMetric("FAQ candidates", result.faqCandidates?.found || 0, `${result.faqCandidates?.checked || 0} נבדקו בפועל`, ""),
-        renderMetric("Host", result.host || "-", "הדומיין שנבדק", "")
+        renderMetric("URLs", urls.length, "Mapped internal URLs", "blue"),
+        renderMetric("Groups", groups.length, "Detected classifications", ""),
+        renderMetric("Sitemap hints", result.robots?.sitemapHints?.length || 0, "Sitemaps found in robots.txt", ""),
+        renderMetric("FAQ candidates", result.faqCandidates?.found || 0, `${result.faqCandidates?.checked || 0} checked`, ""),
+        renderMetric("Host", result.host || "-", "Audited domain", "")
       ].join("");
 
       document.getElementById("groupGrid").innerHTML = groups.map(renderGroupCard).join("");
@@ -960,7 +1038,7 @@
         <label class="group-card ${selected ? "selected" : ""}" data-group-card>
           <span><input data-group-checkbox type="checkbox" value="${escapeHtml(group.group)}" ${selected ? "checked" : ""} onchange="handleGroupChange(this)" /> ${escapeHtml(groupLabels[group.group] || group.group)}</span>
           <strong>${escapeHtml(group.count)}</strong>
-          <p>URLs בקבוצה</p>
+          <p>URLs in group</p>
           <div class="examples">${examples}</div>
         </label>
       `;
@@ -972,12 +1050,12 @@
       const summary = result.summary || {};
 
       document.getElementById("faqSubtitle").textContent =
-        `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} עמודים נבדקו | ${summary.totalVisibleQuestions || 0} שאלות גלויות`;
+        `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} pages checked | ${summary.totalVisibleQuestions || 0} visible questions`;
       document.getElementById("faqMetrics").innerHTML = [
-        renderMetric("עמודים", summary.pagesChecked || pages.length, "עמודים שנבדקו", "blue"),
-        renderMetric("שאלות גלויות", summary.totalVisibleQuestions || 0, "Q/A שנמצאו בעמודים", ""),
-        renderMetric("שאלות בסכמה", summary.totalSchemaQuestions || 0, "Q/A מתוך FAQPage", ""),
-        renderMetric("פערים", (summary.pagesWithMismatch || 0) + (summary.pagesMissingSchema || 0) + (summary.pagesMissingVisibleFaq || 0), "עמודים שדורשים טיפול", "red")
+        renderMetric("Pages", summary.pagesChecked || pages.length, "Pages checked", "blue"),
+        renderMetric("Visible Q/A", summary.totalVisibleQuestions || 0, "Questions found on pages", ""),
+        renderMetric("Schema Q/A", summary.totalSchemaQuestions || 0, "Questions found in FAQPage", ""),
+        renderMetric("Gaps", (summary.pagesWithMismatch || 0) + (summary.pagesMissingSchema || 0) + (summary.pagesMissingVisibleFaq || 0), "Pages that need attention", "red")
       ].join("");
 
       document.getElementById("faqTableBody").innerHTML = pages.map(renderFaqRow).join("");
@@ -1020,22 +1098,22 @@
       }
 
       document.getElementById("sourceCompareMetrics").innerHTML = [
-        renderMetric("קבצי מקור", comparison.sourceFilesRead || 0, `${comparison.sourceFilesFound || 0} נמצאו`, "blue"),
-        renderMetric("שאלות מקור", comparison.totalSourceQuestions || 0, "שאלות שנקראו מהקבצים", ""),
-        renderMetric("חסר באתר", comparison.missingOnSite || 0, "שאלות מקור שלא נמצאו באתר", "red"),
-        renderMetric("שינויי תשובה", comparison.answerMismatches || 0, "תשובות שלא נראות זהות", "amber"),
-        renderMetric("בדיקות קלות", comparison.qaIssueCount || 0, "בעיות טקסט בולטות", "")
+        renderMetric("Source files", comparison.sourceFilesRead || 0, `${comparison.sourceFilesFound || 0} found`, "blue"),
+        renderMetric("Source questions", comparison.totalSourceQuestions || 0, "Questions read from source files", ""),
+        renderMetric("Missing on site", comparison.missingOnSite || 0, "Source questions not found on site", "red"),
+        renderMetric("Answer changes", comparison.answerMismatches || 0, "Answers that do not look identical", "amber"),
+        renderMetric("Light checks", comparison.qaIssueCount || 0, "Obvious copy issues", "")
       ].join("");
 
       const files = Array.isArray(comparison.files) ? comparison.files : [];
       document.getElementById("sourceCompareBody").innerHTML = files.length
         ? files.map(renderSourceCompareRow).join("")
-        : `<tr><td colspan="10">לא נמצאו קבצי מקור להשוואה.</td></tr>`;
+        : `<tr><td colspan="10">No source files were found for comparison.</td></tr>`;
 
       const issues = Array.isArray(comparison.issues) ? comparison.issues : [];
       document.getElementById("qaChecksBody").innerHTML = issues.length
         ? issues.map(renderQaIssueRow).join("")
-        : `<tr><td colspan="7">לא נמצאו בעיות טקסט בולטות.</td></tr>`;
+        : `<tr><td colspan="7">No obvious copy issues were found.</td></tr>`;
 
       show("sourceComparePanel");
       show("qaChecksPanel");
@@ -1065,10 +1143,10 @@
     }
 
     function sourceStatusLabel(status) {
-      if (status === "ok") return "נקרא";
-      if (status === "read-failed") return "כשל קריאה";
-      if (status === "no-questions") return "אין שאלות";
-      if (status === "no-page-match") return "לא נמצא עמוד";
+      if (status === "ok") return "Read";
+      if (status === "read-failed") return "Read failed";
+      if (status === "no-questions") return "No questions";
+      if (status === "no-page-match") return "No page match";
       return status || "-";
     }
 
@@ -1078,7 +1156,7 @@
       return list.map((item) => `
         <div>
           <strong>${escapeHtml(item.question || "")}</strong>
-          <div class="muted-small">דמיון: ${Math.round((item.similarity || 0) * 100)}%</div>
+          <div class="muted-small">Similarity: ${Math.round((item.similarity || 0) * 100)}%</div>
         </div>
       `).join("");
     }
@@ -1089,7 +1167,7 @@
         : (issue.url || "");
       return `
         <tr>
-          <td>${issue.scope === "source" ? "קובץ מקור" : "אתר"}</td>
+          <td>${issue.scope === "source" ? "Source file" : "Site"}</td>
           <td><span class="tiny-pill">${escapeHtml(issue.type || "")}</span></td>
           <td class="${issue.scope === "site" ? "url-cell" : ""}">${escapeHtml(where)}</td>
           <td>${escapeHtml(issue.rowNumber || "")}</td>
@@ -1101,22 +1179,22 @@
     }
 
     function pageIssueSummary(page) {
-      if (page.auditStatus === "ok") return "ה־FAQ הגלוי והסכמה מסונכרנים.";
-      if (page.auditStatus === "no-faq") return "לא זוהו שאלות FAQ גלויות או FAQPage schema.";
-      if (page.auditStatus === "missing-schema") return "יש FAQ גלוי אבל חסרה FAQPage schema.";
-      if (page.auditStatus === "missing-visible-faq") return "יש FAQPage schema אבל לא נמצאה תצוגת FAQ גלויה.";
+      if (page.auditStatus === "ok") return "Visible FAQ and schema are aligned.";
+      if (page.auditStatus === "no-faq") return "No visible FAQ questions or FAQPage schema were detected.";
+      if (page.auditStatus === "missing-schema") return "Visible FAQ exists, but FAQPage schema is missing.";
+      if (page.auditStatus === "missing-visible-faq") return "FAQPage schema exists, but no visible FAQ block was found.";
       const parts = [];
-      if ((page.visibleOnlyQuestions || []).length) parts.push(`${page.visibleOnlyQuestions.length} שאלות גלויות חסרות בסכמה`);
-      if ((page.schemaOnlyQuestions || []).length) parts.push(`${page.schemaOnlyQuestions.length} שאלות בסכמה חסרות בעמוד`);
-      return parts.join(" · ") || "יש פער בין ה־DOM לסכמה.";
+      if ((page.visibleOnlyQuestions || []).length) parts.push(`${page.visibleOnlyQuestions.length} visible questions missing from schema`);
+      if ((page.schemaOnlyQuestions || []).length) parts.push(`${page.schemaOnlyQuestions.length} schema questions missing from page`);
+      return parts.join(" · ") || "There is a mismatch between the DOM and schema.";
     }
 
     function pageRecommendedAction(page) {
-      if (page.auditStatus === "ok") return "לא נדרשת פעולה.";
-      if (page.auditStatus === "missing-schema") return "להוסיף FAQPage JSON-LD שמכיל את השאלות והתשובות הגלויות.";
-      if (page.auditStatus === "missing-visible-faq") return "להציג את אותן שאלות בעמוד או להסיר אותן מהסכמה.";
-      if (page.auditStatus === "no-faq") return "לוודא האם העמוד אמור לכלול FAQ.";
-      return "לעבור לטאב Gaps בדוח Google Sheet ולסנכרן שאלה-שאלה.";
+      if (page.auditStatus === "ok") return "No action needed.";
+      if (page.auditStatus === "missing-schema") return "Add FAQPage JSON-LD that includes the visible questions and answers.";
+      if (page.auditStatus === "missing-visible-faq") return "Show those questions on the page or remove them from the schema.";
+      if (page.auditStatus === "no-faq") return "Confirm whether this page should include FAQ content.";
+      return "Review the Gaps tab in the Google Sheet report and sync each question.";
     }
 
     function renderGoogleSheetLink(sheet) {
@@ -1127,7 +1205,7 @@
         return;
       }
 
-      box.innerHTML = `נוצר דוח Google Sheet: <a href="${escapeHtml(sheet.url)}" target="_blank" rel="noopener">פתחי את הדוח בגוגל שיט</a>`;
+      box.innerHTML = `Google Sheet report created: <a href="${escapeHtml(sheet.url)}" target="_blank" rel="noopener">Open the report in Google Sheets</a>`;
       show("googleSheetLink");
     }
 
@@ -1220,14 +1298,14 @@
         return;
       }
       if (!socket) {
-        setLog("Socket.IO is not available. ודאי שהשרת רץ ורענני את העמוד.");
+        setLog("Socket.IO is not available. Make sure the server is running, then refresh the page.");
         return;
       }
 
       config.writeGoogleSheet = true;
       config.reportTitle = `FAQ Audit - ${new URL(config.startUrl).host} - ${new Date().toISOString().slice(0, 10)}`;
 
-      setBusy("googleSheetBtn", true, "יוצר Google Sheet...");
+      setBusy("googleSheetBtn", true, "Creating Google Sheet...");
       setLog(["CREATING GOOGLE SHEET FAQ REPORT", JSON.stringify(config, null, 2), "", "LOGS"].join("\n"));
       socket.emit("start-agent", config);
     }
@@ -1235,7 +1313,7 @@
     function downloadFaqHtml() {
       if (!lastFaqAudit) return;
       const reportHtml = document.getElementById("faqPanel").querySelector(".panel-body").innerHTML;
-      const html = `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8" /><title>FAQ Audit</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#111827}.btn-row,.note a{display:none}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.metric{border:1px solid #dbe3ef;border-radius:10px;padding:10px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #dbe3ef;padding:8px;vertical-align:top;font-size:12px}.url-cell{direction:ltr;text-align:left;word-break:break-all}th{background:#f8fafc}.status-pill,.tiny-pill{display:inline-block;border:1px solid #dbe3ef;border-radius:999px;padding:3px 7px;margin:2px}.hidden{display:none}</style></head><body><h1>דוח FAQ פנימי</h1><p>${escapeHtml(lastFaqAudit.normalizedStartUrl || lastFaqAudit.startUrl || "")}</p>${reportHtml}</body></html>`;
+      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><title>FAQ Audit</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#111827}.btn-row,.note a{display:none}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.metric{border:1px solid #dbe3ef;border-radius:10px;padding:10px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #dbe3ef;padding:8px;vertical-align:top;font-size:12px;text-align:left}.url-cell{direction:ltr;text-align:left;word-break:break-all}th{background:#f8fafc}.status-pill,.tiny-pill{display:inline-block;border:1px solid #dbe3ef;border-radius:999px;padding:3px 7px;margin:2px}.hidden{display:none}</style></head><body><h1>Internal FAQ Audit</h1><p>${escapeHtml(lastFaqAudit.normalizedStartUrl || lastFaqAudit.startUrl || "")}</p>${reportHtml}</body></html>`;
       downloadText(`${fileBase()}-faq-audit.html`, html, "text/html;charset=utf-8");
     }
 

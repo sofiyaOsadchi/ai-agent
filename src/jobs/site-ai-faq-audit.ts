@@ -24,9 +24,31 @@ export type SourceFaqRow = FaqQA & {
 
 export type FaqAnswerMismatch = {
   question: string;
+  sourceQuestion: string;
   sourceAnswer: string;
+  siteQuestion: string;
   siteAnswer: string;
+  questionSimilarity: number;
   similarity: number;
+  reasons: string[];
+};
+
+export type FaqQuestionMismatch = {
+  sourceQuestion: string;
+  sourceAnswer: string;
+  siteQuestion: string;
+  siteAnswer: string;
+  questionSimilarity: number;
+  similarity: number;
+  reasons: string[];
+};
+
+export type FaqSourceSiteDelta = {
+  sourceQuestion: string;
+  sourceAnswer: string;
+  siteQuestion: string;
+  siteAnswer: string;
+  questionSimilarity: number;
 };
 
 export type FaqTextIssue = {
@@ -55,6 +77,9 @@ export type SourceFileComparison = {
   matchedQuestionCount: number;
   sourceOnlyQuestions: string[];
   siteOnlyQuestions: string[];
+  sourceOnlyItems: FaqSourceSiteDelta[];
+  siteOnlyItems: FaqSourceSiteDelta[];
+  questionMismatches: FaqQuestionMismatch[];
   answerMismatches: FaqAnswerMismatch[];
   duplicateQuestions: string[];
   qaIssues: FaqTextIssue[];
@@ -70,6 +95,7 @@ export type SourceComparisonResult = {
   matchedPages: number;
   missingOnSite: number;
   extraOnSite: number;
+  questionMismatches: number;
   answerMismatches: number;
   qaIssueCount: number;
   files: SourceFileComparison[];
@@ -652,13 +678,57 @@ export class SiteFaqAuditJob {
   }
 
   private compareQAs(visibleQAs: QA[], schemaQAs: QA[]): { visibleOnly: string[]; schemaOnly: string[] } {
-    const visibleSet = new Set(visibleQAs.map((item) => this.norm(item.q)));
-    const schemaSet = new Set(schemaQAs.map((item) => this.norm(item.q)));
+    const comparison = this.compareQaCollections(visibleQAs, schemaQAs);
 
     return {
-      visibleOnly: visibleQAs.filter((item) => !schemaSet.has(this.norm(item.q))).map((item) => item.q),
-      schemaOnly: schemaQAs.filter((item) => !visibleSet.has(this.norm(item.q))).map((item) => item.q),
+      visibleOnly: comparison.sourceOnly.map((item) => item.source.q),
+      schemaOnly: comparison.targetOnly.map((item) => item.target.q),
     };
+  }
+
+  private compareQaCollections<TSource extends QA, TTarget extends QA>(
+    sourceQAs: TSource[],
+    targetQAs: TTarget[]
+  ): {
+    matched: Array<{ source: TSource; target: TTarget; questionSimilarity: number }>;
+    sourceOnly: Array<{ source: TSource; questionSimilarity: number }>;
+    targetOnly: Array<{ target: TTarget; questionSimilarity: number }>;
+  } {
+    const matched: Array<{ source: TSource; target: TTarget; questionSimilarity: number }> = [];
+    const sourceOnly: Array<{ source: TSource; questionSimilarity: number }> = [];
+    const targetUsed = new Set<number>();
+
+    for (const source of sourceQAs) {
+      let bestIndex = -1;
+      let bestScore = 0;
+
+      for (let index = 0; index < targetQAs.length; index++) {
+        if (targetUsed.has(index)) continue;
+        const score = this.questionSimilarity(source.q, targetQAs[index]?.q || "");
+        if (score > bestScore) {
+          bestIndex = index;
+          bestScore = score;
+        }
+      }
+
+      if (bestIndex >= 0 && bestScore >= 0.92) {
+        targetUsed.add(bestIndex);
+        matched.push({
+          source,
+          target: targetQAs[bestIndex],
+          questionSimilarity: bestScore,
+        });
+      } else {
+        sourceOnly.push({ source, questionSimilarity: bestScore });
+      }
+    }
+
+    const targetOnly = targetQAs
+      .map((target, index) => ({ target, index }))
+      .filter((item) => !targetUsed.has(item.index))
+      .map((item) => ({ target: item.target, questionSimilarity: 0 }));
+
+    return { matched, sourceOnly, targetOnly };
   }
 
   private async fetchPage(
@@ -786,6 +856,9 @@ export class SiteFaqAuditJob {
             matchedQuestionCount: 0,
             sourceOnlyQuestions: [],
             siteOnlyQuestions: [],
+            sourceOnlyItems: [],
+            siteOnlyItems: [],
+            questionMismatches: [],
             answerMismatches: [],
             duplicateQuestions: [],
             qaIssues: [],
@@ -809,6 +882,9 @@ export class SiteFaqAuditJob {
           matchedQuestionCount: 0,
           sourceOnlyQuestions: [],
           siteOnlyQuestions: [],
+          sourceOnlyItems: [],
+          siteOnlyItems: [],
+          questionMismatches: [],
           answerMismatches: [],
           duplicateQuestions: [],
           qaIssues: [],
@@ -829,6 +905,7 @@ export class SiteFaqAuditJob {
       matchedPages: files.filter((file) => Boolean(file.matchedPageUrl)).length,
       missingOnSite: files.reduce((sum, file) => sum + file.sourceOnlyQuestions.length, 0),
       extraOnSite: files.reduce((sum, file) => sum + file.siteOnlyQuestions.length, 0),
+      questionMismatches: files.reduce((sum, file) => sum + file.questionMismatches.length, 0),
       answerMismatches: files.reduce((sum, file) => sum + file.answerMismatches.length, 0),
       qaIssueCount: issues.length,
       files,
@@ -998,6 +1075,15 @@ export class SiteFaqAuditJob {
         matchedQuestionCount: 0,
         sourceOnlyQuestions: sourceRows.map((row) => row.q),
         siteOnlyQuestions: [],
+        sourceOnlyItems: sourceRows.map((row) => ({
+          sourceQuestion: row.q,
+          sourceAnswer: row.a,
+          siteQuestion: "",
+          siteAnswer: "",
+          questionSimilarity: 0,
+        })),
+        siteOnlyItems: [],
+        questionMismatches: [],
         answerMismatches: [],
         duplicateQuestions,
         qaIssues,
@@ -1006,28 +1092,55 @@ export class SiteFaqAuditJob {
     }
 
     const siteQAs = this.getSiteQAsForComparison(match.page);
-    const sourceMap = this.qaMap(sourceRows);
-    const siteMap = this.qaMap(siteQAs);
-    const sourceOnlyQuestions = sourceRows
-      .filter((row) => !siteMap.has(this.norm(row.q)))
-      .map((row) => row.q);
-    const siteOnlyQuestions = siteQAs
-      .filter((row) => !sourceMap.has(this.norm(row.q)))
-      .map((row) => row.q);
+    const qaComparison = this.compareQaCollections(sourceRows, siteQAs);
+    const sourceOnlyItems = qaComparison.sourceOnly.map((item) => ({
+      sourceQuestion: item.source.q,
+      sourceAnswer: item.source.a,
+      siteQuestion: "",
+      siteAnswer: "",
+      questionSimilarity: item.questionSimilarity,
+    }));
+    const siteOnlyItems = qaComparison.targetOnly.map((item) => ({
+      sourceQuestion: "",
+      sourceAnswer: "",
+      siteQuestion: item.target.q,
+      siteAnswer: item.target.a,
+      questionSimilarity: item.questionSimilarity,
+    }));
+    const sourceOnlyQuestions = sourceOnlyItems.map((item) => item.sourceQuestion);
+    const siteOnlyQuestions = siteOnlyItems.map((item) => item.siteQuestion);
+    const questionMismatches: FaqQuestionMismatch[] = [];
     const answerMismatches: FaqAnswerMismatch[] = [];
-    const matchedQuestionKeys = Array.from(sourceMap.keys()).filter((key) => siteMap.has(key));
 
-    for (const key of matchedQuestionKeys) {
-      const source = sourceMap.get(key)?.[0];
-      const site = siteMap.get(key)?.[0];
-      if (!source || !site || !source.a || !site.a) continue;
-      const similarity = this.textSimilarity(source.a, site.a);
-      if (similarity < 0.9) {
+    for (const item of qaComparison.matched) {
+      const questionComparison = this.compareMeaningfulText(item.source.q, item.target.q);
+      if (
+        questionComparison.reasons.length > 0 ||
+        item.questionSimilarity < 0.98
+      ) {
+        questionMismatches.push({
+          sourceQuestion: item.source.q,
+          sourceAnswer: item.source.a,
+          siteQuestion: item.target.q,
+          siteAnswer: item.target.a,
+          questionSimilarity: item.questionSimilarity,
+          similarity: questionComparison.similarity,
+          reasons: questionComparison.reasons,
+        });
+      }
+
+      if (!item.source.a || !item.target.a) continue;
+      const answerComparison = this.compareMeaningfulText(item.source.a, item.target.a);
+      if (answerComparison.similarity < 0.9 || answerComparison.reasons.length > 0) {
         answerMismatches.push({
-          question: source.q,
-          sourceAnswer: source.a,
-          siteAnswer: site.a,
-          similarity,
+          question: item.source.q,
+          sourceQuestion: item.source.q,
+          sourceAnswer: item.source.a,
+          siteQuestion: item.target.q,
+          siteAnswer: item.target.a,
+          questionSimilarity: item.questionSimilarity,
+          similarity: answerComparison.similarity,
+          reasons: answerComparison.reasons,
         });
       }
     }
@@ -1042,9 +1155,12 @@ export class SiteFaqAuditJob {
       matchedBy: match.matchedBy,
       sourceQuestionCount: sourceRows.length,
       siteQuestionCount: siteQAs.length,
-      matchedQuestionCount: matchedQuestionKeys.length,
+      matchedQuestionCount: qaComparison.matched.length,
       sourceOnlyQuestions,
       siteOnlyQuestions,
+      sourceOnlyItems,
+      siteOnlyItems,
+      questionMismatches,
       answerMismatches,
       duplicateQuestions,
       qaIssues,
@@ -1205,16 +1321,6 @@ export class SiteFaqAuditJob {
       .filter(Boolean);
   }
 
-  private qaMap<T extends QA>(qas: T[]): Map<string, T[]> {
-    const out = new Map<string, T[]>();
-    for (const item of qas) {
-      const key = this.norm(item.q);
-      if (!key) continue;
-      out.set(key, [...(out.get(key) || []), item]);
-    }
-    return out;
-  }
-
   private textSimilarity(a: string, b: string): number {
     const aTokens = new Set(this.norm(a).split(" ").filter((token) => token.length > 2));
     const bTokens = new Set(this.norm(b).split(" ").filter((token) => token.length > 2));
@@ -1223,6 +1329,193 @@ export class SiteFaqAuditJob {
     const intersection = Array.from(aTokens).filter((token) => bTokens.has(token)).length;
     const union = new Set([...aTokens, ...bTokens]).size;
     return union ? intersection / union : 0;
+  }
+
+  private compareMeaningfulText(a: string, b: string): { similarity: number; reasons: string[] } {
+    const similarity = this.textSimilarity(a, b);
+    const reasons = [
+      ...this.findExactTextDifferences(a, b),
+      ...this.findFactualSignalDifferences(a, b),
+    ];
+    return { similarity, reasons };
+  }
+
+  private findExactTextDifferences(source: string, site: string): string[] {
+    const sourceText = this.normalizeComparableText(source);
+    const siteText = this.normalizeComparableText(site);
+
+    if (sourceText === siteText) {
+      return [];
+    }
+
+    const reasons: string[] = [];
+    const sourceTokens = this.tokenizeComparableText(sourceText);
+    const siteTokens = this.tokenizeComparableText(siteText);
+    const caseDifferences = this.findCaseOnlyTokenDifferences(sourceTokens, siteTokens);
+
+    if (sourceText.toLowerCase() === siteText.toLowerCase()) {
+      reasons.push("הטקסט זהה מבחינת מילים, אבל שונה באותיות גדולות/קטנות.");
+      if (caseDifferences.length) {
+        reasons.push(`הבדלי אותיות לדוגמה: ${caseDifferences.join(", ")}.`);
+      }
+      return reasons;
+    }
+
+    const missingTokens = this.diffTokenMultiset(sourceTokens, siteTokens);
+    const extraTokens = this.diffTokenMultiset(siteTokens, sourceTokens);
+
+    if (missingTokens.length) {
+      reasons.push(`מילים/ערכים חסרים באתר: ${this.formatTokenExamples(missingTokens)}.`);
+    }
+
+    if (extraTokens.length) {
+      reasons.push(`מילים/ערכים שמופיעים באתר ולא במקור: ${this.formatTokenExamples(extraTokens)}.`);
+    }
+
+    if (caseDifferences.length) {
+      reasons.push(`הבדלי אותיות לדוגמה: ${caseDifferences.join(", ")}.`);
+    }
+
+    if (!reasons.length) {
+      reasons.push("הנוסח באתר אינו זהה לנוסח המקור לאחר ניקוי HTML ורווחים.");
+    }
+
+    return reasons;
+  }
+
+  private normalizeComparableText(value: string): string {
+    return this.cleanText(value)
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private tokenizeComparableText(value: string): string[] {
+    return this.normalizeComparableText(value).match(/[\p{L}\p{N}]+(?:[:.'’-][\p{L}\p{N}]+)*/gu) || [];
+  }
+
+  private diffTokenMultiset(sourceTokens: string[], siteTokens: string[]): string[] {
+    const available = new Map<string, number>();
+    for (const token of siteTokens) {
+      const key = this.tokenCompareKey(token);
+      available.set(key, (available.get(key) || 0) + 1);
+    }
+
+    const out: string[] = [];
+    for (const token of sourceTokens) {
+      const key = this.tokenCompareKey(token);
+      const count = available.get(key) || 0;
+
+      if (count) {
+        available.set(key, count - 1);
+        continue;
+      }
+
+      out.push(token);
+    }
+
+    return out;
+  }
+
+  private findCaseOnlyTokenDifferences(sourceTokens: string[], siteTokens: string[]): string[] {
+    const siteVariantsByKey = new Map<string, string[]>();
+    for (const token of siteTokens) {
+      const key = this.tokenCompareKey(token);
+      siteVariantsByKey.set(key, [...(siteVariantsByKey.get(key) || []), token]);
+    }
+
+    const differences: string[] = [];
+    for (const token of sourceTokens) {
+      const variants = siteVariantsByKey.get(this.tokenCompareKey(token)) || [];
+      const differentCase = variants.find((variant) => variant !== token && variant.toLowerCase() === token.toLowerCase());
+
+      if (differentCase) {
+        differences.push(`מקור "${token}" מול אתר "${differentCase}"`);
+      }
+    }
+
+    return this.uniqueStrings(differences).slice(0, 8);
+  }
+
+  private tokenCompareKey(value: string): string {
+    return value.toLowerCase();
+  }
+
+  private formatTokenExamples(tokens: string[]): string {
+    const unique = this.uniqueStrings(tokens);
+    const shown = unique.slice(0, 12).map((token) => `"${token}"`).join(", ");
+    return unique.length > 12 ? `${shown} ועוד ${unique.length - 12}` : shown;
+  }
+
+  private findFactualSignalDifferences(a: string, b: string): string[] {
+    const reasons: string[] = [];
+    const sourceTimes = this.extractTimeSignals(a);
+    const siteTimes = this.extractTimeSignals(b);
+
+    if (!this.sameStringSet(sourceTimes, siteTimes)) {
+      reasons.push(`שעות/פורמט זמן לא תואמים: מקור ${this.formatSignalList(sourceTimes)} | אתר ${this.formatSignalList(siteTimes)}`);
+    }
+
+    const sourceNumbers = this.extractNumberSignals(a);
+    const siteNumbers = this.extractNumberSignals(b);
+
+    if (!this.sameStringSet(sourceNumbers, siteNumbers)) {
+      reasons.push(`מספרים לא תואמים: מקור ${this.formatSignalList(sourceNumbers)} | אתר ${this.formatSignalList(siteNumbers)}`);
+    }
+
+    return reasons;
+  }
+
+  private extractTimeSignals(value: string): string[] {
+    const cleaned = this.cleanText(value).toLowerCase();
+    const matches = cleaned.match(
+      /\b(?:[01]?\d|2[0-3])(?:\s*:\s*[0-5]\d|\s*:)?\s*(?:a\.?m\.?|p\.?m\.?)\b|\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b/g
+    ) || [];
+
+    return this.uniqueStrings(matches.map((match) => match.replace(/\s+/g, " ").replace(/\s*:\s*/g, ":").trim()));
+  }
+
+  private extractNumberSignals(value: string): string[] {
+    const withoutTimes = this.cleanText(value)
+      .toLowerCase()
+      .replace(
+        /\b(?:[01]?\d|2[0-3])(?:\s*:\s*[0-5]\d|\s*:)?\s*(?:a\.?m\.?|p\.?m\.?)\b|\b(?:[01]?\d|2[0-3])[:.][0-5]\d\b/g,
+        " "
+      );
+    const matches = withoutTimes.match(/\b\d+(?:[.,]\d+)?(?:\s?%|st|nd|rd|th)?\b/g) || [];
+
+    return this.uniqueStrings(matches.map((match) => match.replace(",", ".").replace(/\s+/g, "").trim()));
+  }
+
+  private uniqueStrings(values: string[]): string[] {
+    return Array.from(new Set(values.filter(Boolean))).sort();
+  }
+
+  private sameStringSet(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((value, index) => value === b[index]);
+  }
+
+  private formatSignalList(values: string[]): string {
+    return values.length ? values.join(", ") : "אין";
+  }
+
+  private questionSimilarity(a: string, b: string): number {
+    const aNorm = this.norm(a);
+    const bNorm = this.norm(b);
+    if (!aNorm && !bNorm) return 1;
+    if (!aNorm || !bNorm) return 0;
+    if (aNorm === bNorm) return 1;
+
+    const aCompact = aNorm.replace(/\s+/g, "");
+    const bCompact = bNorm.replace(/\s+/g, "");
+    if (aCompact === bCompact) return 1;
+
+    const lengthRatio = Math.min(aCompact.length, bCompact.length) / Math.max(aCompact.length, bCompact.length);
+    const containmentScore = (aCompact.includes(bCompact) || bCompact.includes(aCompact)) && lengthRatio > 0.8
+      ? lengthRatio
+      : 0;
+
+    return Math.max(this.textSimilarity(a, b), containmentScore);
   }
 
   private normalizeHeader(value: string): string {
@@ -1337,6 +1630,7 @@ export class SiteFaqAuditJob {
         ["Matched source files to FAQ pages", String(result.sourceComparison.matchedPages)],
         ["Questions missing on site", String(result.sourceComparison.missingOnSite)],
         ["Extra questions on site", String(result.sourceComparison.extraOnSite)],
+        ["Question wording mismatches", String(result.sourceComparison.questionMismatches)],
         ["Answer mismatches", String(result.sourceComparison.answerMismatches)],
         ["QA light-check issues", String(result.sourceComparison.qaIssueCount)],
         ["Source tabs", "Use Source Compare for file-level matching, QA Checks for obvious text problems, and Source Questions for the raw source rows."]
@@ -1453,178 +1747,178 @@ export class SiteFaqAuditJob {
       "קובץ מקור",
       "URL",
       "כותרת",
-      "שאלה",
+      "שאלת מקור",
       "תשובת מקור",
+      "שאלה באתר / סכמה",
       "תשובת אתר / סכמה",
       "מה הבעיה",
       "מה לעשות",
       "הערות",
     ]];
 
+    const pushRow = (item: {
+      area: string;
+      issueType: string;
+      priority: string;
+      status: string;
+      sourceFile?: string;
+      url?: string;
+      title?: string;
+      sourceQuestion?: string;
+      sourceAnswer?: string;
+      siteQuestion?: string;
+      siteAnswer?: string;
+      problem: string;
+      action: string;
+      notes?: string;
+    }) => {
+      rows.push([
+        item.area,
+        item.issueType,
+        item.priority,
+        item.status,
+        item.sourceFile || "",
+        item.url || "",
+        item.title || "",
+        item.sourceQuestion || "",
+        item.sourceAnswer || "",
+        item.siteQuestion || "",
+        item.siteAnswer || "",
+        item.problem,
+        item.action,
+        item.notes || "",
+      ]);
+    };
+
     for (const page of result.pages) {
       if (page.auditStatus === "fetch-failed") {
-        rows.push([
-          "פער עמוד/סכמה",
-          "כשל טעינת עמוד",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          "",
-          "",
-          "",
-          "העמוד לא נטען ולכן לא ניתן לבדוק את ה-FAQ או את הסכמה.",
-          "לבדוק שהעמוד זמין, שאין חסימה, ולהריץ בדיקה חוזרת.",
-          page.notes.join(" | "),
-        ]);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "כשל טעינת עמוד",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: "העמוד לא נטען ולכן לא ניתן לבדוק את ה-FAQ או את הסכמה.",
+          action: "לבדוק שהעמוד זמין, שאין חסימה, ולהריץ בדיקה חוזרת.",
+          notes: page.notes.join(" | "),
+        });
         continue;
       }
 
       if (page.auditStatus === "missing-schema") {
-        rows.push([
-          "פער עמוד/סכמה",
-          "FAQ גלוי ללא FAQPage schema",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          "",
-          "",
-          "",
-          `נמצאו ${page.visibleQaCount} שאלות גלויות, אבל לא נמצאה FAQPage schema.`,
-          "להוסיף FAQPage JSON-LD שמכיל את אותן שאלות ותשובות שמופיעות בעמוד.",
-          page.notes.join(" | "),
-        ]);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "FAQ גלוי ללא FAQPage schema",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: `נמצאו ${page.visibleQaCount} שאלות גלויות, אבל לא נמצאה FAQPage schema.`,
+          action: "להוסיף FAQPage JSON-LD שמכיל את אותן שאלות ותשובות שמופיעות בעמוד.",
+          notes: page.notes.join(" | "),
+        });
       }
 
       if (page.auditStatus === "missing-visible-faq") {
-        rows.push([
-          "פער עמוד/סכמה",
-          "FAQPage schema ללא FAQ גלוי",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          "",
-          "",
-          "",
-          `נמצאו ${page.schemaQaCount} שאלות בסכמה, אבל לא נמצאה תצוגת FAQ גלויה בעמוד.`,
-          "להציג את אותן שאלות בעמוד או להסיר אותן מהסכמה אם הן לא אמורות להיות גלויות.",
-          page.notes.join(" | "),
-        ]);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "FAQPage schema ללא FAQ גלוי",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: `נמצאו ${page.schemaQaCount} שאלות בסכמה, אבל לא נמצאה תצוגת FAQ גלויה בעמוד.`,
+          action: "להציג את אותן שאלות בעמוד או להסיר אותן מהסכמה אם הן לא אמורות להיות גלויות.",
+          notes: page.notes.join(" | "),
+        });
       }
 
       if (page.auditStatus === "no-faq") {
-        rows.push([
-          "פער עמוד/סכמה",
-          "לא נמצא FAQ",
-          "בינונית",
-          "לבדיקה",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          "",
-          "",
-          "",
-          "לא זוהו שאלות FAQ גלויות ולא זוהתה FAQPage schema.",
-          "לוודא אם העמוד אכן אמור לכלול FAQ. אם כן, להוסיף FAQ גלוי וסכמה.",
-          page.notes.join(" | "),
-        ]);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "לא נמצא FAQ",
+          priority: "בינונית",
+          status: "לבדיקה",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: "לא זוהו שאלות FAQ גלויות ולא זוהתה FAQPage schema.",
+          action: "לוודא אם העמוד אכן אמור לכלול FAQ. אם כן, להוסיף FAQ גלוי וסכמה.",
+          notes: page.notes.join(" | "),
+        });
       }
 
       for (const question of page.visibleOnlyQuestions) {
-        const visible = page.visibleQAs.find((item) => this.norm(item.q) === this.norm(question));
-        rows.push([
-          "פער עמוד/סכמה",
-          "שאלה גלויה חסרה בסכמה",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          question,
-          "",
-          visible?.a || "",
-          "השאלה מופיעה בעמוד, אבל לא קיימת ב-FAQPage schema.",
-          "להוסיף את השאלה והתשובה ל-FAQPage JSON-LD או להסיר אותה מהעמוד אם אינה אמורה להתפרסם.",
-          "",
-        ]);
+        const visible = page.visibleQAs.find((item) => this.questionSimilarity(item.q, question) >= 0.99);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "שאלה גלויה חסרה בסכמה",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          siteQuestion: question,
+          siteAnswer: visible?.a || "",
+          problem: "השאלה מופיעה בעמוד, אבל לא קיימת ב-FAQPage schema.",
+          action: "להוסיף את השאלה והתשובה ל-FAQPage JSON-LD או להסיר אותה מהעמוד אם אינה אמורה להתפרסם.",
+        });
       }
 
       for (const question of page.schemaOnlyQuestions) {
-        const schema = page.schemaQAs.find((item) => this.norm(item.q) === this.norm(question));
-        rows.push([
-          "פער עמוד/סכמה",
-          "שאלה בסכמה חסרה בעמוד",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          question,
-          "",
-          schema?.a || "",
-          "השאלה קיימת ב-FAQPage schema, אבל לא נמצאה כ-FAQ גלוי בעמוד.",
-          "להציג את אותה שאלה ותשובה בעמוד או להסיר אותה מהסכמה.",
-          "",
-        ]);
+        const schema = page.schemaQAs.find((item) => this.questionSimilarity(item.q, question) >= 0.99);
+        pushRow({
+          area: "פער עמוד/סכמה",
+          issueType: "שאלה בסכמה חסרה בעמוד",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          siteQuestion: question,
+          siteAnswer: schema?.a || "",
+          problem: "השאלה קיימת ב-FAQPage schema, אבל לא נמצאה כ-FAQ גלוי בעמוד.",
+          action: "להציג את אותה שאלה ותשובה בעמוד או להסיר אותה מהסכמה.",
+        });
       }
 
       for (const question of page.emptyVisibleAnswers) {
-        rows.push([
-          "בדיקת QA קלה",
-          "תשובה גלויה קצרה או חסרה",
-          "בינונית",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          question,
-          "",
-          "",
-          "השאלה הגלויה כוללת תשובה חסרה או קצרה מדי.",
-          "להשלים תשובה מלאה לפני פרסום או הטמעה בסכמה.",
-          "",
-        ]);
+        pushRow({
+          area: "בדיקת QA קלה",
+          issueType: "תשובה גלויה קצרה או חסרה",
+          priority: "בינונית",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          siteQuestion: question,
+          problem: "השאלה הגלויה כוללת תשובה חסרה או קצרה מדי.",
+          action: "להשלים תשובה מלאה לפני פרסום או הטמעה בסכמה.",
+        });
       }
 
       for (const question of page.emptySchemaAnswers) {
-        rows.push([
-          "בדיקת QA קלה",
-          "תשובת סכמה קצרה או חסרה",
-          "בינונית",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          question,
-          "",
-          "",
-          "השאלה בסכמה כוללת תשובה חסרה או קצרה מדי.",
-          "להשלים את acceptedAnswer.text או להסיר את השאלה מהסכמה.",
-          "",
-        ]);
+        pushRow({
+          area: "בדיקת QA קלה",
+          issueType: "תשובת סכמה קצרה או חסרה",
+          priority: "בינונית",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          siteQuestion: question,
+          problem: "השאלה בסכמה כוללת תשובה חסרה או קצרה מדי.",
+          action: "להשלים את acceptedAnswer.text או להסיר את השאלה מהסכמה.",
+        });
       }
 
       if (page.invalidJsonLdCount) {
-        rows.push([
-          "בדיקת QA קלה",
-          "JSON-LD לא תקין",
-          "גבוהה",
-          "לטיפול",
-          "",
-          page.url,
-          page.title || page.h1 || "",
-          "",
-          "",
-          "",
-          `${page.invalidJsonLdCount} בלוקים של JSON-LD לא נקראו בגלל שגיאת סינטקס.`,
-          "להריץ ולידציה ל-JSON-LD ולתקן פסיקים, סוגריים, גרשיים או escaping.",
-          "",
-        ]);
+        pushRow({
+          area: "בדיקת QA קלה",
+          issueType: "JSON-LD לא תקין",
+          priority: "גבוהה",
+          status: "לטיפול",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: `${page.invalidJsonLdCount} בלוקים של JSON-LD לא נקראו בגלל שגיאת סינטקס.`,
+          action: "להריץ ולידציה ל-JSON-LD ולתקן פסיקים, סוגריים, גרשיים או escaping.",
+        });
       }
     }
 
@@ -1632,169 +1926,174 @@ export class SiteFaqAuditJob {
     if (comparison?.enabled) {
       for (const file of comparison.files) {
         if (file.status === "read-failed") {
-          rows.push([
-            "פער מקור/הטמעה",
-            "כשל קריאת קובץ מקור",
-            "גבוהה",
-            "לטיפול",
-            file.sourceFile,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "לא ניתן היה לקרוא את קובץ המקור ולכן לא בוצעה השוואה.",
-            "לבדוק הרשאות, טאב מקור, ושקובץ Google Sheet תקין.",
-            file.notes.join(" | "),
-          ]);
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "כשל קריאת קובץ מקור",
+            priority: "גבוהה",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            problem: "לא ניתן היה לקרוא את קובץ המקור ולכן לא בוצעה השוואה.",
+            action: "לבדוק הרשאות, טאב מקור, ושקובץ Google Sheet תקין.",
+            notes: file.notes.join(" | "),
+          });
         }
 
         if (file.status === "no-page-match") {
-          rows.push([
-            "פער מקור/הטמעה",
-            "לא נמצא עמוד FAQ מתאים לקובץ מקור",
-            "גבוהה",
-            "לטיפול",
-            file.sourceFile,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "קובץ המקור נקרא, אבל לא נמצא לו עמוד FAQ מתאים באתר.",
-            "לבדוק שהעמוד קיים, שה-URL נסרק, וששם הקובץ תואם לשם הנכס.",
-            file.notes.join(" | "),
-          ]);
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא נמצא עמוד FAQ מתאים לקובץ מקור",
+            priority: "גבוהה",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            problem: "קובץ המקור נקרא, אבל לא נמצא לו עמוד FAQ מתאים באתר.",
+            action: "לבדוק שהעמוד קיים, שה-URL נסרק, וששם הקובץ תואם לשם הנכס.",
+            notes: file.notes.join(" | "),
+          });
         }
 
         if (file.status === "no-questions") {
-          rows.push([
-            "פער מקור/הטמעה",
-            "לא נמצאו שאלות בקובץ מקור",
-            "בינונית",
-            "לבדיקה",
-            file.sourceFile,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "קובץ המקור נקרא אבל לא זוהו בו שאלות FAQ.",
-            "לבדוק את שורת הכותרות, שם הטאב, ועמודות Question/Answer.",
-            file.notes.join(" | "),
-          ]);
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא נמצאו שאלות בקובץ מקור",
+            priority: "בינונית",
+            status: "לבדיקה",
+            sourceFile: file.sourceFile,
+            problem: "קובץ המקור נקרא אבל לא זוהו בו שאלות FAQ.",
+            action: "לבדוק את שורת הכותרות, שם הטאב, ועמודות Question/Answer.",
+            notes: file.notes.join(" | "),
+          });
         }
 
-        for (const question of file.sourceOnlyQuestions) {
-          rows.push([
-            "פער מקור/הטמעה",
-            "שאלה מהמקור חסרה באתר",
-            "גבוהה",
-            "לטיפול",
-            file.sourceFile,
-            file.matchedPageUrl,
-            file.matchedPageTitle,
-            question,
-            "",
-            "",
-            "השאלה קיימת בקובץ המקור אבל לא נמצאה בעמוד ה-FAQ שהוטמע באתר.",
-            "להוסיף את השאלה והתשובה לעמוד ולסכמה, או לאשר שהיא הוסרה בכוונה.",
-            `Tab: ${file.tabName}`,
-          ]);
+        for (const item of file.sourceOnlyItems) {
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא תואם: שאלה מהמקור חסרה באתר",
+            priority: "גבוהה",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            url: file.matchedPageUrl,
+            title: file.matchedPageTitle,
+            sourceQuestion: item.sourceQuestion,
+            sourceAnswer: item.sourceAnswer,
+            problem: "השאלה קיימת בקובץ המקור אבל לא נמצאה בעמוד ה-FAQ שהוטמע באתר.",
+            action: "להוסיף באתר את שאלת המקור והתשובה המקורית, או לאשר שהשאלה הוסרה בכוונה.",
+            notes: `Tab: ${file.tabName}`,
+          });
         }
 
-        for (const question of file.siteOnlyQuestions) {
-          rows.push([
-            "פער מקור/הטמעה",
-            "שאלה באתר לא קיימת במקור",
-            "בינונית",
-            "לבדיקה",
-            file.sourceFile,
-            file.matchedPageUrl,
-            file.matchedPageTitle,
-            question,
-            "",
-            "",
-            "השאלה נמצאה באתר אבל לא נמצאה בקובץ המקור.",
-            "לבדוק אם זו תוספת מאושרת. אם לא, להסיר או להחליף לפי קובץ המקור.",
-            `Tab: ${file.tabName}`,
-          ]);
+        for (const item of file.siteOnlyItems) {
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא תואם: שאלה באתר לא קיימת במקור",
+            priority: "בינונית",
+            status: "לבדיקה",
+            sourceFile: file.sourceFile,
+            url: file.matchedPageUrl,
+            title: file.matchedPageTitle,
+            siteQuestion: item.siteQuestion,
+            siteAnswer: item.siteAnswer,
+            problem: "השאלה נמצאה באתר אבל לא נמצאה בקובץ המקור.",
+            action: "לבדוק אם זו תוספת מאושרת. אם לא, להסיר או להחליף לפי קובץ המקור.",
+            notes: `Tab: ${file.tabName}`,
+          });
+        }
+
+        for (const mismatch of file.questionMismatches) {
+          const reasonNote = mismatch.reasons.length
+            ? ` סימנים שנבדקו: ${mismatch.reasons.join(" | ")}.`
+            : "";
+
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא תואם: נוסח שאלה שונה מהמקור",
+            priority: "גבוהה",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            url: file.matchedPageUrl,
+            title: file.matchedPageTitle,
+            sourceQuestion: mismatch.sourceQuestion,
+            sourceAnswer: mismatch.sourceAnswer,
+            siteQuestion: mismatch.siteQuestion,
+            siteAnswer: mismatch.siteAnswer,
+            problem: `השאלה זוהתה כמקבילה, אבל הנוסח באתר לא תואם לקובץ המקור.${reasonNote} דמיון שאלה משוער: ${Math.round(mismatch.similarity * 100)}%.`,
+            action: "לעדכן באתר את נוסח השאלה לפי קובץ המקור, כולל מספרים, שעות וסימני פיסוק משמעותיים.",
+            notes: `Tab: ${file.tabName}`,
+          });
         }
 
         for (const mismatch of file.answerMismatches) {
-          rows.push([
-            "פער מקור/הטמעה",
-            "תשובה שונה מהמקור",
-            "גבוהה",
-            "לטיפול",
-            file.sourceFile,
-            file.matchedPageUrl,
-            file.matchedPageTitle,
-            mismatch.question,
-            mismatch.sourceAnswer,
-            mismatch.siteAnswer,
-            `השאלה קיימת גם במקור וגם באתר, אבל התשובה שונה. דמיון משוער: ${Math.round(mismatch.similarity * 100)}%.`,
-            "להשוות ידנית ולאשר אם התשובה באתר נכונה. אם לא, להחזיר לנוסח המקור.",
-            `Tab: ${file.tabName}`,
-          ]);
+          const questionNote = mismatch.questionSimilarity < 1
+            ? ` נוסח השאלה זוהה כמקביל אך לא זהה (${Math.round(mismatch.questionSimilarity * 100)}%).`
+            : "";
+          const reasonNote = mismatch.reasons.length
+            ? ` סימנים שנבדקו: ${mismatch.reasons.join(" | ")}.`
+            : "";
+
+          pushRow({
+            area: "פער מקור/הטמעה",
+            issueType: "לא תואם: תשובה שונה מהמקור",
+            priority: "גבוהה",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            url: file.matchedPageUrl,
+            title: file.matchedPageTitle,
+            sourceQuestion: mismatch.sourceQuestion,
+            sourceAnswer: mismatch.sourceAnswer,
+            siteQuestion: mismatch.siteQuestion,
+            siteAnswer: mismatch.siteAnswer,
+            problem: `השאלה קיימת גם במקור וגם באתר, אבל התשובה שונה.${questionNote}${reasonNote} דמיון תשובה משוער: ${Math.round(mismatch.similarity * 100)}%.`,
+            action: "להשוות לפי ארבעת השדות: שאלת מקור, תשובת מקור, שאלת אתר ותשובת אתר. אם האתר לא תואם לקובץ המקור, לעדכן באתר לפי המקור.",
+            notes: `Tab: ${file.tabName}`,
+          });
         }
 
         for (const question of file.duplicateQuestions) {
-          rows.push([
-            "בדיקת QA קלה",
-            "שאלה כפולה בקובץ מקור",
-            "בינונית",
-            "לטיפול",
-            file.sourceFile,
-            file.matchedPageUrl,
-            file.matchedPageTitle,
-            question,
-            "",
-            "",
-            "אותה שאלה מופיעה יותר מפעם אחת בקובץ המקור.",
-            "להשאיר נוסח אחד או לוודא שהכפילות מכוונת ומנוסחת אחרת.",
-            `Tab: ${file.tabName}`,
-          ]);
+          pushRow({
+            area: "בדיקת QA קלה",
+            issueType: "שאלה כפולה בקובץ מקור",
+            priority: "בינונית",
+            status: "לטיפול",
+            sourceFile: file.sourceFile,
+            url: file.matchedPageUrl,
+            title: file.matchedPageTitle,
+            sourceQuestion: question,
+            problem: "אותה שאלה מופיעה יותר מפעם אחת בקובץ המקור.",
+            action: "להשאיר נוסח אחד או לוודא שהכפילות מכוונת ומנוסחת אחרת.",
+            notes: `Tab: ${file.tabName}`,
+          });
         }
       }
 
       for (const issue of comparison.issues) {
         if (issue.scope === "source" && issue.type === "duplicate-question") continue;
 
-        rows.push([
-          "בדיקת QA קלה",
-          this.issueTypeLabel(issue.type),
-          issue.type === "invalid-json-ld" ? "גבוהה" : "נמוכה",
-          "לבדיקה",
-          issue.sourceFile || "",
-          issue.url || "",
-          "",
-          issue.question || "",
-          issue.scope === "source" ? issue.answerPreview || "" : "",
-          issue.scope === "site" ? issue.answerPreview || "" : "",
-          issue.detail,
-          issue.recommendedAction,
-          issue.rowNumber ? `Row ${issue.rowNumber}` : "",
-        ]);
+        pushRow({
+          area: "בדיקת QA קלה",
+          issueType: this.issueTypeLabel(issue.type),
+          priority: issue.type === "invalid-json-ld" ? "גבוהה" : "נמוכה",
+          status: "לבדיקה",
+          sourceFile: issue.sourceFile || "",
+          url: issue.url || "",
+          sourceQuestion: issue.scope === "source" ? issue.question || "" : "",
+          sourceAnswer: issue.scope === "source" ? issue.answerPreview || "" : "",
+          siteQuestion: issue.scope === "site" ? issue.question || "" : "",
+          siteAnswer: issue.scope === "site" ? issue.answerPreview || "" : "",
+          problem: issue.detail,
+          action: issue.recommendedAction,
+          notes: issue.rowNumber ? `Row ${issue.rowNumber}` : "",
+        });
       }
     }
 
     if (rows.length === 1) {
-      rows.push([
-        "אין בעיות",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "לא נמצאו בעיות שמיועדות לטיפול.",
-        "אין פעולה נדרשת.",
-        "",
-      ]);
+      pushRow({
+        area: "אין בעיות",
+        issueType: "",
+        priority: "",
+        status: "",
+        problem: "לא נמצאו בעיות שמיועדות לטיפול.",
+        action: "אין פעולה נדרשת.",
+      });
     }
 
     return rows;
@@ -1832,17 +2131,19 @@ export class SiteFaqAuditJob {
       "Matched questions",
       "Missing on site",
       "Extra on site",
+      "Question mismatches",
       "Answer mismatches",
       "Duplicate source questions",
       "Light QA issues",
       "Missing on site - examples",
       "Extra on site - examples",
+      "Question mismatch - examples",
       "Answer mismatch - examples",
       "Notes",
     ]];
 
     if (!comparison?.files.length) {
-      rows.push(["No source files", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "No source files were provided or found."]);
+      rows.push(["No source files", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "No source files were provided or found."]);
       return rows;
     }
 
@@ -1860,12 +2161,21 @@ export class SiteFaqAuditJob {
         String(file.matchedQuestionCount),
         String(file.sourceOnlyQuestions.length),
         String(file.siteOnlyQuestions.length),
+        String(file.questionMismatches.length),
         String(file.answerMismatches.length),
         String(file.duplicateQuestions.length),
         String(file.qaIssues.length),
         file.sourceOnlyQuestions.slice(0, 12).join(" | "),
         file.siteOnlyQuestions.slice(0, 12).join(" | "),
-        file.answerMismatches.slice(0, 8).map((item) => `${item.question} (similarity ${Math.round(item.similarity * 100)}%)`).join(" | "),
+        file.questionMismatches.slice(0, 8).map((item) => {
+          return `${item.sourceQuestion} -> ${item.siteQuestion} (question similarity ${Math.round(item.similarity * 100)}%)`;
+        }).join(" | "),
+        file.answerMismatches.slice(0, 8).map((item) => {
+          const questionPart = item.sourceQuestion === item.siteQuestion
+            ? item.sourceQuestion
+            : `${item.sourceQuestion} -> ${item.siteQuestion}`;
+          return `${questionPart} (answer similarity ${Math.round(item.similarity * 100)}%)`;
+        }).join(" | "),
         file.notes.join(" | "),
       ]);
     }
@@ -1992,10 +2302,20 @@ export class SiteFaqAuditJob {
   }
 
   private cleanText(value: string): string {
-    const decoded = cheerio.load(`<span>${String(value || "")}</span>`)("span").text();
+    let decoded = String(value || "")
+      .replace(/[\u200B-\u200D\uFEFF\u200E\u200F]/g, "")
+      .replace(/\u00A0/g, " ");
+
+    for (let pass = 0; pass < 3; pass++) {
+      const next = cheerio.load(`<span>${decoded}</span>`)("span").text();
+      if (next === decoded) break;
+      decoded = next;
+    }
+
     return decoded
       .replace(/[“”„‟]/g, "\"")
       .replace(/[‘’‚‛`´]/g, "'")
+      .replace(/[‐‑‒–—―]/g, "-")
       .replace(/\s+/g, " ")
       .trim();
   }
@@ -2004,6 +2324,16 @@ export class SiteFaqAuditJob {
     return this.cleanText(value)
       .toLowerCase()
       .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\bwi[\s-]?fi\b/g, "wifi")
+      .replace(/\btravellers\b/g, "travelers")
+      .replace(/\btraveller\b/g, "traveler")
+      .replace(/\btravelling\b/g, "traveling")
+      .replace(/\btravelled\b/g, "traveled")
+      .replace(/\bcentres\b/g, "centers")
+      .replace(/\bcentre\b/g, "center")
+      .replace(/\bmetres\b/g, "meters")
+      .replace(/\bmetre\b/g, "meter")
       .replace(/[\p{P}\p{S}]+/gu, " ")
       .replace(/\s+/g, " ")
       .trim();

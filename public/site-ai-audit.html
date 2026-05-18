@@ -1,66 +1,75 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Site Audit Crawler</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="/socket.io/socket.io.js"></script>
 
   <style>
     :root {
-      --bg: #fbf8fc;
+      --bg: #fdfcf9;
       --surface: #ffffff;
-      --surface-soft: #fffafd;
-      --border: #eadfec;
-      --text: #111827;
-      --text-dim: #475569;
-      --text-muted: #64748b;
-      --accent: #7e5aae;
-      --accent-soft: #f6f0fb;
-      --accent-border: #dfcdea;
-      --blue: #54bbb9;
-      --blue-soft: #effafa;
-      --violet: #71509d;
-      --violet-soft: #f5f0fb;
-      --pink: #df82ad;
-      --pink-soft: #fdf1f6;
-      --red: #c96b6f;
-      --red-soft: #fff3f2;
-      --amber: #df986a;
-      --amber-soft: #fff6ee;
-      --green: #5da58d;
-      --green-soft: #f0faf6;
-      --yellow: #ead45f;
-      --radius: 14px;
-      --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --surface-warm: #fbf8f2;
+      --surface-soft: #fffdf9;
+      --border: #ebe3d6;
+      --border-strong: #d8ccb8;
+      --ink: #1a1410;
+      --text: #3a342e;
+      --text-dim: #6b6557;
+      --text-muted: #948c7e;
+      --accent: #17110d;
+      --accent-soft: #f1ece4;
+      --accent-border: #d8ccb8;
+      --blue: #4a7fc7;
+      --blue-soft: #e7eef9;
+      --violet: #4a7fc7;
+      --violet-soft: #e7eef9;
+      --pink: #d97a3c;
+      --pink-soft: #f8eadc;
+      --red: #b94d4d;
+      --red-soft: #f8e7e3;
+      --amber: #d97a3c;
+      --amber-soft: #f8eadc;
+      --green: #6f9355;
+      --green-soft: #eaf1df;
+      --yellow: #d9b84a;
+      --radius: 18px;
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     * { box-sizing: border-box; }
 
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     button, input, select { font: inherit; }
 
     .topbar {
-      min-height: 72px;
-      padding: 18px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      min-height: 64px;
+      padding: 14px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
       border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(14px);
+      background: rgba(251, 250, 247, 0.92);
+      backdrop-filter: blur(20px);
     }
 
     .brand {
@@ -71,47 +80,63 @@
     }
 
     .brand-logo-wrap {
-      width: 182px;
-      max-width: min(42vw, 190px);
-      min-height: 42px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      padding: 4px 8px;
-      border-radius: 14px;
-      background: #fff;
-      border: 1px solid rgba(111, 74, 168, 0.18);
-      box-shadow: 0 12px 26px rgba(75, 44, 130, 0.08);
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
     }
 
     .brand-logo {
-      width: 100%;
-      height: auto;
+      width: auto;
+      height: 36px;
       display: block;
+      object-fit: contain;
+    }
+
+    .brand-logo-wrap:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 4px;
+    }
+
+    .brand-copy {
+      min-width: 0;
+      padding-inline-start: 14px;
+      border-inline-start: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      margin: 0 0 2px;
+      color: var(--blue);
+      font: 600 0.66rem/1.2 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     h1, h2, h3, p { margin: 0; }
 
     .brand h1 {
-      font-size: 1.08rem;
-      font-weight: 900;
-      letter-spacing: -0.03em;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.15;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
     .brand p {
       margin-top: 3px;
-      color: var(--text-muted);
+      color: var(--text-dim);
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 500;
     }
 
     .badge {
       padding: 7px 12px;
       border-radius: 999px;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid var(--accent-border);
-      font-size: 0.68rem;
-      font-weight: 900;
+      color: var(--text-dim);
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      font: 600 0.68rem/1 var(--mono);
       letter-spacing: 0.08em;
       text-transform: uppercase;
       white-space: nowrap;
@@ -119,9 +144,11 @@
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 310px;
-      gap: 18px;
-      padding: 18px;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 22px;
+      width: min(1480px, calc(100% - 56px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
       align-items: start;
     }
 
@@ -130,29 +157,29 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      box-shadow: 0 14px 34px rgba(84, 55, 112, 0.07);
     }
 
     .panel-head,
     .sidebar-head {
       padding: 18px;
       border-bottom: 1px solid var(--border);
-      background: var(--surface-soft);
+      background: var(--surface);
       border-radius: var(--radius) var(--radius) 0 0;
     }
 
     .panel-head h2,
     .sidebar-head h2 {
       font-size: 1.08rem;
-      font-weight: 900;
-      letter-spacing: -0.03em;
+      font-weight: 800;
+      letter-spacing: 0;
+      color: var(--ink);
     }
 
     .panel-head p,
     .sidebar-head p {
       margin-top: 6px;
       color: var(--text-dim);
-      font-size: 0.86rem;
+      font-size: 0.82rem;
       line-height: 1.55;
     }
 
@@ -171,7 +198,7 @@
       padding: 14px;
       border: 1px solid rgba(126, 90, 174, 0.18);
       border-radius: 16px;
-      background: var(--accent-soft);
+      background: var(--surface-warm);
     }
 
     .setup-intro strong {
@@ -192,7 +219,7 @@
       border-radius: 999px;
       border: 1px solid var(--accent-border);
       background: #fff;
-      color: var(--accent);
+      color: var(--text-dim);
       font-size: 0.72rem;
       font-weight: 900;
       white-space: nowrap;
@@ -206,9 +233,8 @@
     .field label,
     .section-label {
       color: var(--text-muted);
-      font-size: 0.7rem;
-      font-weight: 900;
-      letter-spacing: 0.07em;
+      font: 600 0.66rem/1.2 var(--mono);
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
@@ -227,14 +253,16 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       background: #fff;
-      color: var(--text);
+      color: var(--ink);
+      font-size: 0.9rem;
+      font-weight: 600;
       outline: none;
     }
 
     input:focus,
     select:focus {
       border-color: var(--accent);
-      box-shadow: 0 0 0 4px var(--accent-soft);
+      box-shadow: 0 0 0 3px var(--blue-soft);
     }
 
     .grid-2 {
@@ -258,8 +286,8 @@
       min-height: 44px;
       padding: 9px 12px;
       border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
+      border-radius: 999px;
+      background: var(--surface-soft);
       color: var(--text-dim);
       font-size: 0.78rem;
       font-weight: 900;
@@ -291,13 +319,13 @@
       color: var(--text);
       border-color: var(--accent-border);
       background: #fff;
-      box-shadow: 0 8px 18px rgba(126, 90, 174, 0.08);
+      box-shadow: none;
     }
 
     .check:has(input:checked)::after {
       content: "✓";
-      background: var(--accent);
-      border-color: var(--accent);
+      background: var(--green);
+      border-color: var(--green);
       color: #fff;
       font-size: 0.82rem;
       font-weight: 1000;
@@ -320,7 +348,7 @@
     .render-card {
       position: relative;
       min-height: 112px;
-      padding: 14px;
+      padding: 18px 14px 14px;
       display: grid;
       gap: 8px;
       align-content: start;
@@ -329,7 +357,7 @@
       background: var(--surface-soft);
       color: var(--text-dim);
       cursor: pointer;
-      text-align: right;
+      text-align: left;
       transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
     }
 
@@ -337,6 +365,7 @@
       color: var(--text);
       font-size: 0.95rem;
       font-weight: 900;
+      padding-right: 74px;
     }
 
     .render-card span {
@@ -346,19 +375,19 @@
     }
 
     .render-card.active {
-      border-color: var(--accent);
-      background: #fbf8ff;
-      box-shadow: 0 12px 28px rgba(126, 90, 174, 0.16);
+      border-color: #c7d8f0;
+      background: var(--blue-soft);
+      box-shadow: none;
     }
 
     .render-card.active::after {
-      content: "נבחר";
+      content: "Selected";
       position: absolute;
       top: 10px;
-      left: 10px;
+      right: 10px;
       padding: 4px 8px;
       border-radius: 999px;
-      background: var(--accent);
+      background: var(--blue);
       color: #fff;
       font-size: 0.68rem;
       font-weight: 1000;
@@ -374,7 +403,7 @@
       min-height: 44px;
       padding: 0 16px;
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 999px;
       background: #fff;
       color: var(--text-dim);
       font-weight: 900;
@@ -398,9 +427,9 @@
       min-height: 230px;
       max-height: 360px;
       padding: 14px;
-      border-radius: 12px;
-      background: #0f172a;
-      color: #dbeafe;
+      border-radius: 14px;
+      background: #17110d;
+      color: #e9dfd3;
       font-family: var(--mono);
       font-size: 0.74rem;
       line-height: 1.65;
@@ -410,7 +439,7 @@
 
     .sidebar {
       position: sticky;
-      top: 18px;
+      top: 88px;
     }
 
     .side-steps {
@@ -439,7 +468,7 @@
       place-items: center;
       border-radius: 999px;
       background: var(--accent-soft);
-      color: var(--accent);
+      color: var(--blue);
       font-size: 0.78rem;
       font-weight: 900;
     }
@@ -467,12 +496,12 @@
 
     .side-report-summary {
       padding: 12px;
-      border: 1px solid rgba(111, 74, 168, 0.2);
+      border: 1px solid var(--border);
       border-radius: 14px;
       background: #fff;
       display: grid;
       gap: 10px;
-      box-shadow: 0 12px 24px rgba(84, 55, 112, 0.06);
+      box-shadow: none;
     }
 
     .side-summary-label {
@@ -2200,125 +2229,126 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brand-logo-wrap">
+      <a class="brand-logo-wrap" href="/index.html" aria-label="Go to home page">
         <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
-      </div>
+      </a>
       <div class="brand-copy">
+        <p class="eyebrow">Audit Studio</p>
         <h1>AI Site Audit Crawler</h1>
-        <p>בדיקת אתר כללית ל־AI readiness, FAQ, סכמה וזחילות</p>
+        <p>Run a structured site audit for AI readiness, crawlability, FAQ, schema, metadata and links.</p>
       </div>
     </div>
-    <span class="badge">Experimental</span>
+    <span class="badge">Internal QA</span>
   </header>
 
   <main class="layout">
     <section class="panel">
       <div class="panel-head">
-        <h2>הגדרת בדיקה</h2>
-        <p>המסך הזה מריץ את הקרולר הכללי ובונה דוח עבודה פנימי שממנו אפשר לגזור דוח לקוח מסודר.</p>
+        <h2>Audit Setup</h2>
+        <p>Run the general crawler and build an internal working report that can later become a clean client report.</p>
       </div>
       <div class="panel-body">
         <div class="setup-intro">
           <div>
-            <strong>בדיקה אחת, דוח עבודה מוכן לפעולה</strong>
-            <p>בחרי עומק, מצב קריאה וסוגי בדיקות. אחרי ההרצה אפשר להחליף בין דוח פנימי לדוח לקוח בלי לאבד את הנתונים.</p>
+            <strong>One audit, actionable working report</strong>
+            <p>Choose crawl depth, reading mode and audit checks. After the run, switch between internal and client views without losing the collected data.</p>
           </div>
-          <span>נשמר מקומית</span>
+          <span>Saved locally</span>
         </div>
 
         <div class="field">
-          <label for="startUrl">כתובת אתר להתחלה</label>
+          <label for="startUrl">Starting website URL</label>
           <input id="startUrl" type="text" placeholder="https://www.example.com" autocomplete="url" />
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label for="crawlScope">סוג בדיקה</label>
+            <label for="crawlScope">Audit scope</label>
             <select id="crawlScope" onchange="updateScopeHint()">
-              <option value="site">כל האתר</option>
-              <option value="faq-only">רק עמודי FAQ</option>
+              <option value="site">Full site sample</option>
+              <option value="faq-only">FAQ pages only</option>
             </select>
           </div>
           <div class="note" id="scopeHint">
-            במצב כללי הקרולר מחזיר מדגם עמודים רחב. במצב FAQ בלבד הוא מחפש עמודים עם FAQ גלוי, FAQPage schema או סימני FAQ בכותרות ובכתובות.
+            Full site mode returns a broad page sample. FAQ mode focuses on pages with visible FAQ, FAQPage schema or clear FAQ signals in titles and URLs.
           </div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label for="maxPages">תקציב עמודים לבדיקה</label>
+            <label for="maxPages">Page budget</label>
             <input id="maxPages" type="number" min="1" max="250" value="25" />
-            <div class="field-help">זה לא “כל האתר”, אלא תקציב מדגם: הקרולר ממפה הרבה כתובות ובוחר מתוכן עמודים מייצגים לפי סוגים וחשיבות.</div>
+            <div class="field-help">This is the working sample size. The crawler maps many URLs and selects representative pages by type and importance.</div>
           </div>
           <div class="field">
-            <label for="maxDepth">עומק זחילה</label>
+            <label for="maxDepth">Crawl depth</label>
             <input id="maxDepth" type="number" min="0" max="8" value="2" />
-            <div class="field-help">עומק גבוה יותר מגדיל סיכוי למצוא עמודים פנימיים, אבל מאריך את זמן הבדיקה.</div>
+            <div class="field-help">Higher depth improves discovery of internal pages, but increases run time.</div>
           </div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <label for="renderMode">מצב קריאה</label>
-            <select id="renderMode" class="render-mode-select" tabindex="-1" aria-label="מצב קריאה" onchange="syncRenderModeCards()">
-              <option value="static">Static HTML - מהיר</option>
-              <option value="rendered">Rendered Playwright - לאתרים דינמיים</option>
+            <label for="renderMode">Reading mode</label>
+            <select id="renderMode" class="render-mode-select" tabindex="-1" aria-label="Reading mode" onchange="syncRenderModeCards()">
+              <option value="static">Static HTML - fast</option>
+              <option value="rendered">Rendered Playwright - dynamic sites</option>
             </select>
-            <div class="render-mode-cards" role="group" aria-label="בחירת מצב קריאה">
+            <div class="render-mode-cards" role="group" aria-label="Choose reading mode">
               <button class="render-card active" type="button" data-render-mode="static" onclick="setRenderMode('static')">
-                <strong>מהיר: קורא HTML בלבד</strong>
-                <span>מתאים לרוב האתרים ולבדיקה ראשונה. מהיר יותר ומציג מה קרולרים מקבלים בלי JavaScript.</span>
+                <strong>Fast: static HTML</strong>
+                <span>Best for most first passes. Shows what crawlers receive before JavaScript rendering.</span>
               </button>
               <button class="render-card" type="button" data-render-mode="rendered" onclick="setRenderMode('rendered')">
-                <strong>עמוק: מרנדר JavaScript</strong>
-                <span>מתאים כשעמודים נטענים עם JavaScript או כשה־HTML הראשוני דל. איטי יותר.</span>
+                <strong>Deep: render JavaScript</strong>
+                <span>Useful for dynamic sites or pages with thin initial HTML. Slower, but more complete.</span>
               </button>
             </div>
           </div>
           <div class="field">
-            <label for="acceptLanguage">שפת האתר לבדיקה</label>
+            <label for="acceptLanguage">Site language to request</label>
             <select id="acceptLanguage">
-              <option value="en-GB,en;q=0.9">אנגלית</option>
-              <option value="he-IL,he;q=0.9,en;q=0.7">עברית</option>
-              <option value="de-DE,de;q=0.9,en;q=0.7">גרמנית</option>
-              <option value="it-IT,it;q=0.9,en;q=0.7">איטלקית</option>
-              <option value="fr-FR,fr;q=0.9,en;q=0.7">צרפתית</option>
-              <option value="es-ES,es;q=0.9,en;q=0.7">ספרדית</option>
+              <option value="en-GB,en;q=0.9">English</option>
+              <option value="he-IL,he;q=0.9,en;q=0.7">Hebrew</option>
+              <option value="de-DE,de;q=0.9,en;q=0.7">German</option>
+              <option value="it-IT,it;q=0.9,en;q=0.7">Italian</option>
+              <option value="fr-FR,fr;q=0.9,en;q=0.7">French</option>
+              <option value="es-ES,es;q=0.9,en;q=0.7">Spanish</option>
             </select>
-            <div class="field-help">משפיע על התוכן שהשרת מחזיר לקרולר, לא על שפת הדוח.</div>
+            <div class="field-help">Affects what the server returns to the crawler, not the report language.</div>
           </div>
         </div>
 
         <div>
-          <div class="section-label">מה לבדוק</div>
+          <div class="section-label">Checks to run</div>
           <div class="checks" style="margin-top:8px">
-            <label class="check"><input id="includeSitemap" type="checkbox" checked /> מפת אתר</label>
-            <label class="check"><input id="includeLlms" type="checkbox" checked /> קובץ llms.txt</label>
-            <label class="check"><input id="includeFaq" type="checkbox" checked /> שאלות FAQ גלויות</label>
-            <label class="check"><input id="includeSchema" type="checkbox" checked /> סכמה JSON-LD</label>
-            <label class="check"><input id="includeAnswerability" type="checkbox" checked /> בלוקי תשובה</label>
-            <label class="check"><input id="includeMeta" type="checkbox" checked /> כותרות ומטא</label>
-            <label class="check"><input id="includeLinks" type="checkbox" checked /> קישורים ודומיינים</label>
-            <label class="check"><input id="includeAiAnalysis" type="checkbox" /> ניתוח AI מסכם</label>
-            <label class="check"><input id="respectRobots" type="checkbox" /> לכבד robots.txt בזחילה</label>
+            <label class="check"><input id="includeSitemap" type="checkbox" checked /> Sitemap</label>
+            <label class="check"><input id="includeLlms" type="checkbox" checked /> llms.txt</label>
+            <label class="check"><input id="includeFaq" type="checkbox" checked /> Visible FAQ</label>
+            <label class="check"><input id="includeSchema" type="checkbox" checked /> JSON-LD schema</label>
+            <label class="check"><input id="includeAnswerability" type="checkbox" checked /> Answer blocks</label>
+            <label class="check"><input id="includeMeta" type="checkbox" checked /> Titles & meta</label>
+            <label class="check"><input id="includeLinks" type="checkbox" checked /> Links & domains</label>
+            <label class="check"><input id="includeAiAnalysis" type="checkbox" /> AI summary</label>
+            <label class="check"><input id="respectRobots" type="checkbox" /> Respect robots.txt</label>
           </div>
-          <div class="field-help" style="margin-top:8px">ניתוח AI מסכם הוא שלב אופציונלי ואיטי יותר. הבדיקה הדטרמיניסטית והדוח יעבדו גם בלעדיו.</div>
+          <div class="field-help" style="margin-top:8px">AI summary is optional and slower. The deterministic audit and report work without it.</div>
         </div>
 
         <div class="actions">
-          <button class="btn primary" type="button" id="runAuditBtn" onclick="runAudit()">הרץ בדיקה</button>
-          <button class="btn" type="button" onclick="buildAuditConfig()">הצג פקודת CLI</button>
-          <button class="btn" type="button" onclick="copyCommand()">העתק פקודה</button>
-          <button class="btn" type="button" onclick="resetForm()">איפוס</button>
+          <button class="btn primary" type="button" id="runAuditBtn" onclick="runAudit()">Run Audit</button>
+          <button class="btn" type="button" onclick="buildAuditConfig()">Show CLI Command</button>
+          <button class="btn" type="button" onclick="copyCommand()">Copy Command</button>
+          <button class="btn" type="button" onclick="resetForm()">Reset</button>
         </div>
 
         <div class="run-progress hidden" id="runProgress" aria-live="polite">
           <div class="run-progress-top">
             <div>
-              <strong id="runProgressTitle">הבדיקה רצה</strong>
-              <p id="runProgressNote">הקרולר ממפה את האתר, קורא עמודים ובונה דוח עבודה.</p>
+              <strong id="runProgressTitle">Audit running</strong>
+              <p id="runProgressNote">The crawler is mapping the site, reading pages and building a working report.</p>
             </div>
-            <span class="progress-time" id="runProgressEta">מחשב זמן</span>
+            <span class="progress-time" id="runProgressEta">Estimating time</span>
           </div>
           <div class="progress-meter" aria-hidden="true"><span id="runProgressBar"></span></div>
         </div>
@@ -2328,34 +2358,34 @@
         <section class="report-panel hidden" id="clientReportPanel">
           <div class="report-head">
             <div>
-              <h2>דוח עבודה פנימי</h2>
-              <p id="reportSubtitle">אחרי הרצה יופיע כאן דוח פנימי מלא. ממנו אפשר לסמן מה נכנס לדוח הלקוח.</p>
+              <h2>Internal Working Report</h2>
+              <p id="reportSubtitle">After the run, the full internal report appears here. You can choose what belongs in the client version.</p>
             </div>
             <div class="report-actions">
-              <button class="btn primary" type="button" onclick="downloadClientReport()">הורד דוח לקוח</button>
-              <button class="btn" type="button" onclick="downloadInternalReport()">הורד דוח פנימי</button>
-              <button class="btn" type="button" onclick="downloadActionItemsCsv()">הורד לטיפול CSV</button>
-              <button class="btn" type="button" onclick="downloadExecutiveSummary()">הורד תקציר</button>
-              <button class="btn" type="button" onclick="downloadRawJson()">הורד JSON</button>
-              <button class="btn" type="button" onclick="copyExecutiveSummary()">העתק תקציר</button>
+              <button class="btn primary" type="button" onclick="downloadClientReport()">Download Client Report</button>
+              <button class="btn" type="button" onclick="downloadInternalReport()">Download Internal Report</button>
+              <button class="btn" type="button" onclick="downloadActionItemsCsv()">Download Action CSV</button>
+              <button class="btn" type="button" onclick="downloadExecutiveSummary()">Download Summary</button>
+              <button class="btn" type="button" onclick="downloadRawJson()">Download JSON</button>
+              <button class="btn" type="button" onclick="copyExecutiveSummary()">Copy Summary</button>
             </div>
           </div>
           <div class="report-options">
             <div class="view-toggle">
-              <button id="reportModeInternal" type="button" class="active" onclick="setReportMode('internal')">דוח פנימי</button>
-              <button id="reportModeClient" type="button" onclick="setReportMode('client')">דוח לקוח</button>
+              <button id="reportModeInternal" type="button" class="active" onclick="setReportMode('internal')">Internal report</button>
+              <button id="reportModeClient" type="button" onclick="setReportMode('client')">Client report</button>
             </div>
-            <div class="section-toggles" aria-label="בחירת חלקים בדוח">
-              <label class="section-toggle"><input type="checkbox" data-report-section="overview" checked onchange="rerenderReport()" /> מבט מהיר</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="score" checked onchange="rerenderReport()" /> ציון</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="faq" checked onchange="rerenderReport()" /> סכמה</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="meta" checked onchange="rerenderReport()" /> מטא</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="links" onchange="rerenderReport()" /> לינקים</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="actions" checked onchange="rerenderReport()" /> צעדים</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="issues" onchange="rerenderReport()" /> פירוט יתר</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="pages" onchange="rerenderReport()" /> מפת עמודים</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="recommendations" onchange="rerenderReport()" /> המלצות גולמיות</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="technical" onchange="rerenderReport()" /> נספח טכני</label>
+            <div class="section-toggles" aria-label="Choose report sections">
+              <label class="section-toggle"><input type="checkbox" data-report-section="overview" checked onchange="rerenderReport()" /> Overview</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="score" checked onchange="rerenderReport()" /> Score</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="faq" checked onchange="rerenderReport()" /> Schema</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="meta" checked onchange="rerenderReport()" /> Meta</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="links" onchange="rerenderReport()" /> Links</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="actions" checked onchange="rerenderReport()" /> Actions</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="issues" onchange="rerenderReport()" /> Detail</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="pages" onchange="rerenderReport()" /> Page map</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="recommendations" onchange="rerenderReport()" /> Raw recommendations</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="technical" onchange="rerenderReport()" /> Technical appendix</label>
             </div>
           </div>
           <div class="client-report" id="clientReport"></div>
@@ -2365,25 +2395,25 @@
 
     <aside class="sidebar">
       <div class="sidebar-head">
-        <h2>לפני שמריצים</h2>
-        <p>סרגל קצר שעוזר לבחור הגדרה נכונה בלי להעמיס על המסך.</p>
+        <h2>Before You Run</h2>
+        <p>A compact guide for choosing the right settings without crowding the main form.</p>
       </div>
       <div class="sidebar-body">
         <div class="side-steps">
-          <div class="side-step">התחילי עם 25 עמודים ועומק 2 כדי לקבל תמונה מהירה.</div>
-          <div class="side-step">בחרי רינדור רק כשיש תוכן שנבנה ב־JavaScript או אתר דינמי.</div>
-          <div class="side-step">השאירי ניתוח AI פעיל כשצריך תקציר והמלצות לדוח לקוח.</div>
+          <div class="side-step">Start with 25 pages and depth 2 for a fast, useful snapshot.</div>
+          <div class="side-step">Use rendering only for JavaScript-heavy or highly dynamic pages.</div>
+          <div class="side-step">Enable AI summary when you need a narrative summary for a client report.</div>
         </div>
 
         <div class="side-compact-card">
-          <strong>מודל הציון</strong>
-          <p>הדוח מדרג מוכנות AI, SEO טכני, תוכן, סכמה, רינדור, ביצועים ורמת ביטחון.</p>
+          <strong>Scoring model</strong>
+          <p>The report scores AI readiness, technical SEO, content, schema, rendering, performance and confidence.</p>
         </div>
 
         <div class="side-report-summary hidden" id="sideReportSummary"></div>
 
         <div>
-          <div class="section-label">בדיקות נפוצות</div>
+          <div class="section-label">Common checks</div>
           <div class="pill-row" style="margin-top:8px">
             <span class="pill">robots.txt</span>
             <span class="pill">sitemap.xml</span>
@@ -2399,7 +2429,7 @@
         </div>
 
         <div class="note">
-          הכתובת האחרונה נשמרת בדפדפן הזה בלבד ומשמשת כברירת מחדל בפעם הבאה.
+          The last URL is saved in this browser only and becomes the default next time.
         </div>
       </div>
     </aside>
@@ -2408,21 +2438,21 @@
   <dialog id="schemaDraftDialog" class="schema-dialog">
     <div class="schema-dialog-head">
       <div>
-        <h3 id="schemaDraftTitle">טיוטת סכמה לעריכה</h3>
-        <p id="schemaDraftSubtitle">הטיוטה נוצרת מתוך נתוני הקרולר. היא מיועדת להתחלה מהירה, לא לפרסום אוטומטי בלי בדיקה.</p>
+        <h3 id="schemaDraftTitle">Editable Schema Draft</h3>
+        <p id="schemaDraftSubtitle">The draft is generated from crawler data. Use it as a starting point, not as auto-published production code.</p>
       </div>
-      <button class="btn small" type="button" onclick="closeSchemaDraftDialog()">סגירה</button>
+      <button class="btn small" type="button" onclick="closeSchemaDraftDialog()">Close</button>
     </div>
     <div class="schema-dialog-body">
       <div class="schema-draft-meta" id="schemaDraftMeta"></div>
       <div class="schema-draft-warning">
-        חשוב: זו טיוטה טכנית. לפני הטמעה באתר צריך להשלים תשובות אמיתיות אם חסרות, לוודא התאמה לתוכן הגלוי בעמוד, ולהריץ בדיקה ב־Rich Results Test.
+        Important: this is a technical draft. Before implementation, complete any missing answers, verify alignment with visible page content and test it in Rich Results.
       </div>
       <textarea id="schemaDraftTextarea" class="schema-draft-textarea" spellcheck="false"></textarea>
       <div class="schema-dialog-actions">
-        <button class="btn primary" type="button" onclick="copySchemaDraft()">העתק סכמה</button>
-        <button class="btn" type="button" onclick="downloadSchemaDraft()">הורד JSON-LD</button>
-        <button class="btn" type="button" onclick="openRichResultsTest()">בדיקה ב־Rich Results</button>
+        <button class="btn primary" type="button" onclick="copySchemaDraft()">Copy Schema</button>
+        <button class="btn" type="button" onclick="downloadSchemaDraft()">Download JSON-LD</button>
+        <button class="btn" type="button" onclick="openRichResultsTest()">Test in Rich Results</button>
       </div>
     </div>
   </dialog>
@@ -2445,86 +2475,86 @@
     const lastStartUrlStorageKey = "carmelon.siteAiAudit.lastStartUrl";
 
     const severityLabels = {
-      critical: "קריטי",
-      warning: "דורש תשומת לב",
-      info: "המלצה"
+      critical: "Critical",
+      warning: "Needs attention",
+      info: "Recommendation"
     };
 
     const categoryLabels = {
-      "crawlability": "זחילות ואינדוקס",
-      "discoverability": "גילוי האתר",
-      "structured-data": "סכמה ונתונים מובנים",
-      faq: "FAQ ושאלות נפוצות",
-      answerability: "יכולת מענה לכלי AI",
-      content: "איכות תוכן",
-      metadata: "מטא וכותרות",
-      "ai-readiness": "מוכנות AI"
+      "crawlability": "Crawlability & Indexing",
+      "discoverability": "Site Discovery",
+      "structured-data": "Schema & Structured Data",
+      faq: "FAQ",
+      answerability: "AI Answerability",
+      content: "Content Quality",
+      metadata: "Metadata & Titles",
+      "ai-readiness": "AI Readiness"
     };
 
     const actionPriorityLabels = {
-      critical: "קריטי",
-      high: "גבוה",
-      medium: "בינוני",
-      low: "נמוך"
+      critical: "Critical",
+      high: "High",
+      medium: "Medium",
+      low: "Low"
     };
 
     const actionWorkstreamLabels = {
-      crawlability: "זחילות ואינדוקס",
-      discoverability: "גילוי ומיפוי",
-      metadata: "מטא וכותרות",
-      "structured-data": "סכמה",
+      crawlability: "Crawlability & Indexing",
+      discoverability: "Discovery & Mapping",
+      metadata: "Metadata & Titles",
+      "structured-data": "Schema",
       faq: "FAQ",
-      answerability: "מענה לכלי AI",
-      content: "תוכן",
-      links: "קישורים ואמון",
-      technical: "טכני"
+      answerability: "AI Answerability",
+      content: "Content",
+      links: "Links & Trust",
+      technical: "Technical"
     };
 
     const actionOwnerLabels = {
       SEO: "SEO",
-      Content: "תוכן",
-      Developer: "פיתוח",
-      "Project manager": "ניהול פרויקט",
-      Strategy: "אסטרטגיה"
+      Content: "Content",
+      Developer: "Development",
+      "Project manager": "Project Management",
+      Strategy: "Strategy"
     };
 
     const actionEffortLabels = {
-      quick: "מהיר",
-      medium: "בינוני",
-      large: "גדול"
+      quick: "Quick",
+      medium: "Medium",
+      large: "Large"
     };
 
     const actionImpactLabels = {
-      high: "גבוהה",
-      medium: "בינונית",
-      low: "נמוכה"
+      high: "High",
+      medium: "Medium",
+      low: "Low"
     };
 
     const pageTypeLabels = {
-      "site-wide": "רוחבי באתר",
-      homepage: "עמוד בית",
-      hotel: "עמודי מלון",
-      destination: "עמודי יעד / עיר",
-      faq: "עמודי FAQ",
-      offer: "עמודי מבצעים",
-      meeting: "עמודי אירועים / Meetings",
-      brand: "עמודי מותג",
-      service: "עמודי שירותים / Facilities",
-      blog: "בלוג / תוכן",
-      legal: "עמודים משפטיים",
-      contact: "יצירת קשר / אודות",
-      technical: "עמודים טכניים",
-      other: "עמודים אחרים"
+      "site-wide": "Site-wide",
+      homepage: "Homepage",
+      hotel: "Hotel pages",
+      destination: "Destination / city pages",
+      faq: "FAQ pages",
+      offer: "Offer pages",
+      meeting: "Meetings / events pages",
+      brand: "Brand pages",
+      service: "Service / facilities pages",
+      blog: "Blog / content",
+      legal: "Legal pages",
+      contact: "Contact / about",
+      technical: "Technical pages",
+      other: "Other pages"
     };
 
     const scoreBreakdownLabels = [
-      { key: "geoAiReadiness", label: "GEO / AI", max: 25, note: "גישה לקרולרי AI, פסקאות ציטוטיות, Answer blocks ובהירות ישות" },
-      { key: "technicalSeo", label: "Technical SEO", max: 20, note: "אינדוקס, canonical, מטא, כותרות, קישורים, sitemap ו-robots" },
-      { key: "contentEeAt", label: "תוכן ו-E-E-A-T", max: 20, note: "כוונת משתמש, עומק, מומחיות, אמינות, עדכניות ודוגמאות" },
-      { key: "structuredData", label: "Structured Data", max: 15, note: "JSON-LD תקין, סוג סכמה מתאים, שדות חובה והתאמה לתוכן הגלוי" },
-      { key: "crawlerRendering", label: "קרולרים ו-JS", max: 10, note: "תוכן ב-HTML, רינדור, user agents, משאבים ומובייל" },
-      { key: "performance", label: "Performance", max: 5, note: "זמן תגובה, משקל HTML, תמונות, scripts ונתוני Lighthouse אם זמינים" },
-      { key: "confidence", label: "ביטחון", max: 5, note: "כמה מהציון אומת בפועל לעומת היוריסטיקות וחוסרים ידועים" }
+      { key: "geoAiReadiness", label: "GEO / AI", max: 25, note: "AI crawler access, quotable answer blocks and clear entity signals" },
+      { key: "technicalSeo", label: "Technical SEO", max: 20, note: "Indexing, canonical tags, metadata, headings, links, sitemap and robots" },
+      { key: "contentEeAt", label: "Content & E-E-A-T", max: 20, note: "Intent coverage, depth, expertise, trust, freshness and examples" },
+      { key: "structuredData", label: "Structured Data", max: 15, note: "Valid JSON-LD, schema type, required fields and visible-content alignment" },
+      { key: "crawlerRendering", label: "Crawlers & JS", max: 10, note: "HTML content, rendering, user agents, resources and mobile readiness" },
+      { key: "performance", label: "Performance", max: 5, note: "Response time, HTML weight, images, scripts and Lighthouse data when available" },
+      { key: "confidence", label: "Confidence", max: 5, note: "How much of the score is verified versus inferred from heuristics" }
     ];
 
     function getConfig() {
@@ -2615,7 +2645,7 @@
       const config = getConfig();
 
       if (!config.startUrl) {
-        document.getElementById("output").textContent = "הכניסי כתובת אתר כדי להכין פקודת בדיקה.";
+        document.getElementById("output").textContent = "Enter a website URL to prepare the audit command.";
         return;
       }
 
@@ -2629,7 +2659,7 @@
         lastCommand,
         "",
         "UI RUN STATUS",
-        socket ? "Ready. Click הרץ בדיקה to run through the demo server." : "Socket.IO is not available. Use the local command."
+        socket ? "Ready. Click Run Audit to run through the demo server." : "Socket.IO is not available. Use the local command."
       ].join("\n");
     }
 
@@ -2642,7 +2672,7 @@
       }
 
       if (!config.startUrl) {
-        document.getElementById("output").textContent = "הכניסי כתובת אתר כדי להריץ בדיקה.";
+        document.getElementById("output").textContent = "Enter a website URL to run the audit.";
         return;
       }
 
@@ -2653,7 +2683,7 @@
 
       const runBtn = document.getElementById("runAuditBtn");
       runBtn.disabled = true;
-      runBtn.textContent = "מריץ בדיקה...";
+      runBtn.textContent = "Running audit...";
       startAuditProgress(config);
 
       document.getElementById("output").textContent = [
@@ -2686,12 +2716,12 @@
       const title = document.getElementById("runProgressTitle");
       const note = document.getElementById("runProgressNote");
 
-      title.textContent = config.includeAiAnalysis ? "הבדיקה רצה; בסוף יתווסף ניתוח AI" : "הבדיקה רצה";
+      title.textContent = config.includeAiAnalysis ? "Audit running; AI analysis will be added at the end" : "Audit running";
       note.textContent = config.includeAiAnalysis
-        ? "הקרולר מדפיס לוגים בזמן אמת. שלב ה־AI מוגבל בזמן, ואם הוא מתעכב הדוח הדטרמיניסטי עדיין יופק."
+        ? "The crawler streams logs in real time. The AI step is time-boxed; if it takes too long, the deterministic report will still be produced."
         : (config.renderMode === "rendered"
-          ? "הקרולר פותח עמודים בדפדפן מרונדר, אוסף נתונים ובונה דוח. הזמן הוא הערכה."
-          : "הקרולר ממפה את האתר, קורא HTML, אוסף נתונים ובונה דוח. הזמן הוא הערכה.");
+          ? "The crawler opens pages in a rendered browser, collects data and builds the report. Timing is an estimate."
+          : "The crawler maps the site, reads HTML, collects data and builds the report. Timing is an estimate.");
       progress.classList.remove("hidden");
       updateAuditProgress();
       clearInterval(auditProgressTimer);
@@ -2712,11 +2742,11 @@
 
       bar.style.setProperty("--progress", `${softProgress}%`);
       eta.textContent = remaining
-        ? `כ־${formatDuration(remaining)} נשאר`
-        : `עוד עובד · ${formatDuration(elapsedSeconds)}`;
+        ? `About ${formatDuration(remaining)} left`
+        : `Still working · ${formatDuration(elapsedSeconds)}`;
     }
 
-    function stopAuditProgress(message = "הדוח מוכן") {
+    function stopAuditProgress(message = "Report ready") {
       clearInterval(auditProgressTimer);
       auditProgressTimer = null;
       const progress = document.getElementById("runProgress");
@@ -2726,7 +2756,7 @@
 
       if (!progress) return;
       title.textContent = message;
-      eta.textContent = auditStartedAt ? `הסתיים אחרי ${formatDuration(Math.round((Date.now() - auditStartedAt) / 1000))}` : "הסתיים";
+      eta.textContent = auditStartedAt ? `Finished after ${formatDuration(Math.round((Date.now() - auditStartedAt) / 1000))}` : "Finished";
       bar.style.setProperty("--progress", "100%");
       window.setTimeout(() => progress.classList.add("hidden"), 1400);
       auditStartedAt = 0;
@@ -2737,9 +2767,9 @@
       const seconds = Math.max(0, Number(totalSeconds || 0));
       const minutes = Math.floor(seconds / 60);
       const remainder = seconds % 60;
-      if (!minutes) return `${remainder} שנ׳`;
-      if (!remainder) return `${minutes} דק׳`;
-      return `${minutes} דק׳ ${remainder} שנ׳`;
+      if (!minutes) return `${remainder}s`;
+      if (!remainder) return `${minutes}m`;
+      return `${minutes}m ${remainder}s`;
     }
 
     function appendOutput(line) {
@@ -2820,48 +2850,48 @@
       const firstActions = (model.actionItems || []).slice(0, 3);
       const clientVisible = (model.actionItems || []).filter(isActionClientIncluded).length;
       const selection = model.pageSelectionSummary || {};
-      const host = model.result?.host || model.result?.normalizedStartUrl || model.result?.startUrl || "האתר";
+      const host = model.result?.host || model.result?.normalizedStartUrl || model.result?.startUrl || "the site";
       const sampleText = selection.budget
-        ? `${selection.budget} עמודים נבחרו לבדיקה המעמיקה מתוך ${selection.candidateUrls || "מאגר"} מועמדים.`
-        : "הקרולר בחר מדגם עמודים לפי המידע שהיה זמין בהרצה.";
+        ? `${selection.budget} pages were selected for deep audit from ${selection.candidateUrls || "the candidate pool"} candidates.`
+        : "The crawler selected a page sample from the information available in this run.";
 
       box.classList.remove("hidden");
       box.innerHTML = `
-        <div class="side-summary-label">דוח פעיל</div>
+        <div class="side-summary-label">Active report</div>
         <strong>${escapeHtml(host)}</strong>
-        <p>ציון ${escapeHtml(model.scoreTotal)}/100 · ${escapeHtml(model.pages.length)} עמודים · ${escapeHtml(model.actionItems.length)} משימות לטיפול.</p>
+        <p>Score ${escapeHtml(model.scoreTotal)}/100 · ${escapeHtml(model.pages.length)} pages · ${escapeHtml(model.actionItems.length)} action items.</p>
         <details class="side-note-details" open>
-          <summary>תקציר מנהלים</summary>
+          <summary>Executive summary</summary>
           <div class="side-note-body">
             <p>${escapeHtml(model.executiveSummary)}</p>
             <p>${escapeHtml(model.mainOpportunity)}</p>
           </div>
         </details>
         <details class="side-note-details">
-          <summary>איך לקרוא את הדוח</summary>
+          <summary>How to read this report</summary>
           <div class="side-note-body">
-            <p>מתחילים בציון ובמשימות לטיפול. פותחים פירוט רק כשצריך להבין ראיות, URLs או מקור ממצא.</p>
-            <p>בדוח לקוח מסומנות כרגע ${escapeHtml(clientVisible)} משימות. אפשר לשלוט בזה ידנית מכרטיסי הטיפול.</p>
+            <p>Start with the score and action items. Open details only when you need evidence, URLs or issue sources.</p>
+            <p>The client report currently includes ${escapeHtml(clientVisible)} action items. You can adjust that from each action card.</p>
           </div>
         </details>
         <details class="side-note-details">
-          <summary>הערת מיפוי המדגם</summary>
+          <summary>Sample mapping note</summary>
           <div class="side-note-body">
             <p>${escapeHtml(sampleText)}</p>
-            <p>זה הסבר פנימי בלבד, ולא חלק מדוח לקוח.</p>
+            <p>This is internal context only, not part of the client report.</p>
           </div>
         </details>
         ${firstActions.length ? `<details class="side-note-details">
-          <summary>שלוש פעולות לפתיחה</summary>
+          <summary>First three actions</summary>
           <div class="side-note-body">
-            <ul>${firstActions.map((item) => `<li>${escapeHtml(item.recommendedFix || item.finding || "לבדוק ולהגדיר טיפול.")}</li>`).join("")}</ul>
+            <ul>${firstActions.map((item) => `<li>${escapeHtml(item.recommendedFix || item.finding || "Review and define the right fix.")}</li>`).join("")}</ul>
           </div>
         </details>` : ""}
       `;
     }
 
     function renderAuditResult(result) {
-      stopAuditProgress("הדוח מוכן");
+      stopAuditProgress("Report ready");
       lastAuditResult = result;
       clientActionSelection = {};
       applyReportModeDefaults(reportMode);
@@ -2877,7 +2907,7 @@
       const panel = document.getElementById("clientReportPanel");
       const subtitle = document.getElementById("reportSubtitle");
 
-      subtitle.textContent = `${result.host || result.normalizedStartUrl || result.startUrl || "האתר"} | ציון ${result.score?.total ?? "-"} מתוך 100 | ${pages.length} עמודים שנבדקו`;
+      subtitle.textContent = `${result.host || result.normalizedStartUrl || result.startUrl || "the site"} | Score ${result.score?.total ?? "-"} out of 100 | ${pages.length} pages checked`;
       panel.classList.remove("hidden");
       rerenderReport();
 
@@ -2902,7 +2932,7 @@
       clientActionSelection = {};
       document.getElementById("clientReportPanel").classList.add("hidden");
       document.getElementById("clientReport").innerHTML = "";
-      document.getElementById("reportSubtitle").textContent = "אחרי הרצה יופיע כאן דוח פנימי מלא. ממנו אפשר לסמן מה נכנס לדוח הלקוח.";
+      document.getElementById("reportSubtitle").textContent = "After a run, the full internal report will appear here. From there you can choose what enters the client report.";
       const sideSummary = document.getElementById("sideReportSummary");
       if (sideSummary) {
         sideSummary.classList.add("hidden");
@@ -2927,11 +2957,11 @@
 
         ${sections.actions ? `${renderActionItems(model, isInternal)}
         <section class="report-block" id="action-plan">
-          <h3>תוכנית טיפול מומלצת</h3>
+          <h3>Recommended Action Plan</h3>
           <div class="action-grid">
-            ${renderActionCard("מיידי", actionPlan.now)}
-            ${renderActionCard("בשבועיים הקרובים", actionPlan.next)}
-            ${renderActionCard("המשך עבודה", actionPlan.later)}
+            ${renderActionCard("Immediate", actionPlan.now)}
+            ${renderActionCard("Next two weeks", actionPlan.next)}
+            ${renderActionCard("Later", actionPlan.later)}
           </div>
         </section>` : ""}
 
@@ -2945,13 +2975,13 @@
 
         ${sections.pages ? `${renderPageMap(model)}
         <section class="report-block" id="top-pages">
-          <h3>עמודים שכדאי להתחיל מהם</h3>
-          ${pageCards || `<div class="report-empty">אין עמודים עם ממצאים פתוחים בתוצאה הנוכחית.</div>`}
+          <h3>Pages to Start With</h3>
+          ${pageCards || `<div class="report-empty">No pages with open findings in the current result.</div>`}
         </section>` : ""}
 
         ${sections.recommendations ? `<section class="report-block">
-          <h3>המלצות מערכת</h3>
-          <ol>${recommendationItems || `<li>אין המלצות אוטומטיות בתוצאה הנוכחית.</li>`}</ol>
+          <h3>System Recommendations</h3>
+          <ol>${recommendationItems || `<li>No automatic recommendations in the current result.</li>`}</ol>
         </section>` : ""}
 
         ${sections.overview ? renderAiAnalysisSection(model, isInternal) : ""}
@@ -3025,7 +3055,7 @@
         crawlSummary: buildCrawlSummary(result, pages),
         businessMeaning: buildBusinessMeaning(scoreTotal, stats, breakdown),
         executiveSummary: buildExecutiveSummaryText(result, scoreTotal, stats, pages, breakdown, actionItems),
-        mainOpportunity: `הפער הבולט ביותר כרגע הוא ${lowestScore.label}: ${lowestScore.value}/${lowestScore.max}. זה התחום שבו טיפול ממוקד צפוי לשפר הכי מהר את יכולת האתר להיקרא, להיות מובן ולהישלף על ידי כלי AI.`
+        mainOpportunity: `The clearest current gap is ${lowestScore.label}: ${lowestScore.value}/${lowestScore.max}. Focused work here is likely to improve how quickly the site can be read, understood and retrieved by AI tools.`
       };
     }
 
@@ -3039,7 +3069,7 @@
           const value = Number.isFinite(Number(section.score)) ? Number(section.score) : 0;
           return {
             key: section.key || fallback.key,
-            label: section.label || fallback.label || section.key || "ציון",
+            label: section.label || fallback.label || section.key || "Score",
             note: section.summary || fallback.note || "",
             value,
             max,
@@ -3165,9 +3195,9 @@
           pageType: issue.pageUrl ? classifyPageType({ url: issue.pageUrl, title: "", h1: "" }) : "site-wide",
           pageUrl: issue.pageUrl || "",
           pageTitle: "",
-          finding: requiresVerification ? "נדרש אימות קריאה לפני קביעת בעיית SEO" : issue.title || "ממצא",
-          whyItMatters: requiresVerification ? "הקרולר לא קיבל מספיק תוכן אמין מהעמוד, ולכן ממצא כמו H1/מטא חסר עלול להיות תוצר של רינדור חלקי ולא בעיית אתר אמיתית." : issue.detail || "",
-          recommendedFix: requiresVerification ? "לפתוח את הדוגמה בדפדפן או להריץ מחדש עם רינדור, ורק אחרי אימות לפתוח משימת מטא/תוכן." : issue.recommendation || "לבדוק ידנית ולהגדיר תיקון מתאים.",
+          finding: requiresVerification ? "Reading verification required before calling this an SEO issue" : issue.title || "Finding",
+          whyItMatters: requiresVerification ? "The crawler did not receive enough reliable content from this page, so a missing H1 or meta finding may come from partial rendering rather than a real site issue." : issue.detail || "",
+          recommendedFix: requiresVerification ? "Open the example in a browser or rerun with rendering, then create a metadata/content task only after verification." : issue.recommendation || "Review manually and define the right fix.",
           evidence: issue.detail || "",
           sourceIssues: [issue.title || "Issue"]
         };
@@ -3312,39 +3342,39 @@
       const pageGroups = context.sitemapDiagnostics.groups || [];
       const largestGroup = pageGroups.reduce((largest, group) => group.crawledCount > (largest?.crawledCount || 0) ? group : largest, pageGroups[0]);
       const pageFocus = largestGroup
-        ? `המדגם נמשך בעיקר ל${largestGroup.label}: ${largestGroup.crawledCount} עמודים מתוך ${context.pages.length || 0}.`
-        : "אין עדיין מספיק נתוני מיפוי כדי להבין אילו סוגי עמודים נסרקו.";
+        ? `The sample leans mostly toward ${largestGroup.label}: ${largestGroup.crawledCount} pages out of ${context.pages.length || 0}.`
+        : "There is not enough mapping data yet to understand which page types were crawled.";
 
       return [
         {
-          title: "מוקד השיפור הראשון",
-          text: `${lowestScore.label} הוא הציון הנמוך ביותר (${lowestScore.value}/${lowestScore.max}), ולכן כדאי להתחיל ממנו לפני הרחבת הדוח.`
+          title: "First Improvement Focus",
+          text: `${lowestScore.label} has the lowest score (${lowestScore.value}/${lowestScore.max}), so it is the right place to start before expanding the report.`
         },
         {
-          title: "מפת האתר מול המדגם",
+          title: "Sitemap vs Sample",
           text: context.sitemapDiagnostics.total
-            ? `נמצאו ${context.sitemapDiagnostics.total} כתובות ב־sitemap ומתוכן נסרקו ${context.sitemapDiagnostics.sampledFromSitemap}. ${pageFocus}`
-            : `${pageFocus} לא נמצא sitemap זמין, לכן המדגם נשען בעיקר על קישורים פנימיים.`
+            ? `${context.sitemapDiagnostics.total} sitemap URLs were found, and ${context.sitemapDiagnostics.sampledFromSitemap} were crawled. ${pageFocus}`
+            : `${pageFocus} No available sitemap was found, so the sample relies mainly on internal links.`
         },
         {
-          title: "מה מתאים לדוח לקוח",
-          text: `${visibleActions.length} משימות מסומנות כרלוונטיות ללקוח מתוך ${context.actionItems.length}. בדוח הפנימי אפשר לסמן ידנית מה נכנס ומה יורד.`
+          title: "Client Report Fit",
+          text: `${visibleActions.length} action items are marked as client-relevant out of ${context.actionItems.length}. In the internal report, you can manually decide what stays in and what comes out.`
         },
         {
-          title: "עדיפות טיפול",
+          title: "Treatment Priority",
           text: criticalActions.length
-            ? `${criticalActions.length} משימות דורשות טיפול בעדיפות גבוהה. כדאי לצמצם אותן ל־3-5 צעדים ראשונים וברורים.`
-            : "לא נמצאו חסימות חמורות במיוחד במדגם הזה, לכן הדוח יכול להתמקד בשיפור איכות והרחבת הזדמנויות."
+            ? `${criticalActions.length} action items need high-priority treatment. Narrow them into 3-5 clear first steps.`
+            : "No severe blockers were found in this sample, so the report can focus on quality improvements and opportunity expansion."
         },
         {
-          title: "מטא ולינקים",
-          text: `נמצאו ${context.linkDiagnostics.totalInternal} קישורים פנימיים ו־${context.linkDiagnostics.totalExternal} קישורים חיצוניים. במטא יש ${context.metaDiagnostics.missingDescription.length} תיאורים חסרים ו־${context.metaDiagnostics.missingH1.length} H1 חסרים.`
+          title: "Metadata and Links",
+          text: `${context.linkDiagnostics.totalInternal} internal links and ${context.linkDiagnostics.totalExternal} external links were found. Metadata includes ${context.metaDiagnostics.missingDescription.length} missing descriptions and ${context.metaDiagnostics.missingH1.length} missing H1s.`
         },
         {
-          title: "FAQ בהקשר כללי",
+          title: "FAQ in General Context",
           text: context.faqDiagnostics.faqPages.length
-            ? `נמצאו ${context.faqDiagnostics.faqPages.length} עמודים עם סימני FAQ במדגם הכללי. בדיקה עמוקה של FAQ נשארת במסך הייעודי.`
-            : "במדגם הכללי לא נמצאו הרבה סימני FAQ. לבדיקת FAQ מדויקת משתמשים במסך הייעודי הנפרד."
+            ? `${context.faqDiagnostics.faqPages.length} pages with FAQ signals were found in the general sample. Deep FAQ analysis stays in the dedicated FAQ audit screen.`
+            : "The general sample did not show many FAQ signals. Use the dedicated FAQ screen for precise FAQ analysis."
         }
       ];
     }
@@ -3359,7 +3389,7 @@
             <div class="score-ring" style="--score:${escapeHtml(Math.max(0, Math.min(100, model.scoreTotal)))}">
               <div>
                 <strong>${escapeHtml(model.scoreTotal)}</strong>
-                <span>מתוך 100</span>
+                <span>out of 100</span>
               </div>
             </div>
             <h3>${escapeHtml(model.scoreLabel)}</h3>
@@ -3367,10 +3397,10 @@
           </div>
           <div class="hero-insights">
             <div class="hero-metrics">
-              ${renderHeroMetric("עמודים", model.pages.length, model.crawlSummary, "")}
-              ${renderHeroMetric("Sitemap", model.sitemapDiagnostics.total || "לא נמצא", model.sitemapDiagnostics.total ? `${model.sitemapDiagnostics.sampledFromSitemap} כתובות נסרקו מתוך המפה` : "המדגם נשען על קישורים פנימיים", "blue")}
-              ${renderHeroMetric("לטיפול", model.actionItems.length, `${clientVisibleCount} מסומנים לדוח לקוח`, primaryMetricTone)}
-              ${renderHeroMetric("קריטיים", model.stats.critical, "ממצאים שכדאי לסגור לפני הצגה סופית", model.stats.critical ? "red" : "blue")}
+              ${renderHeroMetric("Pages", model.pages.length, model.crawlSummary, "")}
+              ${renderHeroMetric("Sitemap", model.sitemapDiagnostics.total || "Not found", model.sitemapDiagnostics.total ? `${model.sitemapDiagnostics.sampledFromSitemap} URLs crawled from the map` : "The sample relies on internal links", "blue")}
+              ${renderHeroMetric("Actions", model.actionItems.length, `${clientVisibleCount} marked for the client report`, primaryMetricTone)}
+              ${renderHeroMetric("Critical", model.stats.critical, "Findings to resolve before final presentation", model.stats.critical ? "red" : "blue")}
             </div>
             ${renderInsightCards(model.heroInsights.slice(0, 3))}
           </div>
@@ -3586,23 +3616,23 @@
         <details class="report-accordion" id="faq-general-diagnostics">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>FAQ במדגם הכללי</strong>
-              <span>תקציר בלבד. בדיקת FAQ עמוקה ומדויקת נמצאת במסך ה־FAQ הייעודי.</span>
+              <strong>FAQ in the General Sample</strong>
+              <span>Summary only. Deep FAQ analysis lives in the dedicated FAQ audit screen.</span>
             </div>
             <div class="accordion-meta">
-              <span class="count-pill">${escapeHtml(faq.faqPages.length)} עמודים</span>
-              <span class="count-pill">${escapeHtml(faq.totalVisible)} שאלות גלויות</span>
-              <span class="count-pill">${escapeHtml(faq.totalSchema)} שאלות בסכמה</span>
+              <span class="count-pill">${escapeHtml(faq.faqPages.length)} pages</span>
+              <span class="count-pill">${escapeHtml(faq.totalVisible)} visible questions</span>
+              <span class="count-pill">${escapeHtml(faq.totalSchema)} schema questions</span>
             </div>
           </summary>
           <div class="accordion-body">
           <div class="diagnostic-grid">
-            ${renderMetric("עמודי FAQ", faq.faqPages.length, "עמודים עם FAQ גלוי, FAQPage schema או סימני FAQ ברורים", "blue")}
-            ${renderMetric("שאלות גלויות", faq.totalVisible, "מספר שאלות ותשובות שנמצאו בעמוד עצמו", "")}
-            ${renderMetric("שאלות בסכמה", faq.totalSchema, "מספר שאלות ותשובות שנמצאו ב־FAQPage JSON-LD", "")}
-            ${renderMetric("פערי סנכרון", faq.pagesWithMismatch.length + faq.pagesVisibleNoSchema.length, "עמודים שבהם הסכמה חסרה או לא תואמת לתוכן הגלוי", faq.pagesWithMismatch.length || faq.pagesVisibleNoSchema.length ? "red" : "blue")}
+            ${renderMetric("FAQ pages", faq.faqPages.length, "Pages with visible FAQ, FAQPage schema or clear FAQ signals", "blue")}
+            ${renderMetric("Visible questions", faq.totalVisible, "Questions and answers found on the page itself", "")}
+            ${renderMetric("Schema questions", faq.totalSchema, "Questions and answers found in FAQPage JSON-LD", "")}
+            ${renderMetric("Sync gaps", faq.pagesWithMismatch.length + faq.pagesVisibleNoSchema.length, "Pages where schema is missing or does not match visible content", faq.pagesWithMismatch.length || faq.pagesVisibleNoSchema.length ? "red" : "blue")}
           </div>
-          ${faq.faqPages.length ? `<div class="diagnostic-list">${pageCards}</div>` : `<div class="report-empty">לא נמצאו עמודי FAQ במדגם הנוכחי. כדאי להריץ מצב FAQ בלבד או להתחיל מכתובת FAQ ידועה.</div>`}
+          ${faq.faqPages.length ? `<div class="diagnostic-list">${pageCards}</div>` : `<div class="report-empty">No FAQ pages were found in the current sample. Try FAQ-only mode or start from a known FAQ URL.</div>`}
           </div>
         </details>
       `;
@@ -3615,25 +3645,25 @@
         <details class="report-accordion" id="meta-diagnostics">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>מטא, כותרות ונראות במנועים</strong>
-              <span>מוצג כתקציר כדי לא להעמיס. פותחים כדי לראות עמודים ודוגמאות.</span>
+              <strong>Metadata, Headings and Search Visibility</strong>
+              <span>Shown as a compact summary. Open it to inspect pages and examples.</span>
             </div>
             <div class="accordion-meta">
-              <span class="count-pill">Title חסר: ${escapeHtml(meta.missingTitle.length)}</span>
-              <span class="count-pill">Description חסר: ${escapeHtml(meta.missingDescription.length)}</span>
-              <span class="count-pill">H1 בעייתי: ${escapeHtml(meta.missingH1.length + meta.multipleH1.length)}</span>
-              ${meta.unreliablePages.length ? `<span class="severity-pill warning">${escapeHtml(meta.unreliablePages.length)} לא אומתו</span>` : ""}
+              <span class="count-pill">Missing title: ${escapeHtml(meta.missingTitle.length)}</span>
+              <span class="count-pill">Missing description: ${escapeHtml(meta.missingDescription.length)}</span>
+              <span class="count-pill">H1 issues: ${escapeHtml(meta.missingH1.length + meta.multipleH1.length)}</span>
+              ${meta.unreliablePages.length ? `<span class="severity-pill warning">${escapeHtml(meta.unreliablePages.length)} unverified</span>` : ""}
             </div>
           </summary>
           <div class="accordion-body">
           <div class="diagnostic-grid">
-            ${renderMetric("Title חסר", meta.missingTitle.length, "עמודים בלי כותרת דפדפן", meta.missingTitle.length ? "red" : "blue")}
-            ${renderMetric("Meta description חסר", meta.missingDescription.length, "עמודים בלי תקציר מטא", meta.missingDescription.length ? "amber" : "blue")}
-            ${renderMetric("H1 חסר או כפול", meta.missingH1.length + meta.multipleH1.length, "בעיות בכותרת הראשית של העמוד", meta.missingH1.length || meta.multipleH1.length ? "amber" : "blue")}
-            ${renderMetric("OG חסר", meta.missingOg.length, "עמודים עם Open Graph לא מלא", meta.missingOg.length ? "amber" : "blue")}
-            ${meta.unreliablePages.length ? renderMetric("נדרש אימות", meta.unreliablePages.length, "עמודים שהוחרגו מממצאי מטא כי הקריאה לא הייתה אמינה", "amber") : ""}
+            ${renderMetric("Missing title", meta.missingTitle.length, "Pages without a browser title", meta.missingTitle.length ? "red" : "blue")}
+            ${renderMetric("Missing meta description", meta.missingDescription.length, "Pages without a meta summary", meta.missingDescription.length ? "amber" : "blue")}
+            ${renderMetric("Missing or duplicate H1", meta.missingH1.length + meta.multipleH1.length, "Main page heading issues", meta.missingH1.length || meta.multipleH1.length ? "amber" : "blue")}
+            ${renderMetric("Missing OG", meta.missingOg.length, "Pages with incomplete Open Graph metadata", meta.missingOg.length ? "amber" : "blue")}
+            ${meta.unreliablePages.length ? renderMetric("Needs verification", meta.unreliablePages.length, "Pages excluded from metadata findings because extraction was not reliable", "amber") : ""}
           </div>
-          ${meta.unreliablePages.length ? `<div class="issue-detail warning"><strong>חשוב:</strong> עמודים שהקרולר קיבל מהם מעט מדי מידע לא נספרים כאן כ־Title/H1/Description חסרים. קודם מאמתים שהעמוד נטען נכון, ואז קובעים אם זו בעיית SEO אמיתית.</div>` : ""}
+          ${meta.unreliablePages.length ? `<div class="issue-detail warning"><strong>Important:</strong> Pages where the crawler received too little information are not counted here as missing Title/H1/Description. First verify that the page loads correctly, then decide if it is a real SEO issue.</div>` : ""}
           <div class="diagnostic-list">
             ${pages.map(renderMetaPageCard).join("")}
           </div>
@@ -3649,23 +3679,23 @@
         <details class="report-accordion" id="link-diagnostics">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>לינקים, קישורים חיצוניים וסימני אמון</strong>
-              <span>מבט מקוצר על מבנה קישורים פנימיים וחיצוניים.</span>
+              <strong>Links, External References and Trust Signals</strong>
+              <span>A compact view of internal and external linking structure.</span>
             </div>
             <div class="accordion-meta">
-              <span class="count-pill">${escapeHtml(links.totalInternal)} פנימיים</span>
-              <span class="count-pill">${escapeHtml(links.totalExternal)} חיצוניים</span>
-              <span class="count-pill">${escapeHtml(links.topDomains.length)} דומיינים</span>
+              <span class="count-pill">${escapeHtml(links.totalInternal)} internal</span>
+              <span class="count-pill">${escapeHtml(links.totalExternal)} external</span>
+              <span class="count-pill">${escapeHtml(links.topDomains.length)} domains</span>
             </div>
           </summary>
           <div class="accordion-body">
           <div class="diagnostic-grid">
-            ${renderMetric("קישורים פנימיים", links.totalInternal, "קישורים שמחברים בין עמודי האתר", "")}
-            ${renderMetric("קישורים חיצוניים", links.totalExternal, "קישורים שמפנים החוצה מהאתר", "blue")}
-            ${renderMetric("דומיינים חיצוניים", links.topDomains.length, "מקורות ויעדים חיצוניים שנמצאו", links.topDomains.length > 15 ? "amber" : "")}
-            ${renderMetric("עמודים עם קישורים חיצוניים", pages.length, "עמודים שבהם כדאי לבדוק איכות הקישורים", "")}
+            ${renderMetric("Internal links", links.totalInternal, "Links that connect pages within the site", "")}
+            ${renderMetric("External links", links.totalExternal, "Links that point outside the site", "blue")}
+            ${renderMetric("External domains", links.topDomains.length, "External sources and destinations found", links.topDomains.length > 15 ? "amber" : "")}
+            ${renderMetric("Pages with external links", pages.length, "Pages where link quality should be reviewed", "")}
           </div>
-          ${links.topDomains.length ? `<div class="domain-cloud">${links.topDomains.slice(0, 18).map((item) => `<span class="domain-chip">${escapeHtml(item.domain)} · ${escapeHtml(item.count)}</span>`).join("")}</div>` : `<div class="report-empty">לא נמצאו קישורים חיצוניים במדגם הנוכחי.</div>`}
+          ${links.topDomains.length ? `<div class="domain-cloud">${links.topDomains.slice(0, 18).map((item) => `<span class="domain-chip">${escapeHtml(item.domain)} · ${escapeHtml(item.count)}</span>`).join("")}</div>` : `<div class="report-empty">No external links were found in the current sample.</div>`}
           <div class="diagnostic-list">
             ${pages.map(renderLinkPageCard).join("")}
           </div>
@@ -3698,18 +3728,18 @@
         <details class="report-accordion report-appendix" id="sampling-strategy">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>נספח פנימי: איך נבחר מדגם העמודים</strong>
-              <span>סגור כברירת מחדל. מיועד להבנת תהליך הבחירה, לא לתצוגת לקוח.</span>
+              <strong>Internal Appendix: How the Page Sample Was Chosen</strong>
+              <span>Closed by default. Built for understanding the selection process, not for client display.</span>
             </div>
-            <div class="accordion-meta"><span class="count-pill">הערת מיפוי</span></div>
+            <div class="accordion-meta"><span class="count-pill">Mapping note</span></div>
           </summary>
           <div class="accordion-body">
-            <p>הקרולר ממפה מועמדים מה־sitemap ומהקישורים באתר, מסווג אותם לפי סוג עמוד, ואז משתמש בתקציב העמודים כדי לבחור מדגם מאוזן לבדיקה.</p>
+            <p>The crawler maps candidates from the sitemap and site links, classifies them by page type, then uses the page budget to choose a balanced audit sample.</p>
             <div class="diagnostic-grid">
-              ${renderMetric("תקציב עמודים", summary.budget || strategy.maxPagesBudget || model.result?.config?.maxPages || model.pages.length, "כמה עמודים נכנסים בפועל לבדיקה המעמיקה", "blue")}
-              ${renderMetric("מועמדים לפני סינון", summary.candidateUrls || strategy.sitemapUrlsConsidered || 0, "כתובות שנאספו לפני בחירת המדגם", "")}
-              ${renderMetric("מתוך sitemap", summary.sitemapCandidateUrls || strategy.sitemapUrlsConsidered || 0, "כתובות שהגיעו ממפת האתר", "")}
-              ${renderMetric("מתוך קישורים", summary.linkCandidateUrls || strategy.linkUrlsConsidered || 0, "כתובות שהתגלו מזחילה פנימית", "")}
+              ${renderMetric("Page budget", summary.budget || strategy.maxPagesBudget || model.result?.config?.maxPages || model.pages.length, "How many pages enter the deep audit", "blue")}
+              ${renderMetric("Candidates before filtering", summary.candidateUrls || strategy.sitemapUrlsConsidered || 0, "URLs collected before sample selection", "")}
+              ${renderMetric("From sitemap", summary.sitemapCandidateUrls || strategy.sitemapUrlsConsidered || 0, "URLs collected from the sitemap", "")}
+              ${renderMetric("From links", summary.linkCandidateUrls || strategy.linkUrlsConsidered || 0, "URLs discovered through internal crawling", "")}
             </div>
             ${rows.length ? `<div class="page-map-grid">${rows.map((row) => `
               <article class="page-map-card ${["homepage", "hotel", "destination", "service", "faq"].includes(row.pageType) ? "featured" : ""}">
@@ -3717,11 +3747,11 @@
                   <strong>${escapeHtml(row.label)}</strong>
                   <span class="page-map-count">${escapeHtml(row.crawled || row.selected)}</span>
                 </div>
-                <div class="issue-detail">נבחרו ${escapeHtml(row.selected)} למדגם · נסרקו ${escapeHtml(row.crawled)}</div>
+                <div class="issue-detail">${escapeHtml(row.selected)} selected for the sample · ${escapeHtml(row.crawled)} crawled</div>
                 ${row.examples.length ? `<div>${row.examples.slice(0, 2).map((url) => renderUrlLink(url)).join("")}</div>` : ""}
               </article>
-            `).join("")}</div>` : `<div class="report-empty">אין פירוט מדגם זמין בתוצאה הזו. בדוח הבא הקרולר ישמור גם סיכום בחירת עמודים.</div>`}
-            ${notes.length ? `<div class="reader-card"><strong>הערות מיפוי</strong><div class="mini-checklist">${notes.map((note) => `<div class="mini-check">${escapeHtml(note)}</div>`).join("")}</div></div>` : ""}
+            `).join("")}</div>` : `<div class="report-empty">No sample breakdown is available in this result. The next report will also keep a page-selection summary.</div>`}
+            ${notes.length ? `<div class="reader-card"><strong>Mapping notes</strong><div class="mini-checklist">${notes.map((note) => `<div class="mini-check">${escapeHtml(note)}</div>`).join("")}</div></div>` : ""}
           </div>
         </details>
       `;
@@ -3737,27 +3767,27 @@
         <section class="report-block accent">
           <div>
             <div class="report-kicker">Internal first</div>
-            <h3>תקציר מנהלים ותהליך קריאה</h3>
+            <h3>Executive Summary and Reading Flow</h3>
           </div>
           <div class="reader-grid">
             <div class="reader-card">
-              <strong>מה רואים בבדיקה</strong>
+              <strong>What the audit shows</strong>
               <p>${escapeHtml(model.executiveSummary)}</p>
               <p>${escapeHtml(model.mainOpportunity)}</p>
             </div>
             <div class="reader-card">
-              <strong>איך לקרוא את הדוח</strong>
+              <strong>How to read the report</strong>
               <div class="mini-checklist">
-                <div class="mini-check">מתחילים בציון הכולל ובפירוק שלו כדי להבין מאיפה המספר הגיע.</div>
-                <div class="mini-check">עוברים למשימות הטיפול ורק אחר כך פותחים ראיות עומק לפי צורך.</div>
-                <div class="mini-check">דוח לקוח מציג ${escapeHtml(visibleForClient)} משימות כרגע; אפשר לסמן ידנית מה נכנס ומה יורד.</div>
+                <div class="mini-check">Start with the total score and its breakdown to understand where the number came from.</div>
+                <div class="mini-check">Move to the action items, then open deeper evidence only when needed.</div>
+                <div class="mini-check">The client report currently shows ${escapeHtml(visibleForClient)} action items; you can manually choose what stays in or comes out.</div>
               </div>
             </div>
           </div>
           ${isInternal && firstActions.length ? `<div class="reader-card">
-            <strong>הצעדים הראשונים שכדאי לפתוח כמשימות</strong>
+            <strong>First steps worth opening as tasks</strong>
             <div class="mini-checklist">
-              ${firstActions.map((item) => `<div class="mini-check">${escapeHtml(item.recommendedFix || item.finding || "לבדוק ולהגדיר טיפול.")}</div>`).join("")}
+              ${firstActions.map((item) => `<div class="mini-check">${escapeHtml(item.recommendedFix || item.finding || "Review and define the right fix.")}</div>`).join("")}
             </div>
           </div>` : ""}
         </section>
@@ -3789,12 +3819,12 @@
           <summary class="accordion-summary">
             <div class="accordion-title">
               <span class="report-kicker">Reading map</span>
-              <strong>מפת עבודה חזותית</strong>
-              <span>סיוע מהיר להבנת מוקדי העבודה. לא חייבים לפתוח בקריאה ראשונה.</span>
+              <strong>Visual Work Map</strong>
+              <span>A quick way to understand the work focus. It does not need to be opened on first read.</span>
             </div>
             <div class="accordion-meta">
-              <span class="count-pill">${escapeHtml(model.stats.total)} ממצאים</span>
-              <span class="count-pill">${escapeHtml(model.actionItems.length)} משימות</span>
+              <span class="count-pill">${escapeHtml(model.stats.total)} findings</span>
+              <span class="count-pill">${escapeHtml(model.actionItems.length)} actions</span>
             </div>
           </summary>
           <div class="accordion-body">
@@ -3802,19 +3832,19 @@
             <article class="visual-card">
               <div class="visual-head">
                 <div>
-                  <strong>ממצאים לפי חומרה</strong>
-                  <span>כמה מהדוח דורש טיפול מיידי לעומת השלמות</span>
+                  <strong>Findings by Severity</strong>
+                  <span>How much of the report needs immediate treatment versus follow-up work</span>
                 </div>
-                <span class="count-pill">${escapeHtml(model.stats.total)} ממצאים</span>
+                <span class="count-pill">${escapeHtml(model.stats.total)} findings</span>
               </div>
               <div class="donut-layout">
                 <div class="donut-chart" style="--criticalEnd:${escapeHtml(criticalEnd)}%;--warningEnd:${escapeHtml(warningEnd)}%">
                   <strong>${escapeHtml(model.stats.total)}</strong>
                 </div>
                 <div class="chart-legend">
-                  ${renderLegendItem("קריטי", model.stats.critical, "var(--red)")}
-                  ${renderLegendItem("דורש תשומת לב", model.stats.warning, "var(--amber)")}
-                  ${renderLegendItem("המלצות", model.stats.info, "var(--blue)")}
+                  ${renderLegendItem("Critical", model.stats.critical, "var(--red)")}
+                  ${renderLegendItem("Needs attention", model.stats.warning, "var(--amber)")}
+                  ${renderLegendItem("Recommendations", model.stats.info, "var(--blue)")}
                 </div>
               </div>
             </article>
@@ -3822,36 +3852,36 @@
             <article class="visual-card alt">
               <div class="visual-head">
                 <div>
-                  <strong>משימות לפי תחום עבודה</strong>
-                  <span>איפה הצוות יצטרך להשקיע בפועל</span>
+                  <strong>Actions by Workstream</strong>
+                  <span>Where the team will need to invest in practice</span>
                 </div>
-                <span class="count-pill">${escapeHtml(model.actionItems.length)} משימות</span>
+                <span class="count-pill">${escapeHtml(model.actionItems.length)} actions</span>
               </div>
               <div class="bar-list">
-                ${actionRows.length ? actionRows.map((row, index) => renderColorBar(row.label, row.value, row.percent, index)).join("") : `<div class="report-empty">אין עדיין משימות טיפול.</div>`}
+                ${actionRows.length ? actionRows.map((row, index) => renderColorBar(row.label, row.value, row.percent, index)).join("") : `<div class="report-empty">No action items yet.</div>`}
               </div>
             </article>
 
             <article class="visual-card warm">
               <div class="visual-head">
                 <div>
-                  <strong>כיסוי סוגי עמודים</strong>
-                  <span>האם המדגם מייצג את העמודים החשובים באמת</span>
+                  <strong>Page Type Coverage</strong>
+                  <span>Whether the sample represents the pages that matter</span>
                 </div>
-                <span class="count-pill">${escapeHtml(model.pages.length)} נסרקו</span>
+                <span class="count-pill">${escapeHtml(model.pages.length)} crawled</span>
               </div>
               <div class="bar-list">
-                ${pageRows.length ? pageRows.map((row, index) => renderColorBar(row.label, row.value, row.percent, index + 2)).join("") : `<div class="report-empty">אין עדיין מיפוי עמודים.</div>`}
+                ${pageRows.length ? pageRows.map((row, index) => renderColorBar(row.label, row.value, row.percent, index + 2)).join("") : `<div class="report-empty">No page mapping yet.</div>`}
               </div>
             </article>
 
             <article class="visual-card ocean">
               <div class="visual-head">
                 <div>
-                  <strong>אותות טכניים מרכזיים</strong>
-                  <span>סכמה, מטא וקישורים במקום אחד כדי להבין אם יש בעיה רוחבית</span>
+                  <strong>Key Technical Signals</strong>
+                  <span>Schema, metadata and links in one place to understand whether there is a wider issue</span>
                 </div>
-                <span class="count-pill">${escapeHtml(metaMissing + metaWarnings + model.schemaDiagnostics.visibleFaqNoSchema.length + model.schemaDiagnostics.faqMismatch.length)} לבדיקה</span>
+                <span class="count-pill">${escapeHtml(metaMissing + metaWarnings + model.schemaDiagnostics.visibleFaqNoSchema.length + model.schemaDiagnostics.faqMismatch.length)} to review</span>
               </div>
               <div class="mini-stack" aria-label="Technical signals">
                 <span style="--w:${escapeHtml(Math.round((metaOk / metaTotal) * 100))}%;--c:var(--green)"></span>
@@ -3859,9 +3889,9 @@
                 <span style="--w:${escapeHtml(Math.round((metaMissing / metaTotal) * 100))}%;--c:var(--red)"></span>
               </div>
               <div class="chart-legend">
-                ${renderLegendItem("עמודים עם JSON-LD", model.schemaDiagnostics.pagesWithJsonLd.length, "var(--green)")}
-                ${renderLegendItem("בעיות מטא וכותרות", metaMissing + metaWarnings, "var(--amber)")}
-                ${renderLegendItem("דומיינים חיצוניים", model.linkDiagnostics.topDomains.length, "var(--blue)")}
+                ${renderLegendItem("Pages with JSON-LD", model.schemaDiagnostics.pagesWithJsonLd.length, "var(--green)")}
+                ${renderLegendItem("Metadata and heading issues", metaMissing + metaWarnings, "var(--amber)")}
+                ${renderLegendItem("External domains", model.linkDiagnostics.topDomains.length, "var(--blue)")}
               </div>
             </article>
           </div>
@@ -3895,37 +3925,37 @@
           <div class="ai-analysis-head">
             <div>
               <div class="report-kicker">AI analysis</div>
-              <h3>ניתוח מסקנות</h3>
-              <p>${escapeHtml(ai.executiveSummary || "ה־AI לא החזיר תקציר מילולי, אבל החזיר מבנה ניתוח.")}</p>
+              <h3>Insight Analysis</h3>
+              <p>${escapeHtml(ai.executiveSummary || "The AI did not return a written summary, but it did return an analysis structure.")}</p>
             </div>
             <span class="severity-pill info">${escapeHtml(ai.model)} · ${escapeHtml(ai.confidence)}</span>
           </div>
           <div class="reader-grid">
             <div class="reader-card">
-              <strong>ניסוח להצגה</strong>
-              <p>${escapeHtml(ai.clientNarrative || ai.executiveSummary || "אין ניסוח לקוח בהרצה הזו.")}</p>
+              <strong>Presentation wording</strong>
+              <p>${escapeHtml(ai.clientNarrative || ai.executiveSummary || "No client-facing wording was returned in this run.")}</p>
             </div>
             <div class="reader-card">
-              <strong>מה כדאי להציג ללקוח</strong>
-              <div class="domain-cloud">${sections || `<span class="domain-chip">תקציר · צעדים · ממצאים מרכזיים</span>`}</div>
+              <strong>What to show the client</strong>
+              <div class="domain-cloud">${sections || `<span class="domain-chip">Summary · steps · key findings</span>`}</div>
             </div>
           </div>
           <div class="action-grid">
             <div class="action-card">
-              <strong>הזדמנויות מרכזיות</strong>
-              <ol>${opportunities || `<li>לא הוחזרו הזדמנויות מה־AI.</li>`}</ol>
+              <strong>Key opportunities</strong>
+              <ol>${opportunities || `<li>No opportunities were returned by the AI.</li>`}</ol>
             </div>
             <div class="action-card">
-              <strong>צעדים מומלצים</strong>
-              <ol>${steps || `<li>לא הוחזרו צעדים מה־AI.</li>`}</ol>
+              <strong>Recommended steps</strong>
+              <ol>${steps || `<li>No steps were returned by the AI.</li>`}</ol>
             </div>
             ${isInternal ? `<div class="action-card">
-              <strong>סיכונים לבדיקה פנימית</strong>
-              <ol>${risks || `<li>אין דגלים פנימיים מיוחדים.</li>`}</ol>
+              <strong>Internal review risks</strong>
+              <ol>${risks || `<li>No special internal flags.</li>`}</ol>
             </div>` : ""}
             ${isInternal ? `<div class="action-card">
-              <strong>חוסר ודאות</strong>
-              <ol>${uncertainties || `<li>אין חוסר ודאות משמעותי שדווח.</li>`}</ol>
+              <strong>Uncertainty</strong>
+              <ol>${uncertainties || `<li>No significant uncertainty was reported.</li>`}</ol>
             </div>` : ""}
           </div>
         </section>
@@ -3944,12 +3974,12 @@
 
     function renderColorBar(label, value, percent, index = 0) {
       const palettes = [
-        ["#7653a9", "#7653a9"],
-        ["#62c7c8", "#62c7c8"],
-        ["#e99a62", "#e99a62"],
-        ["#e88ab2", "#e88ab2"],
-        ["#58a98f", "#58a98f"],
-        ["#cf6666", "#cf6666"]
+        ["#4f7fc7", "#4f7fc7"],
+        ["#6f9b5f", "#6f9b5f"],
+        ["#d98245", "#d98245"],
+        ["#93b0d2", "#93b0d2"],
+        ["#86a66f", "#86a66f"],
+        ["#c65f4b", "#c65f4b"]
       ];
       const [a, b] = palettes[index % palettes.length];
 
@@ -3986,7 +4016,7 @@
         .map((group) => {
           const value = group.crawledCount || group.count || 0;
           return {
-            label: group.label || pageTypeLabels[group.pageType] || group.pageType || "עמודים",
+            label: group.label || pageTypeLabels[group.pageType] || group.pageType || "Pages",
             value,
             percent: Math.max(8, Math.round((value / total) * 100))
           };
@@ -3999,8 +4029,8 @@
         <details class="report-accordion" open id="score-breakdown">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>פירוק הציון הדטרמיניסטי</strong>
-              <span>הציון בנוי מ־7 תחומים ותתי־בדיקות שקופות. כל סעיף מציג ניקוד, מקור ראיה ורמת ביטחון.</span>
+              <strong>Deterministic Score Breakdown</strong>
+              <span>The score is built from 7 areas and transparent sub-checks. Each item shows score, evidence source and confidence level.</span>
             </div>
             <div class="accordion-meta">
               <span class="section-score">${escapeHtml(model.scoreTotal)}</span>
@@ -4019,8 +4049,8 @@
             </div>
             <details class="score-methods-accordion">
               <summary>
-                <strong>איך הציון חושב בפועל</strong>
-                <span>פתיחה מציגה את תתי־הבדיקות, הראיות ורמת הביטחון של כל תחום.</span>
+                <strong>How the score was calculated</strong>
+                <span>Open to see the sub-checks, evidence and confidence level for each area.</span>
               </summary>
               <div class="score-method-grid">
                 ${model.breakdown.map(renderScoreMethodCard).join("")}
@@ -4040,7 +4070,7 @@
             <span>${escapeHtml(section.value)}/${escapeHtml(section.max)}</span>
           </summary>
           <div class="score-component-list">
-            ${components.length ? components.map(renderScoreComponent).join("") : `<div class="report-empty">בדוח ישן אין עדיין פירוק תתי־סעיפים.</div>`}
+            ${components.length ? components.map(renderScoreComponent).join("") : `<div class="report-empty">This older report does not include a sub-check breakdown yet.</div>`}
           </div>
         </details>
       `;
@@ -4055,7 +4085,7 @@
       return `
         <article class="score-component ${escapeAttribute(level)}">
           <div class="score-component-head">
-            <strong>${escapeHtml(component.label || component.key || "בדיקה")}</strong>
+            <strong>${escapeHtml(component.label || component.key || "Check")}</strong>
             <span>${escapeHtml(score)}/${escapeHtml(max)}</span>
           </div>
           <div class="mini-bar"><span style="--w:${escapeHtml(Math.max(0, Math.min(100, percent)))}%"></span></div>
@@ -4066,9 +4096,9 @@
     }
 
     function scoreEvidenceLabel(level) {
-      if (level === "verified") return "אומת בפועל";
-      if (level === "missing") return "חסר מקור אימות";
-      return "היוריסטיקה";
+      if (level === "verified") return "Verified";
+      if (level === "missing") return "Missing verification source";
+      return "Heuristic";
     }
 
     function renderSchemaDiagnostics(model, isInternal) {
@@ -4090,41 +4120,41 @@
         <details class="report-accordion" id="schema-diagnostics">
           <summary class="accordion-summary">
             <div class="accordion-title">
-              <strong>סכמה ונתונים מובנים</strong>
-              <span>החלק הזה מפריד בין סכמה קיימת, פערי התאמה מובהקים, והזדמנויות סכמה שאינן בהכרח תקלה.</span>
+              <strong>Schema and Structured Data</strong>
+              <span>This separates existing schema, clear mismatch gaps and schema opportunities that are not necessarily bugs.</span>
             </div>
             <div class="accordion-meta">
               <span class="count-pill">JSON-LD: ${escapeHtml(schema.pagesWithJsonLd.length)}</span>
-              <span class="count-pill">בלי JSON-LD: ${escapeHtml(schema.pagesWithoutJsonLd.length)}</span>
-              <span class="severity-pill ${schema.problemPages.length ? "warning" : "info"}">${escapeHtml(schema.problemPages.length)} לבדיקה</span>
+              <span class="count-pill">No JSON-LD: ${escapeHtml(schema.pagesWithoutJsonLd.length)}</span>
+              <span class="severity-pill ${schema.problemPages.length ? "warning" : "info"}">${escapeHtml(schema.problemPages.length)} to review</span>
             </div>
           </summary>
           <div class="accordion-body">
             <div class="diagnostic-grid">
-              ${renderMetric("עמודים עם JSON-LD", schema.pagesWithJsonLd.length, "עמודים שבהם נמצאה לפחות סכמה אחת", "blue")}
-              ${renderMetric("עמודים בלי JSON-LD", schema.pagesWithoutJsonLd.length, "נתון מיפוי בלבד. לא כל עמוד צריך סכמה.", "blue")}
-              ${renderMetric("FAQ גלוי בלי סכמה", schema.visibleFaqNoSchema.length, "יש שאלות בעמוד אבל אין FAQPage תואם", schema.visibleFaqNoSchema.length ? "red" : "blue")}
-              ${renderMetric("פער שאלות", schema.faqMismatch.length, "שאלות שמופיעות רק בעמוד או רק בסכמה", schema.faqMismatch.length ? "red" : "blue")}
+              ${renderMetric("Pages with JSON-LD", schema.pagesWithJsonLd.length, "Pages where at least one schema type was found", "blue")}
+              ${renderMetric("Pages without JSON-LD", schema.pagesWithoutJsonLd.length, "Mapping context only. Not every page needs schema.", "blue")}
+              ${renderMetric("Visible FAQ without schema", schema.visibleFaqNoSchema.length, "Questions exist on the page but no matching FAQPage schema was found", schema.visibleFaqNoSchema.length ? "red" : "blue")}
+              ${renderMetric("Question gaps", schema.faqMismatch.length, "Questions that appear only on the page or only in schema", schema.faqMismatch.length ? "red" : "blue")}
             </div>
-            ${topTypes ? `<div class="domain-cloud">${topTypes}</div>` : `<div class="report-empty">לא נמצאו סוגי סכמה במדגם הנוכחי.</div>`}
-            ${problemCards ? `<div class="schema-grid">${problemCards}</div>` : `<div class="report-empty">לא נמצאו פערי סכמה מובהקים במדגם הנוכחי.</div>`}
+            ${topTypes ? `<div class="domain-cloud">${topTypes}</div>` : `<div class="report-empty">No schema types were found in the current sample.</div>`}
+            ${problemCards ? `<div class="schema-grid">${problemCards}</div>` : `<div class="report-empty">No clear schema gaps were found in the current sample.</div>`}
             ${isInternal && opportunityCards ? `<details class="report-accordion">
               <summary class="accordion-summary">
                 <div class="accordion-title">
-                  <strong>הזדמנויות סכמה, לא תקלות</strong>
-                  <span>עמודים מרכזיים בלי JSON-LD. זה לא מסומן כבעיה, רק כנקודה לשיקול מקצועי.</span>
+                  <strong>Schema Opportunities, Not Bugs</strong>
+                  <span>Important pages without JSON-LD. This is not marked as an issue, only as a professional consideration.</span>
                 </div>
-                <div class="accordion-meta"><span class="count-pill">${escapeHtml(schema.schemaOpportunities.length)} עמודים</span></div>
+                <div class="accordion-meta"><span class="count-pill">${escapeHtml(schema.schemaOpportunities.length)} pages</span></div>
               </summary>
               <div class="accordion-body"><div class="schema-grid">${opportunityCards}</div></div>
             </details>` : ""}
             ${isInternal && cleanPages ? `<details class="report-accordion">
               <summary class="accordion-summary">
                 <div class="accordion-title">
-                  <strong>עמודים שבהם כן נמצאה סכמה</strong>
-                  <span>מקוצר כדי לשמור על הדוח קריא. פתחי רק אם צריך לבדוק דוגמאות תקינות.</span>
+                  <strong>Pages Where Schema Was Found</strong>
+                  <span>Kept compact to keep the report readable. Open only when you need to inspect valid examples.</span>
                 </div>
-                <div class="accordion-meta"><span class="count-pill">${escapeHtml(schema.pagesWithJsonLd.length)} עמודים</span></div>
+                <div class="accordion-meta"><span class="count-pill">${escapeHtml(schema.pagesWithJsonLd.length)} pages</span></div>
               </summary>
               <div class="accordion-body"><div class="schema-grid">${cleanPages}</div></div>
             </details>` : ""}
@@ -4138,19 +4168,19 @@
     function renderTechnicalEvidence(model) {
       return `
         <section class="report-block" id="technical-evidence">
-          <h3>נספח פנימי</h3>
-          <p>החלק הזה מיועד לעבודה פנימית: הוא משאיר יותר פרטים טכניים, דוגמאות URLs ומספרי שדות כדי שיהיה קל לפתוח משימות טיפול.</p>
+          <h3>Internal Appendix</h3>
+          <p>This section is for internal work: it keeps more technical details, URL examples and field counts so treatment tasks are easier to open.</p>
           <div class="diagnostic-grid">
-            ${renderMetric("סך ממצאים", model.stats.total, "כל הממצאים מהקרולר", "")}
-            ${renderMetric("קריטיים", model.stats.critical, "תיקונים בעדיפות גבוהה", model.stats.critical ? "red" : "")}
-            ${renderMetric("אזהרות", model.stats.warning, "תיקונים בעדיפות בינונית", model.stats.warning ? "amber" : "")}
-            ${renderMetric("מידע", model.stats.info, "המלצות והעשרות", "blue")}
+            ${renderMetric("Total findings", model.stats.total, "All crawler findings", "")}
+            ${renderMetric("Critical", model.stats.critical, "High-priority fixes", model.stats.critical ? "red" : "")}
+            ${renderMetric("Warnings", model.stats.warning, "Medium-priority fixes", model.stats.warning ? "amber" : "")}
+            ${renderMetric("Info", model.stats.info, "Recommendations and enrichments", "blue")}
           </div>
           <details class="report-accordion">
             <summary class="accordion-summary">
               <div class="accordion-title">
-                <strong>מה נאסף בפועל מהאתר</strong>
-                <span>שקיפות פנימית: מה הקרולר בודק היום ומה עדיין דורש הרחבה בשלב הבא.</span>
+                <strong>What Was Actually Collected From the Site</strong>
+                <span>Internal transparency: what the crawler checks today and what still needs expansion next.</span>
               </div>
               <div class="accordion-meta"><span class="count-pill">Coverage matrix</span></div>
             </summary>
@@ -4165,27 +4195,27 @@
     function renderDataCoverageMatrix(model) {
       const hasRendered = String(model.result?.config?.renderMode || "").includes("rendered");
       const rows = [
-        ["Status code", "נאסף", "נשמר לכל עמוד שנבדק."],
-        ["Redirect chain", "חסר", "כרגע נשמר הסטטוס הסופי בלבד. צריך להוסיף שרשרת הפניות מלאה."],
-        ["Title", "נאסף", "מתוך תגית title."],
-        ["Meta description", "נאסף", "כולל אורך וחוסרים."],
-        ["Canonical", "נאסף", "כולל בדיקת קיום והתאמה ל־URL."],
-        ["robots.txt", "נאסף", "נבדק ברמת האתר."],
-        ["Meta robots", "נאסף", "נבדק לכל עמוד."],
-        ["Sitemap", "נאסף", "משמש גם למיפוי קבוצות עמודים."],
-        ["H1/H2", "חלקי", "H1 נאסף ומנותח. H2 עדיין לא נשמר כדאטה מובנה."],
-        ["קישורים פנימיים וחיצוניים", "נאסף", "כולל ספירה, דומיינים חיצוניים ו־mailto/tel."],
-        ["תמונות ו-alt", "חסר", "עדיין לא נשמרים נתוני תמונות ו־alt. זה שלב הרחבה מומלץ."],
-        ["Structured data / JSON-LD", "נאסף", "כולל סוגי סכמה ו־FAQPage."],
-        ["תוכן HTML מקורי", "נאסף", "הקרולר מנתח את ה־HTML שהוא קיבל במצב הרצה הנבחר."],
-        ["תוכן אחרי JavaScript", hasRendered ? "נאסף" : "אופציונלי", hasRendered ? "נאסף דרך Rendered browser." : "נאסף רק אם בוחרים מצב Rendered browser."],
-        ["פער Static מול Rendered", "חסר", "עדיין אין השוואה מובנית בין HTML סטטי לבין תוכן JS-only."]
+        ["Status code", "Collected", "Stored for every checked page."],
+        ["Redirect chain", "Missing", "Only the final status is currently stored. A full redirect chain should be added."],
+        ["Title", "Collected", "Read from the title tag."],
+        ["Meta description", "Collected", "Includes length and missing-state checks."],
+        ["Canonical", "Collected", "Includes existence and URL-match checks."],
+        ["robots.txt", "Collected", "Checked at site level."],
+        ["Meta robots", "Collected", "Checked per page."],
+        ["Sitemap", "Collected", "Also used for page-group mapping."],
+        ["H1/H2", "Partial", "H1 is collected and analyzed. H2 is not stored as structured data yet."],
+        ["Internal and external links", "Collected", "Includes counts, external domains and mailto/tel."],
+        ["Images and alt text", "Missing", "Image and alt data are not stored yet. This is a recommended expansion step."],
+        ["Structured data / JSON-LD", "Collected", "Includes schema types and FAQPage."],
+        ["Original HTML content", "Collected", "The crawler analyzes the HTML received in the selected run mode."],
+        ["Content after JavaScript", hasRendered ? "Collected" : "Optional", hasRendered ? "Collected through Rendered browser." : "Collected only when Rendered browser mode is selected."],
+        ["Static vs Rendered gap", "Missing", "There is not yet a structured comparison between static HTML and JS-only content."]
       ];
 
       return `
         <div class="reader-grid">
           ${rows.map(([label, status, note]) => {
-            const tone = status === "נאסף" ? "info" : status === "חלקי" || status === "אופציונלי" ? "warning" : "critical";
+            const tone = status === "Collected" ? "info" : status === "Partial" || status === "Optional" ? "warning" : "critical";
             return `<div class="reader-card">
               <strong>${escapeHtml(label)}</strong>
               <div class="diagnostic-meta"><span class="severity-pill ${tone}">${escapeHtml(status)}</span></div>
@@ -4210,18 +4240,18 @@
 
       return `
         <section class="report-block" id="action-backlog">
-          <h3>${isInternal ? "לטיפול - דוח עבודה פנימי" : "צעדים ברורים לטיפול"}</h3>
-          <p>${isInternal ? "רשימת המשימות נבנית ישירות מהממצאים של הקרולר ומיועדת לפתיחת משימות לצוות." : "רשימת צעדים מתומצתת שמתרגמת את ממצאי הבדיקה לפעולות ברורות."}</p>
+          <h3>${isInternal ? "Action Backlog - Internal Working Report" : "Clear Next Steps"}</h3>
+          <p>${isInternal ? "The task list is built directly from crawler findings and is meant to help the team open concrete work items." : "A focused list of steps that turns audit findings into clear actions."}</p>
           <div class="diagnostic-grid">
-            ${renderMetric("קריטי", priorityStats.critical, "חסימות או בעיות תשתית שמומלץ לפתור ראשונות", priorityStats.critical ? "red" : "")}
-            ${renderMetric("גבוה", priorityStats.high, "משימות עם השפעה גבוהה על הבנת האתר", priorityStats.high ? "amber" : "")}
-            ${renderMetric("בינוני", priorityStats.medium, "תיקונים חשובים לשיפור איכות ודיוק", "")}
-            ${renderMetric("נמוך", priorityStats.low, "שיפורים והשלמות לאחר טיפול בעיקר", "blue")}
-            ${isInternal && model.unreliablePages.length ? renderMetric("נדרש אימות", model.unreliablePages.length, "עמודים שלא נקראו מספיק טוב ולכן לא הופכים אוטומטית למשימות מטא/תוכן", "amber") : ""}
-            ${isInternal ? renderMetric("בדוח לקוח", clientVisibleCount, "משימות שמסומנות להצגה בגרסה שהלקוח יקבל", "blue") : ""}
+            ${renderMetric("Critical", priorityStats.critical, "Blockers or infrastructure issues to resolve first", priorityStats.critical ? "red" : "")}
+            ${renderMetric("High", priorityStats.high, "High-impact tasks for site understanding", priorityStats.high ? "amber" : "")}
+            ${renderMetric("Medium", priorityStats.medium, "Important fixes for quality and accuracy", "")}
+            ${renderMetric("Low", priorityStats.low, "Improvements and follow-up work after the main fixes", "blue")}
+            ${isInternal && model.unreliablePages.length ? renderMetric("Needs verification", model.unreliablePages.length, "Pages that were not read well enough and should not automatically become metadata/content tasks", "amber") : ""}
+            ${isInternal ? renderMetric("In client report", clientVisibleCount, "Tasks marked for the client-facing version", "blue") : ""}
           </div>
           ${isInternal ? renderActionFocus(model, allItems) : ""}
-          ${items.length ? `<div>${actionGroups.map((group, index) => renderActionGroup(group, index, isInternal, model)).join("")}</div>` : `<div class="report-empty">לא נמצאו משימות טיפול בתוצאה הנוכחית.</div>`}
+          ${items.length ? `<div>${actionGroups.map((group, index) => renderActionGroup(group, index, isInternal, model)).join("")}</div>` : `<div class="report-empty">No action items were found in the current result.</div>`}
         </section>
       `;
     }
@@ -4238,9 +4268,9 @@
       if (!nextItems.length && !verifyItems.length) return "";
 
       return `
-        <div class="action-focus-grid" aria-label="מוקדי טיפול פתוחים">
-          ${renderActionFocusCard("מה לפתוח עכשיו", "המשימות הראשונות שאמורות להפוך לטיפול תפעולי.", nextItems, "urgent")}
-          ${renderActionFocusCard("מה לבדוק לפני שמתקנים", "ממצאים שבהם כדאי לוודא קריאה/ראיה לפני פתיחת משימה.", verifyItems, "verify")}
+        <div class="action-focus-grid" aria-label="Open treatment focus areas">
+          ${renderActionFocusCard("What to open now", "The first tasks that should become operational work.", nextItems, "urgent")}
+          ${renderActionFocusCard("What to verify before fixing", "Findings where reading or evidence should be confirmed before opening a task.", verifyItems, "verify")}
         </div>
       `;
     }
@@ -4251,7 +4281,7 @@
           <div class="action-focus-card ${tone}">
             <strong>${escapeHtml(title)}</strong>
             <p>${escapeHtml(subtitle)}</p>
-            <div class="action-focus-item">אין כרגע פריטים פתוחים בקטגוריה הזו.</div>
+            <div class="action-focus-item">There are no open items in this category right now.</div>
           </div>
         `;
       }
@@ -4261,7 +4291,7 @@
           <strong>${escapeHtml(title)}</strong>
           <p>${escapeHtml(subtitle)}</p>
           <div class="action-focus-list">
-            ${items.map((item) => `<div class="action-focus-item">${escapeHtml(item.recommendedFix || item.finding || "לבדוק ולהגדיר טיפול.")}</div>`).join("")}
+            ${items.map((item) => `<div class="action-focus-item">${escapeHtml(item.recommendedFix || item.finding || "Review and define the right fix.")}</div>`).join("")}
           </div>
         </div>
       `;
@@ -4291,18 +4321,18 @@
 
     function renderActionGroup(group, index, isInternal, model) {
       const highCount = group.items.filter((item) => item.priority === "critical" || item.priority === "high").length;
-      const pageTypes = Array.from(new Set(group.items.map((item) => pageTypeLabels[item.pageType || "site-wide"] || "רוחבי באתר"))).slice(0, 3);
+      const pageTypes = Array.from(new Set(group.items.map((item) => pageTypeLabels[item.pageType || "site-wide"] || "Site-wide"))).slice(0, 3);
 
       return `
         <details class="report-accordion" ${index < 1 ? "open" : ""}>
           <summary class="accordion-summary">
             <div class="accordion-title">
               <strong>${escapeHtml(group.label)}</strong>
-              <span>${escapeHtml(group.items.length)} משימות${highCount ? `, מתוכן ${escapeHtml(highCount)} בעדיפות גבוהה` : ""}. ${escapeHtml(pageTypes.join(" · "))}</span>
+              <span>${escapeHtml(group.items.length)} actions${highCount ? `, including ${escapeHtml(highCount)} high-priority` : ""}. ${escapeHtml(pageTypes.join(" · "))}</span>
             </div>
             <div class="accordion-meta">
-              <span class="count-pill">${escapeHtml(group.items.length)} לטיפול</span>
-              ${highCount ? `<span class="severity-pill critical">${escapeHtml(highCount)} גבוה</span>` : ""}
+              <span class="count-pill">${escapeHtml(group.items.length)} to handle</span>
+              ${highCount ? `<span class="severity-pill critical">${escapeHtml(highCount)} high</span>` : ""}
             </div>
           </summary>
           <div class="accordion-body">
@@ -4371,51 +4401,51 @@
     function renderActionTaskCard(item, isInternal, model) {
       const tone = actionPriorityTone(item.priority);
       const affectedCount = Number(item.affectedCount || (item.affectedUrls || []).length || (item.pageUrl ? 1 : 0));
-      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "רוחבי באתר";
+      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "Site-wide";
       const examples = Array.isArray(item.affectedUrls) && item.affectedUrls.length
         ? item.affectedUrls.slice(0, isInternal ? 4 : 2).map((url) => renderUrlLink(url)).join("")
-        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">רוחבי באתר</div>`;
+        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">Site-wide</div>`;
       const actionKey = getClientActionKey(item);
       const taskTone = item.priority === "critical" || item.priority === "high" ? "high" : item.priority === "medium" ? "medium" : "low";
       const jumpHref = getActionJumpHref(item, model);
       const unreliableExamples = getUnreliableActionUrls(item, model);
       const reliabilityNote = unreliableExamples.length
-        ? `<div class="issue-detail warning"><strong>נדרש אימות קריאה:</strong> בחלק מהדוגמאות הקרולר לא קיבל תוכן מלא. לפני פתיחת משימת מטא/כותרות, לבדוק את העמוד בדפדפן או להריץ מחדש עם רינדור.</div>`
+        ? `<div class="issue-detail warning"><strong>Reading verification required:</strong> For some examples, the crawler did not receive full content. Before opening a metadata or heading task, check the page in a browser or rerun with rendering.</div>`
         : "";
 
       return `
         <article class="task-card ${taskTone}">
           <div class="task-topline">
             <div>
-              <div class="task-title">${escapeHtml(item.finding || "ממצא")}</div>
+              <div class="task-title">${escapeHtml(item.finding || "Finding")}</div>
               <div class="diagnostic-meta">
                 <span class="severity-pill ${tone}">${escapeHtml(actionPriorityLabels[item.priority] || item.priority || "-")}</span>
-                <span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} עמודים</span>
-                <span class="count-pill">${escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")} השפעה</span>
-                ${unreliableExamples.length ? `<span class="severity-pill warning">נדרש אימות</span>` : ""}
+                <span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} pages</span>
+                <span class="count-pill">${escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")} impact</span>
+                ${unreliableExamples.length ? `<span class="severity-pill warning">Needs verification</span>` : ""}
               </div>
             </div>
-            ${isInternal ? `<label class="client-include"><input type="checkbox" ${isActionClientIncluded(item) ? "checked" : ""} onchange="toggleClientAction('${escapeAttribute(actionKey)}', this.checked)" /> דוח לקוח</label>` : ""}
+            ${isInternal ? `<label class="client-include"><input type="checkbox" ${isActionClientIncluded(item) ? "checked" : ""} onchange="toggleClientAction('${escapeAttribute(actionKey)}', this.checked)" /> Client report</label>` : ""}
           </div>
           <div class="task-body">
             <div class="task-note">
-              <span>מה הבעיה</span>
-              <p>${escapeHtml(item.whyItMatters || item.evidence || "הממצא דורש בדיקה ותיקון כדי לשפר את מוכנות האתר.")}</p>
+              <span>What is the issue</span>
+              <p>${escapeHtml(item.whyItMatters || item.evidence || "This finding needs review and correction to improve site readiness.")}</p>
             </div>
             <div class="task-note">
-              <span>מה עושים</span>
-              <p>${escapeHtml(item.recommendedFix || "לבדוק ולהגדיר תיקון.")}</p>
+              <span>What to do</span>
+              <p>${escapeHtml(item.recommendedFix || "Review and define the right fix.")}</p>
             </div>
             <div class="task-note">
-              <span>דוגמאות</span>
+              <span>Examples</span>
               ${examples}
-              ${jumpHref ? `<a class="jump-link" href="${escapeAttribute(jumpHref)}">קפיצה לפירוט</a>` : ""}
+              ${jumpHref ? `<a class="jump-link" href="${escapeAttribute(jumpHref)}">Jump to details</a>` : ""}
             </div>
           </div>
           ${reliabilityNote}
           ${isInternal ? renderActionTools(item, model) : ""}
-          ${isInternal && item.evidence ? `<div class="issue-detail"><strong>ראיה:</strong> ${escapeHtml(item.evidence)}</div>` : ""}
-          ${isInternal ? `<div class="issue-detail"><strong>אחריות:</strong> ${escapeHtml(actionOwnerLabels[item.owner] || item.owner || "-")} · <strong>מאמץ:</strong> ${escapeHtml(actionEffortLabels[item.effort] || item.effort || "-")}</div>` : ""}
+          ${isInternal && item.evidence ? `<div class="issue-detail"><strong>Evidence:</strong> ${escapeHtml(item.evidence)}</div>` : ""}
+          ${isInternal ? `<div class="issue-detail"><strong>Owner:</strong> ${escapeHtml(actionOwnerLabels[item.owner] || item.owner || "-")} · <strong>Effort:</strong> ${escapeHtml(actionEffortLabels[item.effort] || item.effort || "-")}</div>` : ""}
         </article>
       `;
     }
@@ -4428,8 +4458,8 @@
 
       return `
         <div class="task-tools">
-          <button class="btn primary small" type="button" onclick="openSchemaDraftDialog('${escapeAttribute(schemaUrl)}')">צור טיוטת סכמה</button>
-          <span>פותח JSON-LD ראשוני לעריכה ידנית לפי העמוד והממצא. מיועד לקיצור עבודה, לא לפרסום אוטומטי.</span>
+          <button class="btn primary small" type="button" onclick="openSchemaDraftDialog('${escapeAttribute(schemaUrl)}')">Create schema draft</button>
+          <span>Opens an initial JSON-LD draft for manual editing based on the page and finding. Built to speed up work, not for automatic publishing.</span>
         </div>
       `;
     }
@@ -4441,7 +4471,7 @@
         || text.includes("schema")
         || text.includes("json-ld")
         || text.includes("faqpage")
-        || text.includes("סכמה");
+        || text.includes("schema");
 
       if (!isSchemaTask) return "";
 
@@ -4456,28 +4486,28 @@
     function renderActionItemRow(item, isInternal) {
       const tone = actionPriorityTone(item.priority);
       const affectedCount = Number(item.affectedCount || (item.affectedUrls || []).length || (item.pageUrl ? 1 : 0));
-      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "רוחבי באתר";
+      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "Site-wide";
       const examples = Array.isArray(item.affectedUrls) && item.affectedUrls.length
         ? item.affectedUrls.slice(0, isInternal ? 5 : 2).map((url) => renderUrlLink(url)).join("")
-        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">רוחבי באתר</div>`;
+        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">Site-wide</div>`;
       const evidence = isInternal && item.evidence ? `<div class="issue-detail">${escapeHtml(item.evidence)}</div>` : "";
       const actionKey = getClientActionKey(item);
 
       return `
         <tr>
-          ${isInternal ? `<td><label class="client-include"><input type="checkbox" ${isActionClientIncluded(item) ? "checked" : ""} onchange="toggleClientAction('${escapeAttribute(actionKey)}', this.checked)" /> לקוח</label></td>` : ""}
+          ${isInternal ? `<td><label class="client-include"><input type="checkbox" ${isActionClientIncluded(item) ? "checked" : ""} onchange="toggleClientAction('${escapeAttribute(actionKey)}', this.checked)" /> Client</label></td>` : ""}
           <td><span class="severity-pill ${tone}">${escapeHtml(actionPriorityLabels[item.priority] || item.priority || "-")}</span></td>
           <td>${escapeHtml(actionWorkstreamLabels[item.workstream] || item.workstream || "-")}</td>
           <td>
-            <div class="action-finding">${escapeHtml(item.finding || "ממצא")}</div>
-            <div class="action-fix">${escapeHtml(item.recommendedFix || "לבדוק ולהגדיר תיקון.")}</div>
-            ${isInternal && item.whyItMatters ? `<div class="issue-detail"><strong>למה זה חשוב:</strong> ${escapeHtml(item.whyItMatters)}</div>` : ""}
+            <div class="action-finding">${escapeHtml(item.finding || "Finding")}</div>
+            <div class="action-fix">${escapeHtml(item.recommendedFix || "Review and define the right fix.")}</div>
+            ${isInternal && item.whyItMatters ? `<div class="issue-detail"><strong>Why it matters:</strong> ${escapeHtml(item.whyItMatters)}</div>` : ""}
           </td>
           <td>${isInternal
             ? `${escapeHtml(actionOwnerLabels[item.owner] || item.owner || "-")} · ${escapeHtml(actionEffortLabels[item.effort] || item.effort || "-")} · ${escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")}`
             : escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")}
           </td>
-          <td><span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} עמודים</span>${examples}${evidence}</td>
+          <td><span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} pages</span>${examples}${evidence}</td>
         </tr>
       `;
     }
@@ -4506,22 +4536,22 @@
         .slice(0, 10);
       const importantCoverage = model.sitemapDiagnostics.importantSitemapCount
         ? `${model.sitemapDiagnostics.importantCrawledCount}/${model.sitemapDiagnostics.importantSitemapCount}`
-        : "לא זמין";
+        : "Not available";
       const selection = model.pageSelectionSummary || {};
 
       return `
         <section class="report-block" id="page-map">
-          <h3>מפת האתר והעמודים החשובים</h3>
-          <p>המיפוי משווה בין מה שה־sitemap מציע לבין מה שהקרולר הספיק לבדוק, כדי להבין אם המדגם באמת מכסה עמודים מרכזיים ולא רק עמודים אקראיים.</p>
+          <h3>Sitemap and Important Pages</h3>
+          <p>The mapping compares what the sitemap offers with what the crawler actually checked, so you can see whether the sample covers important pages rather than random pages.</p>
           <div class="diagnostic-grid">
-            ${selection.budget ? renderMetric("תקציב מדגם", selection.budget, "מספר העמודים שנכנסים לבדיקה בפועל", "blue") : ""}
-            ${selection.candidateUrls ? renderMetric("מועמדים לפני בחירה", selection.candidateUrls, "כתובות שנאספו לפני סינון וסיווג", "") : ""}
-            ${renderMetric("כתובות ב־sitemap", model.sitemapDiagnostics.total || "לא נמצא", "כמה URLs נמצאו בקובצי sitemap", model.sitemapDiagnostics.total ? "blue" : "amber")}
-            ${renderMetric("נסרקו מתוך sitemap", model.sitemapDiagnostics.sampledFromSitemap || 0, "כמה מהכתובות שנבדקו הגיעו מהמפה", "")}
-            ${renderMetric("כיסוי עמודים חשובים", importantCoverage, "בית, מלונות, יעדים, מבצעים, מותג ויצירת קשר", model.sitemapDiagnostics.importantCoverage < 25 && model.sitemapDiagnostics.importantSitemapCount ? "amber" : "blue")}
-            ${renderMetric("סוגי עמודים", visibleGroups.length, "כמה קבוצות עמודים זוהו במדגם", "")}
+            ${selection.budget ? renderMetric("Sample budget", selection.budget, "Number of pages that enter the actual audit", "blue") : ""}
+            ${selection.candidateUrls ? renderMetric("Candidates before selection", selection.candidateUrls, "URLs collected before filtering and classification", "") : ""}
+            ${renderMetric("Sitemap URLs", model.sitemapDiagnostics.total || "Not found", "How many URLs were found in sitemap files", model.sitemapDiagnostics.total ? "blue" : "amber")}
+            ${renderMetric("Crawled from sitemap", model.sitemapDiagnostics.sampledFromSitemap || 0, "How many checked URLs came from the sitemap", "")}
+            ${renderMetric("Important page coverage", importantCoverage, "Home, hotels, destinations, offers, brand and contact pages", model.sitemapDiagnostics.importantCoverage < 25 && model.sitemapDiagnostics.importantSitemapCount ? "amber" : "blue")}
+            ${renderMetric("Page types", visibleGroups.length, "How many page groups were identified in the sample", "")}
           </div>
-          ${visibleGroups.length ? `<div class="page-map-grid">${visibleGroups.map(renderPageTypeCard).join("")}</div>` : `<div class="report-empty">אין מספיק מידע למפת עמודים. כדאי לוודא שיש sitemap או להגדיל את עומק הזחילה.</div>`}
+          ${visibleGroups.length ? `<div class="page-map-grid">${visibleGroups.map(renderPageTypeCard).join("")}</div>` : `<div class="report-empty">There is not enough information for a page map. Make sure a sitemap exists or increase crawl depth.</div>`}
         </section>
       `;
     }
@@ -4542,9 +4572,9 @@
           </div>
           <div class="mini-bars">
             <div class="mini-bar"><span style="--w:${escapeHtml(Math.min(100, coverage))}%"></span></div>
-            <div class="issue-detail">נסרקו ${escapeHtml(crawledCount)}${sitemapCount ? ` מתוך ${escapeHtml(sitemapCount)} ב־sitemap` : ""}</div>
+            <div class="issue-detail">${escapeHtml(crawledCount)} crawled${sitemapCount ? ` out of ${escapeHtml(sitemapCount)} in the sitemap` : ""}</div>
           </div>
-          ${examples.length ? `<div>${examples.map((url) => renderUrlLink(url)).join("")}</div>` : `<div class="issue-detail">אין דוגמאות זמינות בקבוצה הזו.</div>`}
+          ${examples.length ? `<div>${examples.map((url) => renderUrlLink(url)).join("")}</div>` : `<div class="issue-detail">No examples are available for this group.</div>`}
         </article>
       `;
     }
@@ -4561,7 +4591,7 @@
     }
 
     function renderUrlLink(url, label = url) {
-      if (!url) return `<div class="page-url">אין URL זמין</div>`;
+      if (!url) return `<div class="page-url">No URL available</div>`;
       return `<div class="page-url"><a class="page-link" href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label || url)}</a></div>`;
     }
 
@@ -4575,39 +4605,39 @@
       const tone = hasFaqGap ? "problem" : isOpportunity ? "clean" : hasSchema ? "clean" : "";
       const status = hasFaqGap
         ? page.domFaqCount > 0 && page.schemaFaqCount === 0
-          ? "FAQ גלוי בלי FAQPage"
-          : "פער בין העמוד לסכמה"
+          ? "Visible FAQ without FAQPage"
+          : "Page/schema mismatch"
         : hasSchema
-          ? "יש סכמה"
+          ? "Schema found"
           : isOpportunity
-            ? "הזדמנות לסכמה"
-            : "בלי JSON-LD";
+            ? "Schema opportunity"
+            : "No JSON-LD";
       const example = domOnly[0]
-        ? `שאלה גלויה שלא נמצאה בסכמה: ${domOnly[0]}`
+        ? `Visible question not found in schema: ${domOnly[0]}`
         : schemaOnly[0]
-          ? `שאלה בסכמה שלא נמצאה בעמוד: ${schemaOnly[0]}`
+          ? `Schema question not found on the page: ${schemaOnly[0]}`
           : page.domQuestions?.[0]
-            ? `דוגמה לשאלה בעמוד: ${page.domQuestions[0]}`
-            : "אין דוגמת שאלה זמינה במדגם.";
+            ? `Example page question: ${page.domQuestions[0]}`
+            : "No question example is available in the sample.";
 
       return `
         <article class="schema-page-card ${tone}">
           <div class="card-topline">
             <div>
-              <div class="card-title">${escapeHtml(page.title || page.h1 || "עמוד ללא כותרת")}</div>
+              <div class="card-title">${escapeHtml(page.title || page.h1 || "Untitled page")}</div>
               ${renderUrlLink(page.url)}
             </div>
             <span class="severity-pill ${hasFaqGap ? "warning" : "info"}">${escapeHtml(status)}</span>
           </div>
           <div class="diagnostic-meta">
-            <span class="count-pill">סוג עמוד: ${escapeHtml(pageTypeLabels[page.pageType] || page.pageType || "-")}</span>
-            <span class="count-pill">סכמה: ${escapeHtml(types.length ? types.join(", ") : "אין")}</span>
-            <span class="count-pill">FAQ גלוי: ${escapeHtml(page.domFaqCount || 0)}</span>
-            <span class="count-pill">FAQ בסכמה: ${escapeHtml(page.schemaFaqCount || 0)}</span>
+            <span class="count-pill">Page type: ${escapeHtml(pageTypeLabels[page.pageType] || page.pageType || "-")}</span>
+            <span class="count-pill">Schema: ${escapeHtml(types.length ? types.join(", ") : "None")}</span>
+            <span class="count-pill">Visible FAQ: ${escapeHtml(page.domFaqCount || 0)}</span>
+            <span class="count-pill">Schema FAQ: ${escapeHtml(page.schemaFaqCount || 0)}</span>
           </div>
-          ${isOpportunity ? `<div class="issue-detail"><strong>הערה:</strong> זה לא מסומן כבעיה. לבדוק ידנית אם יש בעמוד ישות או שירות שמצדיקים סכמה.</div>` : `<div class="issue-detail"><strong>דוגמה:</strong> ${escapeHtml(example)}</div>`}
-          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>חסר בסכמה:</strong> ${escapeHtml(domOnly.slice(0, 6).join(" | "))}</div>` : ""}
-          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>מופיע רק בסכמה:</strong> ${escapeHtml(schemaOnly.slice(0, 6).join(" | "))}</div>` : ""}
+          ${isOpportunity ? `<div class="issue-detail"><strong>Note:</strong> This is not marked as an issue. Review manually whether the page has an entity or service that justifies schema.</div>` : `<div class="issue-detail"><strong>Example:</strong> ${escapeHtml(example)}</div>`}
+          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Missing from schema:</strong> ${escapeHtml(domOnly.slice(0, 6).join(" | "))}</div>` : ""}
+          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Appears only in schema:</strong> ${escapeHtml(schemaOnly.slice(0, 6).join(" | "))}</div>` : ""}
         </article>
       `;
     }
@@ -4620,18 +4650,18 @@
 
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "עמוד FAQ ללא כותרת")}</h4>
+          <h4>${escapeHtml(page.title || page.h1 || "Untitled FAQ page")}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
-            <span class="severity-pill ${hasProblem ? "critical" : "info"}">${hasProblem ? "דורש טיפול" : "תקין במדגם"}</span>
-            <span class="count-pill">FAQ גלוי: ${escapeHtml(page.domFaqCount || 0)}</span>
-            <span class="count-pill">FAQ בסכמה: ${escapeHtml(page.schemaFaqCount || 0)}</span>
-            <span class="count-pill">פער DOM: ${escapeHtml(domOnly.length)}</span>
-            <span class="count-pill">פער schema: ${escapeHtml(schemaOnly.length)}</span>
+            <span class="severity-pill ${hasProblem ? "critical" : "info"}">${hasProblem ? "Needs work" : "OK in sample"}</span>
+            <span class="count-pill">Visible FAQ: ${escapeHtml(page.domFaqCount || 0)}</span>
+            <span class="count-pill">Schema FAQ: ${escapeHtml(page.schemaFaqCount || 0)}</span>
+            <span class="count-pill">DOM gap: ${escapeHtml(domOnly.length)}</span>
+            <span class="count-pill">Schema gap: ${escapeHtml(schemaOnly.length)}</span>
           </div>
           ${sampleQuestions.length ? `<div class="qa-list">${sampleQuestions.map((q) => `<div class="qa-item">${escapeHtml(q)}</div>`).join("")}</div>` : ""}
-          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>שאלות גלויות שלא נמצאו בסכמה:</strong> ${escapeHtml(domOnly.slice(0, 8).join(" | "))}</div>` : ""}
-          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>שאלות בסכמה שלא נמצאו במסך:</strong> ${escapeHtml(schemaOnly.slice(0, 8).join(" | "))}</div>` : ""}
+          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Visible questions not found in schema:</strong> ${escapeHtml(domOnly.slice(0, 8).join(" | "))}</div>` : ""}
+          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Schema questions not found on screen:</strong> ${escapeHtml(schemaOnly.slice(0, 8).join(" | "))}</div>` : ""}
         </article>
       `;
     }
@@ -4640,14 +4670,14 @@
       const meta = page.metaDiagnostics || {};
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "עמוד ללא כותרת")}</h4>
+          <h4>${escapeHtml(page.title || page.h1 || "Untitled page")}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
             <span class="count-pill">Title: ${escapeHtml(meta.titleLength || page.title?.length || 0)}</span>
             <span class="count-pill">Description: ${escapeHtml(meta.descriptionLength || page.metaDescription?.length || 0)}</span>
             <span class="count-pill">H1: ${escapeHtml(meta.h1Count || 0)}</span>
-            <span class="count-pill">Canonical: ${meta.hasCanonical ? "קיים" : "חסר"}</span>
-            <span class="count-pill">OG: ${meta.hasOpenGraphTitle && meta.hasOpenGraphDescription ? "מלא" : "חסר"}</span>
+            <span class="count-pill">Canonical: ${meta.hasCanonical ? "Exists" : "Missing"}</span>
+            <span class="count-pill">OG: ${meta.hasOpenGraphTitle && meta.hasOpenGraphDescription ? "Complete" : "Missing"}</span>
           </div>
         </article>
       `;
@@ -4657,12 +4687,12 @@
       const diag = page.linkDiagnostics || {};
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "עמוד ללא כותרת")}</h4>
+          <h4>${escapeHtml(page.title || page.h1 || "Untitled page")}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
-            <span class="count-pill">פנימיים: ${escapeHtml(diag.internalCount || page.internalLinks?.length || 0)}</span>
-            <span class="count-pill">חיצוניים: ${escapeHtml(diag.externalCount || 0)}</span>
-            <span class="count-pill">דומיינים: ${escapeHtml((diag.externalDomains || []).length)}</span>
+            <span class="count-pill">Internal: ${escapeHtml(diag.internalCount || page.internalLinks?.length || 0)}</span>
+            <span class="count-pill">External: ${escapeHtml(diag.externalCount || 0)}</span>
+            <span class="count-pill">Domains: ${escapeHtml((diag.externalDomains || []).length)}</span>
           </div>
           ${(diag.externalDomains || []).length ? `<div class="domain-cloud">${diag.externalDomains.slice(0, 8).map((domain) => `<span class="domain-chip">${escapeHtml(domain)}</span>`).join("")}</div>` : ""}
         </article>
@@ -4684,7 +4714,7 @@
       issues.forEach((issue) => {
         const severity = issue?.severity || "info";
         const category = issue?.category || "ai-readiness";
-        const title = issue?.title || "ממצא ללא כותרת";
+        const title = issue?.title || "Untitled finding";
         const recommendation = issue?.recommendation || "";
         const key = `${severity}|${category}|${title}|${recommendation}`;
 
@@ -4702,7 +4732,7 @@
 
         const group = map.get(key);
         group.count += 1;
-        const pageUrl = issue?.pageUrl || "רוחבי באתר";
+        const pageUrl = issue?.pageUrl || "Site-wide";
         if (!group.examples.includes(pageUrl) && group.examples.length < 4) {
           group.examples.push(pageUrl);
         }
@@ -4720,7 +4750,7 @@
           const stats = getIssueStats(issues);
           return {
             url: page.url || "",
-            title: page.title || page.h1 || "עמוד ללא כותרת",
+            title: page.title || page.h1 || "Untitled page",
             wordCount: page.wordCount || 0,
             schemaFaqCount: page.schemaFaqCount || 0,
             domFaqCount: page.domFaqCount || 0,
@@ -4747,40 +4777,40 @@
         .forEach((item) => now.push(item.recommendedFix));
 
       if (has((issue) => /Visible FAQ missing FAQPage schema|Structured data issue/i.test(issue.title || issue.detail || ""))) {
-        now.push("להוסיף או לתקן FAQPage JSON-LD בעמודים שבהם יש שאלות ותשובות גלויות, כך שכל שאלה ותשובה תופיע גם בסכמה.");
+        now.push("Add or fix FAQPage JSON-LD on pages with visible Q&A, so every visible question and answer also appears in schema.");
       }
 
       if (has((issue) => /FAQ DOM and schema mismatch/i.test(issue.title || ""))) {
-        now.push("לסנכרן בין ה־FAQ הגלוי באתר לבין הסכמה: אותן שאלות, אותן תשובות, בלי שאלות שחיות רק בקוד או רק במסך.");
+        now.push("Sync visible FAQ content with schema: the same questions, the same answers, with no questions living only in code or only on screen.");
       }
 
       if (has((issue) => issue.category === "crawlability" && issue.severity === "critical")) {
-        now.push("לבדוק חסימות אינדוקס או שגיאות זחילה בעמודים חשובים, ולפתוח רק עמודים שאמורים להופיע בחיפוש ובכלי AI.");
+        now.push("Check indexing blocks or crawl errors on important pages, and only open pages that should appear in search and AI tools.");
       }
 
       if (!now.length) {
-        now.push("לטפל קודם בשלושת הממצאים הראשונים ברשימת הממצאים המרכזיים, לפי חומרה ומספר מופעים.");
+        now.push("Handle the first three key findings first, based on severity and number of occurrences.");
       }
 
       if (has((issue) => /sitemap.xml not found|robots.txt not found/i.test(issue.title || ""))) {
-        next.push("לייצב את שכבת הגילוי: robots.txt תקין, sitemap.xml עדכני והפניות ברורות לעמודים החשובים.");
+        next.push("Stabilize discovery: valid robots.txt, updated sitemap.xml and clear paths to important pages.");
       }
 
       if (has((issue) => /llms.txt not found/i.test(issue.title || ""))) {
-        next.push("להוסיף llms.txt קצר ומנוהל שממפה לכלי AI את העמודים, השירותים והתכנים החשובים ביותר.");
+        next.push("Add a short, maintained llms.txt that maps the most important pages, services and content for AI tools.");
       }
 
       if (has((issue) => issue.category === "content")) {
-        next.push("לעבות עמודים דקים עם תוכן קריא וברור: שירותים, מיקומים, מדיניות, שאלות נפוצות וצעדים להמרה.");
+        next.push("Strengthen thin pages with readable, clear content: services, locations, policies, FAQs and conversion steps.");
       }
 
       if (!next.length) {
-        next.push("להרחיב את הבדיקה לעומק זחילה גדול יותר ולוודא שהממצאים חוזרים גם במדגם גדול.");
+        next.push("Expand the audit to a deeper crawl and verify that the findings repeat in a larger sample.");
       }
 
-      later.push("למפות שאלות וכוונות משתמש מרכזיות, ולחבר אותן לעמודים המתאימים בלי לשכפל FAQ כשכבר קיים מקור מסודר.");
-      later.push("להריץ בדיקה חוזרת אחרי כל תיקון משמעותי ולשמור השוואת ציון כדי להראות התקדמות ללקוח.");
-      later.push("להוסיף שכבת ניתוח AI איכותנית בהמשך: האם התוכן לא רק זחיל, אלא גם עונה טוב, קצר ומדויק.");
+      later.push("Map core user questions and intents, then connect them to the right pages without duplicating FAQ when a clean source already exists.");
+      later.push("Rerun the audit after each meaningful fix and keep score comparisons to show client progress.");
+      later.push("Add a qualitative AI analysis layer later: whether the content is not only crawlable, but also answers clearly, briefly and accurately.");
 
       const unique = (items) => Array.from(new Set(items.filter(Boolean)));
       return { now: unique(now).slice(0, 3), next: unique(next).slice(0, 3), later: unique(later).slice(0, 3) };
@@ -4800,9 +4830,9 @@
 
       return `
         <section class="report-block" id="issues-diagnostics">
-          <h3>פירוט יתר - ממצאים גולמיים</h3>
-          <p>זה נספח עבודה למי שרוצה לבדוק את כל קבוצות הממצאים. הקריאה הראשונה של הדוח צריכה להתחיל בציון, בסיכום וברשימת הטיפול.</p>
-          ${issueGroups.length ? `<div>${issueGroups.map((group, index) => renderIssueGroupCard(group, index, model)).join("")}</div>` : `<div class="report-empty">לא נמצאו ממצאים משמעותיים בתוצאה הנוכחית.</div>`}
+          <h3>Deep Detail - Raw Findings</h3>
+          <p>This is a working appendix for reviewing every finding group. The first read should start with the score, summary and action list.</p>
+          ${issueGroups.length ? `<div>${issueGroups.map((group, index) => renderIssueGroupCard(group, index, model)).join("")}</div>` : `<div class="report-empty">No meaningful findings were found in the current result.</div>`}
         </section>
       `;
     }
@@ -4816,34 +4846,34 @@
       const examples = group.examples.map((url) => renderUrlLink(url)).join("");
       const unreliableExamples = getUnreliableIssueExamples(group, model);
       const reliabilityNote = unreliableExamples.length
-        ? `<div class="issue-detail warning"><strong>נדרש אימות לפני טיפול:</strong> חלק מהדוגמאות בקבוצה הזו הגיעו מעמודים שהקרולר לא הצליח לקרוא באופן מלא. לא להציג אותן כבעיית SEO ודאית לפני בדיקת רינדור/דפדפן.</div>`
+        ? `<div class="issue-detail warning"><strong>Verify before treatment:</strong> Some examples in this group came from pages the crawler could not read fully. Do not present them as definite SEO issues before a rendering/browser check.</div>`
         : "";
       return `
         <details class="report-accordion">
           <summary class="accordion-summary">
             <div class="accordion-title">
               <strong>${escapeHtml(group.title)}</strong>
-              <span>${escapeHtml(categoryLabels[group.category] || group.category)} · ${escapeHtml(group.detail || "אין פירוט נוסף")}</span>
+              <span>${escapeHtml(categoryLabels[group.category] || group.category)} · ${escapeHtml(group.detail || "No additional detail")}</span>
             </div>
             <div class="accordion-meta">
               <span class="severity-pill ${escapeHtml(group.severity)}">${escapeHtml(severityLabels[group.severity] || group.severity)}</span>
-              ${unreliableExamples.length ? `<span class="severity-pill warning">נדרש אימות</span>` : ""}
-              <span class="count-pill">${escapeHtml(group.count)} מופעים</span>
+              ${unreliableExamples.length ? `<span class="severity-pill warning">Needs verification</span>` : ""}
+              <span class="count-pill">${escapeHtml(group.count)} occurrences</span>
             </div>
           </summary>
           <div class="accordion-body">
             <div class="reader-grid">
               <div class="task-note">
-                <span>מה הבעיה</span>
+                <span>What is the issue</span>
                 <p>${escapeHtml(group.detail || group.title)}</p>
               </div>
               <div class="task-note">
-                <span>מה עושים</span>
-                <p>${escapeHtml(group.recommendation || "לבדוק ידנית ולהגדיר תיקון מתאים.")}</p>
+                <span>What to do</span>
+                <p>${escapeHtml(group.recommendation || "Review manually and define the right fix.")}</p>
               </div>
             </div>
             ${reliabilityNote}
-            ${examples ? `<div class="reader-card"><strong>דוגמאות URL</strong>${examples}</div>` : ""}
+            ${examples ? `<div class="reader-card"><strong>URL examples</strong>${examples}</div>` : ""}
           </div>
         </details>
       `;
@@ -4857,10 +4887,10 @@
               <div class="page-title">${escapeHtml(page.title)}</div>
               ${renderUrlLink(page.url)}
             </div>
-            <span class="count-pill">${escapeHtml(page.stats.total)} ממצאים</span>
+            <span class="count-pill">${escapeHtml(page.stats.total)} findings</span>
           </div>
-          <div class="issue-detail">קריטי: ${escapeHtml(page.stats.critical)} | אזהרות: ${escapeHtml(page.stats.warning)} | מידע: ${escapeHtml(page.stats.info)} | מילים: ${escapeHtml(page.wordCount)}</div>
-          <div class="issue-detail">FAQ גלוי: ${escapeHtml(page.domFaqCount)} | FAQ בסכמה: ${escapeHtml(page.schemaFaqCount)}</div>
+          <div class="issue-detail">Critical: ${escapeHtml(page.stats.critical)} | Warnings: ${escapeHtml(page.stats.warning)} | Info: ${escapeHtml(page.stats.info)} | Words: ${escapeHtml(page.wordCount)}</div>
+          <div class="issue-detail">Visible FAQ: ${escapeHtml(page.domFaqCount)} | Schema FAQ: ${escapeHtml(page.schemaFaqCount)}</div>
         </article>
       `;
     }
@@ -4870,112 +4900,112 @@
       const actionPlan = buildActionPlan(result);
       const sections = options.sections;
       const lines = [
-        "# דוח מוכנות אתר לכלי AI",
+        "# AI Site Readiness Report",
         "",
-        `אתר: ${result.normalizedStartUrl || result.startUrl || "-"}`,
-        `דומיין: ${result.host || "-"}`,
-        `תאריך בדיקה: ${formatDate(result.finishedAt || result.startedAt)}`,
+        `Site: ${result.normalizedStartUrl || result.startUrl || "-"}`,
+        `Domain: ${result.host || "-"}`,
+        `Audit date: ${formatDate(result.finishedAt || result.startedAt)}`,
       ];
 
       if (sections.score) {
-        lines.push("", "## ציון", "", `ציון כולל: ${model.scoreTotal}/100 - ${model.scoreLabel}`, "");
+        lines.push("", "## Score", "", `Total score: ${model.scoreTotal}/100 - ${model.scoreLabel}`, "");
         model.breakdown.forEach((item) => lines.push(`- ${item.label}: ${item.value}/${item.max} - ${item.note}`));
       }
 
       if (sections.overview) {
-        lines.push("", "## תקציר מנהלים", "", model.executiveSummary, "", model.mainOpportunity);
+        lines.push("", "## Executive Summary", "", model.executiveSummary, "", model.mainOpportunity);
       }
 
       if (sections.faq) {
-        lines.push("", "## סכמה ונתונים מובנים", "");
-        lines.push(`עמודים עם JSON-LD: ${model.schemaDiagnostics.pagesWithJsonLd.length}`);
-        lines.push(`עמודים בלי JSON-LD: ${model.schemaDiagnostics.pagesWithoutJsonLd.length}`);
-        lines.push(`פערי התאמה מובהקים: ${model.schemaDiagnostics.problemPages.length}`);
+        lines.push("", "## Schema and Structured Data", "");
+        lines.push(`Pages with JSON-LD: ${model.schemaDiagnostics.pagesWithJsonLd.length}`);
+        lines.push(`Pages without JSON-LD: ${model.schemaDiagnostics.pagesWithoutJsonLd.length}`);
+        lines.push(`Clear mismatch gaps: ${model.schemaDiagnostics.problemPages.length}`);
         model.schemaDiagnostics.problemPages.slice(0, options.mode === "internal" ? 12 : 5).forEach((page, index) => {
           lines.push(`${index + 1}. ${page.title || page.h1 || page.url}`);
           lines.push(`   URL: ${page.url}`);
-          lines.push(`   סוגי סכמה: ${(page.jsonLdTypes || []).join(", ") || "-"}`);
+          lines.push(`   Schema types: ${(page.jsonLdTypes || []).join(", ") || "-"}`);
         });
       }
 
       if (sections.meta) {
-        lines.push("", "## מטא וכותרות", "");
-        lines.push(`Title חסר: ${model.metaDiagnostics.missingTitle.length}`);
-        lines.push(`Meta description חסר: ${model.metaDiagnostics.missingDescription.length}`);
-        lines.push(`H1 חסר: ${model.metaDiagnostics.missingH1.length}`);
-        lines.push(`Open Graph חסר: ${model.metaDiagnostics.missingOg.length}`);
+        lines.push("", "## Metadata and Headings", "");
+        lines.push(`Missing title: ${model.metaDiagnostics.missingTitle.length}`);
+        lines.push(`Missing meta description: ${model.metaDiagnostics.missingDescription.length}`);
+        lines.push(`Missing H1: ${model.metaDiagnostics.missingH1.length}`);
+        lines.push(`Missing Open Graph: ${model.metaDiagnostics.missingOg.length}`);
       }
 
       if (sections.links) {
-        lines.push("", "## לינקים וקישורים חיצוניים", "");
-        lines.push(`קישורים פנימיים: ${model.linkDiagnostics.totalInternal}`);
-        lines.push(`קישורים חיצוניים: ${model.linkDiagnostics.totalExternal}`);
-        lines.push(`דומיינים חיצוניים: ${model.linkDiagnostics.topDomains.length}`);
-        model.linkDiagnostics.topDomains.slice(0, 12).forEach((item) => lines.push(`- ${item.domain}: ${item.count} עמודים`));
+        lines.push("", "## Links and External References", "");
+        lines.push(`Internal links: ${model.linkDiagnostics.totalInternal}`);
+        lines.push(`External links: ${model.linkDiagnostics.totalExternal}`);
+        lines.push(`External domains: ${model.linkDiagnostics.topDomains.length}`);
+        model.linkDiagnostics.topDomains.slice(0, 12).forEach((item) => lines.push(`- ${item.domain}: ${item.count} pages`));
       }
 
       if (sections.actions) {
         const actionItems = (options.mode === "internal" ? model.actionItems : model.actionItems.filter(isActionClientIncluded)).slice(0, options.mode === "internal" ? 50 : 12);
-        lines.push("", "## לטיפול", "");
+        lines.push("", "## Action Items", "");
         actionItems.forEach((item) => {
-          const countText = item.affectedCount ? `${item.affectedCount} עמודים` : item.pageUrl ? "עמוד אחד" : "רוחבי באתר";
+          const countText = item.affectedCount ? `${item.affectedCount} pages` : item.pageUrl ? "one page" : "site-wide";
           lines.push(`- [${actionPriorityLabels[item.priority] || item.priority}] ${actionWorkstreamLabels[item.workstream] || item.workstream} | ${pageTypeLabels[item.pageType || "site-wide"] || ""} | ${countText} | ${item.finding}`);
-          lines.push(`  טיפול: ${item.recommendedFix}`);
-          lines.push(`  דוגמאות: ${Array.isArray(item.affectedUrls) && item.affectedUrls.length ? item.affectedUrls.slice(0, 5).join(", ") : item.pageUrl || "רוחבי באתר"}`);
+          lines.push(`  Fix: ${item.recommendedFix}`);
+          lines.push(`  Examples: ${Array.isArray(item.affectedUrls) && item.affectedUrls.length ? item.affectedUrls.slice(0, 5).join(", ") : item.pageUrl || "site-wide"}`);
           if (options.mode === "internal") {
-            lines.push(`  אחראי: ${actionOwnerLabels[item.owner] || item.owner || "-"} | מאמץ: ${actionEffortLabels[item.effort] || item.effort || "-"} | השפעה: ${actionImpactLabels[item.impact] || item.impact || "-"}`);
-            lines.push(`  ראיה: ${item.evidence || "-"}`);
+            lines.push(`  Owner: ${actionOwnerLabels[item.owner] || item.owner || "-"} | Effort: ${actionEffortLabels[item.effort] || item.effort || "-"} | Impact: ${actionImpactLabels[item.impact] || item.impact || "-"}`);
+            lines.push(`  Evidence: ${item.evidence || "-"}`);
           }
         });
 
-        lines.push("", "## תוכנית טיפול מומלצת", "", "### מיידי");
+        lines.push("", "## Recommended Action Plan", "", "### Immediate");
         actionPlan.now.forEach((item) => lines.push(`- ${item}`));
-        lines.push("", "### בשבועיים הקרובים");
+        lines.push("", "### Next two weeks");
         actionPlan.next.forEach((item) => lines.push(`- ${item}`));
-        lines.push("", "### המשך עבודה");
+        lines.push("", "### Later");
         actionPlan.later.forEach((item) => lines.push(`- ${item}`));
       }
 
       if (sections.issues) {
-        lines.push("", "## ממצאים מרכזיים", "");
+        lines.push("", "## Key Findings", "");
         model.groupedIssues.slice(0, 10).forEach((group, index) => {
           lines.push(`${index + 1}. ${severityLabels[group.severity] || group.severity} | ${categoryLabels[group.category] || group.category} | ${group.title}`);
-          lines.push(`   מופעים: ${group.count}`);
-          lines.push(`   טיפול: ${group.recommendation || "בדיקה ידנית ותיקון מתאים."}`);
-          lines.push(`   דוגמאות: ${group.examples.join(", ") || "רוחבי באתר"}`);
+          lines.push(`   Occurrences: ${group.count}`);
+          lines.push(`   Fix: ${group.recommendation || "Manual review and appropriate fix."}`);
+          lines.push(`   Examples: ${group.examples.join(", ") || "site-wide"}`);
         });
       }
 
       if (sections.pages) {
-        lines.push("", "## מפת עמודים", "");
-        lines.push(`כתובות ב-sitemap: ${model.sitemapDiagnostics.total || 0}`);
-        lines.push(`נסרקו מתוך sitemap: ${model.sitemapDiagnostics.sampledFromSitemap || 0}`);
+        lines.push("", "## Page Map", "");
+        lines.push(`Sitemap URLs: ${model.sitemapDiagnostics.total || 0}`);
+        lines.push(`Crawled from sitemap: ${model.sitemapDiagnostics.sampledFromSitemap || 0}`);
         model.pageTypeGroups.slice(0, 10).forEach((group) => {
           const sitemapCount = group.sitemapCount || 0;
           const crawledCount = group.crawledCount || group.count || 0;
-          lines.push(`- ${group.label}: נסרקו ${crawledCount}${sitemapCount ? ` מתוך ${sitemapCount}` : ""}`);
+          lines.push(`- ${group.label}: ${crawledCount} crawled${sitemapCount ? ` out of ${sitemapCount}` : ""}`);
         });
 
-        lines.push("", "## עמודים להתחלה", "");
-        model.topPages.slice(0, 8).forEach((page, index) => lines.push(`${index + 1}. ${page.title} | ${page.url} | ${page.stats.total} ממצאים`));
+        lines.push("", "## Pages to Start With", "");
+        model.topPages.slice(0, 8).forEach((page, index) => lines.push(`${index + 1}. ${page.title} | ${page.url} | ${page.stats.total} findings`));
       }
 
       if (sections.overview && model.aiAnalysis) {
-        lines.push("", "## ניתוח AI", "", model.aiAnalysis.executiveSummary || "");
+        lines.push("", "## AI Analysis", "", model.aiAnalysis.executiveSummary || "");
         if (model.aiAnalysis.clientNarrative) lines.push("", model.aiAnalysis.clientNarrative);
         if (model.aiAnalysis.recommendedNextSteps.length) {
-          lines.push("", "צעדים מומלצים:");
+          lines.push("", "Recommended steps:");
           model.aiAnalysis.recommendedNextSteps.slice(0, 6).forEach((item) => lines.push(`- ${item}`));
         }
       }
 
       if (sections.technical) {
-        lines.push("", "## נספח נתונים", "");
-        lines.push(`עמודים שנבדקו: ${model.pages.length}`);
-        lines.push(`ממצאים: ${model.stats.total}`);
-        lines.push(`קריטי: ${model.stats.critical}`);
-        lines.push(`אזהרות: ${model.stats.warning}`);
-        lines.push(`מידע: ${model.stats.info}`);
+        lines.push("", "## Data Appendix", "");
+        lines.push(`Pages checked: ${model.pages.length}`);
+        lines.push(`Findings: ${model.stats.total}`);
+        lines.push(`Critical: ${model.stats.critical}`);
+        lines.push(`Warnings: ${model.stats.warning}`);
+        lines.push(`Info: ${model.stats.info}`);
       }
 
       return lines.join("\n");
@@ -4986,16 +5016,16 @@
       const actionPlan = buildActionPlan(result);
       const firstActions = model.actionItems.filter(isActionClientIncluded).slice(0, 3);
       return [
-        "# תקציר מנהלים - מוכנות אתר לכלי AI",
+        "# Executive Summary - AI Site Readiness",
         "",
-        `אתר: ${result.normalizedStartUrl || result.startUrl || "-"}`,
-        `ציון כולל: ${model.scoreTotal}/100 - ${model.scoreLabel}`,
-        `עמודים שנבדקו: ${model.pages.length}`,
-        `ממצאים קריטיים: ${model.stats.critical}`,
+        `Site: ${result.normalizedStartUrl || result.startUrl || "-"}`,
+        `Total score: ${model.scoreTotal}/100 - ${model.scoreLabel}`,
+        `Pages checked: ${model.pages.length}`,
+        `Critical findings: ${model.stats.critical}`,
         "",
         model.executiveSummary,
         "",
-        "שלושת הצעדים הראשונים:",
+        "First three steps:",
         ...(firstActions.length ? firstActions.map((item, index) => `${index + 1}. ${item.recommendedFix}`) : actionPlan.now.map((item, index) => `${index + 1}. ${item}`)),
         "",
         model.mainOpportunity
@@ -5033,7 +5063,7 @@
       return [
         "You are an expert digital agency website auditor.",
         "Analyze the following deterministic crawler evidence. Do not invent crawl facts.",
-        "Return concise JSON in Hebrew with these keys:",
+        "Return concise JSON in English with these keys:",
         "executiveSummary, clientNarrative, internalRisks, topOpportunities, recommendedNextSteps, uncertainties, suggestedClientSections.",
         "Use the crawler evidence as source of truth. If evidence is missing, say what manual check is needed.",
         "",
@@ -5072,7 +5102,7 @@
     }
 
     function buildStandaloneClientReportHtml(result, options = getReportOptions()) {
-      const title = `${options.mode === "internal" ? "דוח פנימי" : "דוח לקוח"} - מוכנות אתר לכלי AI - ${result.host || ""}`;
+      const title = `${options.mode === "internal" ? "Internal report" : "Client report"} - AI site readiness - ${result.host || ""}`;
       const previousStandaloneState = renderingStandaloneReport;
       renderingStandaloneReport = true;
       let reportBody = "";
@@ -5082,22 +5112,22 @@
         renderingStandaloneReport = previousStandaloneState;
       }
       return `<!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
   <style>
-    body { margin: 0; background: #f9f7fc; color: #111827; font-family: Arial, sans-serif; }
+    body { margin: 0; background: #fdfcf9; color: #18130f; font-family: Inter, Arial, sans-serif; }
     .page { max-width: 1120px; margin: 0 auto; padding: 32px 20px; }
     header { margin-bottom: 20px; }
     h1, h2, h3, h4, p { margin: 0; }
     h1 { font-size: 28px; }
     header p, .report-block p, .issue-detail, .page-url { color: #475569; line-height: 1.65; }
     .client-report { display: grid; gap: 16px; }
-    .audit-hero { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 18px; border: 1px solid #d9cbe9; border-radius: 18px; background: #fff; }
-    .score-ring-card { min-height: 260px; display: grid; place-items: center; gap: 12px; border-radius: 16px; border: 1px solid #d9cbe9; background: #fcfbfe; text-align: center; }
-    .score-ring { --score: 0; width: 168px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at center, #fff 0 58%, transparent 59%), conic-gradient(#6f4aa8 calc(var(--score) * 1%), #e5e7eb 0); box-shadow: 0 18px 38px rgba(111, 74, 168, 0.14); }
+    .audit-hero { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 18px; border: 1px solid #e9dfd2; border-radius: 18px; background: #fff; }
+    .score-ring-card { min-height: 260px; display: grid; place-items: center; gap: 12px; border-radius: 16px; border: 1px solid #e9dfd2; background: #fffaf3; text-align: center; }
+    .score-ring { --score: 0; width: 168px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at center, #fff 0 58%, transparent 59%), conic-gradient(#4f7fc7 calc(var(--score) * 1%), #e5e7eb 0); box-shadow: 0 18px 38px rgba(55, 45, 35, 0.08); }
     .score-ring strong { display: block; color: #111827; font-size: 42px; font-weight: 900; line-height: 1; }
     .score-ring span { color: #64748b; font-size: 12px; font-weight: 800; }
     .score-ring-card h3 { font-size: 18px; }
@@ -5112,9 +5142,9 @@
     .score-bar span { display: block; height: 100%; width: var(--w, 0%); border-radius: inherit; background: #62c7c8; }
     .visual-dashboard { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; }
     .visual-card { padding: 15px; border: 1px solid #e8e1ef; border-radius: 16px; background: #fff; display: grid; gap: 12px; }
-    .visual-card.alt { background: #fdf0f6; border-color: rgba(232, 138, 178, 0.28); }
+    .visual-card.alt { background: #f7faf5; border-color: rgba(111, 155, 95, 0.28); }
     .visual-card.warm { background: #fff4eb; border-color: rgba(233, 154, 98, 0.3); }
-    .visual-card.candy { background: #f1edf8; border-color: rgba(118, 83, 169, 0.24); }
+    .visual-card.candy { background: #f5f8fb; border-color: rgba(79, 127, 199, 0.24); }
     .visual-card.ocean { background: #eefafa; border-color: rgba(98, 199, 200, 0.28); }
     .visual-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
     .visual-head strong { color: #111827; font-weight: 900; }
@@ -5132,9 +5162,9 @@
     .mini-stack span { width: var(--w, 0%); min-width: 2px; background: var(--c, #6f4aa8); }
     .ai-panel { border-color: #d9cbe9; background: #fff; }
     .page-map-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .page-map-card.featured { border-color: #d9cbe9; background: #f2edf8; }
+    .page-map-card.featured { border-color: #cddcaf; background: #f7faf5; }
     .page-map-top { display: flex; justify-content: space-between; gap: 10px; }
-    .page-map-count { min-width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: #6f4aa8; font-weight: 900; }
+    .page-map-count { min-width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: #fff; background: #4f7fc7; font-weight: 900; }
     .mini-bars { display: grid; gap: 5px; }
     .mini-bar { height: 7px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
     .mini-bar span { display: block; height: 100%; width: var(--w, 0%); background: #36b7b8; }
@@ -5170,14 +5200,14 @@
     .issue-list, .page-list, .diagnostic-list { display: grid; gap: 10px; }
     .severity-pill, .count-pill { display: inline-block; margin-inline-start: 6px; padding: 4px 8px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 700; }
     .diagnostic-meta, .domain-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
-    .domain-chip, .qa-item { display: inline-block; padding: 6px 8px; border-radius: 999px; background: #f5f3ff; border: 1px solid #ddd6fe; color: #4b2c82; font-size: 12px; }
+    .domain-chip, .qa-item { display: inline-block; padding: 6px 8px; border-radius: 999px; background: #f6f1e9; border: 1px solid #e9dfd2; color: #5c5046; font-size: 12px; }
     .qa-list { display: grid; gap: 5px; }
     .page-url, .issue-detail { word-break: break-word; }
     .page-link { color: #255ee8; text-decoration: none; font-weight: 800; }
     .jump-link { display: inline-block; width: max-content; margin-top: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(37, 94, 232, 0.25); background: rgba(37, 94, 232, 0.07); color: #255ee8; font-size: 12px; font-weight: 800; text-decoration: none; }
     .critical { color: #b91c1c; background: #fef2f2; }
     .warning { color: #9a3412; background: #fff7ed; }
-    .info { color: #4b2c82; background: #f5f3ff; }
+    .info { color: #335d35; background: #eef6ea; }
     .action-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
     .action-table { width: 100%; min-width: 920px; border-collapse: collapse; }
     .action-table th, .action-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #475569; font-size: 12px; line-height: 1.5; text-align: right; vertical-align: top; }
@@ -5203,7 +5233,7 @@
     .client-include { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 999px; background: #f8fafc; font-size: 12px; font-weight: 700; }
     .mini-checklist { display: grid; gap: 8px; }
     .mini-check { color: #475569; font-size: 13px; line-height: 1.5; }
-    .section-score { min-width: 54px; height: 54px; display: grid; place-items: center; border-radius: 16px; background: #6f4aa8; color: #fff; font-weight: 900; }
+    .section-score { min-width: 54px; height: 54px; display: grid; place-items: center; border-radius: 16px; background: #4f7fc7; color: #fff; font-weight: 900; }
     @media print { body { background: #fff; } .page { padding: 0; } }
     @media (max-width: 800px) { .audit-hero, .report-strip, .breakdown-grid, .score-method-grid, .action-grid, .hero-metrics, .insight-row, .visual-dashboard, .donut-layout, .page-map-grid, .reader-grid, .schema-grid, .task-body { grid-template-columns: 1fr; } }
   </style>
@@ -5212,7 +5242,7 @@
   <main class="page">
     <header>
       <h1>${escapeHtml(title)}</h1>
-      <p>נוצר בתאריך ${escapeHtml(formatDate(result.finishedAt || result.startedAt))}</p>
+      <p>Created on ${escapeHtml(formatDate(result.finishedAt || result.startedAt))}</p>
     </header>
     <div class="client-report">${reportBody}</div>
   </main>
@@ -5284,7 +5314,7 @@
               name: question,
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "TODO: להשלים תשובה אמיתית שמופיעה בגלוי בעמוד לפני פרסום הסכמה."
+                text: "TODO: Add the real answer that appears visibly on the page before publishing this schema."
               }
             }))
           }
@@ -5307,14 +5337,14 @@
 
       return {
         pageUrl,
-        title: shouldDraftFaq ? "טיוטת FAQPage JSON-LD" : "טיוטת WebPage JSON-LD",
-        subtitle: `${pageTitle} | ${pageTypeLabels[pageType] || pageType || "עמוד"}`,
+        title: shouldDraftFaq ? "FAQPage JSON-LD Draft" : "WebPage JSON-LD Draft",
+        subtitle: `${pageTitle} | ${pageTypeLabels[pageType] || pageType || "Page"}`,
         schema,
         meta: [
-          pageTypeLabels[pageType] || pageType || "עמוד",
-          shouldDraftFaq ? `${questionCandidates.length} שאלות בטיוטה` : "WebPage בסיסי",
-          !shouldDraftFaq && pageType === "faq" ? "לא נמצאו שאלות אמינות לטיוטת FAQPage" : "",
-          page.jsonLdTypes?.length ? `סכמה קיימת: ${page.jsonLdTypes.join(", ")}` : "לא נמצאה סכמה קיימת במדגם"
+          pageTypeLabels[pageType] || pageType || "Page",
+          shouldDraftFaq ? `${questionCandidates.length} draft questions` : "Basic WebPage",
+          !shouldDraftFaq && pageType === "faq" ? "No reliable questions were found for an FAQPage draft" : "",
+          page.jsonLdTypes?.length ? `Existing schema: ${page.jsonLdTypes.join(", ")}` : "No existing schema was found in the sample"
         ].filter(Boolean)
       };
     }
@@ -5474,55 +5504,55 @@
     }
 
     function buildCrawlSummary(result, pages) {
-      const sitemap = result.sitemap?.found ? "sitemap נמצא" : "sitemap לא נמצא";
-      const robots = result.robots?.found ? "robots נמצא" : "robots לא נמצא";
-      const scope = result.config?.crawlScope === "faq-only" ? "עמודי FAQ בלבד" : "מדגם כללי";
-      return `${sitemap}, ${robots}. הבדיקה כללה ${pages.length} עמודים (${scope}).`;
+      const sitemap = result.sitemap?.found ? "sitemap found" : "sitemap not found";
+      const robots = result.robots?.found ? "robots found" : "robots not found";
+      const scope = result.config?.crawlScope === "faq-only" ? "FAQ pages only" : "general sample";
+      return `${sitemap}, ${robots}. The audit included ${pages.length} pages (${scope}).`;
     }
 
     function buildBusinessMeaning(scoreTotal, stats, breakdown = []) {
       const lowest = Array.isArray(breakdown) && breakdown.length
         ? breakdown.reduce((item, next) => next.percent < item.percent ? next : item, breakdown[0])
         : null;
-      const focus = lowest ? ` מוקד השיפור הראשון הוא ${lowest.label}.` : "";
+      const focus = lowest ? ` The first improvement focus is ${lowest.label}.` : "";
 
-      if (scoreTotal >= 80) return `האתר מציג בסיס חזק ומסודר; כדאי להתמקד בליטוש נקודתי ובבדיקות עומק.${focus}`;
-      if (scoreTotal >= 60) return `יש בסיס טוב ואפשר להפיק ממנו תובנות שימושיות, אבל כמה תיקונים ממוקדים ישפרו את האמינות והקריאות.${focus}`;
-      if (scoreTotal >= 40) return `האתר זמין לסריקה בחלקים משמעותיים, אך נדרש סידור לפני שאפשר להתייחס אליו כמקור תשובות יציב.${focus}`;
-      return `נדרש טיפול תשתיתי לפני שהאתר יוכל לשמש מקור מידע אמין וברור לכלי חיפוש ו־AI.${focus}`;
+      if (scoreTotal >= 80) return `The site has a strong, organized foundation; focus on targeted polish and deeper checks.${focus}`;
+      if (scoreTotal >= 60) return `There is a useful foundation, but focused fixes will improve reliability and readability.${focus}`;
+      if (scoreTotal >= 40) return `The site is crawlable in meaningful areas, but it needs cleanup before it can be treated as a stable answer source.${focus}`;
+      return `Foundational work is needed before the site can serve as a reliable, clear information source for search and AI tools.${focus}`;
     }
 
     function buildExecutiveSummaryText(result, scoreTotal, stats, pages, breakdown = [], actionItems = []) {
-      const site = result.host || result.normalizedStartUrl || result.startUrl || "האתר";
+      const site = result.host || result.normalizedStartUrl || result.startUrl || "the site";
       const lowest = Array.isArray(breakdown) && breakdown.length
         ? breakdown.reduce((item, next) => next.percent < item.percent ? next : item, breakdown[0])
         : null;
       const severityText = stats.critical
-        ? `נמצאו ${stats.critical} ממצאים בעדיפות גבוהה שדורשים בדיקה לפני שמציגים מסקנות סופיות ללקוח.`
-        : "לא נמצאו חסימות קריטיות במדגם, ולכן העבודה יכולה להתמקד בשיפור איכות וסידור עדיפויות.";
+        ? `${stats.critical} high-priority findings require review before final conclusions are presented to the client.`
+        : "No critical blockers were found in the sample, so the work can focus on quality improvement and prioritization.";
       const actionText = actionItems.length
-        ? `מתוך הממצאים נבנו ${actionItems.length} משימות טיפול, כך שאפשר לעבור מהדוח ישר לתוכנית עבודה.`
-        : "לא נבנו משימות טיפול אוטומטיות בהרצה הזו.";
+        ? `${actionItems.length} treatment tasks were built from the findings, so the report can move directly into a work plan.`
+        : "No automatic treatment tasks were built in this run.";
       const focusText = lowest
-        ? `התחום החלש ביותר הוא ${lowest.label} (${lowest.value}/${lowest.max}), ולכן זה המקום הראשון שכדאי לפתוח לעומק.`
-        : "פירוק הציון מופיע מיד אחרי התקציר ומציג את מקור הניקוד.";
+        ? `The weakest area is ${lowest.label} (${lowest.value}/${lowest.max}), so it is the first place to open in depth.`
+        : "The score breakdown appears right after the summary and shows the source of the scoring.";
 
-      const scope = result.config?.crawlScope === "faq-only" ? "בבדיקה ממוקדת לעמודי FAQ" : "במדגם כללי";
-      return `בדקנו את ${site} ${scope} של ${pages.length} עמודים. הציון הכולל הוא ${scoreTotal}/100. ${severityText} ${focusText} ${actionText}`;
+      const scope = result.config?.crawlScope === "faq-only" ? "in a focused FAQ-page audit" : "in a general sample";
+      return `We checked ${site} ${scope} across ${pages.length} pages. The total score is ${scoreTotal}/100. ${severityText} ${focusText} ${actionText}`;
     }
 
     function getScoreLabel(scoreTotal) {
-      if (scoreTotal >= 85) return "מוכן ברמה גבוהה";
-      if (scoreTotal >= 70) return "טוב, עם תיקונים ממוקדים";
-      if (scoreTotal >= 50) return "בסיס קיים, נדרש שיפור";
-      if (scoreTotal >= 30) return "נדרש טיפול משמעותי";
-      return "לא מוכן לשימוש יציב בכלי AI";
+      if (scoreTotal >= 85) return "Highly ready";
+      if (scoreTotal >= 70) return "Good, with focused fixes";
+      if (scoreTotal >= 50) return "Foundation exists, improvement needed";
+      if (scoreTotal >= 30) return "Significant work needed";
+      return "Not ready for stable AI use";
     }
 
     function getReadinessLabel(scoreTotal) {
-      if (scoreTotal >= 75) return "גבוהה";
-      if (scoreTotal >= 50) return "בינונית";
-      return "נמוכה";
+      if (scoreTotal >= 75) return "High";
+      if (scoreTotal >= 50) return "Medium";
+      return "Low";
     }
 
     function severityWeight(severity) {
@@ -5647,8 +5677,8 @@
     function updateScopeHint() {
       const scope = document.getElementById("crawlScope").value;
       document.getElementById("scopeHint").textContent = scope === "faq-only"
-        ? "מצב FAQ בלבד: הקרולר יזחל יותר מועמדים מאחורי הקלעים, אבל יחזיר לדוח רק עמודים עם FAQ גלוי, FAQPage schema או סימני FAQ ברורים."
-        : "מצב כללי: הקרולר מחזיר מדגם עמודים רחב ובודק AI readiness, מטא, FAQ, סכמה ולינקים.";
+        ? "FAQ-only mode: the crawler checks more candidates behind the scenes, but returns only pages with visible FAQ, FAQPage schema or clear FAQ signals."
+        : "General mode: the crawler returns a broad page sample and checks AI readiness, metadata, FAQ, schema and links.";
     }
 
     function shellQuote(value) {
@@ -5671,7 +5701,7 @@
           try {
             renderAuditResult(JSON.parse(resultLines.join("\n")));
           } catch (error) {
-            stopAuditProgress("הבדיקה הסתיימה עם שגיאה");
+            stopAuditProgress("Audit finished with an error");
             appendOutput("Failed to parse audit result JSON.");
             appendOutput(error instanceof Error ? error.message : String(error));
           }
@@ -5690,10 +5720,10 @@
       socket.on("done", () => {
         const runBtn = document.getElementById("runAuditBtn");
         runBtn.disabled = false;
-        runBtn.textContent = "הרץ בדיקה";
+        runBtn.textContent = "Run Audit";
 
         if (!collectingResult) {
-          if (auditProgressTimer) stopAuditProgress("הבדיקה הסתיימה");
+          if (auditProgressTimer) stopAuditProgress("Audit complete");
           appendOutput("Done.");
         }
       });
