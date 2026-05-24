@@ -19,6 +19,7 @@
     categoryPreset: "hotel",
     categoryCount: "",
     customCategories: "",
+    audience: "",
     taskPrompts: {}
   };
 
@@ -36,12 +37,26 @@
       replies: [
         { label: "Hotel / hospitality property", value: "hotel" },
         { label: "Local business", value: "local" },
-        { label: "Product / service", value: "service" }
+        { label: "Product / service", value: "service" },
+        { label: "Vehicle / car models", value: "vehicle" }
       ]
     },
     subjects: {
-      question: "Great. Add the hotel, product, service, or page names. If there is more than one, separate them with commas.",
-      placeholder: "Example: Bachar House, master Wola"
+      question: "Great. Add the hotel, product, service, model, or page names. If there is more than one, separate them with commas.",
+      placeholder: "Example: Bachar House, Toyota Corolla Hybrid, master Wola"
+    },
+    audience: {
+      question: "Who is this FAQ for?",
+      replies: [
+        { label: "Guests / visitors", value: "Guests before booking, guests before arrival, and in-house guests" },
+        { label: "Potential customers", value: "Potential customers comparing options, pricing, trust signals and next steps." },
+        { label: "Car buyers", value: "Car buyers comparing models, trims, ownership costs, reliability and day-to-day fit." },
+        { label: "I'll write it myself", value: "custom_audience" }
+      ]
+    },
+    customAudience: {
+      question: "Write one short sentence describing the target audience.",
+      placeholder: "Example: Families comparing compact SUV models before a lease or purchase."
     },
     language: {
       question: "Which language should the outputs use?",
@@ -163,6 +178,9 @@
       question: "How should question categories be defined?",
       replies: [
         { label: "Full hotel set", value: "hotel" },
+        { label: "Vehicle model set", value: "vehicle" },
+        { label: "Product / service set", value: "service" },
+        { label: "Local business set", value: "local" },
         { label: "Basic and short", value: "basic" },
         { label: "I'll write category names", value: "custom_categories" },
         { label: "Leave for manual editing", value: "manual" }
@@ -341,6 +359,7 @@
 
       summary.innerHTML = [
         ["Subjects", state.answers.subjects || "Not set yet"],
+        ["Audience", state.answers.audience || "Not set yet"],
         ["Language", state.answers.language],
         ["Target", target],
         ["Sources", sources || "Official website"],
@@ -373,7 +392,8 @@
         local: "Local business",
         basic: "Basic and short",
         manual: "Manual editing",
-        service: "Product / service"
+        service: "Product / service",
+        vehicle: "Vehicle model set"
       }[value] || value || "Full hotel set";
     }
 
@@ -478,15 +498,22 @@
       $("namingPolicy").value = answers.namingPolicy;
       $("namingRules").value = answers.namingRules;
 
-      if (answers.scope === "local") {
-        $("audience").value = "Potential customers researching the business before contacting, visiting or buying.";
-      } else if (answers.scope === "service") {
-        $("audience").value = "Potential customers comparing services, pricing, trust signals and next steps.";
-      } else {
-        $("audience").value = "Guests before booking, guests before arrival, and in-house guests";
-      }
+      $("audience").value = answers.audience || {
+        local: "Potential customers researching the business before contacting, visiting or buying.",
+        service: "Potential customers comparing services, pricing, trust signals and next steps.",
+        vehicle: "Car buyers comparing models, trims, ownership costs, reliability and day-to-day fit.",
+        hotel: "Guests before booking, guests before arrival, and in-house guests"
+      }[answers.scope] || "Guests before booking, guests before arrival, and in-house guests";
 
       bridge.applySourceOptions(answers.sources);
+
+      if (answers.customCategories) {
+        bridge.applyCustomCategories(answers.customCategories);
+      } else if (answers.categoryPreset === "basic") {
+        bridge.setCategoriesEnabled(["general", "booking", "checkin", "location"]);
+      } else if (answers.categoryPreset !== "manual") {
+        bridge.setActivePreset(answers.categoryPreset, true, { updateFields: false });
+      }
 
       bridge.applyChatPromptGuidance({
         questionUserNote: answers.questionUserNote,
@@ -499,14 +526,6 @@
       bridge.applyChatTaskPrompts?.(answers.taskPrompts);
 
       bridge.setTasksEnabled(qaTaskMap(answers.qaMode));
-
-      if (answers.customCategories) {
-        bridge.applyCustomCategories(answers.customCategories);
-      } else if (answers.categoryPreset === "basic") {
-        bridge.setCategoriesEnabled(["general", "booking", "checkin", "location"]);
-      } else if (answers.categoryPreset !== "manual") {
-        bridge.setActivePreset(answers.categoryPreset, true);
-      }
 
       bridge.updateSummary();
       bridge.saveState();
@@ -535,13 +554,34 @@
 
       if (currentStep === "scope") {
         state.answers.scope = text;
-        state.answers.categoryPreset = text === "local" ? "local" : "hotel";
+        state.answers.categoryPreset = ["local", "service", "vehicle"].includes(text) ? text : "hotel";
+        state.answers.audience = {
+          local: "Potential customers researching the business before contacting, visiting or buying.",
+          service: "Potential customers comparing services, pricing, trust signals and next steps.",
+          vehicle: "Car buyers comparing models, trims, ownership costs, reliability and day-to-day fit.",
+          hotel: "Guests before booking, guests before arrival, and in-house guests"
+        }[state.answers.categoryPreset] || "";
         applyAnswersToBuilder();
         return showStep("subjects");
       }
 
       if (currentStep === "subjects") {
         state.answers.subjects = text;
+        applyAnswersToBuilder();
+        return showStep("audience");
+      }
+
+      if (currentStep === "audience") {
+        if (text === "custom_audience") {
+          return showStep("customAudience");
+        }
+        state.answers.audience = text;
+        applyAnswersToBuilder();
+        return showStep("language");
+      }
+
+      if (currentStep === "customAudience") {
+        state.answers.audience = text;
         applyAnswersToBuilder();
         return showStep("language");
       }

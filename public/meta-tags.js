@@ -182,6 +182,36 @@
     updatePreview();
   }
 
+  function consumeAssistantHandoff() {
+    const raw = localStorage.getItem("carmelonAssistantToolHandoff");
+    if (!raw) return false;
+    try {
+      const handoff = JSON.parse(raw);
+      if (handoff?.toolId !== "meta-tags") return false;
+      const payload = handoff.payload || {};
+      const values = handoff.values || {};
+      const sourceUrl = values.sourceUrl || payload.spreadsheetId || payload.folderId || payload.sourceLink || "";
+      const setup = {
+        ...payload,
+        ...values,
+        mode: values.generationMode || payload.generationMode || payload.mode,
+        sourceType: payload.sourceType || values.sourceType,
+        sourceLink: sourceUrl,
+        spreadsheetId: payload.spreadsheetId || (detectSource(sourceUrl).type === "sheet" ? sourceUrl : ""),
+        folderId: payload.folderId || (detectSource(sourceUrl).type === "folder" ? sourceUrl : "")
+      };
+      applySetup(setup);
+      localStorage.removeItem("carmelonAssistantToolHandoff");
+      addLog("Loaded setup from AI Workspace Assistant.", "success");
+      els.summaryText.textContent = "Assistant setup loaded";
+      return true;
+    } catch {
+      localStorage.removeItem("carmelonAssistantToolHandoff");
+      addLog("Could not load assistant handoff.", "warn");
+      return false;
+    }
+  }
+
   function setValue(el, value) {
     if (el == null || value == null) return;
     el.value = String(value);
@@ -862,5 +892,6 @@
   renderSourceType();
   renderOutputMode();
   renderRules();
+  consumeAssistantHandoff();
   updatePreview();
 })();

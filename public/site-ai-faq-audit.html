@@ -60,7 +60,7 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      min-height: 64px;
+      min-height: 96px;
       padding: 14px 32px;
       display: flex;
       align-items: center;
@@ -81,6 +81,7 @@
     .brand-home-link {
       display: inline-flex;
       align-items: center;
+      gap: 12px;
       flex: 0 0 auto;
       border-radius: 8px;
       text-decoration: none;
@@ -91,11 +92,31 @@
       outline-offset: 4px;
     }
 
+    .brand-home-link,
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
     .brand-logo {
-      width: auto;
-      height: 32px;
+      width: 142px;
+      height: auto;
       display: block;
       object-fit: contain;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand-copy {
@@ -620,6 +641,7 @@
     <div class="brand">
       <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
         <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
         <p class="eyebrow">Audit Studio</p>

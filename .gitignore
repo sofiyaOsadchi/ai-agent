@@ -3,5 +3,6 @@ node_modules/
 src/credentials/service-account.json
 dist/
 .local-history/
+backups/
 all_hotels_summary_*.txt
 master_wola_faq_tsv_*.tsv

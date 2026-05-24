@@ -113,6 +113,52 @@ socket.emit("start-agent", {
 8. Add docs to `README.md`, `02-modes-and-jobs.md`, and `03-data-contracts.md`.
 9. Run `npm run build`.
 
+## Adding A Tool To The Central Assistant
+
+There is an early central assistant attempt in:
+
+- `public/assistant-workspace.html`
+- `public/assistant-workspace.js`
+- `public/assistant-tools.js`
+- `/api/assistant-chat` inside `src/server-demo.ts`
+
+Do not treat the current implementation as the final pattern. It is a prototype and the user is not satisfied with it. The current issue is not just styling or a missing endpoint; it is a product/architecture issue.
+
+The assistant should not be a thin keyword router that creates forms. It should become an orchestrator:
+
+- understand a natural-language task,
+- decide whether to answer generally, use an existing tool, ask follow-up questions, run a job, open a workspace, or draft a file edit,
+- keep one active task state instead of duplicating action cards,
+- use cheap/local logic for simple follow-up answers,
+- use a stronger model only when the request requires reasoning, planning or ambiguity resolution,
+- expose a clean handoff contract to each feature.
+
+Before continuing central assistant work, define a real tool/capability manifest. Each tool should describe:
+
+- required inputs,
+- optional inputs,
+- follow-up questions,
+- payload shape,
+- whether it can run directly or only open its workspace,
+- write risk,
+- confirmation rules,
+- handoff target.
+
+Recommended first rebuild target: FAQ Workflow Builder only. Make the flow excellent before expanding to all tools.
+
+Example desired FAQ flow:
+
+```text
+User: I want to create FAQ for Bachar House.
+Assistant: detects FAQ Builder + hotel workflow, asks only missing useful questions.
+User: target tourists from Israel and abroad, source URL...
+Assistant: updates one active draft, does not call AI for simple field answers.
+Assistant: offers Open Builder / Run where supported.
+Open Builder: transfers subjects, audience, source URL and workflow type into faq-playground state.
+```
+
+Important: if a user says "yes", "כן", "open", or gives a URL while an active task exists, that should continue the active task, not start a new AI routing pass.
+
 ## Adding A New CLI Mode
 
 This usually requires editing `src/index.ts`, so it needs separate explicit user approval before implementation.

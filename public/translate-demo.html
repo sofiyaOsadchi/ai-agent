@@ -447,7 +447,8 @@
     }
 
     .demo-header {
-      height: 64px !important;
+      height: auto !important;
+      min-height: 96px !important;
       padding: 14px 32px !important;
       background: rgba(251, 250, 247, 0.88) !important;
       border-bottom: 1px solid var(--vx-border) !important;
@@ -461,16 +462,37 @@
     }
 
     .brand-logo {
-      width: auto;
-      height: 32px;
+      width: 142px;
+      height: auto;
       display: block;
     }
 
     .brand-home-link {
       display: inline-flex;
       align-items: center;
+      gap: 12px;
       flex: 0 0 auto;
       border-radius: 8px;
+      text-decoration: none !important;
+    }
+
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--vx-border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--vx-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand h1 {
@@ -1198,7 +1220,8 @@
       }
 
       .brand-logo {
-        height: 28px;
+        width: 126px;
+        height: auto;
       }
 
       .main-grid {
@@ -1211,8 +1234,9 @@
 <body>
   <header class="demo-header">
     <div class="brand">
-      <a class="brand-home-link" href="./index.html" aria-label="Back to home">
-        <img class="brand-logo" src="./carmelon-logo-header-x2.png" alt="Carmelon" />
+      <a class="brand-home-link" href="/index.html" aria-label="Back to home">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div>
         <h1>AI Translation Engine</h1>
@@ -2351,6 +2375,46 @@ OUTPUT: return ONLY {"rows":[...]}`;
         setSetupMode(mode);
       }
     };
+
+    function consumeAssistantWorkspaceHandoff() {
+      const raw = localStorage.getItem("carmelonAssistantToolHandoff");
+      if (!raw) return;
+
+      let handoff = null;
+      try {
+        handoff = JSON.parse(raw);
+      } catch {
+        localStorage.removeItem("carmelonAssistantToolHandoff");
+        return;
+      }
+
+      if (!handoff || handoff.toolId !== "translate-demo") return;
+
+      const values = handoff.values || {};
+      const payload = handoff.payload || {};
+      const sourceType = payload.sourceType || values.sourceType || (String(values.sourceUrl || "").includes("/drive/folders/") ? "folder" : "sheet");
+      const sourceId = values.sourceUrl || payload.spreadsheetId || payload.sourceFolderId || "";
+
+      window.translateDemoBridge.fillSetupFromChatbot({
+        sourceType,
+        sourceId,
+        sourceTab: values.sourceTab === "__auto__" ? "" : (values.sourceTab || payload.sourceTab || ""),
+        targetLangs: payload.targetLangs || values.targetLangs || ["de"],
+        model: payload.model || values.model || "o3",
+        translateHeader: payload.translateHeader !== false,
+        splitIntoTwo: payload.splitIntoTwo !== false,
+        prompts: payload.prompts || {},
+        languageNotesByLang: payload.languageNotes || {},
+        glossaryByLang: payload.glossaryByLang || {},
+        terminologyByLang: payload.terminologyByLang || {}
+      });
+
+      setSetupMode("manual");
+      setManualPlanStatus("Loaded setup from AI Workspace Assistant.");
+      localStorage.removeItem("carmelonAssistantToolHandoff");
+    }
+
+    consumeAssistantWorkspaceHandoff();
   </script>
   <script src="/translate-chatbot.js"></script>
 </body>

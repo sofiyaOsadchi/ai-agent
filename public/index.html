@@ -57,6 +57,15 @@
 
     body { min-height: 100vh; }
 
+    body.is-launching {
+      overflow: hidden;
+    }
+
+    body.is-launching .shell {
+      animation: homeWorkspaceExit 0.22s ease-out both;
+      transform-origin: 50% 44%;
+    }
+
     a {
       color: inherit;
       text-decoration: none;
@@ -92,18 +101,19 @@
     }
 
     .brand-logo {
-      width: 158px;
+      width: 142px;
       height: auto;
       display: block;
       object-fit: contain;
     }
 
     .brand-ai {
-      align-self: flex-end;
-      margin: 0 0 8px -4px;
+      align-self: center;
+      margin: 10px 0 0 -2px;
       padding-left: 10px;
       border-left: 1px solid var(--border-strong);
       color: var(--violet);
+      text-decoration: none;
       font-family: var(--mono);
       font-size: 0.68rem;
       font-weight: 700;
@@ -116,6 +126,7 @@
       padding: 7px 14px;
       border-radius: 999px;
       color: var(--violet);
+      text-decoration: none;
       background: var(--surface);
       border: 1px solid var(--border);
       font-family: var(--mono);
@@ -164,7 +175,7 @@
       color: var(--ink);
       font-size: clamp(2.15rem, 4.65vw, 3.9rem);
       line-height: 1.04;
-      letter-spacing: -0.035em;
+      letter-spacing: 0;
       font-weight: 800;
     }
 
@@ -173,11 +184,12 @@
       font-style: italic;
       font-weight: 400;
       color: var(--violet);
-      letter-spacing: -0.015em;
+      text-decoration: none;
+      letter-spacing: 0;
     }
 
     .hero p {
-      max-width: 690px;
+      max-width: 920px;
       margin: 24px 0 0;
       color: var(--text);
       font-size: 1.05rem;
@@ -187,6 +199,255 @@
 
     .tool-section {
       margin-top: 48px;
+    }
+
+    .assistant-console {
+      position: relative;
+      margin: 0 0 44px;
+      padding: 20px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 22px 58px -46px rgba(45, 35, 60, 0.34);
+    }
+
+    .assistant-console-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 270px;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .assistant-console-main {
+      min-width: 0;
+    }
+
+    .assistant-console-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .assistant-orb {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: var(--violet);
+      background: var(--violet-soft);
+      border: 1px solid rgba(91, 58, 150, 0.10);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .assistant-console-kicker {
+      display: block;
+      color: var(--violet);
+      font-family: var(--mono);
+      font-size: 0.61rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .assistant-console-title {
+      margin: 3px 0 0;
+      color: var(--ink);
+      font-size: clamp(1.26rem, 2vw, 1.76rem);
+      line-height: 1.12;
+      letter-spacing: 0;
+      font-weight: 600;
+    }
+
+    .assistant-launch-form {
+      position: relative;
+      padding: 10px;
+      border: 1px solid var(--border-strong);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.66);
+    }
+
+    .assistant-launch-input {
+      width: 100%;
+      min-height: 76px;
+      max-height: 142px;
+      resize: vertical;
+      display: block;
+      padding: 15px 16px 6px;
+      color: var(--ink);
+      background: transparent;
+      border: 0;
+      outline: 0;
+      font: 500 0.98rem/1.45 var(--font);
+    }
+
+    .assistant-launch-input::placeholder {
+      color: #8b8495;
+      font-weight: 500;
+    }
+
+    .assistant-launch-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 4px 6px 6px 12px;
+    }
+
+    .assistant-prompt-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .assistant-prompt {
+      appearance: none;
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--text-dim);
+      background: var(--surface-soft);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: color 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+    }
+
+    .assistant-prompt:hover {
+      color: var(--ink);
+      border-color: var(--border-hover);
+      background: #fff;
+    }
+
+    .assistant-launch-button {
+      appearance: none;
+      border: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      min-height: 50px;
+      padding: 0 20px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 14px 30px -18px rgba(32, 23, 45, 0.6);
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .assistant-launch-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px -18px rgba(32, 23, 45, 0.72);
+    }
+
+    .assistant-flow {
+      display: grid;
+      align-content: center;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(250, 248, 244, 0.78);
+      border: 1px solid rgba(228, 221, 209, 0.78);
+    }
+
+    .assistant-flow-step {
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      min-height: 44px;
+    }
+
+    .assistant-flow-step span:first-child {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--violet);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 800;
+    }
+
+    .assistant-flow-step strong {
+      display: block;
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .assistant-flow-step small {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      line-height: 1.32;
+    }
+
+    body.is-launching .assistant-console {
+      animation: launchToWorkspace 0.22s ease-out both;
+    }
+
+    body.is-launching .assistant-launch-form {
+      border-color: rgba(74, 127, 199, 0.42);
+      box-shadow: 0 0 0 5px rgba(74, 127, 199, 0.10);
+    }
+
+    body.is-launching .assistant-launch-button {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 38px -20px rgba(32, 23, 45, 0.72);
+    }
+
+    @keyframes launchToWorkspace {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      46% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.004);
+      }
+      100% {
+        opacity: 0.82;
+        transform: translateY(-4px) scale(1.008);
+      }
+    }
+
+    @keyframes homeWorkspaceExit {
+      0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0);
+      }
+      100% {
+        opacity: 0.86;
+        transform: scale(1.006) translateY(-3px);
+        filter: blur(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.is-launching .assistant-console,
+      body.is-launching .shell {
+        animation: none;
+      }
     }
 
     .section-head {
@@ -202,7 +463,7 @@
       color: var(--ink);
       font-size: 1.4rem;
       font-weight: 700;
-      letter-spacing: -0.025em;
+      letter-spacing: 0;
       text-transform: none;
     }
 
@@ -286,6 +547,7 @@
     .tool-card.builder .tool-icon {
       background: var(--violet-soft);
       color: var(--violet);
+      text-decoration: none;
     }
 
     .tool-card.editing .tool-icon {
@@ -338,7 +600,7 @@
       font-size: 1.14rem;
       line-height: 1.22;
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: 0;
     }
 
     .tool-description {
@@ -376,6 +638,7 @@
 
     .tool-card:hover .tool-action {
       color: var(--violet);
+      text-decoration: none;
       transform: translateX(2px);
     }
 
@@ -412,7 +675,7 @@
       }
 
       .brand-logo {
-        width: 136px;
+        width: 126px;
       }
 
       .badge {
@@ -430,6 +693,29 @@
       .section-copy {
         margin-top: 8px;
         text-align: left;
+      }
+
+      .assistant-console {
+        padding: 16px;
+        border-radius: 22px;
+      }
+
+      .assistant-console-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .assistant-console-header {
+        align-items: flex-start;
+      }
+
+      .assistant-launch-footer {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 6px;
+      }
+
+      .assistant-launch-button {
+        width: 100%;
       }
 
       .cards {
@@ -451,7 +737,7 @@
         <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </div>
 
-      <span class="badge">Demo Server</span>
+      <a class="badge" href="/assistant-workspace.html">Assistant</a>
     </header>
 
     <section class="hero">
@@ -460,6 +746,66 @@
       <p>
         Start with the job you need, move into the right workspace, and let the agent handle the schema-driven work behind it — FAQ chains, translation pipelines, sheet operations and report builds.
       </p>
+    </section>
+
+    <section class="assistant-console" aria-labelledby="assistantConsoleTitle">
+      <div class="assistant-console-grid">
+        <div class="assistant-console-main">
+          <div class="assistant-console-header">
+            <div class="assistant-orb">AI</div>
+            <div>
+              <span class="assistant-console-kicker">Start from chat</span>
+              <h2 class="assistant-console-title" id="assistantConsoleTitle">What’s on your mind?</h2>
+            </div>
+          </div>
+
+          <form class="assistant-launch-form" id="assistantLaunchForm" action="/assistant-workspace.html">
+            <textarea
+              class="assistant-launch-input"
+              id="assistantLaunchInput"
+              rows="3"
+              placeholder="Write what you want to do..."
+              aria-label="Start a message for the AI Workspace Assistant"
+            ></textarea>
+            <div class="assistant-launch-footer">
+              <div class="assistant-prompt-row" aria-label="Example prompts">
+                <button class="assistant-prompt" type="button" data-prompt="Clean source links from the answers in column C">Clean column C</button>
+                <button class="assistant-prompt" type="button" data-prompt="Translate this Google Sheet to English, French and German">Translate Sheet</button>
+                <button class="assistant-prompt" type="button" data-prompt="Build a hotel FAQ from the official website">Build FAQ</button>
+                <button class="assistant-prompt" type="button" data-prompt="Run an AI site audit and open the report">Audit site</button>
+              </div>
+              <button class="assistant-launch-button" type="submit">
+                <span>Start chat</span>
+                <span aria-hidden="true">-></span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="assistant-flow" aria-label="Assistant flow">
+          <div class="assistant-flow-step">
+            <span>01</span>
+            <div>
+              <strong>Understands</strong>
+              <small>FAQ, Sheets, schema, audits.</small>
+            </div>
+          </div>
+          <div class="assistant-flow-step">
+            <span>02</span>
+            <div>
+              <strong>Plans safely</strong>
+              <small>Inputs, payload, dry-run.</small>
+            </div>
+          </div>
+          <div class="assistant-flow-step">
+            <span>03</span>
+            <div>
+              <strong>Opens the right place</strong>
+              <small>Run or review.</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="tool-section">
@@ -570,23 +916,6 @@
             <span class="tool-action">Open -></span>
           </div>
         </a>
-
-        <a class="tool-card utility" href="/sheet-utilities.html">
-          <div class="tool-top">
-            <div class="tool-icon">SHT</div>
-            <div>
-              <span class="tool-pill">Sheets</span>
-              <h3 class="tool-title">Sheet Utilities</h3>
-              <p class="tool-description">
-                Run cross-file operations like lookup copy, folder injection, coverage checks and work-file generation.
-              </p>
-            </div>
-          </div>
-          <div class="tool-footer">
-            <span class="tool-mode">mode: sheet-utilities</span>
-            <span class="tool-action">Open -></span>
-          </div>
-        </a>
       </div>
     </section>
 
@@ -630,6 +959,23 @@
             <span class="tool-action">Open -></span>
           </div>
         </a>
+
+        <a class="tool-card utility" href="/sheet-utilities.html">
+          <div class="tool-top">
+            <div class="tool-icon">SHT</div>
+            <div>
+              <span class="tool-pill">Sheets</span>
+              <h3 class="tool-title">Sheet Utilities</h3>
+              <p class="tool-description">
+                Run cross-file operations like lookup copy, folder injection, coverage checks and work-file generation.
+              </p>
+            </div>
+          </div>
+          <div class="tool-footer">
+            <span class="tool-mode">mode: sheet-utilities</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
       </div>
     </section>
 
@@ -637,5 +983,46 @@
       If one of these pages does not exist yet, the link stays disabled until the matching HTML file is added to the public folder.
     </div>
   </main>
+
+  <script>
+    (() => {
+      const form = document.getElementById("assistantLaunchForm");
+      const input = document.getElementById("assistantLaunchInput");
+      const prompts = document.querySelectorAll("[data-prompt]");
+      const draftKey = "carmelon.assistantDraft";
+      const autostartKey = "carmelon.assistantAutostart";
+
+      function openAssistant() {
+        const draft = String(input?.value || "").trim();
+        if (draft) {
+          sessionStorage.setItem(draftKey, draft);
+          sessionStorage.setItem(autostartKey, "1");
+        }
+        document.body.classList.add("is-launching");
+        window.setTimeout(() => {
+          const query = draft ? `?draft=${encodeURIComponent(draft)}&autostart=1` : "";
+          window.location.href = `/assistant-workspace.html${query}`;
+        }, 180);
+      }
+
+      prompts.forEach((button) => {
+        button.addEventListener("click", () => {
+          input.value = button.dataset.prompt || "";
+          input.focus();
+        });
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        openAssistant();
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+        event.preventDefault();
+        form.requestSubmit();
+      });
+    })();
+  </script>
 </body>
 </html>

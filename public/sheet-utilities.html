@@ -55,7 +55,8 @@
     }
 
     .demo-header {
-      height: 72px;
+      height: auto;
+      min-height: 96px;
       padding: 18px 28px;
       display: flex;
       justify-content: space-between;
@@ -66,6 +67,60 @@
         rgba(139, 92, 246, 0.08),
         rgba(139, 92, 246, 0.01)
       );
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .brand-home-link:focus-visible {
+      outline: 2px solid var(--accent-text);
+      outline-offset: 4px;
+    }
+
+    .brand-home-link,
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
+    .brand-logo {
+      width: 142px;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .brand-copy {
+      min-width: 0;
+      padding-inline-start: 14px;
+      border-inline-start: 1px solid var(--border);
     }
 
     .demo-header h1 {
@@ -669,10 +724,15 @@
 
 <body>
   <header class="demo-header">
-    <h1>
-      <span class="icon">🔗</span>
-      Sheet Utilities / Cross-file Operations
-    </h1>
+    <div class="brand">
+      <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
+      </a>
+      <div class="brand-copy">
+        <h1>Sheet Utilities / Cross-file Operations</h1>
+      </div>
+    </div>
     <span class="badge">Live Demo</span>
   </header>
 

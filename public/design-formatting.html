@@ -775,7 +775,8 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      height: 64px;
+      height: auto;
+      min-height: 96px;
       padding: 14px 32px !important;
       background: rgba(251, 250, 247, 0.9) !important;
       border-bottom: 1px solid var(--vx-border) !important;
@@ -790,6 +791,7 @@
     .brand-home-link {
       display: inline-flex;
       align-items: center;
+      gap: 12px;
       flex: 0 0 auto;
       border-radius: 8px;
       text-decoration: none;
@@ -800,10 +802,30 @@
       outline-offset: 4px;
     }
 
+    .brand-home-link,
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
     .brand-logo {
-      width: auto !important;
-      height: 32px !important;
+      width: 142px !important;
+      height: auto !important;
       max-width: none !important;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--vx-border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand-copy {
@@ -1291,6 +1313,7 @@
     <div class="brand-lockup">
       <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
         <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
         <p class="eyebrow">Editing Studio</p>
@@ -1750,6 +1773,27 @@
             </div>
           </div>
 
+          <div id="fields-faq_answer_research" class="operation-fields">
+            <div class="operation-note">
+              Finds rows where the answer is blank or marked as unavailable/VERIFY, uses AI web search during the live run, and writes a sourced replacement answer.
+            </div>
+            <label class="field-label">Source policy and research instructions</label>
+            <textarea id="faqAnswerResearchPolicy" rows="5">Use trustworthy public sources. Prefer the official website when available. If a fact cannot be verified, keep [VERIFY] rather than inventing.</textarea>
+            <div class="input-row" style="margin-top: 12px;">
+              <div>
+                <label class="field-label">Placeholder to replace</label>
+                <input type="text" id="faqAnswerPlaceholder" value="Information is currently not available. [VERIFY]" />
+              </div>
+              <div>
+                <label class="field-label">Writeback target</label>
+                <select id="faqAnswerResearchWriteback">
+                  <option value="answer">Replace answer column</option>
+                  <option value="target">Write to output column</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div id="fields-faq_missing_questions" class="operation-fields">
             <div class="operation-note">
               Finds important missing questions against the existing categories and adds them as new rows at the end of the sheet.
@@ -1882,6 +1926,7 @@
           { id: "faq_language_review", title: "Language review", desc: "Fixes grammar, clarity and style without changing facts.", tag: "Language" },
           { id: "faq_question_review", title: "Question review", desc: "Suggests question fixes, finds duplicates and flags answer-fit issues.", tag: "QA" },
           { id: "faq_name_injection", title: "Name usage review", desc: "Checks whether the property or topic name should appear naturally.", tag: "Naming" },
+          { id: "faq_answer_research", title: "Research missing answers", desc: "Uses AI/web search to replace blank or VERIFY answers with sourced answers.", tag: "AI Search" },
           { id: "faq_missing_questions", title: "Add missing questions", desc: "Adds important missing questions based on categories and required topics.", tag: "Gap Fill" }
         ]
       },
@@ -2191,7 +2236,7 @@
       }
       if (selectedOperation.startsWith("faq_")) {
         const common = getFaqCommonConfig();
-        return {
+        const operation = {
           type: selectedOperation,
           ...common,
           commentMode: document.getElementById("faqCommentMode")?.value || "rewrite_if_needed",
@@ -2200,8 +2245,21 @@
           detectDuplicates: document.getElementById("faqQuestionDuplicates")?.classList.contains("on") !== false,
           nameScope: document.getElementById("faqNameScope")?.value || "answers",
           nameOutputMode: document.getElementById("faqNameOutputMode")?.value || "final_answer",
-          missingRequirements: document.getElementById("faqMissingRequirements")?.value || ""
+          missingRequirements: document.getElementById("faqMissingRequirements")?.value || "",
+          sourcePolicy: document.getElementById("faqAnswerResearchPolicy")?.value || "",
+          answerPlaceholder: document.getElementById("faqAnswerPlaceholder")?.value || "Information is currently not available. [VERIFY]",
+          useWebSearch: selectedOperation === "faq_answer_research",
+          replaceOriginal: document.getElementById("faqAnswerResearchWriteback")?.value !== "target"
         };
+        if (selectedOperation === "faq_answer_research") {
+          const sourceColumns = getValue("faqEditSourceColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
+          const outputColumns = getValue("faqEditOutputColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
+          operation.targetCol = document.getElementById("faqAnswerResearchWriteback")?.value === "target"
+            ? (outputColumns[0] || "F")
+            : (sourceColumns[2] || "C");
+          operation.targetHeader = operation.targetCol === (sourceColumns[2] || "C") ? "Answer" : "Agent Researched Answer";
+        }
+        return operation;
       }
       if (selectedOperation === "add_column") return { type: "add_column", columnLetter: getValue("addColumnLetter") || "H", header: getValue("addColumnHeader") || "New Column" };
       if (selectedOperation === "rename_column") return { type: "rename_column", columnLetter: getValue("renameColumnLetter") || "H", header: getValue("renameColumnHeader") || "New Header" };
@@ -2228,6 +2286,130 @@
     function updatePayloadPreview() {
       const payloadPreview = document.getElementById("payloadPreview");
       payloadPreview.textContent = JSON.stringify(getPayload(), null, 2);
+    }
+
+    function setFieldValue(id, value) {
+      if (value === undefined || value === null || value === "") return;
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.value = String(value);
+    }
+
+    function setToggleValue(id, enabled) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.classList.toggle("on", Boolean(enabled));
+    }
+
+    function normalizeSourceType(value) {
+      return value === "folder" ? "folder" : "sheet";
+    }
+
+    function applyFaqOperationHandoff(operation) {
+      if (!operation?.type) return;
+      if (getAllOperations().some((item) => item.id === operation.type)) {
+        selectOperation(operation.type);
+      }
+
+      setFieldValue("faqEditModel", operation.model);
+      setFieldValue("faqEditHotelName", operation.hotelName);
+      setFieldValue("faqEditSourceColumns", [
+        operation.categoryCol || "A",
+        operation.questionCol || "B",
+        operation.answerCol || "C",
+        operation.commentCol || "D"
+      ].join(","));
+      setFieldValue("faqEditOutputColumns", [
+        operation.targetCol || "F",
+        operation.questionFixCol || "G",
+        operation.qaNoteCol || "H",
+        operation.hotelNameCol || "I"
+      ].join(","));
+      setToggleValue("faqEditFormatAfterWrite", operation.formatAfterWrite !== false);
+      setFieldValue("faqCommentMode", operation.commentMode);
+      setFieldValue("faqLanguageDepth", operation.languageDepth);
+      setFieldValue("faqLanguageTone", operation.languageTone);
+      setToggleValue("faqQuestionDuplicates", operation.detectDuplicates !== false);
+      setFieldValue("faqNameScope", operation.nameScope);
+      setFieldValue("faqNameOutputMode", operation.nameOutputMode);
+      setFieldValue("faqMissingRequirements", operation.missingRequirements);
+      setFieldValue("faqAnswerResearchPolicy", operation.sourcePolicy || operation.missingRequirements);
+      setFieldValue("faqAnswerPlaceholder", operation.answerPlaceholder);
+      if (operation.type === "faq_answer_research") {
+        const answerCol = operation.answerCol || "C";
+        setFieldValue("faqAnswerResearchWriteback", operation.targetCol === answerCol || operation.replaceOriginal ? "answer" : "target");
+      }
+    }
+
+    function applyOperationHandoffFields(operation) {
+      if (!operation?.type) return;
+      if (operation.type === "replace_column_when_value") {
+        setFieldValue("replaceColumnSource", operation.sourceColumn);
+        setFieldValue("replaceColumnTarget", operation.targetColumn);
+        setFieldValue("replaceColumnStartRow", operation.startRow);
+        setFieldValue("replaceColumnTargetHeader", operation.targetHeader);
+      }
+      if (operation.type === "extract_comments") {
+        setFieldValue("commentsSourceColumn", operation.sourceColumn);
+        setFieldValue("commentsOutputColumn", operation.outputColumn);
+        setFieldValue("commentsStartRow", operation.startRow);
+        setFieldValue("commentsOutputHeader", operation.outputHeader);
+        setToggleValue("commentsIncludeReplies", operation.includeReplies !== false);
+      }
+    }
+
+    function applyAssistantHandoff(handoff) {
+      const payload = handoff?.payload || {};
+      const values = handoff?.values || {};
+      const operation = Array.isArray(payload.operations) && payload.operations.length ? payload.operations[0] : payload.operation;
+
+      setFieldValue("sourceType", normalizeSourceType(payload.sourceType || values.sourceType));
+      setFieldValue("targetId", payload.targetId || values.targetUrl || values.targetId);
+      setFieldValue("tabName", payload.tabName || values.tabName || "Sheet1");
+      setFieldValue("maxFiles", payload.maxFiles || values.maxFiles);
+      setToggleValue("dryRun", payload.dryRun !== false && values.dryRun !== false);
+      setToggleValue("createBackup", Boolean(payload.createBackup || values.createBackup));
+
+      const range = payload.range || {};
+      setFieldValue("columnScope", range.columnScope);
+      setFieldValue("rowScope", range.rowScope);
+      if (range.columns) setFieldValue("columnsInput", range.columns);
+      if (range.rows) setFieldValue("rowsInput", range.rows);
+
+      applyFaqOperationHandoff(operation);
+      if (operation?.type && !operation.type.startsWith("faq_") && getAllOperations().some((item) => item.id === operation.type)) {
+        selectOperation(operation.type);
+        applyOperationHandoffFields(operation);
+      }
+
+      if (Array.isArray(payload.operations) && payload.operations.length > 1) {
+        pipelineOperations = payload.operations.map(cloneOperation);
+      } else {
+        pipelineOperations = [];
+      }
+
+      renderPipeline();
+      const setupSummary = operation?.type === "faq_answer_research"
+        ? "Loaded AI answer research setup from AI Workspace Assistant."
+        : "Loaded setup from AI Workspace Assistant.";
+      setSummary("read", setupSummary, "Loaded");
+    }
+
+    function consumeAssistantWorkspaceHandoff() {
+      const keys = ["carmelonAssistantToolHandoff", "faqEditingWorkspaceHandoff"];
+      for (const key of keys) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        try {
+          const handoff = JSON.parse(raw);
+          if (handoff?.toolId && handoff.toolId !== "design-formatting") continue;
+          applyAssistantHandoff(handoff);
+          localStorage.removeItem(key);
+          return;
+        } catch {
+          localStorage.removeItem(key);
+        }
+      }
     }
 
     function switchOutputView(view) {
@@ -2538,6 +2720,7 @@
 
     renderCategoryTabs();
     renderOperationCategories();
+    consumeAssistantWorkspaceHandoff();
     updateSelectedActionInfo();
     syncRangeControls();
     renderPipeline();

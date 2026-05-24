@@ -850,11 +850,30 @@
     }
 
     .brand-logo {
-      width: 158px;
+      width: 142px;
       filter: none;
     }
 
-    .brand-badge {
+    .brand-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    .brand-home-link:focus-visible {
+      outline: 2px solid var(--violet);
+      outline-offset: 4px;
+    }
+
+    .brand-home-link,
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
+    .brand-ai {
       width: auto;
       height: auto;
       margin: 0 0 7px -3px;
@@ -865,6 +884,7 @@
       background: transparent;
       box-shadow: none;
       color: var(--violet);
+      text-decoration: none;
       font-family: var(--mono);
       font-size: 0.68rem;
       font-weight: 700;
@@ -879,6 +899,7 @@
       border: 1px solid var(--border);
       box-shadow: none;
       color: var(--violet);
+      text-decoration: none;
       font-family: var(--mono);
       font-size: 0.7rem;
       letter-spacing: 0.04em;
@@ -921,6 +942,7 @@
     .eyebrow {
       margin-bottom: 7px;
       color: var(--violet);
+      text-decoration: none;
       font-family: var(--mono);
       font-size: 0.72rem;
       font-weight: 600;
@@ -976,6 +998,7 @@
 
     .btn.primary {
       border-color: var(--violet);
+      text-decoration: none;
       background: var(--violet);
       color: #fff;
     }
@@ -1018,6 +1041,7 @@
       background: var(--violet-soft);
       box-shadow: none;
       color: var(--violet);
+      text-decoration: none;
     }
 
     .workflow-step strong {
@@ -1092,6 +1116,7 @@
     select:focus,
     textarea:focus {
       border-color: var(--violet);
+      text-decoration: none;
       box-shadow: 0 0 0 4px var(--violet-dim);
     }
 
@@ -1128,6 +1153,7 @@
       border-color: rgba(91, 58, 150, 0.16);
       background: var(--violet-soft);
       color: var(--violet);
+      text-decoration: none;
     }
 
     .toggle {
@@ -1159,6 +1185,7 @@
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--violet);
+      text-decoration: none;
       box-shadow: none;
     }
 
@@ -2016,7 +2043,8 @@
       }
 
       .brand-logo {
-        height: 28px !important;
+        width: 126px !important;
+        height: auto !important;
       }
 
       .layout {
@@ -2124,22 +2152,36 @@
     }
 
     .brand-logo {
-      width: auto !important;
-      height: 32px !important;
+      width: 142px !important;
+      height: auto !important;
       filter: none !important;
     }
 
-    .brand-badge {
+    .brand-home-link {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      flex: 0 0 auto !important;
+      border-radius: 8px !important;
+      text-decoration: none !important;
+    }
+
+    .brand-ai {
+      align-self: center !important;
       width: auto !important;
       height: auto !important;
       min-width: 0 !important;
-      padding: 4px 10px !important;
-      border-radius: 999px !important;
-      background: var(--vx-violet-soft) !important;
-      border: 1px solid rgba(110, 87, 196, 0.18) !important;
-      color: var(--vx-violet) !important;
+      margin: 10px 0 0 -2px !important;
+      padding: 0 0 0 10px !important;
+      border: 0 !important;
+      border-left: 1px solid var(--vx-border-strong) !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      color: #5b3a96 !important;
       font: 600 0.68rem/1 var(--vx-mono) !important;
-      letter-spacing: 0.02em !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      line-height: 1 !important;
       transform: none !important;
       box-shadow: none !important;
     }
@@ -2716,8 +2758,10 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img class="brand-logo" src="./carmelon-logo-header-x2.png" alt="Carmelon" />
-      <div class="brand-badge">AI</div>
+      <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
+        <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
+      </a>
     </div>
     <div class="status-pill" id="statusPill">Schema workspace</div>
   </header>
@@ -3166,6 +3210,44 @@
       window.open(schemaValidatorUrl, "_blank", "noopener,noreferrer");
     }
 
+    function consumeAssistantHandoff() {
+      const raw = localStorage.getItem("carmelonAssistantToolHandoff");
+      if (!raw) return;
+
+      let handoff = null;
+      try {
+        handoff = JSON.parse(raw);
+      } catch {
+        localStorage.removeItem("carmelonAssistantToolHandoff");
+        return;
+      }
+
+      if (!handoff || handoff.toolId !== "schema-builder") return;
+
+      const values = handoff.values || {};
+      const payload = handoff.payload || {};
+      const sourceType = payload.sourceType || (String(values.sourceUrl || "").includes("/drive/folders/") ? "folder" : "sheet");
+
+      $("sourceType").value = sourceType === "folder" ? "folder" : "sheet";
+      $("targetId").value = payload.targetId || values.sourceUrl || "";
+      $("tabName").value = payload.tabName || values.tabName || "Sheet1";
+      $("maxFiles").value = payload.maxFiles || values.maxFiles || 30;
+      $("schemaType").value = payload.schemaType || "FAQPage";
+      $("questionColumn").value = payload.questionColumn || values.questionColumn || "B";
+      $("answerColumn").value = payload.answerColumn || values.answerColumn || "C";
+      $("startRow").value = payload.startRow || values.startRow || 2;
+      $("maxRows").value = payload.maxRows || values.maxRows || 500;
+      $("outputCell").value = payload.outputCell || values.outputCell || "E73";
+      $("pageUrl").value = values.pageUrl || payload.pageUrl || "";
+      setToggle("recursiveToggle", payload.recursive !== false);
+      setToggle("scriptToggle", payload.includeScriptTag !== false);
+      setToggle("previewOnlyToggle", payload.previewOnly !== false);
+
+      saveConfig();
+      localStorage.removeItem("carmelonAssistantToolHandoff");
+      addLog("Loaded setup from AI Workspace Assistant.", "dim");
+    }
+
     ["recursiveToggle", "scriptToggle", "previewOnlyToggle"].forEach((id) => {
       $(id).addEventListener("click", () => {
         $(id).classList.toggle("on");
@@ -3226,6 +3308,7 @@
     });
 
     loadConfig();
+    consumeAssistantHandoff();
   </script>
 </body>
 </html>

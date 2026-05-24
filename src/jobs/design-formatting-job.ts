@@ -30,6 +30,9 @@ type DesignFormattingPayload = {
   range?: RangeConfig;
   operations?: DesignFormattingOperation[];
   operation: DesignFormattingOperation;
+  assistantInstruction?: string;
+  assistantSourceUrl?: string;
+  selectedOperation?: string;
 };
 
 type DesignFormattingOperation =
@@ -172,6 +175,7 @@ type FaqAiEditOperationType =
   | "faq_language_review"
   | "faq_question_review"
   | "faq_name_injection"
+  | "faq_answer_research"
   | "faq_missing_questions";
 
 type FaqAiEditOperation = {
@@ -198,6 +202,11 @@ type FaqAiEditOperation = {
   nameScope?: "questions" | "answers" | "both";
   nameOutputMode?: "final_answer" | "original_answer";
   missingRequirements?: string;
+  sourcePolicy?: string;
+  answerPlaceholder?: string;
+  editorInstruction?: string;
+  useWebSearch?: boolean;
+  replaceOriginal?: boolean;
   formatAfterWrite?: boolean;
 };
 
@@ -394,12 +403,79 @@ export class DesignFormattingJob {
 
   private getOperations(payload: DesignFormattingPayload): DesignFormattingOperation[] {
     const operations = Array.isArray(payload.operations) ? payload.operations.filter((item) => item?.type) : [];
+    const singleOperation = payload.operation?.type ? [payload.operation] : [];
 
     if (operations.length > 0) {
+      if (singleOperation.length > 0) {
+        const operationTypes = operations.map((operation) => operation.type).join(" → ");
+        const singleType = singleOperation[0].type;
+
+        if (!operations.some((operation) => operation.type === singleType)) {
+          throw new Error(
+            `Conflicting design-formatting payload: operation is ${singleType}, but operations contain ${operationTypes}.`
+          );
+        }
+      }
+
+      this.assertSupportedOperations(operations);
+      this.assertInstructionMatchesOperation(payload, operations);
       return operations;
     }
 
-    return payload.operation?.type ? [payload.operation] : [];
+    this.assertSupportedOperations(singleOperation);
+    this.assertInstructionMatchesOperation(payload, singleOperation);
+    return singleOperation;
+  }
+
+  private assertSupportedOperations(operations: DesignFormattingOperation[]): void {
+    const supported = new Set([
+      "text_replace",
+      "wrap_html",
+      "normalize_spaces",
+      "normalize_line_breaks",
+      "plain_to_html_paragraphs",
+      "case_transform",
+      "format_table",
+      "header_style",
+      "wrap_text",
+      "align_cells",
+      "set_column_widths",
+      "set_row_heights",
+      "extract_comments",
+      "replace_column_when_value",
+      "add_column",
+      "rename_column",
+      "reorder_columns",
+      "duplicate_tab_template",
+      "faq_ai_edit",
+      "faq_apply_client_comments",
+      "faq_language_review",
+      "faq_question_review",
+      "faq_name_injection",
+      "faq_answer_research",
+      "faq_missing_questions",
+    ]);
+
+    for (const operation of operations) {
+      if (!supported.has(operation.type)) {
+        throw new Error(`Unsupported design-formatting operation: ${operation.type}`);
+      }
+    }
+  }
+
+  private assertInstructionMatchesOperation(payload: DesignFormattingPayload, operations: DesignFormattingOperation[]): void {
+    const text = [
+      payload.assistantInstruction || "",
+      payload.selectedOperation || "",
+      payload.operation?.type || "",
+    ].join(" ");
+    const asksForAnswerResearch =
+      /\[verify\]|information is currently not available|missing answers|verify answers|search answers|find answers|source-backed|trusted sources|official sources/i.test(text) ||
+      /לחפש\s+תשובות|למצוא\s+תשובות|להשלים\s+תשובות|תשובות\s+חסרות|תשובות\s+מאומתות|מקורות\s+מהימנים|לא\s+זמין|אימות|מאומת/.test(text);
+
+    if (asksForAnswerResearch && !operations.some((operation) => operation.type === "faq_answer_research")) {
+      throw new Error("The request asks for answer research/verification, but the payload operation is not faq_answer_research.");
+    }
   }
 
   private async resolveTargets(payload: DesignFormattingPayload): Promise<TargetSheet[]> {
@@ -570,7 +646,7 @@ export class DesignFormattingJob {
       return this.editFaqWithAi(spreadsheetId, fileName, tabName, operation, dryRun);
     }
 
-    return 0;
+    throw new Error(`Unsupported design-formatting operation: ${String((operation as { type?: string }).type || "unknown")}`);
   }
 
   private isTextValueOperation(
@@ -1432,6 +1508,7 @@ export class DesignFormattingJob {
     const rowsWithComments = allRows.filter((row) => row.clientComment);
     const rowsWithAnswers = allRows.filter((row) => row.originalAnswer);
     const rowsWithQuestions = allRows.filter((row) => row.question);
+    const rowsWithMissingAnswers = allRows.filter((row) => row.question && this.isMissingAnswerValue(row.originalAnswer, operation.answerPlaceholder));
 
     const inputCounts = {
       rewrite: operation.type === "faq_ai_edit" || operation.type === "faq_apply_client_comments" ? rowsWithComments.length : 0,
@@ -1443,18 +1520,20 @@ export class DesignFormattingJob {
             : 0,
       questionFix: operation.type === "faq_ai_edit" || operation.type === "faq_question_review" ? rowsWithQuestions.length : 0,
       nameInject: operation.type === "faq_name_injection" ? rowsWithAnswers.length : 0,
+      answerResearch: operation.type === "faq_answer_research" ? rowsWithMissingAnswers.length : 0,
       missing: operation.type === "faq_missing_questions" ? allRows.length : 0,
     };
 
     const estimatedInputRows =
-      inputCounts.rewrite + inputCounts.qa + inputCounts.questionFix + inputCounts.nameInject + inputCounts.missing;
+      inputCounts.rewrite + inputCounts.qa + inputCounts.questionFix + inputCounts.nameInject + inputCounts.answerResearch + inputCounts.missing;
 
     this.emitPreviewPlanIfNeeded(spreadsheetId, fileName, tabName, operationLabel, [
       `Rows available: ${dataRowCount}`,
       `Rows selected for this operation: ${estimatedInputRows}`,
       `Output columns: ${targetCol}, ${questionFixCol}, ${qaNoteCol}, ${hotelNameCol}`,
+      operation.type === "faq_answer_research" && operation.useWebSearch ? "Live run will use AI web search for missing/VERIFY answers" : "",
       dryRun ? "Dry run will not call AI or write cells" : "Real run will call AI and write output columns",
-    ]);
+    ].filter(Boolean));
 
     if (dryRun) {
       console.log(
@@ -1471,7 +1550,7 @@ export class DesignFormattingJob {
 
     const prompt = this.buildFaqEditPrompt(operation, allRows, hotelName);
     const model = operation.model || "o3";
-    const aiOutput = await this.getAiAgent().run(prompt, model);
+    const aiOutput = await this.getAiAgent().run(prompt, model, { useWebSearch: operation.type === "faq_answer_research" && operation.useWebSearch === true });
     const parsed = this.parseFaqEditOutput(aiOutput);
 
     const rewriteMap = new Map<number, string>();
@@ -1522,6 +1601,7 @@ export class DesignFormattingJob {
       "faq_apply_client_comments",
       "faq_language_review",
       "faq_name_injection",
+      "faq_answer_research",
     ].includes(operation.type);
     const shouldWriteQuestionFix = [
       "faq_ai_edit",
@@ -1532,6 +1612,7 @@ export class DesignFormattingJob {
       "faq_ai_edit",
       "faq_language_review",
       "faq_question_review",
+      "faq_answer_research",
     ].includes(operation.type);
     const shouldWriteNameStatus = operation.type === "faq_ai_edit" || operation.type === "faq_name_injection";
 
@@ -1598,6 +1679,22 @@ export class DesignFormattingJob {
     return changed;
   }
 
+  private isMissingAnswerValue(value: string, customPlaceholder?: string): boolean {
+    const text = String(value || "").trim();
+    if (!text) return true;
+    const normalized = text.toLowerCase();
+    const custom = String(customPlaceholder || "").trim().toLowerCase();
+
+    return Boolean(custom && normalized.includes(custom)) ||
+      normalized.includes("information is currently not available") ||
+      normalized.includes("[verify]") ||
+      normalized.includes("needs source confirmation") ||
+      normalized.includes("not available") ||
+      normalized.includes("לא זמין") ||
+      normalized.includes("אין מידע") ||
+      normalized.includes("דורש אימות");
+  }
+
   private buildFaqEditPrompt(
     operation: FaqAiEditOperation,
     allRows: Array<{
@@ -1609,6 +1706,9 @@ export class DesignFormattingJob {
     }>,
     hotelName: string
   ): string {
+    const answerResearchRows = operation.type === "faq_answer_research"
+      ? allRows.filter((row) => row.question && this.isMissingAnswerValue(row.originalAnswer, operation.answerPlaceholder))
+      : [];
     const rewriteRows =
       operation.type === "faq_ai_edit" || operation.type === "faq_apply_client_comments"
         ? allRows.filter((row) => row.clientComment)
@@ -1634,14 +1734,16 @@ You are a senior hospitality FAQ editor and a strict QA reviewer.
 CONTEXT
 Property/product name: ${hotelName}
 Operation: ${operation.type}
+Additional user edit instruction: ${operation.editorInstruction || "None"}
 
 TASKS
 Use only the relevant task for the selected operation:
 1. faq_apply_client_comments: rewrite rows that have a clientComment. The clientComment is the source of truth, but preserve verified facts from the original answer when useful.
-2. faq_language_review: lightly improve grammar, clarity and hospitality tone. Do not change factual meaning.
+2. faq_language_review: lightly improve grammar, clarity and hospitality tone. Do not change factual meaning. If an additional user edit instruction is provided, apply it to the answer text.
 3. faq_question_review: suggest corrected questions only when the question is unsuitable for a public FAQ, duplicated, too vague, or mismatched with the answer.
 4. faq_name_injection: add the property/product name only when it improves clarity. Avoid keyword stuffing. Check scope: ${operation.nameScope || "answers"}.
 5. faq_missing_questions: propose practical missing FAQ rows using only the patterns and facts visible in the input.
+6. faq_answer_research: research rows whose answer is blank, unavailable or marked VERIFY, then write a concise source-grounded replacement answer in rewrite[]. Add the source label or URL in qa_note[].
 
 STRICT RULES
 - Do not invent amenities, policies, times, facilities or prices.
@@ -1653,6 +1755,9 @@ STRICT RULES
 - Keep QA notes short, practical and not accusatory.
 - Return empty strings when no change is needed.
 - If information is missing or not verified, say that it needs source confirmation instead of inventing.
+- For faq_answer_research, use trustworthy sources. Prefer official sources when available. Put the best short source label or URL in qa_note.
+- Source policy: ${operation.sourcePolicy || "Use trustworthy public sources; prefer official pages."}
+- Additional edit instruction: ${operation.editorInstruction || "None"}
 
 OUTPUT FORMAT
 Return only valid JSON:
@@ -1685,12 +1790,16 @@ ${JSON.stringify(
     question_check: questionRows,
     name_inject: nameRows,
     missing_question_scan: missingRows,
+    answer_research: answerResearchRows,
     options: {
       commentMode: operation.commentMode || "rewrite_if_needed",
       languageDepth: operation.languageDepth || "light",
       languageTone: operation.languageTone || "clear_hospitality",
       detectDuplicates: operation.detectDuplicates !== false,
       missingRequirements: operation.missingRequirements || "",
+      sourcePolicy: operation.sourcePolicy || "",
+      answerPlaceholder: operation.answerPlaceholder || "",
+      editorInstruction: operation.editorInstruction || "",
     },
   },
   null,
@@ -1736,6 +1845,8 @@ ${JSON.stringify(
         return "FAQ question QA";
       case "faq_name_injection":
         return "FAQ property name check";
+      case "faq_answer_research":
+        return "FAQ answer research";
       case "faq_missing_questions":
         return "FAQ missing question scan";
       default:

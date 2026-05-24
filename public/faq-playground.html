@@ -97,6 +97,11 @@
       outline-offset: 4px;
     }
 
+    .brand-home-link,
+    .brand-home-link * {
+      text-decoration: none !important;
+    }
+
     .brand-copy {
       border-inline-start: 1px solid var(--border);
       padding-inline-start: 18px;
@@ -363,7 +368,7 @@
     }
 
     .chat-message.user {
-      align-self: flex-end;
+      align-self: center;
       color: #fff;
       background: var(--purple);
       border-color: var(--purple);
@@ -845,6 +850,44 @@
 
     .preset-row {
       margin-top: 18px;
+    }
+
+    .workflow-type-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-soft);
+    }
+
+    .workflow-type-panel .preset-row {
+      margin-top: 8px;
+    }
+
+    .workflow-type-copy {
+      min-width: 0;
+    }
+
+    .workflow-type-copy strong {
+      display: block;
+      font-size: 0.98rem;
+      line-height: 1.3;
+    }
+
+    .workflow-type-copy span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .auto-configure-btn {
+      white-space: nowrap;
     }
 
     .seg-btn,
@@ -1623,9 +1666,24 @@
     }
 
     .brand-logo {
-      width: auto !important;
-      height: 32px !important;
+      width: 142px !important;
+      height: auto !important;
       max-width: none !important;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--vx-border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--vx-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand-copy {
@@ -2343,6 +2401,10 @@
         grid-template-columns: 1fr;
       }
 
+      .workflow-type-panel {
+        grid-template-columns: 1fr;
+      }
+
       .task-config-grid {
         grid-template-columns: 1fr !important;
       }
@@ -2381,6 +2443,7 @@
     <div class="brand">
       <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
         <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
         <p class="eyebrow">Creator Studio</p>
@@ -2460,9 +2523,23 @@
 
         <div class="panel-body">
           <div class="grid setup-grid">
+            <div class="workflow-type-panel">
+              <div class="workflow-type-copy">
+                <strong>Workflow type</strong>
+                <span>Choose a starting point, or let the builder infer it from the topics and audience.</span>
+                <div class="preset-row" aria-label="FAQ workflow type">
+                  <button class="seg-btn active" type="button" data-preset="hotel">Hotels</button>
+                  <button class="seg-btn" type="button" data-preset="local">Local business</button>
+                  <button class="seg-btn" type="button" data-preset="service">Product / service</button>
+                  <button class="seg-btn" type="button" data-preset="vehicle">Vehicle models</button>
+                </div>
+              </div>
+              <button class="ghost-btn auto-configure-btn" type="button" id="autoConfigureBtn">Auto-fit from setup</button>
+            </div>
+
             <label class="field">
-              <span>Hotels / topics</span>
-              <textarea id="subjects" class="textarea ltr" rows="3" placeholder="Leonardo Royal Berlin&#10;Bachar House&#10;master Wola"></textarea>
+              <span>Subjects / topics</span>
+              <textarea id="subjects" class="textarea ltr" rows="3" placeholder="Leonardo Royal Berlin&#10;Toyota Corolla Hybrid&#10;Small business CRM"></textarea>
               <span class="hint">Use a new line or comma between subjects. The setup is saved in this browser so you can continue later.</span>
               <div class="subject-history" id="subjectHistory" aria-label="Previous subject sets"></div>
             </label>
@@ -2804,6 +2881,146 @@
         ]
       }
     ];
+
+    const WORKFLOW_PRESETS = {
+      hotel: {
+        label: "Hotels",
+        categoryIds: ["general", "booking", "checkin", "rooms", "location", "food", "policies"],
+        audience: "Guests before booking, guests before arrival, and in-house guests",
+        questionNote: "Prioritize real guest questions across booking, arrival, stay experience, location, amenities, policies and trust signals.",
+        questionTone: "Use practical guest wording, clear intent and source-grounded hospitality context.",
+        answerNote: "Answer like a helpful hospitality FAQ: concise, factual, service-minded and never promotional.",
+        answerTone: "Warm, concise, reliable.",
+        sourceInstructions: "Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation."
+      },
+      local: {
+        label: "Local business",
+        categoryIds: ["general", "booking", "location", "policies", "trust"],
+        audience: "Potential customers researching the business before contacting, visiting or buying.",
+        questionNote: "Prioritize customer questions about services, pricing, booking/contact, location, trust, reviews and what happens next.",
+        questionTone: "Use direct, local-intent wording that fits customers comparing nearby options.",
+        answerNote: "Keep answers practical, clear and conversion-aware without unsupported claims.",
+        answerTone: "Professional, helpful and direct.",
+        sourceInstructions: "Use the official website as the primary factual source. Use business profiles, reviews and competitors only to understand question demand."
+      },
+      service: {
+        label: "Product / service",
+        categoryIds: ["general", "booking", "rooms", "policies", "trust"],
+        audience: "Potential customers comparing products, services, pricing, suitability and next steps.",
+        questionNote: "Prioritize comparison, use cases, suitability, pricing, setup, limitations, support and buying decision questions.",
+        questionTone: "Use buyer-focused wording that clarifies value, fit, constraints and next steps.",
+        answerNote: "Answer with practical product/service clarity, not marketing copy. Mark unsupported claims for verification.",
+        answerTone: "Clear, useful and decision-oriented.",
+        sourceInstructions: "Use official product/service information for facts. Use reviews and competitors only for question ideas and comparison intent."
+      },
+      vehicle: {
+        label: "Vehicle models",
+        categoryIds: ["general", "booking", "checkin", "rooms", "location", "food", "policies", "trust"],
+        audience: "Car buyers comparing models, trims, ownership costs, reliability and day-to-day fit.",
+        questionNote: "Prioritize model-comparison questions about trims, engine or EV options, range or fuel economy, safety, running costs, reliability, space, comfort and ownership.",
+        questionTone: "Use practical car-buyer wording. Make questions useful for people comparing models and deciding what fits their budget and needs.",
+        answerNote: "Answer with factual automotive clarity. Distinguish confirmed specs from estimates, and mark uncertain figures for verification.",
+        answerTone: "Practical, comparison-friendly and evidence-first.",
+        sourceInstructions: "Use manufacturer pages and official specifications for facts. Reviews may inform common buyer concerns, but specs and claims must be verified."
+      }
+    };
+
+    const CATEGORY_PRESET_OVERRIDES = {
+      vehicle: {
+        general: {
+          title: "Model Overview",
+          label: "Model overview",
+          description: "What the vehicle is, who it suits, body style, positioning, and strongest use cases.",
+          intents: [
+            "What type of vehicle is this model?",
+            "Who is this model best suited for?",
+            "How does it compare with similar models?"
+          ]
+        },
+        booking: {
+          title: "Price & Ownership Costs",
+          label: "Price and ownership costs",
+          description: "Starting price, trims, lease or finance context, insurance, fuel, charging and maintenance costs.",
+          intents: [
+            "What is the expected price range?",
+            "Which trims or versions offer the best value?",
+            "What ownership costs should buyers consider?"
+          ]
+        },
+        checkin: {
+          title: "Trims & Availability",
+          label: "Trims and availability",
+          description: "Trim levels, packages, market availability, delivery timing and model-year changes.",
+          intents: [
+            "Which trims are available?",
+            "What changes between model years?",
+            "When is the model available in the relevant market?"
+          ]
+        },
+        rooms: {
+          title: "Specs & Performance",
+          label: "Specs and performance",
+          description: "Engine, EV battery, range, fuel economy, acceleration, towing, drivetrain and practical performance.",
+          intents: [
+            "What engines, battery or drivetrain options are available?",
+            "What range, fuel economy or charging details matter?",
+            "How does the model perform in everyday driving?"
+          ]
+        },
+        location: {
+          title: "Daily Use & Practicality",
+          label: "Daily use and practicality",
+          description: "Interior space, cargo, family use, parking, city driving, long trips and real-world convenience.",
+          intents: [
+            "Is the model practical for families or commuting?",
+            "How much cargo and passenger space does it offer?",
+            "Is it easy to use in city and long-distance driving?"
+          ]
+        },
+        food: {
+          title: "Interior & Technology",
+          label: "Interior and technology",
+          description: "Cabin quality, infotainment, connectivity, driver assistance and comfort features.",
+          intents: [
+            "What technology and infotainment features are included?",
+            "How comfortable is the interior?",
+            "Which convenience features matter most?"
+          ]
+        },
+        policies: {
+          title: "Safety, Warranty & Maintenance",
+          label: "Safety and warranty",
+          description: "Safety ratings, driver assistance, warranty, service intervals, recalls and maintenance expectations.",
+          intents: [
+            "What safety features or ratings are available?",
+            "What warranty coverage applies?",
+            "Are there known maintenance or reliability concerns?"
+          ]
+        },
+        trust: {
+          title: "Reliability & Reviews",
+          label: "Reliability and reviews",
+          description: "Owner feedback, expert reviews, known issues, resale value and long-term confidence.",
+          intents: [
+            "What do owners and reviewers commonly praise or criticize?",
+            "Is this model considered reliable?",
+            "How does resale value compare?"
+          ]
+        }
+      },
+      service: {
+        rooms: {
+          title: "Features & Use Cases",
+          label: "Features and use cases",
+          description: "Key features, workflows, benefits, limitations and when the product or service is a good fit.",
+          intents: [
+            "What features matter most?",
+            "Who is the product or service best for?",
+            "What limitations should users know before buying?"
+          ]
+        }
+      }
+    };
 
     const DEFAULT_SOURCE_OPTIONS = ["Official website"];
 
@@ -3188,6 +3405,93 @@
       });
     }
 
+    function normalizePreset(value) {
+      return WORKFLOW_PRESETS[value] ? value : "hotel";
+    }
+
+    function buildPresetCategories(presetName) {
+      const preset = WORKFLOW_PRESETS[normalizePreset(presetName)];
+      const enabled = new Set(preset.categoryIds || []);
+      const overrides = CATEGORY_PRESET_OVERRIDES[normalizePreset(presetName)] || {};
+
+      return CATEGORY_LIBRARY.map((category) => {
+        const override = overrides[category.id] || {};
+        return {
+          ...category,
+          ...override,
+          intents: Array.isArray(override.intents) ? override.intents : category.intents,
+          target: override.target || categoryTargetValue(category),
+          enabled: enabled.has(category.id)
+        };
+      });
+    }
+
+    function inferWorkflowPreset() {
+      const text = [
+        $("subjects")?.value,
+        $("audience")?.value,
+        $("sourceInstructions")?.value
+      ].join(" ").toLowerCase();
+
+      if (/\b(car|cars|vehicle|vehicles|auto|automotive|suv|sedan|ev|electric|hybrid|trim|trims|engine|lease|leasing)\b/.test(text) || /\b(car|vehicle)\s+models?\b/.test(text)) {
+        return "vehicle";
+      }
+
+      if (/\b(hotel|hotels|hostel|apartment|apartments|guest|guests|booking|check-in|checkin|room|rooms|stay|arrival)\b/.test(text)) {
+        return "hotel";
+      }
+
+      if (/\b(service|services|software|tool|platform|product|products|subscription|pricing|demo|onboarding)\b/.test(text)) {
+        return "service";
+      }
+
+      if (/\b(local|restaurant|clinic|salon|store|shop|business|nearby|location|opening hours)\b/.test(text)) {
+        return "local";
+      }
+
+      return document.querySelector(".seg-btn.active")?.dataset.preset || "hotel";
+    }
+
+    function upsertTextBlock(text, label, content) {
+      const marker = `WORKFLOW NOTE - ${label}:`;
+      const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`\\n\\n${escaped}\\n[\\s\\S]*?(?=\\n\\nWORKFLOW NOTE - |$)`, "m");
+      const cleanBase = String(text || "").replace(pattern, "").trimEnd();
+      const cleanContent = String(content || "").trim();
+      return cleanContent ? `${cleanBase}\n\n${marker}\n${cleanContent}` : cleanBase;
+    }
+
+    function applyPresetToTaskDrafts(presetName) {
+      const preset = WORKFLOW_PRESETS[normalizePreset(presetName)];
+      taskDrafts = taskDrafts.map((task) => {
+        if (task.id === 1) {
+          return {
+            ...task,
+            tone: preset.questionTone || task.tone,
+            user: upsertTextBlock(task.user, "Question focus", preset.questionNote)
+          };
+        }
+
+        if (task.id === 2) {
+          return {
+            ...task,
+            tone: preset.answerTone || task.tone,
+            user: upsertTextBlock(task.user, "Answer rules", preset.answerNote)
+          };
+        }
+
+        if (task.id === 3 || task.id === 5) {
+          return {
+            ...task,
+            user: upsertTextBlock(task.user, "QA checks", `Check the output against the selected ${preset.label.toLowerCase()} context, audience, source rules and category plan.`)
+          };
+        }
+
+        return task;
+      });
+      renderTasks();
+    }
+
     const savedState = loadSavedState();
     let taskDrafts = mergeTasks(savedState.tasks);
     let categoryDrafts = mergeCategories(savedState.categories);
@@ -3236,7 +3540,7 @@
       $("namingRules").value = hasHebrewText(savedNamingRules) ? "Do not shorten or translate the name" : savedNamingRules || "Do not shorten or translate the name";
       applySourceOptions(savedState.controls?.sourceOptions);
       const savedPreset = savedState.controls?.preset;
-      setActivePreset(savedPreset === "local" ? "local" : "hotel", false);
+      setActivePreset(normalizePreset(savedPreset), false);
     }
 
     function modelOptions(selected) {
@@ -3621,22 +3925,27 @@
       updateCardStates();
     }
 
-    function setActivePreset(preset, shouldApply = true) {
+    function setActivePreset(preset, shouldApply = true, options = {}) {
+      const presetName = normalizePreset(preset);
       document.querySelectorAll("[data-preset]").forEach((button) => {
-        button.classList.toggle("active", button.dataset.preset === preset);
+        button.classList.toggle("active", button.dataset.preset === presetName);
       });
 
       if (!shouldApply) return;
 
-      const enabledByPreset = {
-        hotel: ["general", "booking", "checkin", "rooms", "location", "food", "policies"],
-        local: ["general", "booking", "location", "policies", "trust"]
-      }[preset] || [];
+      const presetConfig = WORKFLOW_PRESETS[presetName];
 
-      CATEGORY_LIBRARY.forEach((category) => {
-        const input = $(`cat-enabled-${category.id}`);
-        if (input) input.checked = enabledByPreset.includes(category.id);
-      });
+      categoryDrafts = buildPresetCategories(presetName);
+      renderCategories();
+      applyPresetToTaskDrafts(presetName);
+
+      if (options.updateFields) {
+        if (!options.preserveAudience || !($("audience").value || "").trim()) {
+          $("audience").value = presetConfig.audience || $("audience").value;
+        }
+        $("sourceInstructions").value = presetConfig.sourceInstructions || $("sourceInstructions").value;
+        applySourceOptions(presetConfig.sources || DEFAULT_SOURCE_OPTIONS);
+      }
 
       updateSummary();
       saveState();
@@ -3942,7 +4251,7 @@
     document.addEventListener("click", (event) => {
       const preset = event.target.closest("[data-preset]");
       if (preset) {
-        setActivePreset(preset.dataset.preset, true);
+        setActivePreset(preset.dataset.preset, true, { updateFields: true });
         return;
       }
 
@@ -3972,6 +4281,13 @@
       });
       updateSummary();
       saveState();
+    });
+
+    $("autoConfigureBtn")?.addEventListener("click", () => {
+      const preset = inferWorkflowPreset();
+      setActivePreset(preset, true, { updateFields: true, preserveAudience: true });
+      $("saveStatus").textContent = `Auto-fit: ${WORKFLOW_PRESETS[preset].label}`;
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
     });
 
     $("expandTasksBtn").addEventListener("click", () => {
@@ -4035,10 +4351,134 @@
       appendLog("> Done.", "success");
     });
 
+    function applyAssistantQuestionTarget(value) {
+      const clean = String(value || "").trim();
+      if (!clean) return;
+      if (clean === "quality_first" || clean === "as_found") {
+        $("questionCountMode").value = clean;
+        $("questionCount").value = clean;
+        return;
+      }
+      applyQuestionRange(clean);
+    }
+
+    function applyAssistantTasks(tasks = []) {
+      if (!Array.isArray(tasks) || !tasks.length) return;
+
+      const enabledIds = new Set(tasks
+        .filter((task) => task && task.enabled !== false)
+        .map((task) => String(task.id)));
+
+      DEFAULT_TASKS.forEach((base) => {
+        const enabled = $(`enable-${base.id}`);
+        if (enabled) enabled.checked = enabledIds.has(String(base.id));
+      });
+
+      tasks.forEach((task) => {
+        if (!task || !task.id) return;
+        const id = task.id;
+        const fields = {
+          [`name-${id}`]: task.name,
+          [`tone-${id}`]: task.tone,
+          [`model-${id}`]: task.model,
+          [`src-${id}`]: task.sources,
+          [`sys-${id}`]: task.system,
+          [`user-${id}`]: task.user
+        };
+
+        Object.entries(fields).forEach(([elementId, value]) => {
+          const element = $(elementId);
+          if (!element || typeof value !== "string" || !value.trim()) return;
+          element.value = value;
+        });
+      });
+
+      updateSummary();
+      saveState();
+    }
+
+    function applyAssistantQaMode(qaMode) {
+      const clean = String(qaMode || "");
+      if (!clean) return;
+      const checks = new Set(clean.split("|").filter(Boolean));
+      const mapping = {
+        3: checks.has("duplicates"),
+        4: checks.has("sources"),
+        5: checks.has("writing")
+      };
+      Object.entries(mapping).forEach(([taskId, enabled]) => {
+        const input = $(`enable-${taskId}`);
+        if (input) input.checked = clean === "none" ? false : enabled;
+      });
+    }
+
+    function consumeAssistantHandoff() {
+      const storageKey = localStorage.getItem("carmelonAssistantHandoff")
+        ? "carmelonAssistantHandoff"
+        : "carmelonAssistantToolHandoff";
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+
+      let handoff = null;
+      try {
+        handoff = JSON.parse(raw);
+      } catch {
+        localStorage.removeItem(storageKey);
+        return;
+      }
+
+      if (!handoff || handoff.toolId !== "faq-playground") return;
+
+      const values = handoff.values || {};
+      if (values.subjects) {
+        $("subjects").value = Array.isArray(values.subjects) ? values.subjects.join("\n") : String(values.subjects);
+      }
+
+      if (values.workflowType) {
+        setActivePreset(values.workflowType, true, { updateFields: true, preserveAudience: Boolean(values.audience) });
+      }
+
+      if (values.audience) {
+        $("audience").value = String(values.audience);
+      }
+
+      if (values.language) $("outputLanguage").value = String(values.language);
+      if (values.count) applyAssistantQuestionTarget(values.count);
+      if (values.model) $("globalModel").value = String(values.model);
+      if (values.style) $("tone-2").value = String(values.style);
+      if (values.qaMode) applyAssistantQaMode(values.qaMode);
+
+      const sourceInstructions = $("sourceInstructions");
+      const sourceParts = [
+        values.sourceInstructions,
+        values.sourceUrl ? `Primary source URL from assistant: ${values.sourceUrl}` : ""
+      ].filter(Boolean);
+      if (sourceInstructions && sourceParts.length) {
+        sourceInstructions.value = sourceParts.join("\n");
+      }
+
+      if (values.extraGuidance) {
+        applyChatPromptGuidance({
+          questionUserNote: values.extraGuidance,
+          answerUserNote: values.extraGuidance,
+          qaChecks: values.extraGuidance
+        });
+      }
+
+      applyAssistantTasks(values.tasks || handoff.payload?.tasks || []);
+      rememberSubjects();
+      updateSummary();
+      saveState();
+      localStorage.removeItem(storageKey);
+      $("saveStatus").textContent = "Loaded from assistant";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
+    }
+
     applySavedControls();
     renderCategories();
     renderTasks();
     renderOutputArtifacts();
+    consumeAssistantHandoff();
     updateSummary();
 
     window.faqBuilderBridge = {

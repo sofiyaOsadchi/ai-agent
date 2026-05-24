@@ -61,7 +61,7 @@
       position: sticky;
       top: 0;
       z-index: 30;
-      min-height: 64px;
+      min-height: 96px;
       padding: 14px 32px;
       display: flex;
       align-items: center;
@@ -82,21 +82,42 @@
     .brand-logo-wrap {
       display: inline-flex;
       align-items: center;
+      gap: 12px;
       flex: 0 0 auto;
       border-radius: 8px;
       text-decoration: none;
     }
 
     .brand-logo {
-      width: auto;
-      height: 36px;
+      width: 142px;
+      height: auto;
       display: block;
       object-fit: contain;
+    }
+
+    .brand-ai {
+      align-self: center;
+      margin: 10px 0 0 -2px;
+      padding-left: 10px;
+      border-left: 1px solid var(--border-strong);
+      color: #5b3a96;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
     }
 
     .brand-logo-wrap:focus-visible {
       outline: 2px solid var(--blue);
       outline-offset: 4px;
+    }
+
+    .brand-logo-wrap,
+    .brand-logo-wrap * {
+      text-decoration: none !important;
     }
 
     .brand-copy {
@@ -150,6 +171,40 @@
       margin: 0 auto;
       padding: 24px 0 36px;
       align-items: start;
+    }
+
+    body.standalone-report .layout {
+      grid-template-columns: minmax(0, 1fr) 330px;
+      width: min(1340px, calc(100% - 56px));
+      max-width: 1340px;
+    }
+
+    body.standalone-report .panel-head,
+    body.standalone-report .setup-intro,
+    body.standalone-report .panel-body > .field,
+    body.standalone-report .panel-body > .grid-2,
+    body.standalone-report .panel-body > .actions,
+    body.standalone-report .panel-body > .output,
+    body.standalone-report .panel-body > .run-progress,
+    body.standalone-report .panel-body > div:has(.checks) {
+      display: none !important;
+    }
+
+    body.standalone-report .panel {
+      border: 0;
+      background: transparent;
+      border-radius: 18px;
+      overflow: visible;
+    }
+
+    body.standalone-report .panel-body {
+      padding: 0;
+    }
+
+    body.standalone-report .report-panel {
+      border: 0;
+      background: transparent;
+      overflow: visible;
     }
 
     .panel,
@@ -400,13 +455,14 @@
     }
 
     .btn {
-      min-height: 44px;
-      padding: 0 16px;
+      min-height: 38px;
+      padding: 0 14px;
       border: 1px solid var(--border);
       border-radius: 999px;
       background: #fff;
       color: var(--text-dim);
-      font-weight: 900;
+      font-size: 0.82rem;
+      font-weight: 800;
       cursor: pointer;
     }
 
@@ -622,6 +678,7 @@
       border-radius: var(--radius);
       overflow: hidden;
       background: #fff;
+      box-shadow: none;
     }
 
     .report-panel.hidden {
@@ -629,41 +686,175 @@
     }
 
     .report-head {
-      padding: 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: minmax(240px, 0.95fr) minmax(0, 1.6fr);
+      align-items: center;
+      gap: 18px;
       border-bottom: 1px solid var(--border);
-      background: var(--surface-soft);
+      background: linear-gradient(180deg, var(--surface-soft), #fff);
     }
 
     .report-head h2 {
-      font-size: 1.12rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
     .report-head p {
-      margin-top: 6px;
+      max-width: 320px;
+      margin-top: 5px;
       color: var(--text-dim);
-      font-size: 0.86rem;
-      line-height: 1.55;
+      font-size: 0.8rem;
+      line-height: 1.45;
     }
 
     .report-actions {
       display: flex;
       justify-content: flex-end;
-      flex-wrap: wrap;
+      align-items: center;
       gap: 8px;
-      min-width: 320px;
+      min-width: 0;
+    }
+
+    .report-actions .btn {
+      min-height: 36px;
+      padding-inline: 13px;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .export-menu {
+      position: relative;
+      display: inline-block;
+      text-align: left;
+    }
+
+    .export-menu summary {
+      list-style: none;
+    }
+
+    .export-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .export-trigger {
+      min-width: 132px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+    }
+
+    .export-trigger::after {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid currentColor;
+      transform: translateY(1px);
+    }
+
+    .export-menu[open] .export-trigger::after {
+      transform: translateY(0) rotate(180deg);
+    }
+
+    .export-panel {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 40;
+      width: min(330px, calc(100vw - 36px));
+      padding: 8px;
+      display: grid;
+      gap: 4px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 18px 42px rgba(48, 36, 28, 0.14);
+    }
+
+    .export-panel::before {
+      content: "";
+      position: absolute;
+      top: -6px;
+      right: 26px;
+      width: 10px;
+      height: 10px;
+      border-left: 1px solid var(--border);
+      border-top: 1px solid var(--border);
+      background: #fff;
+      transform: rotate(45deg);
+    }
+
+    .export-option {
+      width: 100%;
+      min-height: 46px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .export-option:hover,
+    .export-option:focus-visible {
+      background: var(--blue-soft);
+      outline: none;
+    }
+
+    .export-option strong {
+      display: block;
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .export-copy {
+      min-width: 0;
+    }
+
+    .export-description {
+      display: block;
+      margin-top: 2px;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .export-chip {
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .export-separator {
+      height: 1px;
+      margin: 4px;
+      background: var(--border);
     }
 
     .report-options {
-      padding: 16px 18px;
+      padding: 13px 16px;
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 18px;
+      grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
+      gap: 14px;
       align-items: center;
       border-bottom: 1px solid var(--border);
       background: #fff;
@@ -671,34 +862,36 @@
 
     .view-toggle {
       display: inline-flex;
-      gap: 4px;
-      padding: 4px;
-      border-radius: 14px;
+      gap: 3px;
+      width: max-content;
+      padding: 3px;
+      border-radius: 12px;
       border: 1px solid var(--border);
       background: var(--surface-soft);
     }
 
     .view-toggle button {
-      min-height: 34px;
-      padding: 0 12px;
+      min-height: 31px;
+      padding: 0 11px;
       border: 0;
       border-radius: 9px;
       background: transparent;
       color: var(--text-muted);
-      font-weight: 900;
+      font-size: 0.78rem;
+      font-weight: 800;
       cursor: pointer;
     }
 
     .view-toggle button.active {
       background: var(--accent);
       color: #fff;
-      box-shadow: 0 10px 22px rgba(111, 74, 168, 0.24);
+      box-shadow: none;
     }
 
     .section-toggles {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 7px;
       justify-content: flex-end;
     }
 
@@ -706,18 +899,18 @@
       position: relative;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      min-height: 38px;
-      padding: 8px 12px;
+      gap: 6px;
+      min-height: 32px;
+      padding: 6px 10px;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: #fff;
       color: var(--text-dim);
-      font-size: 0.76rem;
-      font-weight: 900;
+      font-size: 0.72rem;
+      font-weight: 800;
       white-space: nowrap;
       cursor: pointer;
-      box-shadow: 0 8px 18px rgba(84, 55, 112, 0.04);
+      box-shadow: none;
       transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
     }
 
@@ -728,23 +921,23 @@
     }
 
     .section-toggle:has(input:checked) {
-      color: #4a2a75;
-      border-color: rgba(111, 74, 168, 0.45);
-      background: #f4ecfb;
-      box-shadow: 0 12px 26px rgba(111, 74, 168, 0.18);
+      color: var(--ink);
+      border-color: #c7d8f0;
+      background: var(--blue-soft);
+      box-shadow: none;
       transform: translateY(-1px);
     }
 
     .section-toggle:has(input:checked)::after {
       content: "✓";
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       display: inline-grid;
       place-items: center;
       border-radius: 999px;
       background: var(--accent);
       color: #fff;
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       line-height: 1;
     }
 
@@ -756,27 +949,27 @@
 
     .audit-hero {
       display: grid;
-      grid-template-columns: 320px minmax(0, 1fr);
-      gap: 16px;
-      padding: 18px;
-      border: 1px solid rgba(111, 74, 168, 0.16);
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
       border-radius: 18px;
       background: var(--surface);
     }
 
     .score-ring-card {
-      min-height: 278px;
+      min-height: 228px;
       display: grid;
       place-items: center;
-      gap: 12px;
+      gap: 9px;
       border-radius: 16px;
-      border: 1px solid rgba(111, 74, 168, 0.18);
+      border: 1px solid var(--border);
       background: var(--surface-soft);
     }
 
     .score-ring {
       --score: 0;
-      width: 178px;
+      width: 148px;
       aspect-ratio: 1;
       border-radius: 50%;
       display: grid;
@@ -784,15 +977,15 @@
       background:
         radial-gradient(circle at center, #fff 0 58%, transparent 59%),
         conic-gradient(var(--accent) calc(var(--score) * 1%), #e5e7eb 0);
-      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05), 0 18px 38px rgba(111, 74, 168, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
     }
 
     .score-ring strong {
       color: var(--text);
-      font-size: 2.4rem;
+      font-size: 2rem;
       line-height: 1;
-      font-weight: 900;
-      letter-spacing: -0.06em;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
     .score-ring span {
@@ -808,16 +1001,16 @@
 
     .score-ring-card h3 {
       color: var(--text);
-      font-size: 1rem;
-      font-weight: 900;
+      font-size: 0.92rem;
+      font-weight: 800;
       text-align: center;
     }
 
     .score-ring-card p {
       max-width: 240px;
       color: var(--text-dim);
-      font-size: 0.82rem;
-      line-height: 1.55;
+      font-size: 0.78rem;
+      line-height: 1.5;
       text-align: center;
     }
 
@@ -833,10 +1026,10 @@
     }
 
     .hero-metric {
-      min-height: 96px;
-      padding: 13px;
+      min-height: 86px;
+      padding: 12px;
       display: grid;
-      gap: 6px;
+      gap: 5px;
       border: 1px solid rgba(15, 23, 42, 0.08);
       border-radius: 14px;
       background: rgba(255, 255, 255, 0.78);
@@ -852,14 +1045,14 @@
 
     .hero-metric strong {
       color: var(--text);
-      font-size: 1.5rem;
+      font-size: 1.32rem;
       line-height: 1;
-      font-weight: 900;
+      font-weight: 800;
     }
 
     .hero-metric p {
       color: var(--text-dim);
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       line-height: 1.4;
     }
 
@@ -904,7 +1097,7 @@
     }
 
     .insight-card {
-      padding: 14px;
+      padding: 12px;
       border-radius: 14px;
       border: 1px solid var(--border);
       background: #fff;
@@ -914,13 +1107,13 @@
 
     .insight-card strong {
       color: var(--text);
-      font-size: 0.92rem;
-      font-weight: 900;
+      font-size: 0.86rem;
+      font-weight: 800;
     }
 
     .insight-card p {
       color: var(--text-dim);
-      font-size: 0.8rem;
+      font-size: 0.76rem;
       line-height: 1.5;
     }
 
@@ -1157,9 +1350,9 @@
     }
 
     .report-block {
-      padding: 18px;
+      padding: 16px;
       display: grid;
-      gap: 16px;
+      gap: 14px;
       border: 1px solid var(--border);
       border-radius: 18px;
       background: #fff;
@@ -1168,16 +1361,16 @@
 
     .report-block h3 {
       color: var(--text);
-      font-size: 0.98rem;
-      font-weight: 900;
-      letter-spacing: -0.02em;
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: 0;
     }
 
     .report-block p,
     .report-block li {
       color: var(--text-dim);
-      font-size: 0.86rem;
-      line-height: 1.6;
+      font-size: 0.8rem;
+      line-height: 1.55;
     }
 
     .report-block ul,
@@ -1202,7 +1395,7 @@
     .report-kicker {
       color: var(--text-muted);
       font-size: 0.7rem;
-      font-weight: 900;
+      font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
@@ -1214,7 +1407,7 @@
     }
 
     .reader-card {
-      padding: 14px;
+      padding: 13px;
       display: grid;
       gap: 9px;
       border: 1px solid var(--border);
@@ -1224,8 +1417,8 @@
 
     .reader-card strong {
       color: var(--text);
-      font-size: 0.95rem;
-      font-weight: 900;
+      font-size: 0.9rem;
+      font-weight: 800;
     }
 
     .report-accordion {
@@ -1507,7 +1700,7 @@
 
     .breakdown-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -1518,24 +1711,29 @@
     }
 
     .breakdown-item {
-      padding: 12px;
+      padding: 11px;
       border-radius: 12px;
       border: 1px solid var(--border);
       background: #fff;
       display: grid;
-      gap: 8px;
+      gap: 7px;
     }
 
     .breakdown-item span {
       color: var(--text-muted);
-      font-size: 0.72rem;
-      font-weight: 900;
+      font-size: 0.68rem;
+      font-weight: 800;
     }
 
     .breakdown-item strong {
       color: var(--text);
-      font-size: 1.1rem;
-      font-weight: 900;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .breakdown-item p {
+      font-size: 0.76rem;
+      line-height: 1.42;
     }
 
     .issue-list,
@@ -2095,6 +2293,193 @@
       line-height: 1.45;
     }
 
+    #clientReport {
+      display: grid;
+      gap: 18px;
+    }
+
+    body.standalone-report #clientReport {
+      gap: 20px;
+    }
+
+    body.standalone-report .report-head {
+      grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.4fr);
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      margin-bottom: 0;
+      background: #fff;
+    }
+
+    body.standalone-report .report-options {
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 16px 16px;
+      background: var(--surface);
+    }
+
+    body.standalone-report .report-actions {
+      justify-content: end;
+      align-items: center;
+      row-gap: 7px;
+    }
+
+    body.standalone-report .report-actions .btn {
+      min-height: 34px;
+      padding-inline: 12px;
+      font-size: 0.74rem;
+      font-weight: 800;
+    }
+
+    body.standalone-report .export-trigger {
+      min-width: 126px;
+    }
+
+    body.standalone-report .view-toggle button,
+    body.standalone-report .section-toggle {
+      font-weight: 800;
+    }
+
+    body.standalone-report .side-steps {
+      display: none;
+    }
+
+    body.standalone-report .report-block,
+    body.standalone-report .report-accordion,
+    body.standalone-report .task-card,
+    body.standalone-report .reader-card,
+    body.standalone-report .metric-card,
+    body.standalone-report .breakdown-item,
+    body.standalone-report .schema-page-card,
+    body.standalone-report .diagnostic-card,
+    body.standalone-report .action-card {
+      box-shadow: none;
+    }
+
+    body.standalone-report .audit-hero {
+      grid-template-columns: 240px minmax(0, 1fr);
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fff, var(--surface-soft));
+    }
+
+    body.standalone-report .hero-metrics {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    body.standalone-report .score-ring-card {
+      border-radius: 16px;
+      background: #fff;
+    }
+
+    body.standalone-report .score-ring-card h3 {
+      max-width: 190px;
+      font-size: 0.86rem;
+      line-height: 1.25;
+    }
+
+    body.standalone-report .score-ring-card p {
+      max-width: 205px;
+    }
+
+    body.standalone-report .report-block,
+    body.standalone-report .report-accordion {
+      border-radius: 16px;
+    }
+
+    body.standalone-report .report-block h3 {
+      font-size: 0.98rem;
+      line-height: 1.25;
+    }
+
+    body.standalone-report .report-block p,
+    body.standalone-report .report-block li,
+    body.standalone-report .issue-detail,
+    body.standalone-report .page-url {
+      font-size: 0.78rem;
+    }
+
+    body.standalone-report .breakdown-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    body.standalone-report .breakdown-item {
+      min-height: 142px;
+    }
+
+    body.standalone-report .accordion-summary {
+      background: #fff;
+    }
+
+    body.standalone-report .accordion-body {
+      background: var(--surface-soft);
+    }
+
+    body.standalone-report .task-card {
+      background: #fff;
+      border-left: 4px solid var(--blue);
+    }
+
+    body.standalone-report .task-card.high {
+      border-color: var(--border);
+      border-left-color: var(--red);
+      background: #fff;
+    }
+
+    body.standalone-report .task-card.medium {
+      border-color: var(--border);
+      border-left-color: var(--amber);
+      background: #fff;
+    }
+
+    body.standalone-report .task-card.low {
+      border-color: var(--border);
+      border-left-color: var(--blue);
+      background: #fff;
+    }
+
+    body.standalone-report .task-title {
+      font-size: 1rem;
+    }
+
+    body.standalone-report .task-body {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    body.standalone-report .task-body .task-note:last-child {
+      grid-column: 1 / -1;
+    }
+
+    body.standalone-report .task-note {
+      background: #fff;
+    }
+
+    body.standalone-report .action-table th,
+    body.standalone-report .action-table td {
+      text-align: left;
+    }
+
+    body.standalone-report .report-head h2,
+    body.standalone-report .sidebar-head h2,
+    body.standalone-report .score-ring strong,
+    body.standalone-report .score-ring-card h3,
+    body.standalone-report .hero-metric strong,
+    body.standalone-report .insight-card strong,
+    body.standalone-report .report-block h3,
+    body.standalone-report .accordion-title strong,
+    body.standalone-report .reader-card strong,
+    body.standalone-report .breakdown-item strong,
+    body.standalone-report .task-title,
+    body.standalone-report .side-compact-card strong,
+    body.standalone-report .view-toggle button,
+    body.standalone-report .section-toggle,
+    body.standalone-report .btn {
+      font-weight: 800;
+    }
+
     .score-row {
       display: grid;
       grid-template-columns: 110px minmax(0, 1fr) 42px;
@@ -2154,6 +2539,11 @@
         grid-template-columns: 1fr;
       }
 
+      body.standalone-report .layout {
+        grid-template-columns: 1fr;
+        width: min(100% - 36px, 840px);
+      }
+
       .sidebar {
         position: static;
       }
@@ -2180,6 +2570,95 @@
       .topbar,
       .layout {
         padding: 14px;
+      }
+
+      .topbar {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 10px;
+      }
+
+      .brand {
+        width: 100%;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+      }
+
+      .brand-logo {
+        width: 126px;
+      }
+
+      .brand-copy {
+        padding-inline-start: 12px;
+      }
+
+      .brand p {
+        font-size: 0.74rem;
+        line-height: 1.35;
+      }
+
+      .badge {
+        justify-self: start;
+      }
+
+      body.standalone-report .layout {
+        width: calc(100% - 28px);
+        padding: 14px 0 30px;
+      }
+
+      body.standalone-report .report-head {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      body.standalone-report .report-head p {
+        max-width: none;
+      }
+
+      body.standalone-report .report-actions {
+        justify-content: stretch;
+      }
+
+      body.standalone-report .export-menu,
+      body.standalone-report .export-trigger {
+        width: 100%;
+      }
+
+      body.standalone-report .export-panel {
+        left: 0;
+        right: auto;
+        width: 100%;
+      }
+
+      body.standalone-report .export-panel::before {
+        right: 34px;
+      }
+
+      body.standalone-report .report-options {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      body.standalone-report .view-toggle {
+        width: 100%;
+      }
+
+      body.standalone-report .view-toggle button {
+        flex: 1 1 0;
+      }
+
+      body.standalone-report .section-toggles {
+        justify-content: flex-start;
+      }
+
+      body.standalone-report .audit-hero,
+      body.standalone-report .task-body,
+      body.standalone-report .hero-metrics,
+      body.standalone-report .breakdown-grid {
+        grid-template-columns: 1fr;
       }
 
       .grid-2,
@@ -2212,7 +2691,9 @@
         justify-content: stretch;
       }
 
-      .report-actions .btn {
+      .report-actions .btn,
+      .export-menu,
+      .export-trigger {
         width: 100%;
       }
 
@@ -2231,6 +2712,7 @@
     <div class="brand">
       <a class="brand-logo-wrap" href="/index.html" aria-label="Go to home page">
         <img class="brand-logo" src="/carmelon-logo-header-x2.png" alt="Carmelon Digital Marketing" />
+        <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
         <p class="eyebrow">Audit Studio</p>
@@ -2315,7 +2797,7 @@
               <option value="fr-FR,fr;q=0.9,en;q=0.7">French</option>
               <option value="es-ES,es;q=0.9,en;q=0.7">Spanish</option>
             </select>
-            <div class="field-help">Affects what the server returns to the crawler, not the report language.</div>
+            <div class="field-help">Affects what the server returns to the crawler. The audit report itself stays in English.</div>
           </div>
         </div>
 
@@ -2362,12 +2844,36 @@
               <p id="reportSubtitle">After the run, the full internal report appears here. You can choose what belongs in the client version.</p>
             </div>
             <div class="report-actions">
-              <button class="btn primary" type="button" onclick="downloadClientReport()">Download Client Report</button>
-              <button class="btn" type="button" onclick="downloadInternalReport()">Download Internal Report</button>
-              <button class="btn" type="button" onclick="downloadActionItemsCsv()">Download Action CSV</button>
-              <button class="btn" type="button" onclick="downloadExecutiveSummary()">Download Summary</button>
-              <button class="btn" type="button" onclick="downloadRawJson()">Download JSON</button>
-              <button class="btn" type="button" onclick="copyExecutiveSummary()">Copy Summary</button>
+              <details class="export-menu" id="reportExportMenu">
+                <summary class="btn primary export-trigger">Export</summary>
+                <div class="export-panel" role="menu" aria-label="Export report options">
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadClientReport(); closeExportMenu();">
+                    <span class="export-copy"><strong>Client report</strong><span class="export-description">Clean HTML report for sharing</span></span>
+                    <span class="export-chip">HTML</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadInternalReport(); closeExportMenu();">
+                    <span class="export-copy"><strong>Internal report</strong><span class="export-description">Full working report with internal detail</span></span>
+                    <span class="export-chip">HTML</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadActionItemsCsv(); closeExportMenu();">
+                    <span class="export-copy"><strong>Action items</strong><span class="export-description">Prioritized work plan as a spreadsheet</span></span>
+                    <span class="export-chip">CSV</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadExecutiveSummary(); closeExportMenu();">
+                    <span class="export-copy"><strong>Executive summary</strong><span class="export-description">Short markdown summary</span></span>
+                    <span class="export-chip">MD</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadRawJson(); closeExportMenu();">
+                    <span class="export-copy"><strong>Raw audit result</strong><span class="export-description">Complete structured audit payload</span></span>
+                    <span class="export-chip">JSON</span>
+                  </button>
+                  <div class="export-separator" aria-hidden="true"></div>
+                  <button class="export-option" type="button" role="menuitem" onclick="copyExecutiveSummary(); closeExportMenu();">
+                    <span class="export-copy"><strong>Copy summary</strong><span class="export-description">Copy the executive summary text</span></span>
+                    <span class="export-chip">Copy</span>
+                  </button>
+                </div>
+              </details>
             </div>
           </div>
           <div class="report-options">
@@ -2384,8 +2890,8 @@
               <label class="section-toggle"><input type="checkbox" data-report-section="actions" checked onchange="rerenderReport()" /> Actions</label>
               <label class="section-toggle"><input type="checkbox" data-report-section="issues" onchange="rerenderReport()" /> Detail</label>
               <label class="section-toggle"><input type="checkbox" data-report-section="pages" onchange="rerenderReport()" /> Page map</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="recommendations" onchange="rerenderReport()" /> Raw recommendations</label>
-              <label class="section-toggle"><input type="checkbox" data-report-section="technical" onchange="rerenderReport()" /> Technical appendix</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="recommendations" onchange="rerenderReport()" /> Recommendations</label>
+              <label class="section-toggle"><input type="checkbox" data-report-section="technical" onchange="rerenderReport()" /> Appendix</label>
             </div>
           </div>
           <div class="client-report" id="clientReport"></div>
@@ -2556,6 +3062,142 @@
       { key: "performance", label: "Performance", max: 5, note: "Response time, HTML weight, images, scripts and Lighthouse data when available" },
       { key: "confidence", label: "Confidence", max: 5, note: "How much of the score is verified versus inferred from heuristics" }
     ];
+
+    const scoreComponentLabels = {
+      aiCrawlerAccess: "AI crawler access",
+      quotableParagraphs: "Quotable paragraphs",
+      answerBlocks: "Clear answer blocks",
+      entityClarity: "Brand and entity clarity",
+      originalEvidence: "Data, sources and examples",
+      llmsTxt: "llms.txt",
+      indexability: "Indexability",
+      canonicalsRedirects: "Canonicals and redirects",
+      titleMeta: "Title and meta description",
+      headings: "H1 and heading structure",
+      internalLinks: "Internal links and site structure",
+      sitemapRobots: "Sitemap and robots.txt",
+      brokenLinks: "Important broken links",
+      imageAlt: "Alt text for important images",
+      intentFit: "Page intent fit",
+      depthSpecificity: "Depth and specificity",
+      expertise: "Expertise signals",
+      credibility: "Trust and source signals",
+      freshness: "Freshness",
+      examplesData: "Examples, data or case studies",
+      originality: "Original, entity-specific content",
+      validJsonLd: "Technically valid JSON-LD",
+      schemaTypeMatch: "Schema type matches the page",
+      requiredFields: "Required fields are present",
+      recommendedFields: "Recommended fields",
+      visibleMatch: "Schema matches visible content",
+      duplicatesContradictions: "No duplicates or broken schema",
+      rawMainContent: "Main content is readable",
+      rawRenderedGap: "Static vs rendered gap",
+      userAgents: "Different user-agent loading",
+      resources: "Important resources are not blocked",
+      mobileCrawlerBasics: "Mobile and modern crawler basics",
+      responseTime: "Response time",
+      pageWeight: "HTML weight",
+      imageLoading: "Images and lazy loading",
+      scripts: "Scripts and render blocking",
+      lighthouse: "Lighthouse / Core Web Vitals",
+      evidenceCoverage: "Evidence quality and coverage"
+    };
+
+    const scoreEvidenceFallbacks = {
+      aiCrawlerAccess: "Major AI crawler access was checked.",
+      quotableParagraphs: "The crawler counted pages with enough quotable paragraph content.",
+      answerBlocks: "The crawler counted pages with FAQ or question-style answer signals.",
+      entityClarity: "The crawler checked whether the brand or entity is clear in titles and descriptions.",
+      originalEvidence: "The crawler checked for data points, examples and source links.",
+      llmsTxt: "The crawler checked whether /llms.txt exists.",
+      indexability: "The crawler checked indexability and broad robots restrictions.",
+      canonicalsRedirects: "The crawler checked canonical consistency and redirects.",
+      titleMeta: "The crawler checked title and meta description coverage.",
+      headings: "The crawler checked H1 presence and heading structure.",
+      internalLinks: "The crawler counted internal links in readable pages.",
+      sitemapRobots: "The crawler checked sitemap and robots.txt availability.",
+      brokenLinks: "The crawler checked whether sampled pages returned loading errors.",
+      imageAlt: "The crawler counted images without alt text.",
+      intentFit: "The crawler checked whether pages have a title, H1, description and basic content.",
+      depthSpecificity: "The crawler checked content depth and quotable paragraph coverage.",
+      expertise: "The crawler checked for team, expertise or process signals.",
+      credibility: "The crawler checked for external trust and source links.",
+      freshness: "The crawler checked for dates or update signals.",
+      examplesData: "The crawler checked for concrete data, examples or case-study signals.",
+      originality: "The crawler checked for entity-specific content.",
+      validJsonLd: "The crawler checked JSON-LD availability and validity.",
+      schemaTypeMatch: "The crawler checked whether schema types fit the page type.",
+      requiredFields: "The crawler checked whether basic required schema fields exist.",
+      recommendedFields: "The crawler checked recommended schema fields.",
+      visibleMatch: "The crawler checked whether visible FAQ content matches schema.",
+      duplicatesContradictions: "The crawler checked for broken schema and FAQ mismatches.",
+      rawMainContent: "The crawler checked whether readable main content was collected.",
+      rawRenderedGap: "The crawler noted whether a static vs rendered comparison was available.",
+      userAgents: "The crawler noted which user agents were tested.",
+      resources: "The crawler counted scripts and stylesheets.",
+      mobileCrawlerBasics: "The crawler checked viewport metadata.",
+      responseTime: "The crawler measured sampled response times.",
+      pageWeight: "The crawler measured sampled HTML weight.",
+      imageLoading: "The crawler counted lazy-loaded images.",
+      scripts: "The crawler counted scripts per page.",
+      lighthouse: "The crawler noted whether Lighthouse or Core Web Vitals data was connected.",
+      evidenceCoverage: "The crawler summarized how much evidence was directly verified."
+    };
+
+    function hasHebrewText(value) {
+      return /[\u0590-\u05FF]/.test(String(value || ""));
+    }
+
+    function englishOrFallback(value, fallback = "") {
+      const text = String(value || "").replace(/\s+/g, " ").trim();
+      if (!text || hasHebrewText(text)) return fallback;
+      return text;
+    }
+
+    function titleCaseSegment(value) {
+      return String(value || "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .trim();
+    }
+
+    function readableUrlPath(url) {
+      try {
+        const parsed = new URL(url);
+        const parts = parsed.pathname.split("/").filter(Boolean);
+        if (!parts.length) return "Homepage";
+        return titleCaseSegment(parts[parts.length - 1]);
+      } catch {
+        return "Page";
+      }
+    }
+
+    function displayPageTitle(page, fallback = "Page") {
+      const direct = englishOrFallback(page?.title || page?.h1 || "", "");
+      if (direct) return direct;
+      const typeLabel = pageTypeLabels[page?.pageType || ""] || fallback;
+      return `${typeLabel}: ${readableUrlPath(page?.url || "")}`;
+    }
+
+    function sourceLanguagePlaceholder(kind = "text") {
+      return `Original ${kind} was detected in the source site's language. Use the URL and counts as evidence; translate only when preparing final copy.`;
+    }
+
+    function englishScoreEvidence(text, component = {}) {
+      const value = String(text || "").replace(/\s+/g, " ").trim();
+      if (!value) return "";
+      if (!hasHebrewText(value)) return value;
+      const figures = value.match(/\d+(?:[./]\d+)?(?:\/\d+)?(?:ms|KB|%|\/\d+)?/g) || [];
+      const base = scoreEvidenceFallbacks[component.key] || "Crawler evidence was collected.";
+      return figures.length ? `${base} Key figures: ${figures.slice(0, 4).join(", ")}.` : base;
+    }
+
+    function englishQuestionExample(text, fallback) {
+      const value = String(text || "").replace(/\s+/g, " ").trim();
+      if (!value) return fallback;
+      return hasHebrewText(value) ? sourceLanguagePlaceholder("question") : value;
+    }
 
     function getConfig() {
       const startUrl = document.getElementById("startUrl").value.trim();
@@ -2830,6 +3472,8 @@
       if (!client || !internal) return;
       client.classList.toggle("active", reportMode === "client");
       internal.classList.toggle("active", reportMode === "internal");
+      const title = document.querySelector("#clientReportPanel .report-head h2");
+      if (title) title.textContent = reportMode === "client" ? "Client-Ready Audit Report" : "Internal Working Report";
     }
 
     function rerenderReport() {
@@ -2922,7 +3566,9 @@
         "Use the toggles and per-action checkboxes to decide what appears in the client report."
       ].join("\n");
 
-      panel.scrollIntoView({ block: "start", behavior: "smooth" });
+      if (!renderingStandaloneReport) {
+        panel.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
     }
 
     function clearReport() {
@@ -2942,7 +3588,7 @@
 
     function buildClientReportHtml(result, options = getReportOptions(), prebuiltModel = null) {
       const model = prebuiltModel || buildReportModel(result);
-      const actionPlan = buildActionPlan(result);
+      const actionPlan = buildActionPlan(result, model.actionItems);
       const sections = options.sections;
       const isInternal = options.mode === "internal";
       const pageCards = model.topPages.slice(0, isInternal ? 10 : 4).map(renderPageCard).join("");
@@ -3069,8 +3715,8 @@
           const value = Number.isFinite(Number(section.score)) ? Number(section.score) : 0;
           return {
             key: section.key || fallback.key,
-            label: section.label || fallback.label || section.key || "Score",
-            note: section.summary || fallback.note || "",
+            label: fallback.label || englishOrFallback(section.label, section.key || "Score"),
+            note: fallback.note || englishOrFallback(section.summary, ""),
             value,
             max,
             percent: max ? Math.round((value / max) * 100) : 0,
@@ -3139,17 +3785,22 @@
         ? input.filter(Boolean).map((item) => typeof item === "string" ? item : JSON.stringify(item))
         : [];
 
+      const toEnglishArray = (input) => toArray(input).filter((item) => !hasHebrewText(item));
+      const englishSummary = englishOrFallback(value.executiveSummary || value.summary, "");
+      const englishNarrative = englishOrFallback(value.clientNarrative, "");
+
       return {
         model: String(value.model || value.aiModel || "AI"),
         generatedAt: String(value.generatedAt || ""),
         confidence: String(value.confidence || value.confidenceLevel || "medium"),
-        executiveSummary: String(value.executiveSummary || value.summary || ""),
-        clientNarrative: String(value.clientNarrative || ""),
-        internalRisks: toArray(value.internalRisks),
-        topOpportunities: toArray(value.topOpportunities),
-        recommendedNextSteps: toArray(value.recommendedNextSteps),
-        uncertainties: toArray(value.uncertainties),
-        suggestedClientSections: toArray(value.suggestedClientSections)
+        executiveSummary: englishSummary,
+        clientNarrative: englishNarrative,
+        internalRisks: toEnglishArray(value.internalRisks),
+        topOpportunities: toEnglishArray(value.topOpportunities),
+        recommendedNextSteps: toEnglishArray(value.recommendedNextSteps),
+        uncertainties: toEnglishArray(value.uncertainties),
+        suggestedClientSections: toEnglishArray(value.suggestedClientSections),
+        omittedSourceLanguage: hasHebrewText(JSON.stringify(value))
       };
     }
 
@@ -3173,7 +3824,7 @@
             affectedUrls,
             pageType: item.pageType || (item.pageUrl ? classifyPageType({ url: item.pageUrl, title: item.pageTitle || "", h1: "" }) : "site-wide")
           };
-        }).sort(sortActionItems);
+        }).map(normalizeActionItemEnglish).sort(sortActionItems);
       }
 
       return (issues || []).map((issue, index) => {
@@ -3201,7 +3852,91 @@
           evidence: issue.detail || "",
           sourceIssues: [issue.title || "Issue"]
         };
-      }).sort(sortActionItems);
+      }).map(normalizeActionItemEnglish).sort(sortActionItems);
+    }
+
+    function normalizeActionItemEnglish(item) {
+      const affectedUrls = Array.isArray(item.affectedUrls) ? item.affectedUrls : item.pageUrl ? [item.pageUrl] : [];
+      const context = getEnglishActionContext(item);
+      const count = Number(item.affectedCount || affectedUrls.length || 1);
+      const sourceIssues = Array.isArray(item.sourceIssues) ? item.sourceIssues.filter(Boolean) : [];
+      const sourceText = sourceIssues.length ? sourceIssues.join(", ") : context.finding;
+      const examples = affectedUrls.slice(0, 3).join(", ");
+
+      return {
+        ...item,
+        finding: englishOrFallback(item.finding, context.finding),
+        whyItMatters: englishOrFallback(item.whyItMatters, context.why),
+        recommendedFix: englishOrFallback(item.recommendedFix, context.fix),
+        pageTitle: englishOrFallback(item.pageTitle, `${pageTypeLabels[item.pageType || "site-wide"] || "Site-wide"} (${count} pages)`),
+        evidence: englishOrFallback(item.evidence, `${count} affected URL${count === 1 ? "" : "s"}. Source finding: ${sourceText}.${examples ? ` Examples: ${examples}` : ""}`),
+        sourceIssues: sourceIssues.map((source) => englishOrFallback(source, context.finding))
+      };
+    }
+
+    function getEnglishActionContext(item) {
+      const text = `${item?.workstream || ""} ${item?.category || ""} ${item?.finding || ""} ${item?.recommendedFix || ""} ${item?.evidence || ""} ${(item?.sourceIssues || []).join(" ")}`.toLowerCase();
+
+      if (/noindex|nofollow|blocks indexing|אינדוקס/.test(text)) {
+        return {
+          finding: "Page blocks indexing",
+          why: "Pages blocked with noindex or nofollow are less likely to appear in search results and may not be used confidently by AI systems.",
+          fix: "Confirm whether the block is intentional. Remove noindex or nofollow from public pages that should be discoverable."
+        };
+      }
+
+      if (/faq|schema|json-ld|structured|סכמה/.test(text)) {
+        if (/visible faq|dom-only|faqpage/.test(text)) {
+          return {
+            finding: "Visible FAQ content is missing matching FAQPage schema",
+            why: "When visible FAQ content and JSON-LD are not aligned, search engines and AI tools may read a different answer than users see on the page.",
+            fix: "Add FAQPage JSON-LD that mirrors the visible questions and answers, then keep it synchronized with the page content."
+          };
+        }
+        return {
+          finding: "Structured data is missing or incomplete",
+          why: "Without complete structured data, important page entities and answer blocks are harder for search and AI systems to interpret reliably.",
+          fix: "Validate the JSON-LD setup and add complete schema for important pages, starting with FAQ and high-value landing pages."
+        };
+      }
+
+      if (/title|description|metadata|h1|meta/.test(text)) {
+        return {
+          finding: "Metadata or heading quality needs review",
+          why: "Titles, descriptions and headings help search engines, AI tools and users understand the page quickly.",
+          fix: "Review title tags, meta descriptions and H1s on affected pages, then rewrite missing or weak fields in clear English or the target market language."
+        };
+      }
+
+      if (/thin|content|answer|paragraph|copy/.test(text)) {
+        return {
+          finding: "Content depth or answerability needs improvement",
+          why: "Thin or vague content is harder to quote, summarize and trust in AI/search experiences.",
+          fix: "Expand affected pages with useful, crawlable text that answers common user questions and includes concrete details."
+        };
+      }
+
+      if (/link|external|domain|trust/.test(text)) {
+        return {
+          finding: "External links and trust signals need review",
+          why: "Outbound links influence trust, user journeys and how clearly the site points to reliable destinations.",
+          fix: "Review external domains and keep links that support booking, support, credibility or useful customer context."
+        };
+      }
+
+      if (/llms/.test(text)) {
+        return {
+          finding: "llms.txt was not found",
+          why: "A curated llms.txt file can help AI systems discover the most important content more directly.",
+          fix: "Consider adding /llms.txt with a curated map of key pages, policies, FAQ resources and brand information."
+        };
+      }
+
+      return {
+        finding: "Audit finding needs review",
+        why: "This finding affects how clearly the site can be crawled, interpreted or used as a reliable source.",
+        fix: "Review the affected URLs, confirm the evidence, then define the correct technical or content fix."
+      };
     }
 
     function sortActionItems(a, b) {
@@ -3213,7 +3948,10 @@
 
     function getPageTypeGroups(pages, sitemapDiagnostics) {
       if (sitemapDiagnostics && Array.isArray(sitemapDiagnostics.groups) && sitemapDiagnostics.groups.length) {
-        return sitemapDiagnostics.groups;
+        return sitemapDiagnostics.groups.map((group) => ({
+          ...group,
+          label: pageTypeLabels[group.pageType] || englishOrFallback(group.label, pageTypeLabels.other)
+        }));
       }
 
       const map = new Map();
@@ -3766,7 +4504,7 @@
       return `
         <section class="report-block accent">
           <div>
-            <div class="report-kicker">Internal first</div>
+            <div class="report-kicker">Report overview</div>
             <h3>Executive Summary and Reading Flow</h3>
           </div>
           <div class="reader-grid">
@@ -3919,6 +4657,8 @@
       const sections = ai.suggestedClientSections.slice(0, 6)
         .map((item) => `<span class="domain-chip">${escapeHtml(item)}</span>`)
         .join("");
+      const summary = ai.executiveSummary || "The AI narrative was not generated in English, so this report uses the structured English summary and action plan above.";
+      const narrative = ai.clientNarrative || ai.executiveSummary || "No English client-facing wording was returned in this run.";
 
       return `
         <section class="report-block ai-panel" id="ai-analysis">
@@ -3926,14 +4666,15 @@
             <div>
               <div class="report-kicker">AI analysis</div>
               <h3>Insight Analysis</h3>
-              <p>${escapeHtml(ai.executiveSummary || "The AI did not return a written summary, but it did return an analysis structure.")}</p>
+              <p>${escapeHtml(summary)}</p>
             </div>
             <span class="severity-pill info">${escapeHtml(ai.model)} · ${escapeHtml(ai.confidence)}</span>
           </div>
+          ${ai.omittedSourceLanguage ? `<div class="issue-detail warning"><strong>English report mode:</strong> Some AI narrative fields were returned in the source language and were omitted from this presentation. The structured summary, score and action plan stay in English.</div>` : ""}
           <div class="reader-grid">
             <div class="reader-card">
               <strong>Presentation wording</strong>
-              <p>${escapeHtml(ai.clientNarrative || ai.executiveSummary || "No client-facing wording was returned in this run.")}</p>
+              <p>${escapeHtml(narrative)}</p>
             </div>
             <div class="reader-card">
               <strong>What to show the client</strong>
@@ -4082,15 +4823,16 @@
       const percent = max ? Math.round((score / max) * 100) : 0;
       const evidence = Array.isArray(component.evidence) ? component.evidence.filter(Boolean) : [];
       const level = component.evidenceLevel || "heuristic";
+      const label = scoreComponentLabels[component.key] || englishOrFallback(component.label, component.key || "Check");
       return `
         <article class="score-component ${escapeAttribute(level)}">
           <div class="score-component-head">
-            <strong>${escapeHtml(component.label || component.key || "Check")}</strong>
+            <strong>${escapeHtml(label)}</strong>
             <span>${escapeHtml(score)}/${escapeHtml(max)}</span>
           </div>
           <div class="mini-bar"><span style="--w:${escapeHtml(Math.max(0, Math.min(100, percent)))}%"></span></div>
           <div class="score-evidence-level">${escapeHtml(scoreEvidenceLabel(level))}</div>
-          ${evidence.length ? `<ul>${evidence.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+          ${evidence.length ? `<ul>${evidence.map((item) => `<li>${escapeHtml(englishScoreEvidence(item, component))}</li>`).join("")}</ul>` : ""}
         </article>
       `;
     }
@@ -4613,18 +5355,18 @@
             ? "Schema opportunity"
             : "No JSON-LD";
       const example = domOnly[0]
-        ? `Visible question not found in schema: ${domOnly[0]}`
+        ? `Visible question not found in schema: ${englishQuestionExample(domOnly[0], sourceLanguagePlaceholder("question"))}`
         : schemaOnly[0]
-          ? `Schema question not found on the page: ${schemaOnly[0]}`
+          ? `Schema question not found on the page: ${englishQuestionExample(schemaOnly[0], sourceLanguagePlaceholder("question"))}`
           : page.domQuestions?.[0]
-            ? `Example page question: ${page.domQuestions[0]}`
+            ? `Example page question: ${englishQuestionExample(page.domQuestions[0], sourceLanguagePlaceholder("question"))}`
             : "No question example is available in the sample.";
 
       return `
         <article class="schema-page-card ${tone}">
           <div class="card-topline">
             <div>
-              <div class="card-title">${escapeHtml(page.title || page.h1 || "Untitled page")}</div>
+              <div class="card-title">${escapeHtml(displayPageTitle(page, "Page"))}</div>
               ${renderUrlLink(page.url)}
             </div>
             <span class="severity-pill ${hasFaqGap ? "warning" : "info"}">${escapeHtml(status)}</span>
@@ -4636,8 +5378,8 @@
             <span class="count-pill">Schema FAQ: ${escapeHtml(page.schemaFaqCount || 0)}</span>
           </div>
           ${isOpportunity ? `<div class="issue-detail"><strong>Note:</strong> This is not marked as an issue. Review manually whether the page has an entity or service that justifies schema.</div>` : `<div class="issue-detail"><strong>Example:</strong> ${escapeHtml(example)}</div>`}
-          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Missing from schema:</strong> ${escapeHtml(domOnly.slice(0, 6).join(" | "))}</div>` : ""}
-          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Appears only in schema:</strong> ${escapeHtml(schemaOnly.slice(0, 6).join(" | "))}</div>` : ""}
+          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Missing from schema:</strong> ${escapeHtml(domOnly.slice(0, 6).map((q) => englishQuestionExample(q, "Source-language question")).join(" | "))}</div>` : ""}
+          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Appears only in schema:</strong> ${escapeHtml(schemaOnly.slice(0, 6).map((q) => englishQuestionExample(q, "Source-language question")).join(" | "))}</div>` : ""}
         </article>
       `;
     }
@@ -4650,7 +5392,7 @@
 
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "Untitled FAQ page")}</h4>
+          <h4>${escapeHtml(displayPageTitle(page, "FAQ page"))}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
             <span class="severity-pill ${hasProblem ? "critical" : "info"}">${hasProblem ? "Needs work" : "OK in sample"}</span>
@@ -4659,9 +5401,9 @@
             <span class="count-pill">DOM gap: ${escapeHtml(domOnly.length)}</span>
             <span class="count-pill">Schema gap: ${escapeHtml(schemaOnly.length)}</span>
           </div>
-          ${sampleQuestions.length ? `<div class="qa-list">${sampleQuestions.map((q) => `<div class="qa-item">${escapeHtml(q)}</div>`).join("")}</div>` : ""}
-          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Visible questions not found in schema:</strong> ${escapeHtml(domOnly.slice(0, 8).join(" | "))}</div>` : ""}
-          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Schema questions not found on screen:</strong> ${escapeHtml(schemaOnly.slice(0, 8).join(" | "))}</div>` : ""}
+          ${sampleQuestions.length ? `<div class="qa-list">${sampleQuestions.map((q) => `<div class="qa-item">${escapeHtml(englishQuestionExample(q, "Source-language question detected"))}</div>`).join("")}</div>` : ""}
+          ${isInternal && domOnly.length ? `<div class="issue-detail"><strong>Visible questions not found in schema:</strong> ${escapeHtml(domOnly.slice(0, 8).map((q) => englishQuestionExample(q, "Source-language question")).join(" | "))}</div>` : ""}
+          ${isInternal && schemaOnly.length ? `<div class="issue-detail"><strong>Schema questions not found on screen:</strong> ${escapeHtml(schemaOnly.slice(0, 8).map((q) => englishQuestionExample(q, "Source-language question")).join(" | "))}</div>` : ""}
         </article>
       `;
     }
@@ -4670,7 +5412,7 @@
       const meta = page.metaDiagnostics || {};
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "Untitled page")}</h4>
+          <h4>${escapeHtml(displayPageTitle(page, "Page"))}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
             <span class="count-pill">Title: ${escapeHtml(meta.titleLength || page.title?.length || 0)}</span>
@@ -4687,7 +5429,7 @@
       const diag = page.linkDiagnostics || {};
       return `
         <article class="diagnostic-card">
-          <h4>${escapeHtml(page.title || page.h1 || "Untitled page")}</h4>
+          <h4>${escapeHtml(displayPageTitle(page, "Page"))}</h4>
           ${renderUrlLink(page.url)}
           <div class="diagnostic-meta">
             <span class="count-pill">Internal: ${escapeHtml(diag.internalCount || page.internalLinks?.length || 0)}</span>
@@ -4750,7 +5492,8 @@
           const stats = getIssueStats(issues);
           return {
             url: page.url || "",
-            title: page.title || page.h1 || "Untitled page",
+            title: displayPageTitle(page, "Page"),
+            pageType: page.pageType || classifyPageType(page),
             wordCount: page.wordCount || 0,
             schemaFaqCount: page.schemaFaqCount || 0,
             domFaqCount: page.domFaqCount || 0,
@@ -4763,9 +5506,9 @@
         });
     }
 
-    function buildActionPlan(result) {
+    function buildActionPlan(result, normalizedActionItems = []) {
       const issues = Array.isArray(result.issues) ? result.issues : [];
-      const actionItems = Array.isArray(result.actionItems) ? result.actionItems : [];
+      const actionItems = Array.isArray(normalizedActionItems) ? normalizedActionItems : [];
       const has = (predicate) => issues.some(predicate);
       const now = [];
       const next = [];
@@ -4884,7 +5627,7 @@
         <article class="page-card">
           <div class="page-top">
             <div>
-              <div class="page-title">${escapeHtml(page.title)}</div>
+              <div class="page-title">${escapeHtml(displayPageTitle(page, "Page"))}</div>
               ${renderUrlLink(page.url)}
             </div>
             <span class="count-pill">${escapeHtml(page.stats.total)} findings</span>
@@ -4897,7 +5640,7 @@
 
     function buildClientReportMarkdown(result, options = getReportOptions()) {
       const model = buildReportModel(result);
-      const actionPlan = buildActionPlan(result);
+      const actionPlan = buildActionPlan(result, model.actionItems);
       const sections = options.sections;
       const lines = [
         "# AI Site Readiness Report",
@@ -4922,7 +5665,7 @@
         lines.push(`Pages without JSON-LD: ${model.schemaDiagnostics.pagesWithoutJsonLd.length}`);
         lines.push(`Clear mismatch gaps: ${model.schemaDiagnostics.problemPages.length}`);
         model.schemaDiagnostics.problemPages.slice(0, options.mode === "internal" ? 12 : 5).forEach((page, index) => {
-          lines.push(`${index + 1}. ${page.title || page.h1 || page.url}`);
+          lines.push(`${index + 1}. ${displayPageTitle(page, "Page")}`);
           lines.push(`   URL: ${page.url}`);
           lines.push(`   Schema types: ${(page.jsonLdTypes || []).join(", ") || "-"}`);
         });
@@ -5013,7 +5756,7 @@
 
     function buildExecutiveSummaryMarkdown(result) {
       const model = buildReportModel(result);
-      const actionPlan = buildActionPlan(result);
+      const actionPlan = buildActionPlan(result, model.actionItems);
       const firstActions = model.actionItems.filter(isActionClientIncluded).slice(0, 3);
       return [
         "# Executive Summary - AI Site Readiness",
@@ -5034,7 +5777,7 @@
 
     function buildAiAnalysisPrompt(result) {
       const model = buildReportModel(result);
-      const actionPlan = buildActionPlan(result);
+      const actionPlan = buildActionPlan(result, model.actionItems);
       const pageGroups = (model.pageTypeGroups || []).slice(0, 10).map((group) => ({
         type: group.pageType,
         label: group.label,
@@ -5470,6 +6213,11 @@
       }
     }
 
+    function closeExportMenu() {
+      const menu = document.getElementById("reportExportMenu");
+      if (menu) menu.open = false;
+    }
+
     async function copyAiBrief() {
       if (!lastAuditResult) return;
       try {
@@ -5582,7 +6330,7 @@
       if (!value) return "";
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString("he-IL", { dateStyle: "medium", timeStyle: "short" });
+      return date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
     }
 
     function escapeHtml(value) {
@@ -5674,6 +6422,95 @@
       buildAuditConfig();
     }
 
+    function setFieldValue(id, value) {
+      const node = document.getElementById(id);
+      if (!node || value === undefined || value === null || value === "") return;
+      node.value = String(value);
+    }
+
+    function setCheckboxValue(id, value) {
+      const node = document.getElementById(id);
+      if (!node || value === undefined || value === null) return;
+      node.checked = value === true;
+    }
+
+    function applyAssistantAuditConfig(config) {
+      if (!config || typeof config !== "object") return false;
+
+      setFieldValue("startUrl", config.startUrl || config.siteUrl);
+      setFieldValue("crawlScope", config.crawlScope);
+      setFieldValue("maxPages", config.maxPages);
+      setFieldValue("maxDepth", config.maxDepth);
+      setFieldValue("renderMode", config.renderMode);
+      setFieldValue("acceptLanguage", config.acceptLanguage);
+      setCheckboxValue("includeSitemap", config.includeSitemap);
+      setCheckboxValue("includeLlms", config.includeLlmsTxt);
+      setCheckboxValue("includeFaq", config.includeFaqAudit);
+      setCheckboxValue("includeSchema", config.includeStructuredData);
+      setCheckboxValue("includeAnswerability", config.includeAnswerability);
+      setCheckboxValue("includeMeta", config.includeMetaAudit);
+      setCheckboxValue("includeLinks", config.includeLinkAudit);
+      setCheckboxValue("includeAiAnalysis", config.includeAiAnalysis);
+      setCheckboxValue("respectRobots", config.respectRobots);
+
+      updateScopeHint();
+      syncRenderModeCards();
+      buildAuditConfig();
+      appendOutput("Loaded Site Audit setup from AI Workspace Assistant.");
+      return true;
+    }
+
+    function consumeAssistantHandoff() {
+      try {
+        const raw = localStorage.getItem("carmelonAssistantToolHandoff");
+        if (!raw) return false;
+        const handoff = JSON.parse(raw);
+        if (handoff?.toolId !== "site-ai-audit") return false;
+        const config = handoff.payload || handoff.values || {};
+        localStorage.removeItem("carmelonAssistantToolHandoff");
+        return applyAssistantAuditConfig(config);
+      } catch (error) {
+        appendOutput(`Could not load assistant handoff: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    }
+
+    function consumeStoredAuditResult() {
+      const key = new URLSearchParams(window.location.search).get("resultKey");
+      if (!key) return false;
+
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          appendOutput("Could not find the stored audit result. Run the audit again from the assistant or this page.");
+          return false;
+        }
+        document.body.classList.add("standalone-report");
+        renderingStandaloneReport = true;
+        document.title = "AI Site Audit Report";
+        const title = document.querySelector(".brand h1");
+        const subtitle = document.querySelector(".brand p");
+        const sidebarTitle = document.querySelector(".sidebar-head h2");
+        const sidebarSubtitle = document.querySelector(".sidebar-head p");
+        if (title) title.textContent = "AI Site Audit Report";
+        if (subtitle) subtitle.textContent = "Formatted English report for AI readiness, search visibility and technical QA.";
+        if (sidebarTitle) sidebarTitle.textContent = "Report Guide";
+        if (sidebarSubtitle) sidebarSubtitle.textContent = "Key context for reading this generated audit report.";
+        reportMode = "client";
+        const stored = JSON.parse(raw);
+        const result = stored?.result || stored;
+        if (!result || typeof result !== "object") return false;
+        if (result.config) applyAssistantAuditConfig(result.config);
+        renderAuditResult(result);
+        setReportMode("client");
+        appendOutput("Loaded formatted report from Generated outputs.");
+        return true;
+      } catch (error) {
+        appendOutput(`Could not load stored audit result: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    }
+
     function updateScopeHint() {
       const scope = document.getElementById("crawlScope").value;
       document.getElementById("scopeHint").textContent = scope === "faq-only"
@@ -5733,6 +6570,17 @@
     updateScopeHint();
     syncRenderModeCards();
     buildAuditConfig();
+    consumeAssistantHandoff();
+    consumeStoredAuditResult();
+
+    document.addEventListener("click", (event) => {
+      const menu = document.getElementById("reportExportMenu");
+      if (menu && menu.open && !menu.contains(event.target)) menu.open = false;
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeExportMenu();
+    });
   </script>
 </body>
 </html>
