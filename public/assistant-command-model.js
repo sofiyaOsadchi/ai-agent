@@ -46,6 +46,14 @@
     return extractUrls(text).find(isSheetUrl) || "";
   }
 
+  function isDriveFolderUrl(url) {
+    return /drive\.google\.com\/drive\/folders\//i.test(String(url || ""));
+  }
+
+  function firstDriveFolderUrl(text) {
+    return extractUrls(text).find(isDriveFolderUrl) || "";
+  }
+
   function hasSheetReference(text, snapshot = {}) {
     const lower = String(text || "").toLowerCase();
     return Boolean(firstSheetUrl(text) || snapshot.latestSheetUrl || snapshot.latestGeneratedSheetUrl) &&
@@ -83,9 +91,9 @@
 
   function isFaqImplementationAuditIntent(text) {
     const lower = String(text || "").toLowerCase();
-    const mentionsFaq = /faq|faqpage|שאלות ותשובות|שאלות/.test(lower);
-    const wantsCheck = /לבדוק|בדיקה|ביקורת|audit|check|verify|validation|validate|תואם|התאמה|מול|כנגד|השוואה/i.test(lower);
-    const implementation = /הטמעה|מוטמע|מוטמעת|יישום|implementation|implemented|schema|json-ld|סכמה|סכימה|faqpage|rich results|אתר|עמוד|website|site|page/i.test(lower);
+    const mentionsFaq = /faq|faqpage|questions?\s+answers?|שאלות\s*(?:ו)?תשובות|שאלות|תשובות/.test(lower);
+    const wantsCheck = /לבדוק|לבחון|בחינה|בדיקה|ביקורת|audit|check|verify|validation|validate|inspect|review|תואם|התאמה|מול|כנגד|השוואה/i.test(lower);
+    const implementation = /הטמעה|הוטמע|הוטמעו|הוטמעה|מוטמע|מוטמעת|מוטמעים|יישום|implementation|implemented|schema|json-ld|סכמה|סכימה|faqpage|rich results|אתר|עמוד|website|site|page/i.test(lower);
     return mentionsFaq && wantsCheck && implementation;
   }
 
@@ -99,6 +107,23 @@
   function isSiteAuditIntent(text) {
     const lower = String(text || "").toLowerCase();
     return /site audit|audit site|crawler|crawl|אודיט אתר|בדיקת אתר|סריקת אתר/i.test(lower) && !isFaqImplementationAuditIntent(text);
+  }
+
+  function isTranslationIntent(text) {
+    return /translate|translation|localize|localise|תרגום|תרגם|תרגמי|תרגמו|לתרגם/i.test(String(text || ""));
+  }
+
+  function isMetaTagsIntent(text) {
+    const lower = String(text || "").toLowerCase();
+    if (/audit|check|verify|validation|אודיט|בדיקת|לבדוק|בדיקה|סריקה/i.test(lower)) return false;
+    return /\bmeta(?:\s+tags?)?\b|title tag|meta description|seo tags|open graph|מטא|תגיות|טייטלים|תיאורי מטא/i.test(lower);
+  }
+
+  function isSchemaBuilderIntent(text) {
+    const lower = String(text || "").toLowerCase();
+    if (isFaqImplementationAuditIntent(text)) return false;
+    if (isMetaTagsIntent(text) && /\bmeta\b|מטא/i.test(lower)) return false;
+    return /schema|json-ld|faqpage|rich results|סכמה|סכימה/i.test(lower);
   }
 
   function isSheetEditIntent(text, snapshot = {}) {
@@ -158,6 +183,47 @@
         fields: websiteUrl ? { siteUrl: websiteUrl } : {},
         confidence: 0.95,
         reason: "FAQ implementation/schema audit"
+      }];
+    }
+
+    if (isTranslationIntent(clean)) {
+      const sourceUrl = sheetUrl || firstDriveFolderUrl(clean);
+      return [{
+        type: activeToolId && activeToolId !== "translate-demo" ? COMMAND_TYPES.SWITCH_TASK : COMMAND_TYPES.START_TASK,
+        toolId: "translate-demo",
+        fields: sourceUrl ? { sourceUrl } : {},
+        confidence: 0.9,
+        reason: "translation request"
+      }];
+    }
+
+    if (isMetaTagsIntent(clean)) {
+      const folderUrl = firstDriveFolderUrl(clean);
+      const fields = sheetUrl || folderUrl
+        ? { sourceUrl: sheetUrl || folderUrl }
+        : (websiteUrl
+          ? {
+              pageList: websiteUrl,
+              domain: websiteUrl.replace(/^https?:\/\//i, "").split("/")[0]
+            }
+          : {});
+      return [{
+        type: activeToolId && activeToolId !== "meta-tags" ? COMMAND_TYPES.SWITCH_TASK : COMMAND_TYPES.START_TASK,
+        toolId: "meta-tags",
+        fields,
+        confidence: 0.88,
+        reason: "meta tags request"
+      }];
+    }
+
+    if (isSchemaBuilderIntent(clean)) {
+      const sourceUrl = sheetUrl || firstDriveFolderUrl(clean);
+      return [{
+        type: activeToolId && activeToolId !== "schema-builder" ? COMMAND_TYPES.SWITCH_TASK : COMMAND_TYPES.START_TASK,
+        toolId: "schema-builder",
+        fields: sourceUrl ? { sourceUrl } : {},
+        confidence: 0.88,
+        reason: "schema builder request"
       }];
     }
 

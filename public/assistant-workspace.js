@@ -178,6 +178,60 @@
     { id: "plain", en: "Plain and practical", he: "פשוט ומעשי", value: "Plain, practical and easy to scan." }
   ];
 
+  const questionGuidanceOptions = [
+    {
+      id: "natural_user_language",
+      en: "Natural user wording",
+      he: "ניסוח טבעי של משתמשים",
+      value: "Write questions in the natural wording real people would use, including direct, practical phrasing rather than internal marketing language."
+    },
+    {
+      id: "real_question_research",
+      en: "Real question demand",
+      he: "שאלות אמיתיות מהרשת",
+      value: "Use approved sources, public reviews, competitor pages, search-style phrasing and common user intent signals to discover real questions people ask."
+    },
+    {
+      id: "geo_search_coverage",
+      en: "SEO / GEO coverage",
+      he: "כיסוי SEO / GEO",
+      value: "Cover entity understanding, policies, location, trust signals, comparison needs and practical decision blockers that search and AI systems need."
+    },
+    {
+      id: "avoid_generic_duplicates",
+      en: "Avoid generic duplicates",
+      he: "בלי שאלות גנריות כפולות",
+      value: "Avoid vague category-heading questions, duplicated intent and questions that cannot be answered from reliable sources."
+    }
+  ];
+
+  const answerGuidanceOptions = [
+    {
+      id: "source_grounded",
+      en: "Source-grounded facts",
+      he: "עובדות מבוססות מקור",
+      value: "Answer only with facts supported by approved sources. Mark missing or uncertain facts as Needs source confirmation / [VERIFY]."
+    },
+    {
+      id: "direct_answer",
+      en: "Direct answer first",
+      he: "תשובה ישירה קודם",
+      value: "Start with the direct answer before adding conditions, details or caveats."
+    },
+    {
+      id: "useful_detail",
+      en: "Useful practical detail",
+      he: "פרטים שימושיים בפועל",
+      value: "Include practical details users need for decisions or next steps, while avoiding unsupported promises."
+    },
+    {
+      id: "no_sales_copy",
+      en: "No sales copy",
+      he: "בלי טקסט מכירתי",
+      value: "Keep answers helpful, calm and non-promotional. Do not inflate claims beyond the source."
+    }
+  ];
+
   const languageOptions = [
     { code: "en", en: "English", he: "אנגלית" },
     { code: "he", en: "Hebrew", he: "עברית" },
@@ -289,6 +343,10 @@
       sourceMode: "",
       sourceUrl: "",
       sourceInstructions: "Use the official website as the primary factual source. If a fact is missing, mark it as Needs source confirmation.",
+      categories: "",
+      categoryCounts: "",
+      questionGuidance: "",
+      answerGuidance: "",
       qaMode: "duplicates|writing",
       style: "Warm, concise, reliable.",
       model: "o3",
@@ -296,7 +354,11 @@
       audienceConfirmed: false,
       languageConfirmed: false,
       countConfirmed: false,
+      categoriesConfirmed: false,
+      categoryCountsConfirmed: false,
       sourceConfirmed: false,
+      questionGuidanceConfirmed: false,
+      answerGuidanceConfirmed: false,
       qaConfirmed: false,
       styleConfirmed: false
     };
@@ -758,7 +820,7 @@
   function renderOutputs() {
     renderLatestOutput();
     const history = state.outputs.slice(1);
-    els.outputsCount.textContent = String(history.length);
+    els.outputsCount.textContent = String(state.outputs.length);
     if (!history.length) {
       els.outputsList.innerHTML = state.outputs.length
         ? `<div class="resource-empty">The newest generated output is highlighted above. Older outputs will collect here.</div>`
@@ -1069,10 +1131,10 @@
 
   function isFaqImplementationAuditIntent(text) {
     const lower = String(text || "").toLowerCase();
-    const mentionsFaq = /faq|faqpage|שאלות ותשובות|שאלות/.test(lower);
+    const mentionsFaq = /faq|faqpage|questions?\s+answers?|שאלות\s*(?:ו)?תשובות|שאלות|תשובות/.test(lower);
     if (!mentionsFaq) return false;
-    const wantsCheck = /לבדוק|בדיקה|ביקורת|audit|check|verify|validation|validate|תואם|התאמה|מול|כנגד|השוואה/i.test(lower);
-    const implementation = /הטמעה|מוטמע|מוטמעת|יישום|implementation|implemented|schema|json-ld|סכמה|סכימה|faqpage|rich results|אתר|עמוד|website|site|page/i.test(lower);
+    const wantsCheck = /לבדוק|לבחון|בחינה|בדיקה|ביקורת|audit|check|verify|validation|validate|inspect|review|תואם|התאמה|מול|כנגד|השוואה/i.test(lower);
+    const implementation = /הטמעה|הוטמע|הוטמעו|הוטמעה|מוטמע|מוטמעת|מוטמעים|יישום|implementation|implemented|schema|json-ld|סכמה|סכימה|faqpage|rich results|אתר|עמוד|website|site|page/i.test(lower);
     return wantsCheck && implementation;
   }
 
@@ -1088,7 +1150,7 @@
     if (tool.id === "schema-builder" && /schema|json-ld|סכמה|סכימה/i.test(lower)) score += 8;
     if (tool.id === "translate-demo" && /translate|translation|localize|localise|תרגום|תרגם|תרגמי|תרגמו|לתרגם/i.test(lower)) score += 8;
     if (tool.id === "meta-tags" && /meta|title tag|description|h1|seo|מטא|טייטלים/i.test(lower)) score += 7;
-    if (tool.id === "client-reports" && /client report|dashboard|performance report|monthly report|kpi|דוח לקוח|דוחות לקוח|דשבורד|ביצועים/i.test(lower)) score += 9;
+    if (tool.id === "client-reports" && /client report|dashboard|performance report|monthly report|kpi|analytics report|ga4|google analytics|דוח לקוח|דוחות לקוח|דשבורד|ביצועים|אנליטיקס|גוגל אנליטיקס/i.test(lower)) score += 9;
     if (tool.id === "sheet-utilities" && /sheet utilities|vlookup|lookup copy|cross.?check|coverage report|copy columns|folder to master|work file|כלי גיליון|הצלבה|כיסוי|להעתיק עמודות/i.test(lower)) score += 9;
     if (tool.id === "design-formatting" && /format|formatting|edit sheet|sheet edit|client notes|search answers|find answers|complete answers|missing answers|עיצוב|עריכת גיליון|עריכת גוגל|הערות לקוח|לחפש תשובות|למצוא תשובות|להשלים תשובות|תשובות חסרות|מקורות/i.test(lower)) score += 6;
     if (tool.id === "design-formatting" && /schema|json-ld|faqpage|rich results|סכמה|סכימה/i.test(lower)) score -= 8;
@@ -1188,8 +1250,12 @@
       sourceUrl: state.answers.sourceUrl,
       language: state.answers.languageConfirmed ? state.answers.language : "",
       count: state.answers.countConfirmed ? state.answers.count : "",
+      categories: state.answers.categoriesConfirmed ? faqCategoryValues() : [],
+      categoryCounts: state.answers.categoryCountsConfirmed ? state.answers.categoryCounts : "",
       qaMode: state.answers.qaConfirmed ? state.answers.qaMode : "",
       style: state.answers.styleConfirmed ? state.answers.style : "",
+      questionGuidance: state.answers.questionGuidanceConfirmed ? state.answers.questionGuidance : "",
+      answerGuidance: state.answers.answerGuidanceConfirmed ? state.answers.answerGuidance : "",
       extraGuidance: state.answers.extraGuidance
     };
     state.missingInputs = completionItems().filter(([, done]) => !done).map(([label]) => label);
@@ -1481,6 +1547,16 @@
     return state.answers.style || "Warm, concise, reliable.";
   }
 
+  function questionGuidanceText() {
+    const values = guidanceValues("questionGuidance", questionGuidanceOptions);
+    return values.length ? values.map((item) => `- ${item}`).join("\n") : "- Use the core research rules only.";
+  }
+
+  function answerGuidanceText() {
+    const values = guidanceValues("answerGuidance", answerGuidanceOptions);
+    return values.length ? values.map((item) => `- ${item}`).join("\n") : "- Use the core answer rules only.";
+  }
+
   function faqStyleReplies() {
     const selected = styleSet();
     return [
@@ -1507,6 +1583,195 @@
 
   function askFaqStyle(prefix = "") {
     ask("style", [prefix, prefersHebrew() ? "איזה סגנון כתיבה לשמור בתשובות? אפשר לבחור כמה ואז להמשיך." : "Which writing style should the answers use? Choose any, then continue."].filter(Boolean).join("\n\n"), faqStyleReplies());
+  }
+
+  function parseCategoryOption(line) {
+    const clean = compact(line);
+    const [titleRaw, ...descParts] = clean.split(":");
+    const title = compact(titleRaw || clean);
+    const description = compact(descParts.join(":"));
+    return {
+      id: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `cat-${Math.random().toString(36).slice(2, 7)}`,
+      title,
+      description,
+      value: description ? `${title}: ${description}` : title
+    };
+  }
+
+  function faqCategoryOptions() {
+    const scope = state.answers.scope || "hotel";
+    const audience = audienceText();
+    const options = (categoryPlans[scope] || categoryPlans.hotel).map(parseCategoryOption);
+    const extras = [];
+    if (/famil|משפח/i.test(audience)) {
+      extras.push(parseCategoryOption("Family fit: room suitability, policies, food, access, practical stay details."));
+    }
+    if (/international|tourist|חו.?ל|תייר/i.test(audience)) {
+      extras.push(parseCategoryOption("International guest fit: arrival, language, local transport, booking terms and location confidence."));
+    }
+    if (/existing|in-house|בזמן השהות|קיימ/i.test(audience)) {
+      extras.push(parseCategoryOption("During-use support: services, troubleshooting, changes, support and next steps."));
+    }
+    const seen = new Set();
+    return [...options, ...extras].filter((item) => {
+      const key = item.title.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 8);
+  }
+
+  function faqCategoryValues(value = state.answers.categories) {
+    return String(value || "").split(/\n|\|/).map(compact).filter(Boolean);
+  }
+
+  function setFaqCategoryValues(values) {
+    state.answers.categories = Array.from(new Set(values.filter(Boolean))).join("\n");
+  }
+
+  function ensureFaqCategoryDefaults() {
+    if (faqCategoryValues().length) return;
+    setFaqCategoryValues(faqCategoryOptions().map((item) => item.value));
+  }
+
+  function categoryTitle(value) {
+    return parseCategoryOption(value).title;
+  }
+
+  function localizedCategoryLabel(value = state.answers.categories) {
+    const values = faqCategoryValues(value);
+    return values.length ? values.map(categoryTitle).join(prefersHebrew() ? " + " : " + ") : "";
+  }
+
+  function faqCategoryReplies() {
+    ensureFaqCategoryDefaults();
+    const selected = new Set(faqCategoryValues());
+    const options = faqCategoryOptions();
+    const allSelected = options.length > 0 && options.every((item) => selected.has(item.value));
+    return [
+      ...options.map((item) => ({
+        label: `${selected.has(item.value) ? "✓ " : ""}${item.title}`,
+        value: `category-toggle:${item.id}`,
+        selected: selected.has(item.value),
+        echo: false
+      })),
+      { label: `${allSelected ? "✓ " : ""}${prefersHebrew() ? "כל הקטגוריות" : "All categories"}`, value: "categories:all", selected: allSelected, echo: false },
+      { label: prefersHebrew() ? "בחירת ברירת מחדל" : "Recommended categories", value: "categories:recommended", echo: false },
+      { label: prefersHebrew() ? "לנקות בחירה" : "Clear selection", value: "categories:clear", echo: false },
+      { label: prefersHebrew() ? "אכתוב קטגוריות" : "I’ll write categories", value: "categories:custom" },
+      backReply(),
+      { label: prefersHebrew() ? "להמשיך" : "Continue", value: "categories-done", echo: false }
+    ];
+  }
+
+  function refreshFaqCategoryReplies() {
+    state.step = "categories";
+    state.activeStep = "categories";
+    syncConversationFromFaq();
+    setQuickReplies(faqCategoryReplies());
+    renderWorkspace();
+  }
+
+  function askFaqCategories(prefix = "") {
+    ensureFaqCategoryDefaults();
+    ask("categories", [prefix, prefersHebrew()
+      ? "יצרתי קטגוריות מוצעות לפי סוג ה־FAQ, הנושא והקהל. באילו קטגוריות להשתמש? אפשר לבחור כמה ואז להמשיך."
+      : "I generated suggested categories from the FAQ type, subject and audience. Which categories should I use? Choose one or more, then continue."].filter(Boolean).join("\n\n"), faqCategoryReplies());
+  }
+
+  function totalQuestionTargetText() {
+    if (state.answers.count === "quality_first") return "quality-first, no fixed total";
+    return state.answers.count || "20-30";
+  }
+
+  function categoryAllocationText() {
+    return state.answers.categoryCounts || `Total target: ${totalQuestionTargetText()}. Allocate across selected categories according to real demand, source confidence and user decision importance. Keep the sum within the selected total range.`;
+  }
+
+  function localizedCategoryCountsLabel(value = state.answers.categoryCounts) {
+    const text = String(value || "");
+    if (/stronger real-user demand|search intent/i.test(text)) return prefersHebrew() ? "לפי ביקוש וכוונת חיפוש" : "By demand and intent";
+    if (/evenly|Balanced/i.test(text)) return prefersHebrew() ? "חלוקה מאוזנת" : "Balanced split";
+    if (/decision-making|booking, pricing/i.test(text)) return prefersHebrew() ? "עדיפות לנושאי החלטה" : "Prioritize decision topics";
+    if (!text) return "";
+    return text.length > 100 ? `${text.slice(0, 100)}...` : text;
+  }
+
+  function askFaqCategoryCounts(prefix = "") {
+    const total = totalQuestionTargetText();
+    const categories = localizedCategoryLabel() || (prefersHebrew() ? "הקטגוריות שנבחרו" : "selected categories");
+    ask("categoryCounts", [prefix, prefersHebrew()
+      ? `איך לחלק את ${total} השאלות בין הקטגוריות שנבחרו?\n${categories}`
+      : `How should the ${total} questions be split across the selected categories?\n${categories}`].filter(Boolean).join("\n\n"), [
+      { label: prefersHebrew() ? "לפי ביקוש וכוונת חיפוש" : "By demand and intent", value: "category-counts:demand", primary: true },
+      { label: prefersHebrew() ? "חלוקה מאוזנת" : "Balanced split", value: "category-counts:balanced" },
+      { label: prefersHebrew() ? "לתת עדיפות להחלטת רכישה" : "Prioritize decision topics", value: "category-counts:decision" },
+      { label: prefersHebrew() ? "אכתוב ידנית" : "I’ll write it", value: "category-counts:custom" },
+      backReply()
+    ]);
+  }
+
+  function guidanceValues(key, options) {
+    const value = state.answers[key];
+    if (value === "__none__") return [];
+    if (!value) return options.map((item) => item.value);
+    return String(value).split(/\n|\|/).map(compact).filter(Boolean);
+  }
+
+  function setGuidanceValues(key, values) {
+    state.answers[key] = Array.from(new Set(values.filter(Boolean))).join("\n");
+  }
+
+  function guidanceLabel(key, options) {
+    const selected = guidanceValues(key, options);
+    return selected.map((item) => {
+      const match = options.find((option) => option.value === item || option.id === item);
+      return match ? (prefersHebrew() ? match.he : match.en) : item;
+    }).join(prefersHebrew() ? " + " : " + ");
+  }
+
+  function guidanceReplies(key, options, doneValue, clearValue, customValue) {
+    const selected = new Set(guidanceValues(key, options));
+    return [
+      ...options.map((item) => ({
+        label: `${selected.has(item.value) ? "✓ " : ""}${prefersHebrew() ? item.he : item.en}`,
+        value: `${key}-toggle:${item.id}`,
+        selected: selected.has(item.value),
+        echo: false
+      })),
+      { label: prefersHebrew() ? "אכתוב דגשים" : "I’ll write guidance", value: customValue },
+      clearReply(clearValue),
+      backReply(),
+      { label: prefersHebrew() ? "להמשיך" : "Continue", value: doneValue, echo: false }
+    ];
+  }
+
+  function askQuestionGuidance(prefix = "") {
+    ask("questionGuidance", [prefix, prefersHebrew()
+      ? "אילו דגשים להוסיף לפרומפט השאלות? זה לא מחליף את הפרומפט, רק מוסיף הנחיות מחקר וניסוח."
+      : "What guidance should I add to the question prompt? This does not replace the prompt; it adds research and wording guidance."].filter(Boolean).join("\n\n"), guidanceReplies("questionGuidance", questionGuidanceOptions, "question-guidance-done", "question-guidance-clear", "question-guidance:custom"));
+  }
+
+  function refreshQuestionGuidanceReplies() {
+    state.step = "questionGuidance";
+    state.activeStep = "questionGuidance";
+    syncConversationFromFaq();
+    setQuickReplies(guidanceReplies("questionGuidance", questionGuidanceOptions, "question-guidance-done", "question-guidance-clear", "question-guidance:custom"));
+    renderWorkspace();
+  }
+
+  function askAnswerGuidance(prefix = "") {
+    ask("answerGuidance", [prefix, prefersHebrew()
+      ? "אילו דגשים להוסיף לפרומפט התשובות? זה מעבר לסגנון כתיבה: מקור, דיוק, מבנה ותוכן."
+      : "What guidance should I add to the answer prompt? This is beyond writing style: sources, accuracy, structure and content."].filter(Boolean).join("\n\n"), guidanceReplies("answerGuidance", answerGuidanceOptions, "answer-guidance-done", "answer-guidance-clear", "answer-guidance:custom"));
+  }
+
+  function refreshAnswerGuidanceReplies() {
+    state.step = "answerGuidance";
+    state.activeStep = "answerGuidance";
+    syncConversationFromFaq();
+    setQuickReplies(guidanceReplies("answerGuidance", answerGuidanceOptions, "answer-guidance-done", "answer-guidance-clear", "answer-guidance:custom"));
+    renderWorkspace();
   }
 
   function auditCheckOptions() {
@@ -1671,6 +1936,7 @@
       { label: hebrew ? "זריז: 10-15" : "Fast: 10-15", value: "count:10-15" },
       { label: hebrew ? "סטנדרטי: 20-30" : "Standard: 20-30", value: "count:20-30" },
       { label: hebrew ? "עמוק: 30-45" : "Deep: 30-45", value: "count:30-45" },
+      { label: hebrew ? "רחב: 40-55" : "Wide: 40-55", value: "count:40-55" },
       { label: hebrew ? "רק מה שבאמת טוב" : "Quality first", value: "count:quality_first" },
       backReply()
     ]);
@@ -1860,18 +2126,38 @@
       return;
     }
 
+    if (!state.answers.categoriesConfirmed) {
+      askFaqCategories();
+      return;
+    }
+
+    if (!state.answers.categoryCountsConfirmed) {
+      askFaqCategoryCounts();
+      return;
+    }
+
     if (!state.answers.sourceConfirmed) {
       askFaqSource();
       return;
     }
 
-    if (!state.answers.qaConfirmed) {
-      askFaqQa();
+    if (!state.answers.questionGuidanceConfirmed) {
+      askQuestionGuidance();
+      return;
+    }
+
+    if (!state.answers.answerGuidanceConfirmed) {
+      askAnswerGuidance();
       return;
     }
 
     if (!state.answers.styleConfirmed) {
       askFaqStyle();
+      return;
+    }
+
+    if (!state.answers.qaConfirmed) {
+      askFaqQa();
       return;
     }
 
@@ -2201,6 +2487,7 @@
       state.missingInputs = [];
       return;
     }
+    if (tool.id === "site-ai-faq-audit") syncFaqAuditSelectedUrls();
     state.missingInputs = (tool.requiredInputs || [])
       .filter((field) => !fieldHasValue(state.collectedInputs[field.key]))
       .map((field) => field.key);
@@ -2259,6 +2546,29 @@
     return labels[group] || String(group || "");
   }
 
+  function faqAuditGroupAliases(group) {
+    const aliases = {
+      faq: ["faq", "faqs", "faqpage", "questions", "שאלות", "שאלות ותשובות"],
+      hotel: ["hotel", "hotels", "property", "properties", "מלון", "מלונות", "נכס", "נכסים"],
+      location: ["location", "locations", "city", "cities", "מיקום", "מיקומים", "עיר", "ערים"],
+      offer: ["offer", "offers", "deal", "deals", "מבצע", "מבצעים", "הטבה", "הטבות"],
+      blog: ["blog", "content", "article", "articles", "בלוג", "תוכן", "מאמר", "מאמרים"],
+      legal: ["legal", "policy", "policies", "terms", "privacy", "משפטי", "מדיניות", "תנאים", "פרטיות"],
+      contact: ["contact", "about", "support", "צור קשר", "אודות", "תמיכה"],
+      booking: ["booking", "book", "reservation", "reservations", "הזמנה", "הזמנות"],
+      asset: ["asset", "assets", "static", "image", "images", "קבצים", "נכסים", "תמונות"],
+      other: ["other", "misc", "miscellaneous", "אחר", "אחרים"]
+    };
+    return aliases[group] || [String(group || "")];
+  }
+
+  function textMatchesFaqAuditGroup(text, group) {
+    const lower = String(text || "").toLowerCase();
+    const label = faqAuditGroupLabel(group).toLowerCase();
+    return faqAuditGroupAliases(group).some((alias) => lower.includes(alias.toLowerCase())) ||
+      label.split("/").some((part) => part.trim() && lower.includes(part.trim()));
+  }
+
   function faqAuditAvailableGroups() {
     return (state.faqAuditDiscovery?.groups || [])
       .map((group) => typeof group === "string" ? { group, count: 0 } : group)
@@ -2292,6 +2602,80 @@
       })
       .map((item) => item.url)
       .filter(Boolean);
+  }
+
+  function syncFaqAuditSelectedUrls() {
+    if (state.activeToolId !== "site-ai-faq-audit") return;
+    if (!hasFaqAuditDiscovery()) return;
+    const groups = selectedFaqAuditGroups();
+    if (!groups.length) {
+      delete state.collectedInputs.urls;
+      return;
+    }
+    state.collectedInputs.urls = faqAuditUrlsForGroups(groups);
+  }
+
+  function selectedFaqAuditUrlCount() {
+    const urls = Array.isArray(state.collectedInputs.urls) && state.collectedInputs.urls.length
+      ? state.collectedInputs.urls
+      : faqAuditUrlsForGroups();
+    return urls.filter(Boolean).length;
+  }
+
+  function faqAuditGroupsFromText(text) {
+    const clean = compact(text);
+    const lower = clean.toLowerCase();
+    const available = faqAuditAvailableGroups().map((group) => group.group);
+    if (!available.length) return [];
+    if (/\b(all|everything|all groups)\b|הכל|כל הקבוצות/i.test(clean)) return available;
+    if (/\b(recommended|default|suggested)\b|ברירת מחדל|מומלץ|מומלצות/i.test(clean)) return defaultFaqAuditGroups();
+    return available.filter((group) => textMatchesFaqAuditGroup(lower, group));
+  }
+
+  function applyFaqAuditGroupText(text) {
+    const groups = faqAuditGroupsFromText(text);
+    if (!groups.length) return false;
+    state.collectedInputs.groups = groups;
+    state.collectedInputs.urls = faqAuditUrlsForGroups(groups);
+    state.faqAuditGroupSelectionTouched = true;
+    updateToolMissingInputs();
+    finishToolSetup(prefersHebrew()
+      ? "בחרתי את קבוצות ה־URL מתוך המיפוי. עכשיו אפשר להריץ FAQ audit."
+      : "Selected the URL groups from discovery. The FAQ audit is ready to run.");
+    return true;
+  }
+
+  function applyFaqAuditDiscoveryTextSettings(text) {
+    let changed = false;
+    const urlBudget = String(text || "").match(/\b(100|250|500|750|1000|1500|2000)\s*(?:urls?|כתובות)?\b/i);
+    if (urlBudget) {
+      state.collectedInputs.maxDiscoveryUrls = Number(urlBudget[1]);
+      changed = true;
+    }
+    const depth = String(text || "").match(/\bdepth\s*(\d+)|עומק\s*(\d+)/i);
+    if (depth) {
+      state.collectedInputs.maxDepth = Number(depth[1] || depth[2]) || 3;
+      changed = true;
+    }
+    return changed;
+  }
+
+  function isFaqAuditDiscoveryRunText(text) {
+    return /map|mapping|discover|discovery|crawl|crawler|scan|sitemap|robots|start|run|go ahead|continue|yes|למפות|מיפוי|תמפה|מפה|סרוק|לסרוק|סריקה|תסרקי|תסרוק|להמשיך|תמשיכי|כן|יאללה/i.test(String(text || ""));
+  }
+
+  function handleFaqAuditDiscoveryText(text) {
+    if (state.activeToolId !== "site-ai-faq-audit" || state.step !== "toolDiscovery") return false;
+    const changed = applyFaqAuditDiscoveryTextSettings(text);
+    if (isFaqAuditDiscoveryRunText(text)) {
+      runFaqAuditDiscovery();
+      return true;
+    }
+    if (changed) {
+      askFaqAuditDiscovery();
+      return true;
+    }
+    return false;
   }
 
   function askFaqAuditDiscovery(prefix = "") {
@@ -2364,11 +2748,13 @@
     const allSelected = allGroups.length > 0 && allGroups.every((group) => selected.has(group));
     const groupReplies = groups.slice(0, 8).map((group) => ({
       label: `${selected.has(group.group) ? "✓ " : ""}${faqAuditGroupLabel(group.group)}${group.count ? ` · ${group.count}` : ""}`,
-      value: `faqaudit-group-toggle:${group.group}`
+      value: `faqaudit-group-toggle:${group.group}`,
+      selected: selected.has(group.group),
+      echo: false
     }));
     return [
       ...groupReplies,
-      { label: `${allSelected ? "✓ " : ""}${hebrew ? "כל הקבוצות" : "All groups"}`, value: "faqaudit-groups:all", selected: allSelected },
+      { label: `${allSelected ? "✓ " : ""}${hebrew ? "כל הקבוצות" : "All groups"}`, value: "faqaudit-groups:all", selected: allSelected, echo: false },
       { label: hebrew ? "לנקות בחירה" : "Clear selection", value: "faqaudit-groups:clear", echo: false },
       { label: hebrew ? "בחירת ברירת מחדל" : "Recommended groups", value: "faqaudit-groups:recommended", echo: false },
       { label: hebrew ? "חזרה" : "Back", value: "faqaudit-groups:back", echo: false },
@@ -2413,6 +2799,8 @@
       "schema-builder:sourceUrl": "שלחי Google Sheet או תיקיית Drive עם שורות ה־FAQ.",
       "meta-tags:pageList": "אילו עמודים, דומיין, Google Sheet או תיקיית Drive צריכים Meta tags?",
       "client-reports:spreadsheetId": "איזה Google Sheet ישמש לדוח הלקוח?",
+      "client-reports:sourceType": "מאיזה מקור למשוך נתונים לדוח: Analytics או Google Sheet?",
+      "client-reports:analyticsAccount": "איזה חשבון Analytics להשתמש בו?",
       "sheet-utilities:instruction": "איזו פעולת Sheet Utilities להכין? אפשר לתאר VLOOKUP, הצלבה, כיסוי, העתקת עמודות או folder-to-master.",
       "site-ai-audit:siteUrl": "איזה אתר לבדוק?",
       "site-ai-audit:auditProfile": "איזה סוג אודיט להריץ?",
@@ -2556,6 +2944,13 @@
     if (["targetLangs", "languages"].includes(key)) {
       const langs = detectLanguagesFromText(clean, manifestSplitList(clean));
       state.collectedInputs[key] = langs.length ? langs : manifestSplitList(clean);
+      return;
+    }
+    if (key === "groups" && state.activeToolId === "site-ai-faq-audit") {
+      const groups = faqAuditGroupsFromText(clean);
+      state.collectedInputs.groups = groups.length ? groups : manifestSplitList(clean);
+      state.collectedInputs.urls = faqAuditUrlsForGroups(state.collectedInputs.groups);
+      state.faqAuditGroupSelectionTouched = true;
       return;
     }
     if (["maxPages", "maxFiles", "maxDepth", "startRow", "maxRows", "sourceHeaderRow"].includes(key)) {
@@ -2707,7 +3102,7 @@
     const values = command.fields || {};
     const prefix = commandSwitchPrefix(command, tool);
     if (tool.id === "faq-playground") {
-      startFaqFromSmart(values, prefix || text);
+      startFaqFromSmart(values, prefix || text, text);
       return true;
     }
     if (tool.id === "file-draft") {
@@ -2811,7 +3206,8 @@
     return /סוכן|תבנה|תעשה|להכין|לנהל|קבצים|מסמכים|לחפש|למצוא|להשלים|למלא|מקורות|תשובות|תשובות חסרות|workflow|agent|build|create|prepare|manage|plan|content|files|documents|search|find|complete|answers|sources/i.test(clean);
   }
 
-  function startFaqFromSmart(values = {}, reply = "") {
+  function startFaqFromSmart(values = {}, reply = "", text = "") {
+    const sourceText = text || reply || "";
     state.mode = "faq";
     state.activeToolId = "faq-playground";
     state.activeIntent = "faq";
@@ -2823,14 +3219,23 @@
       audience: values.audience || "",
       language: values.language || "English (UK)",
       count: values.count || "20-30",
+      categories: Array.isArray(values.categories) ? values.categories.join("\n") : (values.categories || ""),
+      categoryCounts: values.categoryCounts || "",
+      questionGuidance: values.questionGuidance || "",
+      answerGuidance: values.answerGuidance || "",
       sourceUrl: values.sourceUrl || "",
       sourceMode: values.sourceUrl ? "url" : "",
       audienceConfirmed: Boolean(values.audience),
       languageConfirmed: Boolean(values.language),
       countConfirmed: Boolean(values.count),
+      categoriesConfirmed: Boolean(values.categories),
+      categoryCountsConfirmed: Boolean(values.categoryCounts),
+      questionGuidanceConfirmed: Boolean(values.questionGuidance),
+      answerGuidanceConfirmed: Boolean(values.answerGuidance),
       sourceConfirmed: Boolean(values.sourceUrl)
     };
     if (values.sourceUrl) recordSource(values.sourceUrl, "FAQ source", "faq-playground");
+    if (sourceText) applyInference(sourceText);
     nextStep();
   }
 
@@ -2861,7 +3266,7 @@
   function startToolFromSmart(tool, values = {}, reply = "", text = "") {
     if (!tool) return false;
     if (tool.id === "faq-playground") {
-      startFaqFromSmart(values, reply);
+      startFaqFromSmart(values, reply, text);
       return true;
     }
     if (tool.id === "file-draft") {
@@ -3032,8 +3437,21 @@
     return next;
   }
 
+  function shouldSkipSmartPreflight(tool, payload) {
+    if (!tool || !payload) return false;
+    if (tool.id === "schema-builder" && payload.previewOnly !== false) return true;
+    if (tool.id === "meta-tags" && payload.outputMode === "preview" && payload.generationMode !== "ai") return true;
+    if (tool.id === "site-ai-faq-audit") return true;
+    return false;
+  }
+
   async function runSmartPreflight(tool, payload) {
     if (!tool || !payload || tool.id === "file-draft") return payload;
+    if (shouldSkipSmartPreflight(tool, payload)) {
+      const reason = tool.id === "site-ai-faq-audit" ? "run" : "preview";
+      logLine(`Smart preflight skipped for deterministic ${tool.title} ${reason}.`);
+      return payload;
+    }
     logLine(`Smart preflight: refining ${tool.title} payload before run...`);
 
     try {
@@ -3135,12 +3553,14 @@
 
     if (tool.id === "site-ai-faq-audit") {
       const result = state.faqAuditDiscovery || {};
+      const selectedUrls = selectedFaqAuditUrlCount();
+      const mappedUrls = Array.isArray(result.urls) ? result.urls.length : 0;
       return [
         hebrew ? "אודיט FAQ מוכן:" : "FAQ audit ready:",
         `${hebrew ? "אתר" : "Website"}: ${state.collectedInputs.siteUrl || (hebrew ? "חסר אתר" : "missing site")}`,
-        `${hebrew ? "מיפוי" : "Discovery"}: ${Array.isArray(result.urls) ? result.urls.length : 0} URLs · ${Array.isArray(result.groups) ? result.groups.length : 0} groups`,
+        `${hebrew ? "URLs לאודיט" : "URLs to audit"}: ${selectedUrls || 0}${mappedUrls ? ` ${hebrew ? "מתוך" : "of"} ${mappedUrls} ${hebrew ? "שמופו" : "mapped"}` : ""}`,
         `${hebrew ? "קבוצות לאודיט" : "Groups to audit"}: ${selectedFaqAuditGroupLabel()}`,
-        `${hebrew ? "עומק אודיט" : "Audit depth"}: ${state.collectedInputs.maxPages || 50} ${hebrew ? "עמודים" : "pages"} · ${state.collectedInputs.renderMode || "static"}`
+        `${hebrew ? "מצב אודיט" : "Audit mode"}: ${state.collectedInputs.maxPages || 50} ${hebrew ? "עמודים" : "pages"} · ${state.collectedInputs.renderMode || "rendered"}`
       ].join("\n");
     }
 
@@ -3238,8 +3658,8 @@
     if (tool.id === "site-ai-faq-audit") {
       const hebrew = prefersHebrew();
       replies.push({ label: hebrew ? "להריץ FAQ audit" : "Run FAQ audit", value: "run-tool" });
-      replies.push({ label: hebrew ? "סריקה סטטית" : "Static crawl", value: "faqaudit:static" });
       replies.push({ label: hebrew ? "סריקה מרונדרת" : "Rendered crawl", value: "faqaudit:rendered" });
+      replies.push({ label: hebrew ? "סריקה סטטית" : "Static crawl", value: "faqaudit:static" });
       replies.push({ label: hebrew ? "להשוות ל־Sheet מקור" : "Compare source Sheet", value: "faqaudit:source" });
       replies.push({ label: hebrew ? "25 עמודים" : "25 pages", value: "pages:25" });
       replies.push({ label: hebrew ? "50 עמודים" : "50 pages", value: "pages:50" });
@@ -3431,8 +3851,12 @@
       audience: state.answers.audience || "",
       language: state.answers.language || "",
       count: state.answers.count || "",
+      categories: state.answers.categories || "",
+      categoryCounts: state.answers.categoryCounts || "",
       qaMode: state.answers.qaMode || "",
       style: state.answers.style || "",
+      questionGuidance: state.answers.questionGuidance || "",
+      answerGuidance: state.answers.answerGuidance || "",
       model: state.answers.model || "o3",
       sourceUrl: state.answers.sourceUrl || "",
       sourceMode: state.answers.sourceMode || "",
@@ -3495,24 +3919,44 @@
       askFaqLanguage(prefix);
       return true;
     }
-    if (state.step === "source" || state.step === "sourceUrl" || state.step === "sourceCustom") {
+    if (state.step === "categories" || state.step === "categoriesCustom") {
       state.answers.countConfirmed = false;
       askFaqCount(prefix);
       return true;
     }
-    if (state.step === "qa") {
+    if (state.step === "categoryCounts" || state.step === "categoryCountsCustom") {
+      state.answers.categoriesConfirmed = false;
+      askFaqCategories(prefix);
+      return true;
+    }
+    if (state.step === "source" || state.step === "sourceUrl" || state.step === "sourceCustom") {
+      state.answers.categoryCountsConfirmed = false;
+      askFaqCategoryCounts(prefix);
+      return true;
+    }
+    if (state.step === "questionGuidance" || state.step === "questionGuidanceCustom") {
       state.answers.sourceConfirmed = false;
       askFaqSource(prefix);
       return true;
     }
+    if (state.step === "answerGuidance" || state.step === "answerGuidanceCustom") {
+      state.answers.questionGuidanceConfirmed = false;
+      askQuestionGuidance(prefix);
+      return true;
+    }
     if (state.step === "style" || state.step === "styleCustom") {
-      state.answers.qaConfirmed = false;
-      askFaqQa(prefix);
+      state.answers.answerGuidanceConfirmed = false;
+      askAnswerGuidance(prefix);
+      return true;
+    }
+    if (state.step === "qa") {
+      state.answers.styleConfirmed = false;
+      askFaqStyle(prefix);
       return true;
     }
     if (state.step === "ready" || state.step === "extraGuidance") {
-      state.answers.styleConfirmed = false;
-      askFaqStyle(prefix);
+      state.answers.qaConfirmed = false;
+      askFaqQa(prefix);
       return true;
     }
     return false;
@@ -3557,6 +4001,7 @@
     if (value === "start:translate") return startTool("translate-demo", "");
     if (value === "start:schema") return startTool("schema-builder", "");
     if (value === "start:meta") return startTool("meta-tags", "");
+    if (value === "start:client-reports") return startTool("client-reports", "");
     if (value === "start:site-audit") return startTool("site-ai-audit", "");
     if (value === "start:faq-audit") return startTool("site-ai-faq-audit", "");
     if (value === "start:sheet-edit") return startTool("design-formatting", "");
@@ -3815,6 +4260,7 @@
       if (selected.has(group)) selected.delete(group);
       else selected.add(group);
       state.collectedInputs.groups = Array.from(selected);
+      syncFaqAuditSelectedUrls();
       state.faqAuditGroupSelectionTouched = true;
       refreshFaqAuditGroupReplies();
       return true;
@@ -3824,18 +4270,21 @@
       const selected = new Set(selectedFaqAuditGroups());
       const allSelected = allGroups.length > 0 && allGroups.every((group) => selected.has(group));
       state.collectedInputs.groups = allSelected ? [] : allGroups;
+      syncFaqAuditSelectedUrls();
       state.faqAuditGroupSelectionTouched = true;
       refreshFaqAuditGroupReplies();
       return true;
     }
     if (value === "faqaudit-groups:clear") {
       state.collectedInputs.groups = [];
+      delete state.collectedInputs.urls;
       state.faqAuditGroupSelectionTouched = true;
       refreshFaqAuditGroupReplies();
       return true;
     }
     if (value === "faqaudit-groups:recommended") {
       state.collectedInputs.groups = defaultFaqAuditGroups();
+      syncFaqAuditSelectedUrls();
       state.faqAuditGroupSelectionTouched = true;
       refreshFaqAuditGroupReplies();
       return true;
@@ -3859,7 +4308,10 @@
       state.collectedInputs.urls = faqAuditUrlsForGroups(state.collectedInputs.groups);
       showSelectedAnswer(selectedFaqAuditGroupLabel());
       updateToolMissingInputs();
-      finishToolSetup(prefersHebrew() ? "מעולה. עכשיו אפשר להריץ את אודיט ה־FAQ על הקבוצות שנבחרו." : "Great. Now the FAQ audit can run on the selected groups.");
+      const selectedUrls = selectedFaqAuditUrlCount();
+      finishToolSetup(prefersHebrew()
+        ? `מעולה. אשתמש ב־${selectedUrls} URLs שנבחרו מהמיפוי הקיים.`
+        : `Great. I will use ${selectedUrls} URLs selected from the existing discovery map.`);
       return true;
     }
     if (value === "faqaudit:static" || value === "faqaudit:rendered") {
@@ -4015,6 +4467,89 @@
       return true;
     }
 
+    if (value.startsWith("category-toggle:")) {
+      const id = value.replace("category-toggle:", "");
+      const option = faqCategoryOptions().find((item) => item.id === id);
+      if (!option) return true;
+      const selected = new Set(faqCategoryValues());
+      if (selected.has(option.value)) selected.delete(option.value);
+      else selected.add(option.value);
+      setFaqCategoryValues(Array.from(selected));
+      refreshFaqCategoryReplies();
+      return true;
+    }
+
+    if (value === "categories:all") {
+      const options = faqCategoryOptions();
+      const selected = new Set(faqCategoryValues());
+      const allSelected = options.length > 0 && options.every((item) => selected.has(item.value));
+      setFaqCategoryValues(allSelected ? [] : options.map((item) => item.value));
+      refreshFaqCategoryReplies();
+      return true;
+    }
+
+    if (value === "categories:recommended") {
+      setFaqCategoryValues(faqCategoryOptions().map((item) => item.value));
+      refreshFaqCategoryReplies();
+      return true;
+    }
+
+    if (value === "categories:clear") {
+      setFaqCategoryValues([]);
+      state.answers.categoriesConfirmed = false;
+      refreshFaqCategoryReplies();
+      return true;
+    }
+
+    if (value === "categories:custom") {
+      ask("categoriesCustom", prefersHebrew()
+        ? "כתבי קטגוריות, כל קטגוריה בשורה. אפשר להוסיף אחרי מקף/נקודתיים מה היא צריכה לכסות."
+        : "Write categories, one per line. You can add a dash/colon with what each category should cover.", [
+        { label: prefersHebrew() ? "בחירה מומלצת" : "Recommended categories", value: "categories:recommended" },
+        backReply()
+      ]);
+      return true;
+    }
+
+    if (value === "categories-done") {
+      if (!faqCategoryValues().length) {
+        bot(prefersHebrew() ? "בחרי לפחות קטגוריה אחת, או כתבי קטגוריות משלך." : "Choose at least one category, or write your own categories.");
+        refreshFaqCategoryReplies();
+        return true;
+      }
+      showSelectedAnswer(localizedCategoryLabel());
+      state.answers.categoriesConfirmed = true;
+      nextStep();
+      return true;
+    }
+
+    if (value.startsWith("category-counts:")) {
+      const mode = value.replace("category-counts:", "");
+      if (mode === "custom") {
+        ask("categoryCountsCustom", prefersHebrew()
+          ? `כתבי חלוקת שאלות לפי קטגוריה. סך הכל צריך להתאים ל־${totalQuestionTargetText()}.`
+          : `Write the question split by category. The total should fit ${totalQuestionTargetText()}.`, [
+          { label: prefersHebrew() ? "לפי ביקוש וכוונת חיפוש" : "By demand and intent", value: "category-counts:demand" },
+          backReply()
+        ]);
+        return true;
+      }
+      const labels = {
+        demand: `Total target: ${totalQuestionTargetText()}. Allocate more questions to categories with stronger real-user demand, search intent and source confidence. Keep the sum within the selected total range.`,
+        balanced: `Total target: ${totalQuestionTargetText()}. Split questions as evenly as possible across the selected categories, then adjust lightly for category importance.`,
+        decision: `Total target: ${totalQuestionTargetText()}. Prioritize decision-making categories such as booking, pricing, fit, trust, policies and practical next steps.`
+      };
+      state.answers.categoryCounts = labels[mode] || labels.demand;
+      state.answers.categoryCountsConfirmed = true;
+      showSelectedAnswer(mode === "balanced"
+        ? (prefersHebrew() ? "חלוקה מאוזנת" : "Balanced split")
+        : mode === "decision"
+          ? (prefersHebrew() ? "עדיפות להחלטת רכישה" : "Prioritize decision topics")
+          : (prefersHebrew() ? "לפי ביקוש וכוונת חיפוש" : "By demand and intent"));
+      nextStep();
+      return true;
+    }
+
     if (value.startsWith("source:saved:")) {
       const url = value.replace("source:saved:", "");
       state.answers.sourceMode = "url";
@@ -4060,6 +4595,98 @@
         state.answers.sourceInstructions = "Use the official website as the primary factual source. Use public review or competitor signals only for question demand, not final facts. Mark missing facts as Needs source confirmation.";
       }
       state.answers.sourceConfirmed = true;
+      nextStep();
+      return true;
+    }
+
+    if (value.startsWith("questionGuidance-toggle:")) {
+      const id = value.replace("questionGuidance-toggle:", "");
+      const option = questionGuidanceOptions.find((item) => item.id === id);
+      if (!option) return true;
+      const selected = new Set(guidanceValues("questionGuidance", questionGuidanceOptions));
+      if (selected.has(option.value)) selected.delete(option.value);
+      else selected.add(option.value);
+      setGuidanceValues("questionGuidance", Array.from(selected));
+      refreshQuestionGuidanceReplies();
+      return true;
+    }
+
+    if (value === "question-guidance-clear") {
+      state.answers.questionGuidance = "__none__";
+      state.answers.questionGuidanceConfirmed = false;
+      refreshQuestionGuidanceReplies();
+      return true;
+    }
+
+    if (value === "question-guidance:custom") {
+      ask("questionGuidanceCustom", prefersHebrew()
+        ? "כתבי דגשים לפרומפט השאלות: איך לחקור, איך לנסח, מה לחפש ומה להימנע ממנו."
+        : "Write guidance for the question prompt: how to research, how to phrase, what to look for and what to avoid.", [
+        { label: prefersHebrew() ? "להשתמש בדגשים המומלצים" : "Use recommended guidance", value: "question-guidance:recommended" },
+        backReply()
+      ]);
+      return true;
+    }
+
+    if (value === "question-guidance:recommended") {
+      setGuidanceValues("questionGuidance", questionGuidanceOptions.map((item) => item.value));
+      state.answers.questionGuidanceConfirmed = true;
+      nextStep();
+      return true;
+    }
+
+    if (value === "question-guidance-done") {
+      if (!guidanceValues("questionGuidance", questionGuidanceOptions).length) {
+        setGuidanceValues("questionGuidance", questionGuidanceOptions.map((item) => item.value));
+      }
+      showSelectedAnswer(guidanceLabel("questionGuidance", questionGuidanceOptions));
+      state.answers.questionGuidanceConfirmed = true;
+      nextStep();
+      return true;
+    }
+
+    if (value.startsWith("answerGuidance-toggle:")) {
+      const id = value.replace("answerGuidance-toggle:", "");
+      const option = answerGuidanceOptions.find((item) => item.id === id);
+      if (!option) return true;
+      const selected = new Set(guidanceValues("answerGuidance", answerGuidanceOptions));
+      if (selected.has(option.value)) selected.delete(option.value);
+      else selected.add(option.value);
+      setGuidanceValues("answerGuidance", Array.from(selected));
+      refreshAnswerGuidanceReplies();
+      return true;
+    }
+
+    if (value === "answer-guidance-clear") {
+      state.answers.answerGuidance = "__none__";
+      state.answers.answerGuidanceConfirmed = false;
+      refreshAnswerGuidanceReplies();
+      return true;
+    }
+
+    if (value === "answer-guidance:custom") {
+      ask("answerGuidanceCustom", prefersHebrew()
+        ? "כתבי דגשים לפרומפט התשובות: דיוק, מבנה, מקור, מגבלות, מה להדגיש ומה לא."
+        : "Write guidance for the answer prompt: accuracy, structure, sources, constraints, what to emphasize and what to avoid.", [
+        { label: prefersHebrew() ? "להשתמש בדגשים המומלצים" : "Use recommended guidance", value: "answer-guidance:recommended" },
+        backReply()
+      ]);
+      return true;
+    }
+
+    if (value === "answer-guidance:recommended") {
+      setGuidanceValues("answerGuidance", answerGuidanceOptions.map((item) => item.value));
+      state.answers.answerGuidanceConfirmed = true;
+      nextStep();
+      return true;
+    }
+
+    if (value === "answer-guidance-done") {
+      if (!guidanceValues("answerGuidance", answerGuidanceOptions).length) {
+        setGuidanceValues("answerGuidance", answerGuidanceOptions.map((item) => item.value));
+      }
+      showSelectedAnswer(guidanceLabel("answerGuidance", answerGuidanceOptions));
+      state.answers.answerGuidanceConfirmed = true;
       nextStep();
       return true;
     }
@@ -4113,7 +4740,7 @@
       }
       state.answers.style = style;
       state.answers.styleConfirmed = true;
-      finishSetup();
+      nextStep();
       return true;
     }
 
@@ -4140,7 +4767,7 @@
       if (!styleValues().length) state.answers.style = "Warm, concise, reliable.";
       showSelectedAnswer(localizedStyleLabel());
       state.answers.styleConfirmed = true;
-      finishSetup();
+      nextStep();
       return true;
     }
 
@@ -4400,6 +5027,21 @@
     const clean = compact(text);
     if (!clean) return;
 
+    if (handleFaqAuditDiscoveryText(clean)) {
+      renderWorkspace();
+      return;
+    }
+
+    if (
+      state.activeToolId === "site-ai-faq-audit" &&
+      state.step === "toolField" &&
+      state.pendingQuestion?.key === "groups" &&
+      applyFaqAuditGroupText(clean)
+    ) {
+      renderWorkspace();
+      return;
+    }
+
     if (handlePlannedAssistantCommands(clean)) {
       renderWorkspace();
       return;
@@ -4447,22 +5089,6 @@
     }
 
     if (state.activeToolId === "site-ai-faq-audit" && state.step === "toolDiscovery") {
-      if (/map|discover|crawl|למפות|מפה|תמפה|סרוק|לסרוק|להמשיך|כן|run/i.test(clean)) {
-        runFaqAuditDiscovery();
-        return;
-      }
-      const maxUrls = clean.match(/\b(500|1000|1500|2000)\b/);
-      if (maxUrls) {
-        state.collectedInputs.maxDiscoveryUrls = Number(maxUrls[1]);
-        askFaqAuditDiscovery();
-        return;
-      }
-      const depth = clean.match(/\bdepth\s*(\d+)|עומק\s*(\d+)/i);
-      if (depth) {
-        state.collectedInputs.maxDepth = Number(depth[1] || depth[2]) || 3;
-        askFaqAuditDiscovery();
-        return;
-      }
       askFaqAuditDiscovery(prefersHebrew()
         ? "עוד לא הרצתי מיפוי. לחצי על מיפוי אתר או כתבי למפות."
         : "Discovery has not run yet. Click Map site or type map site.");
@@ -4649,6 +5275,29 @@
       return;
     }
 
+    if (state.step === "categories") {
+      const matched = faqCategoryOptions().filter((item) => clean.toLowerCase().includes(item.title.toLowerCase()));
+      if (matched.length) state.answers.categories = matched.map((item) => item.value).join("\n");
+      else state.answers.categories = clean.split(/\n|,|;/).map(compact).filter(Boolean).join("\n");
+      state.answers.categoriesConfirmed = true;
+      nextStep();
+      return;
+    }
+
+    if (state.step === "categoriesCustom") {
+      state.answers.categories = clean.split(/\n|;/).map((line) => compact(line.replace(/\s+-\s+/, ": "))).filter(Boolean).join("\n");
+      state.answers.categoriesConfirmed = true;
+      nextStep();
+      return;
+    }
+
+    if (state.step === "categoryCounts" || state.step === "categoryCountsCustom") {
+      state.answers.categoryCounts = clean;
+      state.answers.categoryCountsConfirmed = true;
+      nextStep();
+      return;
+    }
+
     if (state.step === "source") {
       const url = extractUrl(clean);
       if (url) {
@@ -4708,6 +5357,20 @@
       return;
     }
 
+    if (state.step === "questionGuidance" || state.step === "questionGuidanceCustom") {
+      state.answers.questionGuidance = clean;
+      state.answers.questionGuidanceConfirmed = true;
+      nextStep();
+      return;
+    }
+
+    if (state.step === "answerGuidance" || state.step === "answerGuidanceCustom") {
+      state.answers.answerGuidance = clean;
+      state.answers.answerGuidanceConfirmed = true;
+      nextStep();
+      return;
+    }
+
     if (state.step === "qa") {
       if (/בלי|none|no qa|ללא/i.test(clean)) state.answers.qaMode = "none";
       else if (/מקור|source|full|מלא/i.test(clean)) state.answers.qaMode = "duplicates|sources|writing";
@@ -4726,14 +5389,14 @@
       if (/פשוט|מעשי|plain|practical/i.test(clean)) selected.push("Plain, practical and easy to scan.");
       state.answers.style = selected.length ? selected.join("\n") : clean;
       state.answers.styleConfirmed = true;
-      finishSetup();
+      nextStep();
       return;
     }
 
     if (state.step === "styleCustom") {
       state.answers.style = clean;
       state.answers.styleConfirmed = true;
-      finishSetup();
+      nextStep();
       return;
     }
 
@@ -4775,11 +5438,12 @@
   }
 
   function categoryPlanText() {
-    const plan = categoryPlans[state.answers.scope || "hotel"] || categoryPlans.hotel;
+    const plan = faqCategoryValues().length ? faqCategoryValues() : (categoryPlans[state.answers.scope || "hotel"] || categoryPlans.hotel);
     return [
       `Selected FAQ category plan for ${presetLabels[state.answers.scope || "hotel"]}:`,
       ...plan.map((line) => `- ${line}`),
       "",
+      `Question allocation: ${categoryAllocationText()}`,
       "Do not use category names themselves as questions. Turn them into real user questions."
     ].join("\n");
   }
@@ -4801,6 +5465,8 @@
     const categoryPlan = categoryPlanText();
     const target = targetText();
     const style = styleText();
+    const questionGuidance = questionGuidanceText();
+    const answerGuidance = answerGuidanceText();
     const extra = state.answers.extraGuidance ? `\n\nEXTRA USER GUIDANCE:\n${state.answers.extraGuidance}` : "";
     const model = state.answers.model || "o3";
     const tasks = [
@@ -4828,6 +5494,9 @@
           "- Do not create duplicate questions or close paraphrases, even across categories.",
           "- Avoid sales copy, vague questions, and questions that cannot be answered from reliable sources.",
           "- Include questions that help AI/search systems understand the entity, service, policies, location and trust signals.",
+          "",
+          "ADDITIONAL QUESTION GUIDANCE:",
+          questionGuidance,
           extra,
           "",
           "Return ONLY a Markdown table with columns:",
@@ -4858,6 +5527,9 @@
           "- If information is unavailable after checking approved sources, write exactly: Information is currently not available. [VERIFY]",
           "- If a fact comes from a non-official source, keep it cautious and mark it with [VERIFY].",
           "- Keep the exact question wording unless grammar must be fixed.",
+          "",
+          "ADDITIONAL ANSWER GUIDANCE:",
+          answerGuidance,
           extra,
           "",
           `TONE & STYLE:\n${style}`,
@@ -4994,9 +5666,13 @@
         "FAQ מוכן:",
         `${subjects.join(", ") || "חסר נושא"} · ${localizedLanguageLabel(state.answers.language)} · ${state.answers.count === "quality_first" ? "רק איכותי" : state.answers.count}`,
         `קהל: ${localizedAudience(audienceText()) || "לא הוגדר"}`,
+        `קטגוריות: ${localizedCategoryLabel() || "לא הוגדרו"}`,
+        `חלוקה: ${localizedCategoryCountsLabel() || categoryAllocationText()}`,
         `מקור: ${state.answers.sourceUrl || (state.answers.sourceMode === "none" ? "אין, נסמן לאימות" : "כללי מקור זהירים")}`,
-        `QA: ${localizedQaLabel()}`,
+        `דגשי שאלות: ${guidanceLabel("questionGuidance", questionGuidanceOptions) || "כללי ברירת מחדל"}`,
+        `דגשי תשובות: ${guidanceLabel("answerGuidance", answerGuidanceOptions) || "כללי ברירת מחדל"}`,
         `סגנון: ${localizedStyleLabel()}`,
+        `QA: ${localizedQaLabel()}`,
         "אפשר להריץ כאן או לפתוח את ה־Builder."
       ].join("\n");
     }
@@ -5004,9 +5680,13 @@
       "FAQ ready:",
       `${subjects.join(", ") || "Missing subject"} · ${state.answers.language} · ${state.answers.count === "quality_first" ? "quality first" : state.answers.count}`,
       `Audience: ${localizedAudience(audienceText()) || "not set"}`,
+      `Categories: ${localizedCategoryLabel() || "not set"}`,
+      `Split: ${localizedCategoryCountsLabel() || categoryAllocationText()}`,
       `Source: ${state.answers.sourceUrl || (state.answers.sourceMode === "none" ? "none, mark facts for verification" : "careful source policy")}`,
-      `QA: ${localizedQaLabel()}`,
+      `Question guidance: ${guidanceLabel("questionGuidance", questionGuidanceOptions) || "default rules"}`,
+      `Answer guidance: ${guidanceLabel("answerGuidance", answerGuidanceOptions) || "default rules"}`,
       `Style: ${localizedStyleLabel()}`,
+      `QA: ${localizedQaLabel()}`,
       "Run here or open the Builder."
     ].join("\n");
   }
@@ -5190,9 +5870,13 @@
       [hebrew ? "קהל יעד" : "Audience", Boolean(state.answers.audienceConfirmed && audienceText()), state.answers.audienceConfirmed ? localizedAudience(audienceText()) : ""],
       [hebrew ? "שפה" : "Language", Boolean(state.answers.languageConfirmed), state.answers.languageConfirmed ? localizedLanguageLabel(state.answers.language) : ""],
       [hebrew ? "כמות" : "Depth", Boolean(state.answers.countConfirmed), state.answers.countConfirmed ? (state.answers.count === "quality_first" ? (hebrew ? "רק איכותי" : "Quality first") : state.answers.count) : ""],
+      [hebrew ? "קטגוריות" : "Categories", Boolean(state.answers.categoriesConfirmed), state.answers.categoriesConfirmed ? localizedCategoryLabel() : ""],
+      [hebrew ? "חלוקת שאלות" : "Question split", Boolean(state.answers.categoryCountsConfirmed), state.answers.categoryCountsConfirmed ? (localizedCategoryCountsLabel() || categoryAllocationText()) : ""],
       [hebrew ? "מקור" : "Source", Boolean(state.answers.sourceConfirmed), state.answers.sourceConfirmed ? (state.answers.sourceUrl || state.answers.sourceMode || "") : ""],
-      [hebrew ? "QA" : "QA", Boolean(state.answers.qaConfirmed), state.answers.qaConfirmed ? localizedQaLabel() : ""],
-      [hebrew ? "סגנון" : "Style", Boolean(state.answers.styleConfirmed), state.answers.styleConfirmed ? localizedStyleLabel() : ""]
+      [hebrew ? "דגשי שאלות" : "Question guidance", Boolean(state.answers.questionGuidanceConfirmed), state.answers.questionGuidanceConfirmed ? guidanceLabel("questionGuidance", questionGuidanceOptions) : ""],
+      [hebrew ? "דגשי תשובות" : "Answer guidance", Boolean(state.answers.answerGuidanceConfirmed), state.answers.answerGuidanceConfirmed ? guidanceLabel("answerGuidance", answerGuidanceOptions) : ""],
+      [hebrew ? "סגנון" : "Style", Boolean(state.answers.styleConfirmed), state.answers.styleConfirmed ? localizedStyleLabel() : ""],
+      [hebrew ? "QA" : "QA", Boolean(state.answers.qaConfirmed), state.answers.qaConfirmed ? localizedQaLabel() : ""]
     ];
   }
 
@@ -5446,6 +6130,7 @@
       { label: hebrew ? "תרגום תוכן" : "Translate content", value: "start:translate" },
       { label: hebrew ? "יצירת Schema" : "Create schema", value: "start:schema" },
       { label: hebrew ? "Meta tags" : "Meta tags", value: "start:meta" },
+      { label: hebrew ? "דוחות לקוח" : "Client reports", value: "start:client-reports" },
       { label: hebrew ? "אודיט אתר" : "Site audit", value: "start:site-audit" },
       { label: hebrew ? "אודיט FAQ" : "FAQ audit", value: "start:faq-audit" },
       { label: hebrew ? "עריכת Google Sheet" : "Edit Google Sheet", value: "start:sheet-edit" },
@@ -5461,6 +6146,9 @@
   function currentMultiSelectDoneValue() {
     if (state.mode === "faq") {
       if (state.step === "audience") return "audience-done";
+      if (state.step === "categories") return "categories-done";
+      if (state.step === "questionGuidance") return "question-guidance-done";
+      if (state.step === "answerGuidance") return "answer-guidance-done";
       if (state.step === "qa") return "qa-done";
       if (state.step === "style") return "style-done";
     }
@@ -5526,18 +6214,18 @@
     }
   }
 
+  function storeStructuredReportResult(storagePrefix, result) {
+    try {
+      const key = `${storagePrefix}.${Date.now()}`;
+      localStorage.setItem(key, JSON.stringify({ result, createdAt: new Date().toISOString() }));
+      return key;
+    } catch {
+      return "";
+    }
+  }
+
   function recordStructuredOutputs(markerName, result) {
     if (!result) return;
-
-    if (markerName === "SITE_FAQ_AUDIT" && result.googleSheet?.url) {
-      recordOutput({
-        title: "FAQ audit Google Sheet report",
-        description: `${result.summary?.pagesChecked || 0} pages checked`,
-        type: "google-sheet",
-        url: result.googleSheet.url,
-        source: markerName
-      });
-    }
 
     if (markerName === "SCHEMA_BUILDER") {
       const ids = Array.from(new Set((result.results || [])
@@ -5589,17 +6277,36 @@
 
     if (markerName === "SITE_AI_AUDIT") {
       let reportUrl = "";
-      try {
-        const key = `carmelon.siteAiAudit.result.${Date.now()}`;
-        localStorage.setItem(key, JSON.stringify({ result, createdAt: new Date().toISOString() }));
-        reportUrl = `/site-ai-audit.html?resultKey=${encodeURIComponent(key)}`;
-      } catch {
-        reportUrl = "/site-ai-audit.html";
-      }
+      const key = storeStructuredReportResult("carmelon.siteAiAudit.result", result);
+      reportUrl = key ? `/site-ai-audit.html?resultKey=${encodeURIComponent(key)}` : "/site-ai-audit.html";
       recordOutput({
         title: "Site AI audit report ready",
         description: `Score ${result.score?.total ?? "-"} / 100 · ${result.pages?.length || result.summary?.pagesChecked || 0} pages · ${(result.issues || []).length} issues`,
         type: "audit-report",
+        url: reportUrl,
+        source: markerName
+      });
+    }
+
+    if (markerName === "SITE_FAQ_AUDIT") {
+      if (result.googleSheet?.url) {
+        recordOutput({
+          title: "FAQ audit Google Sheet report",
+          description: `${result.summary?.pagesChecked || 0} pages checked`,
+          type: "google-sheet",
+          url: result.googleSheet.url,
+          source: markerName
+        });
+      }
+
+      const key = storeStructuredReportResult("carmelon.siteFaqAudit.result", result);
+      const reportUrl = key ? `/site-ai-faq-audit.html?resultKey=${encodeURIComponent(key)}` : "/site-ai-faq-audit.html";
+      const summary = result.summary || {};
+      const gapCount = Number(summary.pagesWithMismatch || 0) + Number(summary.pagesMissingSchema || 0) + Number(summary.pagesMissingVisibleFaq || 0);
+      recordOutput({
+        title: "FAQ audit report ready",
+        description: `${summary.pagesChecked || result.pages?.length || 0} pages · ${summary.totalVisibleQuestions || 0} visible Q/A · ${summary.totalSchemaQuestions || 0} schema Q/A · ${gapCount} gaps`,
+        type: "faq-audit-report",
         url: reportUrl,
         source: markerName
       });
@@ -5807,6 +6514,17 @@
             askFaqAuditDiscovery(prefersHebrew()
               ? "המיפוי הסתיים אבל לא התקבלו קבוצות URL מובנות. נסי למפות שוב או לפתוח את ה־workspace."
               : "Discovery finished but no URL groups were parsed. Try mapping again or open the workspace.");
+          }
+        } else if (tool?.id === "site-ai-faq-audit") {
+          const latestFaqOutput = state.outputs.find((item) => item.source === "SITE_FAQ_AUDIT");
+          if (latestFaqOutput?.url) {
+            bot(prefersHebrew()
+              ? "האודיט הסתיים. דוח פנימי לחיץ מוכן ב־Generated outputs. לא יצרתי Google Sheet בלי אישור יצוא נפרד."
+              : "FAQ audit finished. A clickable internal report is ready in Generated outputs. I did not create a Google Sheet without a separate export confirmation.");
+          } else {
+            bot(prefersHebrew()
+              ? "האודיט הסתיים, אבל לא הצלחתי לבנות דוח לחיץ מהתוצאה. בדקי את ה־Run log או הריצי שוב."
+              : "FAQ audit finished, but I could not build a clickable report from the result. Check the run log or run it again.");
           }
         } else {
           bot(`${tool?.title || "The workflow"} finished. Parsed links and result markers were saved in Generated outputs when available.`);

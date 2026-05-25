@@ -494,7 +494,10 @@ export class SiteFaqAuditJob {
     const types = new Set<string>();
     let invalidCount = 0;
 
-    $('script[type="application/ld+json"]').each((_, element) => {
+    $("script").each((_, element) => {
+      const type = String($(element).attr("type") || "").toLowerCase();
+      if (!type.includes("ld+json")) return;
+
       const raw = $(element).contents().text();
       if (!raw.trim()) return;
 

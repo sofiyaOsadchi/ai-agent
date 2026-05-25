@@ -422,7 +422,7 @@
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
     }
 
@@ -1070,13 +1070,16 @@
       lastFaqAudit = result;
       const pages = Array.isArray(result.pages) ? result.pages : [];
       const summary = result.summary || {};
+      const faqPageObjectCount = pages.reduce((sum, page) => sum + Number(page.faqPageSchemaCount || 0), 0);
+      const invalidJsonLdCount = pages.reduce((sum, page) => sum + Number(page.invalidJsonLdCount || 0), 0);
 
       document.getElementById("faqSubtitle").textContent =
-        `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} pages checked | ${summary.totalVisibleQuestions || 0} visible questions`;
+        `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} pages checked | ${summary.totalVisibleQuestions || 0} visible questions | ${summary.totalSchemaQuestions || 0} schema questions | ${faqPageObjectCount} FAQPage objects`;
       document.getElementById("faqMetrics").innerHTML = [
         renderMetric("Pages", summary.pagesChecked || pages.length, "Pages checked", "blue"),
         renderMetric("Visible Q/A", summary.totalVisibleQuestions || 0, "Questions found on pages", ""),
         renderMetric("Schema Q/A", summary.totalSchemaQuestions || 0, "Questions found in FAQPage", ""),
+        renderMetric("FAQPage objects", faqPageObjectCount, invalidJsonLdCount ? `${invalidJsonLdCount} invalid JSON-LD blocks` : "FAQPage JSON-LD blocks found", invalidJsonLdCount ? "amber" : ""),
         renderMetric("Gaps", (summary.pagesWithMismatch || 0) + (summary.pagesMissingSchema || 0) + (summary.pagesMissingVisibleFaq || 0), "Pages that need attention", "red")
       ].join("");
 
@@ -1335,7 +1338,7 @@
     function downloadFaqHtml() {
       if (!lastFaqAudit) return;
       const reportHtml = document.getElementById("faqPanel").querySelector(".panel-body").innerHTML;
-      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><title>FAQ Audit</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#111827}.btn-row,.note a{display:none}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.metric{border:1px solid #dbe3ef;border-radius:10px;padding:10px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #dbe3ef;padding:8px;vertical-align:top;font-size:12px;text-align:left}.url-cell{direction:ltr;text-align:left;word-break:break-all}th{background:#f8fafc}.status-pill,.tiny-pill{display:inline-block;border:1px solid #dbe3ef;border-radius:999px;padding:3px 7px;margin:2px}.hidden{display:none}</style></head><body><h1>Internal FAQ Audit</h1><p>${escapeHtml(lastFaqAudit.normalizedStartUrl || lastFaqAudit.startUrl || "")}</p>${reportHtml}</body></html>`;
+      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><title>FAQ Audit</title><style>body{font-family:Arial,sans-serif;margin:24px;color:#111827}.btn-row,.note a{display:none}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}.metric{border:1px solid #dbe3ef;border-radius:10px;padding:10px}table{width:100%;border-collapse:collapse;margin:14px 0}th,td{border:1px solid #dbe3ef;padding:8px;vertical-align:top;font-size:12px;text-align:left}.url-cell{direction:ltr;text-align:left;word-break:break-all}th{background:#f8fafc}.status-pill,.tiny-pill{display:inline-block;border:1px solid #dbe3ef;border-radius:999px;padding:3px 7px;margin:2px}.hidden{display:none}</style></head><body><h1>Internal FAQ Audit</h1><p>${escapeHtml(lastFaqAudit.normalizedStartUrl || lastFaqAudit.startUrl || "")}</p>${reportHtml}</body></html>`;
       downloadText(`${fileBase()}-faq-audit.html`, html, "text/html;charset=utf-8");
     }
 
@@ -1388,6 +1391,49 @@
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+    }
+
+    function consumeStoredFaqAuditResult() {
+      const key = new URLSearchParams(window.location.search).get("resultKey");
+      if (!key) return false;
+
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          setLog("Could not find the stored FAQ audit result. Run the audit again from the assistant or this page.");
+          return false;
+        }
+
+        const stored = JSON.parse(raw);
+        const result = stored?.result || stored;
+        if (!result || typeof result !== "object") return false;
+
+        document.body.classList.add("standalone-report");
+        document.title = "AI FAQ Audit Report";
+        const title = document.querySelector(".brand-copy h1");
+        const subtitle = document.querySelector(".brand-copy p:last-child");
+        const badge = document.querySelector(".topbar .badge");
+        if (title) title.textContent = "AI FAQ Audit Report";
+        if (subtitle) subtitle.textContent = "Generated report for visible FAQ content, FAQPage schema and implementation gaps.";
+        if (badge) badge.textContent = "Generated report";
+
+        const startUrl = result.normalizedStartUrl || result.startUrl || "";
+        if (startUrl) document.getElementById("startUrl").value = startUrl;
+        if (Array.isArray(result.selectedUrls) && result.selectedUrls.length) {
+          document.getElementById("manualUrls").value = result.selectedUrls.join("\n");
+          document.getElementById("selectedCount").value = String(result.selectedUrls.length);
+        }
+        if (result.summary?.pagesChecked) document.getElementById("faqMaxPages").value = String(result.summary.pagesChecked);
+        const rendered = Array.isArray(result.pages) && result.pages.some((page) => page.rendered);
+        document.getElementById("faqRenderMode").value = rendered ? "rendered" : "static";
+
+        renderFaqAudit(result);
+        setLog("Loaded FAQ audit report from Generated outputs.");
+        return true;
+      } catch (error) {
+        setLog(`Could not load stored FAQ audit result: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
     }
 
     function resetPage() {
@@ -1514,6 +1560,8 @@
         appendLog("Done.");
       });
     }
+
+    consumeStoredFaqAuditResult();
   </script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 
 import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
+import { AnalyticsService, type AnalyticsAccount } from "../services/analytics.js";
 import { SheetsService } from "../services/sheets.js";
 import {
   calculateBreakdown,
@@ -128,8 +129,15 @@ export type ResolvedClientDashboardConfig = {
 };
 
 export type ClientReportsPayload = {
-  spreadsheetId: string;
+  sourceType?: "sheet" | "analytics";
+  spreadsheetId?: string;
   sourceTab?: string;
+
+  analytics?: {
+    accountId?: string;
+    accountName?: string;
+    propertyId?: string;
+  };
 
   reportType?: ClientReportType;
   dateRange?: DateRange;
@@ -147,6 +155,7 @@ export type ClientReportsPayload = {
     outputTabName?: string;
     includeAiSummary?: boolean;
     includeRecommendations?: boolean;
+    reportBrief?: string;
     // בלוקים שהקמפיינר ערך/קיבע - מועברים ל-job כדי שלא יידרסו ב-regeneration.
     preservedBlocks?: InsightBlock[];
   };
@@ -155,8 +164,11 @@ export type ClientReportsPayload = {
 export type ClientReportResult = {
   ok: boolean;
   reportType: ClientReportType;
+  sourceType: "sheet" | "analytics";
+  sourceName: string;
   spreadsheetId: string;
   sourceTab: string;
+  analyticsAccount?: AnalyticsAccount;
   outputTabName?: string;
   rowCount: number;
   filteredRowCount: number;
@@ -336,31 +348,82 @@ export class ClientReportsJob {
   }
 
   async run(payload: ClientReportsPayload): Promise<ClientReportResult> {
-    const spreadsheetId = this.coerceSpreadsheetId(payload.spreadsheetId);
-
-    if (!spreadsheetId) {
-      throw new Error("client-reports: Missing spreadsheetId.");
-    }
-
+    const sourceType: "sheet" | "analytics" = payload.sourceType === "analytics" ? "analytics" : "sheet";
     const reportType = payload.reportType || "campaign-performance-overview";
-    const primaryMetric = payload.primaryMetric || "conversions";
-    const breakdown = payload.breakdown || "campaign";
+    const primaryMetric = payload.primaryMetric || (sourceType === "analytics" ? "sessions" : "conversions");
+    const breakdown = payload.breakdown || (sourceType === "analytics" ? "channel" : "campaign");
     const dashboardConfig = this.resolveDashboardConfig(reportType, payload.dashboardConfig, primaryMetric);
-
-    const sourceTab =
-      payload.sourceTab?.trim() ||
-      await this.sheets.getFirstSheetTitle(spreadsheetId);
+    const normalizedRange: DateRange = {
+      startDate: normalizeDate(payload.dateRange?.startDate),
+      endDate: normalizeDate(payload.dateRange?.endDate),
+    };
 
     console.log(chalk.blue("📊 Starting Client Reports job."));
-    console.log(chalk.cyan(`Spreadsheet: ${spreadsheetId}`));
-    console.log(chalk.cyan(`Tab: ${sourceTab}`));
+    console.log(chalk.cyan(`Source type: ${sourceType}`));
     console.log(chalk.cyan(`Report type: ${reportType}`));
 
-    const range = `${this.quoteA1Sheet(sourceTab)}!A:ZZ`;
-    const rawRows = await this.sheets.readValues(spreadsheetId, range);
+    let spreadsheetId = "";
+    let sourceTab = "";
+    let sourceName = "";
+    let analyticsAccount: AnalyticsAccount | undefined;
+    let rawRows: string[][] = [];
+    let analyticsCurrentRowCount = 0;
+
+    if (sourceType === "analytics") {
+      const analytics = new AnalyticsService();
+      const analyticsDateRange = normalizedRange.startDate || normalizedRange.endDate
+        ? normalizedRange
+        : undefined;
+      const analyticsResult = await analytics.fetchClientReportRows({
+        accountId: payload.analytics?.accountId,
+        propertyId: payload.analytics?.propertyId,
+        dateRange: analyticsDateRange,
+      });
+
+      analyticsAccount = analyticsResult.account;
+      sourceName = analyticsResult.account.name;
+      sourceTab = analyticsResult.account.name;
+      rawRows = analyticsResult.rows;
+      analyticsCurrentRowCount = Math.max(0, rawRows.length - 1);
+
+      const previousRange = this.previousPeriodRange(normalizedRange);
+      if (previousRange) {
+        const previousResult = await analytics.fetchClientReportRows({
+          accountId: payload.analytics?.accountId,
+          propertyId: payload.analytics?.propertyId,
+          dateRange: previousRange,
+        });
+        rawRows = [
+          rawRows[0],
+          ...previousResult.rows.slice(1),
+          ...rawRows.slice(1),
+        ];
+      }
+
+      console.log(chalk.cyan(`Analytics account: ${analyticsResult.account.name}`));
+      console.log(chalk.cyan(`GA4 property: ${analyticsResult.account.propertyId}`));
+      console.log(chalk.cyan(`Analytics fetch range: ${analyticsResult.dateRange.startDate} to ${analyticsResult.dateRange.endDate}`));
+    } else {
+      spreadsheetId = this.coerceSpreadsheetId(payload.spreadsheetId || "");
+
+      if (!spreadsheetId) {
+        throw new Error("client-reports: Missing spreadsheetId.");
+      }
+
+      sourceTab =
+        payload.sourceTab?.trim() ||
+        await this.sheets.getFirstSheetTitle(spreadsheetId);
+      sourceName = sourceTab;
+
+      console.log(chalk.cyan(`Spreadsheet: ${spreadsheetId}`));
+      console.log(chalk.cyan(`Tab: ${sourceTab}`));
+
+      const range = `${this.quoteA1Sheet(sourceTab)}!A:ZZ`;
+      rawRows = await this.sheets.readValues(spreadsheetId, range);
+    }
 
     if (!rawRows.length) {
-      throw new Error(`Source tab "${sourceTab}" is empty.`);
+      throw new Error(sourceType === "analytics" ? "Analytics returned no rows." : `Source tab "${sourceTab}" is empty.`);
     }
 
     const headers = rawRows[0].map((h) => String(h ?? ""));
@@ -372,15 +435,18 @@ export class ClientReportsJob {
     const allRows = normalizeRows(rawRows, resolvedMapping);
     const dateInfo = this.getDateInfo(allRows.map((row) => row.date).filter(Boolean) as string[]);
 
-    const normalizedRange: DateRange = {
-      startDate: normalizeDate(payload.dateRange?.startDate),
-      endDate: normalizeDate(payload.dateRange?.endDate),
-    };
-
     const hasRange = Boolean(normalizedRange.startDate || normalizedRange.endDate);
     const filteredRows = hasRange ? filterRowsByDateRange(allRows, normalizedRange) : allRows;
 
     if (!filteredRows.length) {
+      if (sourceType === "analytics" && hasRange && analyticsCurrentRowCount === 0) {
+        throw new Error([
+          "Analytics returned no rows for the selected date range.",
+          `Selected date range: ${normalizedRange.startDate || "empty"} to ${normalizedRange.endDate || "empty"}.`,
+          "Try Auto latest available or choose a wider range."
+        ].join(" "));
+      }
+
       const details = [
         "No rows matched the selected filters.",
         `Detected date range: ${dateInfo.minDate || "unknown"} to ${dateInfo.maxDate || "unknown"}.`,
@@ -431,6 +497,7 @@ export class ClientReportsJob {
       comparison,
       topBreakdownRows: breakdownRows.slice(0, dashboardConfig.breakdownChart.limit),
       anomalies,
+      reportBrief: payload.options?.reportBrief?.trim() || "",
     };
 
     const includeAiSummary = payload.options?.includeAiSummary !== false;
@@ -467,7 +534,7 @@ export class ClientReportsJob {
 
     let exported = false;
 
-    if (payload.options?.exportToSheet && !payload.options?.dryRun) {
+    if (payload.options?.exportToSheet && !payload.options?.dryRun && sourceType === "sheet") {
       await this.exportReportToSheet({
         spreadsheetId,
         outputTabName,
@@ -488,13 +555,18 @@ export class ClientReportsJob {
       });
 
       exported = true;
+    } else if (payload.options?.exportToSheet && sourceType === "analytics") {
+      console.log(chalk.yellow("Analytics reports are preview-only unless a target export Sheet is added."));
     }
 
     const result: ClientReportResult = {
       ok: true,
       reportType,
+      sourceType,
+      sourceName,
       spreadsheetId,
       sourceTab,
+      analyticsAccount,
       outputTabName: exported ? outputTabName : undefined,
       rowCount: allRows.length,
       filteredRowCount: filteredRows.length,
@@ -557,6 +629,30 @@ export class ClientReportsJob {
     }
 
     return s;
+  }
+
+  private previousPeriodRange(range?: DateRange): DateRange | undefined {
+    const start = normalizeDate(range?.startDate);
+    const end = normalizeDate(range?.endDate);
+
+    if (!start || !end) {
+      return undefined;
+    }
+
+    const startDate = new Date(`${start}T00:00:00Z`);
+    const endDate = new Date(`${end}T00:00:00Z`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return undefined;
+    }
+
+    const days = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+    const previousStart = new Date(startDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+    return {
+      startDate: previousStart.toISOString().slice(0, 10),
+      endDate: new Date(startDate.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    };
   }
 
   private quoteA1Sheet(title: string): string {

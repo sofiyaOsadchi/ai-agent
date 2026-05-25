@@ -322,8 +322,8 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
     console.log(chalk.cyan("💾 Creating Spreadsheet..."));
 
     try {
-      const safeName = subject.replace(/[^a-zA-Z0-9 ]/g, "");
-      const sheetId = await sheets.createSpreadsheet(`Creator: ${safeName}`);
+      const sheetName = subject.trim() || "FAQ";
+      const sheetId = await sheets.createSpreadsheet(sheetName);
       await sheets.uploadTsv(sheetId, finalTsv);
       await sheets.formatSheet(sheetId);
       console.log(chalk.green(`🎉 SUCCESS! Sheet created: https://docs.google.com/spreadsheets/d/${sheetId}`));
@@ -486,8 +486,8 @@ async function runFaqPlaygroundLegacy(agent: AIAgent, sheets: SheetsService, con
       const combinedTsv = combinedRows.map((r) => r.join("\t")).join("\n");
 
       try {
-        const safeName = hotelName.replace(/[^a-zA-Z0-9 ]/g, "");
-        const sheetId = await sheets.createSpreadsheet(`Creator: ${safeName}`);
+        const sheetName = hotelName.trim() || "FAQ";
+        const sheetId = await sheets.createSpreadsheet(sheetName);
         await sheets.uploadTsv(sheetId, combinedTsv);
         await sheets.formatSheet(sheetId);
         console.log(

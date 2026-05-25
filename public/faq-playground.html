@@ -779,6 +779,277 @@
       color: var(--ink);
     }
 
+    .signals-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .signals-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .signals-card h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .signals-card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .signals-source-row,
+    .signals-actions,
+    .signals-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .signals-source-row {
+      margin-bottom: 14px;
+    }
+
+    .signals-source-row .source-chip {
+      margin: 0;
+    }
+
+    .signals-metrics {
+      margin: 14px 0;
+    }
+
+    .signals-metric {
+      flex: 1 1 140px;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: var(--surface-soft);
+    }
+
+    .signals-metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .signals-metric strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .linked-subject {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: var(--surface-soft);
+      min-height: 56px;
+    }
+
+    .linked-subject strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .linked-subject small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .signals-brief {
+      min-height: 300px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .signals-list {
+      display: grid;
+      gap: 10px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .signals-candidate {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+
+    .signals-candidate.is-starter {
+      border-style: dashed;
+      background: #fffaf3;
+    }
+
+    .signals-candidate input {
+      margin-top: 4px;
+    }
+
+    .signals-candidate strong {
+      display: block;
+      color: var(--ink);
+      line-height: 1.35;
+    }
+
+    .signals-candidate small {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .signal-origin {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      margin-top: 8px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #e8f1ff;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .signals-candidate.is-starter .signal-origin {
+      background: #fff2da;
+      color: #9a5a00;
+    }
+
+    .signals-status {
+      min-height: 24px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .signals-diagnostics {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .signals-diagnostics.is-visible {
+      display: block;
+    }
+
+    .signals-diagnostics strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .signals-diagnostics ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
+    .signals-diagnostics li + li {
+      margin-top: 4px;
+    }
+
+    .demand-helper {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .demand-helper > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 18px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .demand-helper > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .demand-helper > summary::after {
+      content: "Open";
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: var(--purple-dark);
+      background: var(--surface-soft);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .demand-helper[open] > summary {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+
+    .demand-helper[open] > summary::after {
+      content: "Close";
+    }
+
+    .demand-helper strong {
+      display: block;
+      margin-top: 2px;
+      color: var(--ink);
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .demand-helper small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .demand-helper-body {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .demand-brief-card {
+      grid-column: 1 / -1;
+    }
+
     .field {
       display: grid;
       gap: 8px;
@@ -2363,6 +2634,8 @@
       .summary-grid,
       .category-grid,
       .chat-shell,
+      .signals-grid,
+      .demand-helper-body,
       .output-grid,
       .mini-grid {
         grid-template-columns: 1fr;
@@ -2609,9 +2882,122 @@
               </details>
             </div>
 
+            <details class="demand-helper wide-field" id="faqDemandPanel">
+              <summary>
+                <span>
+                  <span class="eyebrow">Optional question helper</span>
+                  <strong>Use Analytics and Search Console phrases</strong>
+                  <small>Find long-tail search phrases that include the brand or product name, then choose which phrases should guide the question prompt.</small>
+                </span>
+              </summary>
+
+              <div class="demand-helper-body">
+                <div class="signals-card">
+                  <div class="source-panel-head">
+                    <h3 class="source-panel-title">Search phrase source</h3>
+                    <button class="ghost-btn" type="button" id="faqDemandRefreshSourcesBtn">Refresh sources</button>
+                  </div>
+                  <p>Use this only to discover question demand. It does not replace factual sources for answers.</p>
+
+                  <div class="signals-source-row">
+                    <label class="source-chip"><input id="faqDemandUseAnalytics" type="checkbox" checked />Google Analytics</label>
+                    <label class="source-chip"><input id="faqDemandUseSearchConsole" type="checkbox" checked />Search Console</label>
+                  </div>
+
+                  <div class="grid control-grid">
+                    <div class="field">
+                      <span>Using subject</span>
+                      <div class="linked-subject ltr">
+                        <strong id="faqDemandSubjectName">No subject yet</strong>
+                        <small id="faqDemandSubjectHint">Taken from the first topic above.</small>
+                      </div>
+                    </div>
+
+                    <label class="field">
+                      <span>Date range</span>
+                      <select id="faqDemandRange" class="select">
+                        <option value="90">Last 90 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="180">Last 180 days</option>
+                      </select>
+                    </label>
+
+                    <label class="field">
+                      <span>Top phrases</span>
+                      <select id="faqDemandMaxPhrases" class="select">
+                        <option value="5" selected>Top 5</option>
+                        <option value="10">Top 10</option>
+                        <option value="15">Top 15</option>
+                      </select>
+                    </label>
+
+                    <label class="field">
+                      <span>Questions per phrase</span>
+                      <select id="faqDemandQuestionsPerPhrase" class="select">
+                        <option value="1" selected>1 question</option>
+                        <option value="2">2 questions</option>
+                        <option value="3">3 questions</option>
+                      </select>
+                    </label>
+
+                    <label class="field">
+                      <span>GA4 account</span>
+                      <select id="faqDemandAnalyticsAccount" class="select ltr"></select>
+                    </label>
+
+                    <label class="field">
+                      <span>Search Console site</span>
+                      <select id="faqDemandSearchSite" class="select ltr"></select>
+                    </label>
+
+                    <label class="field wide-field">
+                      <span>Website URL fallback</span>
+                      <input id="faqDemandWebsiteUrl" class="input ltr" placeholder="https://www.example.com/" />
+                    </label>
+                  </div>
+
+                  <div class="signals-actions" style="margin-top: 16px;">
+                    <button class="btn secondary" type="button" id="faqDemandRunBtn">Find phrases</button>
+                    <button class="ghost-btn" type="button" id="faqDemandCopyBriefBtn">Copy phrase brief</button>
+                  </div>
+                  <div class="signals-status" id="faqDemandStatus" style="margin-top: 12px;">Open this helper when you want Analytics/Search Console terms to guide question generation.</div>
+                  <div class="signals-diagnostics" id="faqDemandDiagnostics" aria-live="polite"></div>
+                </div>
+
+                <div class="signals-card">
+                  <h3>Search phrases to turn into FAQ intent</h3>
+                  <p>Select the long-tail phrases that should influence the question prompt. Similar phrases are deduped by intent after removing the brand name.</p>
+                  <div class="signals-metrics">
+                    <div class="signals-metric"><span>Matched queries</span><strong id="faqDemandQueryCount">0</strong></div>
+                    <div class="signals-metric"><span>Matched pages</span><strong id="faqDemandPageCount">0</strong></div>
+                    <div class="signals-metric"><span>Source phrases</span><strong id="faqDemandIdeaCount">0</strong></div>
+                    <div class="signals-metric"><span>Starter ideas</span><strong id="faqDemandStarterCount">0</strong></div>
+                  </div>
+                  <div class="signals-list" id="faqDemandCandidates">
+                    <div class="empty-output">Find phrases to see selectable search demand here.</div>
+                  </div>
+                </div>
+
+                <div class="signals-card demand-brief-card">
+                  <div class="section-title">
+                    <div>
+                      <p class="eyebrow">Prompt bridge</p>
+                      <h2>Search phrase brief</h2>
+                      <p class="subtitle">This gets inserted into the Research questions prompt. The FAQ agent should generate natural questions from the selected phrases and avoid duplicates.</p>
+                    </div>
+                    <div class="toolbar">
+                      <button class="ghost-btn" type="button" id="faqDemandApplyCategoriesBtn">Use intent categories</button>
+                      <button class="ghost-btn" type="button" id="faqDemandApplyPromptBtn">Apply to question prompt</button>
+                    </div>
+                  </div>
+                  <textarea id="faqDemandBrief" class="textarea signals-brief ltr" placeholder="Find phrases to generate a brief."></textarea>
+                </div>
+              </div>
+            </details>
+
             <div class="read-only-note wide-field">
               <span>The sheet name is generated automatically from the subject:</span>
-              <strong id="sheetNamePreview">Creator: {{subject}}</strong>
+              <strong id="sheetNamePreview">{{subject}}</strong>
             </div>
           </div>
         </div>
@@ -3197,6 +3583,8 @@
     const artifactList = $("artifactList");
     let outputArtifacts = loadOutputArtifacts();
     let activeRunSubject = "";
+    let faqDemandSourcesLoaded = false;
+    let faqDemandLastResult = null;
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -3909,8 +4297,9 @@
       $("taskCount").textContent = enabledTasks.length;
       $("modelShort").textContent = model.replace("gpt-", "");
       $("sheetNamePreview").textContent = subjects.length
-        ? subjects.slice(0, 3).map((subject) => `Creator: ${subject}`).join(" | ")
+        ? subjects.slice(0, 3).join(" | ")
         : "Generated automatically from the subject name";
+      syncFaqDemandSubject();
       $("runSummary").textContent = subjects.length
         ? `Ready to run: ${subjects.length} subjects, ${enabledTasks.length} tasks`
         : "Ready to run";
@@ -3923,6 +4312,267 @@
         .join("") || `<span class="badge">No active tasks</span>`;
 
       updateCardStates();
+    }
+
+    function dateInputValue(daysAgo) {
+      const date = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function faqDemandDateRange() {
+      const days = Number($("faqDemandRange")?.value || 90);
+      return {
+        startDate: dateInputValue(days + 2),
+        endDate: dateInputValue(2)
+      };
+    }
+
+    function syncFaqDemandSubject() {
+      const subject = getFaqDemandSubject();
+      const name = $("faqDemandSubjectName");
+      const hint = $("faqDemandSubjectHint");
+      if (name) name.textContent = subject || "No subject yet";
+      if (hint) {
+        const subjectCount = getSubjects().length;
+        hint.textContent = subject
+          ? (subjectCount > 1 ? "Using the first topic above for this phrase scan." : "Taken directly from the topic above.")
+          : "Enter a topic above before scanning Analytics/Search Console.";
+      }
+    }
+
+    function getFaqDemandSubject() {
+      return getSubjects()[0] || "";
+    }
+
+    function selectedFaqDemandAnalyticsAccount() {
+      const select = $("faqDemandAnalyticsAccount");
+      const option = select?.selectedOptions?.[0];
+      return {
+        accountId: select?.value || "",
+        propertyId: option?.dataset.propertyId || ""
+      };
+    }
+
+    async function loadFaqDemandSources(force = false) {
+      if (faqDemandSourcesLoaded && !force) return;
+      const status = $("faqDemandStatus");
+      if (status) status.textContent = "Loading connected sources...";
+
+      try {
+        const response = await fetch("/api/faq-demand/sources");
+        if (!response.ok) throw new Error(await response.text());
+        const data = await response.json();
+
+        const analyticsSelect = $("faqDemandAnalyticsAccount");
+        const analyticsAccounts = Array.isArray(data.analyticsAccounts) ? data.analyticsAccounts : [];
+        analyticsSelect.innerHTML = analyticsAccounts.length
+          ? analyticsAccounts.map((account) => `
+            <option value="${escapeHtml(account.id)}" data-property-id="${escapeHtml(account.propertyId || "")}">
+              ${escapeHtml(account.name || account.propertyId || account.id)}
+            </option>
+          `).join("")
+          : `<option value="">No GA4 account found</option>`;
+
+        const searchSelect = $("faqDemandSearchSite");
+        const searchSites = Array.isArray(data.searchConsoleSites) ? data.searchConsoleSites : [];
+        searchSelect.innerHTML = searchSites.length
+          ? searchSites.map((site) => `
+            <option value="${escapeHtml(site.siteUrl)}">
+              ${escapeHtml(site.name || site.siteUrl)}
+            </option>
+          `).join("")
+          : `<option value="">Use website URL fallback</option>`;
+
+        faqDemandSourcesLoaded = true;
+        if (status) status.textContent = "Sources loaded. Choose a range and analyze demand.";
+      } catch (error) {
+        if (status) status.textContent = `Could not load sources: ${error.message}`;
+      }
+    }
+
+    function renderFaqDemandResult(result) {
+      faqDemandLastResult = result;
+      $("faqDemandBrief").value = result.promptBrief || "";
+      $("faqDemandQueryCount").textContent = String(result.topQueries?.length || 0);
+      $("faqDemandPageCount").textContent = String(result.topLandingPages?.length || 0);
+      const phrases = Array.isArray(result.phrases) ? result.phrases : [];
+      const sourcePhrases = phrases.filter((phrase) => phrase.source !== "starter-intent");
+      const starterPhrases = phrases.filter((phrase) => phrase.source === "starter-intent");
+      $("faqDemandIdeaCount").textContent = String(sourcePhrases.length);
+      $("faqDemandStarterCount").textContent = String(starterPhrases.length);
+
+      $("faqDemandCandidates").innerHTML = phrases.length
+        ? phrases.map((phrase, index) => `
+          <label class="signals-candidate${phrase.source === "starter-intent" ? " is-starter" : ""}">
+            <input type="checkbox" ${phrase.source === "starter-intent" ? "" : "checked"} data-faq-demand-phrase="${index}" />
+            <span>
+              <strong>${escapeHtml(phrase.phrase)}</strong>
+              <small>Intent: ${escapeHtml(phrase.intent || phrase.phrase)} · ${escapeHtml(phrase.category)} · ${escapeHtml(phrase.source)} · ${escapeHtml(phrase.evidence || "")}</small>
+              <span class="signal-origin">${phrase.source === "starter-intent" ? "Fallback suggestion" : "Real source signal"}</span>
+            </span>
+          </label>
+        `).join("")
+        : `<div class="empty-output">No useful long-tail phrases were found. Try a wider range or a Search Console site URL.</div>`;
+
+      const warnings = result.sources?.warnings || [];
+      $("faqDemandStatus").textContent = starterPhrases.length && !sourcePhrases.length
+        ? "No matching Analytics/Search Console rows were found. Starter ideas are shown unchecked so they are not mistaken for real data."
+        : warnings.length
+        ? `Phrase scan finished with ${warnings.length} warning(s).`
+        : "Phrase scan finished. Select phrases, then apply the brief to the question prompt.";
+
+      renderFaqDemandDiagnostics(result, warnings);
+    }
+
+    function renderFaqDemandDiagnostics(result, warnings = []) {
+      const diagnostics = $("faqDemandDiagnostics");
+      if (!diagnostics) return;
+
+      const counts = result.sources?.signalCounts || {};
+      const lines = [
+        `Search Console queries: ${counts.matchedQueries ?? result.topQueries?.length ?? 0} matched / ${counts.rawQueries ?? result.topQueries?.length ?? 0} returned`,
+        `Analytics pages: ${counts.matchedLandingPages ?? result.topLandingPages?.length ?? 0} matched / ${counts.rawLandingPages ?? result.topLandingPages?.length ?? 0} returned`,
+        `GA4 site-search terms: ${counts.matchedSiteSearchTerms ?? result.topSiteSearchTerms?.length ?? 0} matched / ${counts.rawSiteSearchTerms ?? result.topSiteSearchTerms?.length ?? 0} returned`,
+        `Source phrases: ${counts.sourcePhrases ?? 0}; starter ideas: ${counts.starterIdeas ?? 0}`
+      ];
+
+      const shouldShow = warnings.length || Number(counts.rawQueries || 0) === 0 || Number(counts.sourcePhrases || 0) === 0;
+      diagnostics.classList.toggle("is-visible", Boolean(shouldShow));
+      diagnostics.innerHTML = shouldShow
+        ? `
+          <strong>Source diagnostics</strong>
+          <div>${lines.map(escapeHtml).join("<br />")}</div>
+          ${warnings.length ? `<ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>` : ""}
+        `
+        : "";
+    }
+
+    function selectedFaqDemandBrief() {
+      const result = faqDemandLastResult;
+      if (!result) return "";
+      const selected = Array.from(document.querySelectorAll("[data-faq-demand-phrase]:checked"))
+        .map((input) => result.phrases?.[Number(input.dataset.faqDemandPhrase)])
+        .filter(Boolean);
+      const questionsPerPhrase = Number($("faqDemandQuestionsPerPhrase")?.value || 1);
+
+      if (!selected.length) return "";
+
+      const hasStarter = selected.some((phrase) => phrase.source === "starter-intent");
+
+      return [
+        `SEARCH-DEMAND FAQ BRIEF FOR ${result.subject || getFaqDemandSubject()}`,
+        "",
+        "Use these selected phrases to influence the Research questions task. They do not replace factual answer sources.",
+        "For final answers, verify facts against official or otherwise approved sources.",
+        hasStarter ? "Some selected phrases are fallback suggestions, not proof that users searched those exact terms." : "All selected phrases are real source signals from Analytics/Search Console.",
+        "",
+        "SELECTED PHRASES TO TURN INTO FAQ QUESTIONS:",
+        `Generate up to ${questionsPerPhrase} natural FAQ question(s) from each selected phrase, but merge duplicates across similar intents.`,
+        ...selected.map((phrase) => `- ${phrase.phrase} | Intent: ${phrase.intent || phrase.phrase} | ${phrase.source}: ${phrase.evidence}`)
+      ].join("\n");
+    }
+
+    async function analyzeFaqDemandSignals() {
+      syncFaqDemandSubject();
+      const runButton = $("faqDemandRunBtn");
+      const status = $("faqDemandStatus");
+      const analyticsAccount = selectedFaqDemandAnalyticsAccount();
+      const searchSite = $("faqDemandSearchSite")?.value || "";
+      const websiteUrl = $("faqDemandWebsiteUrl")?.value || "";
+      const maxPhrases = Number($("faqDemandMaxPhrases")?.value || 5);
+      const questionsPerPhrase = Number($("faqDemandQuestionsPerPhrase")?.value || 1);
+      const subject = getFaqDemandSubject();
+
+      if (!subject) {
+        status.textContent = "Enter a topic above before scanning Analytics/Search Console.";
+        return;
+      }
+
+      runButton.disabled = true;
+      runButton.textContent = "Finding phrases...";
+      status.textContent = `Pulling GA4/Search Console phrases for ${subject} and deduping by intent...`;
+
+      try {
+        const response = await fetch("/api/faq-demand/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject,
+            websiteUrl,
+            dateRange: faqDemandDateRange(),
+            analytics: {
+              enabled: $("faqDemandUseAnalytics")?.checked === true,
+              accountId: analyticsAccount.accountId,
+              propertyId: analyticsAccount.propertyId
+            },
+            searchConsole: {
+              enabled: $("faqDemandUseSearchConsole")?.checked === true,
+              siteUrl: searchSite || websiteUrl
+            },
+            limit: 80,
+            maxPhrases,
+            questionsPerPhrase
+          })
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body?.error || await response.text());
+        }
+
+        renderFaqDemandResult(await response.json());
+      } catch (error) {
+        status.textContent = `Signal analysis failed: ${error.message}`;
+      } finally {
+        runButton.disabled = false;
+        runButton.textContent = "Find phrases";
+      }
+    }
+
+    function applyFaqDemandToQuestionPrompt() {
+      const brief = selectedFaqDemandBrief().trim();
+      if (!brief) {
+        alert("Select at least one source phrase or starter idea before applying.");
+        return;
+      }
+
+      upsertPromptBlock("user-1", "Search phrase demand signals", brief);
+      const taskToggle = $("enable-1");
+      if (taskToggle) taskToggle.checked = true;
+      updateSummary();
+      saveState();
+      $("saveStatus").textContent = "Demand brief applied";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
+    }
+
+    function applyFaqDemandCategories() {
+      const result = faqDemandLastResult;
+      const categories = Array.isArray(result?.categories) ? result.categories : [];
+      if (!categories.length) {
+        alert("Analyze signals first to generate category ideas.");
+        return;
+      }
+
+      applyCustomCategories(categories.map((category) => {
+        const signals = category.signals?.length ? ` Signals: ${category.signals.join(", ")}` : "";
+        return `${category.title} - ${category.description}${signals}`;
+      }).join("\n"));
+      $("saveStatus").textContent = "Demand categories applied";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
+    }
+
+    function copyFaqDemandBrief() {
+      const brief = selectedFaqDemandBrief().trim();
+      if (!brief) {
+        alert("Select at least one source phrase or starter idea first.");
+        return;
+      }
+      navigator.clipboard?.writeText(brief);
+      $("saveStatus").textContent = "Demand brief copied";
+      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1600);
     }
 
     function setActivePreset(preset, shouldApply = true, options = {}) {
@@ -4342,6 +4992,17 @@
       event.target.value = "";
     });
     $("resetBtn").addEventListener("click", resetStudio);
+    $("faqDemandPanel")?.addEventListener("toggle", () => {
+      if ($("faqDemandPanel")?.open) {
+        syncFaqDemandSubject();
+        loadFaqDemandSources();
+      }
+    });
+    $("faqDemandRefreshSourcesBtn")?.addEventListener("click", () => loadFaqDemandSources(true));
+    $("faqDemandRunBtn")?.addEventListener("click", analyzeFaqDemandSignals);
+    $("faqDemandApplyPromptBtn")?.addEventListener("click", applyFaqDemandToQuestionPrompt);
+    $("faqDemandApplyCategoriesBtn")?.addEventListener("click", applyFaqDemandCategories);
+    $("faqDemandCopyBriefBtn")?.addEventListener("click", copyFaqDemandBrief);
 
     socket.on("log", (msg) => appendLog(msg));
 

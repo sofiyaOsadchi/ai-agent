@@ -21,7 +21,9 @@
         <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
-        <h1>Carmelon Client Reports Dashboard</h1>
+        <div class="eyebrow">REPORTS</div>
+        <h1>Carmelon Client Reports</h1>
+        <p>Analytics-backed dashboards for client readouts.</p>
       </div>
     </div>
 
@@ -36,9 +38,9 @@
   <div class="layout">
     <aside class="setup-panel">
       <div class="setup-hero">
-        <div class="setup-eyebrow">Report builder</div>
-        <h2>Create a client dashboard</h2>
-        <p>Choose the source, report goal and focus. Advanced controls stay hidden unless needed.</p>
+        <div class="setup-eyebrow">Report setup</div>
+        <h2>What should the report show?</h2>
+        <p>Pick a data source, choose the story, then generate a clean dashboard preview.</p>
       </div>
 
       <div class="setup-progress" aria-label="Report setup steps">
@@ -61,14 +63,42 @@
         </div>
         <div class="card-body">
           <div class="field">
-            <label for="spreadsheetId">Google Sheet ID / URL</label>
-            <input id="spreadsheetId" placeholder="Paste Google Sheet URL or ID" />
-            <div class="hint">For now the report reads data from a Google Sheet. Later this can be replaced by Analytics source selection.</div>
+            <label for="sourceType">Data source</label>
+            <div class="segmented-control source-segment" aria-label="Data source">
+              <button type="button" data-source-option="analytics" class="active">Analytics</button>
+              <button type="button" data-source-option="sheet">Google Sheet</button>
+            </div>
+            <select id="sourceType" class="sr-only" aria-label="Data source">
+              <option value="sheet">Google Sheet</option>
+              <option value="analytics" selected>Google Analytics</option>
+            </select>
           </div>
 
-          <div class="field compact-field">
-            <label for="sourceTab">Tab name</label>
-            <input id="sourceTab" placeholder="Auto-detect first tab if empty" />
+          <div id="analyticsSourceFields" class="source-fields collapsed-ui is-open">
+            <div id="analyticsConnectionCard" class="connection-card is-loading">
+              <span class="connection-dot"></span>
+              <span>
+                <strong id="analyticsConnectionTitle">Checking Analytics connection</strong>
+                <small id="analyticsConnectionMeta">Loading connected account...</small>
+              </span>
+            </div>
+            <div class="field">
+              <label for="analyticsAccount">Analytics account</label>
+              <select id="analyticsAccount"></select>
+              <div class="hint">Only one account is connected today. This selector is ready for more client accounts later.</div>
+            </div>
+          </div>
+
+          <div id="sheetSourceFields" class="source-fields collapsed-ui">
+            <div class="field">
+              <label for="spreadsheetId">Google Sheet ID / URL</label>
+              <input id="spreadsheetId" placeholder="Paste Google Sheet URL or ID" />
+            </div>
+
+            <div class="field compact-field">
+              <label for="sourceTab">Tab name</label>
+              <input id="sourceTab" placeholder="Auto-detect first tab if empty" />
+            </div>
           </div>
         </div>
       </div>
@@ -84,18 +114,18 @@
           <div class="field">
             <label for="reportType">What should this report focus on?</label>
             <select id="reportType">
-              <option value="campaign-performance-overview">Campaign Performance Overview</option>
-              <option value="monthly-client-report">Monthly Client Report</option>
-              <option value="channel-comparison-report">Channel Comparison Report</option>
-              <option value="budget-pacing-report">Budget Pacing Report</option>
+              <option value="seo-traffic-report">Traffic & SEO Overview</option>
+              <option value="executive-summary-report">Executive Summary</option>
+              <option value="channel-comparison-report">Channel Comparison</option>
               <option value="leads-conversions-report">Leads / Conversions Report</option>
-              <option value="seo-traffic-report">SEO Traffic Report</option>
-              <option value="ecommerce-roas-report">Ecommerce ROAS Report</option>
-              <option value="anomaly-opportunities-report">Anomaly & Opportunities Report</option>
-              <option value="executive-summary-report">Executive Summary Report</option>
-              <option value="custom-metrics-dashboard">Custom Metrics Dashboard</option>
+              <option value="campaign-performance-overview">Campaign Performance</option>
             </select>
-            <div class="hint">The template automatically chooses KPI cards, charts, table columns and AI blocks.</div>
+            <div class="hint">The template chooses KPIs, charts and table columns automatically.</div>
+          </div>
+
+          <div class="field">
+            <label for="reportBrief">What do you want to see?</label>
+            <textarea id="reportBrief" class="brief-input" placeholder="Example: show traffic quality, top channels, where conversions came from, and what needs attention."></textarea>
           </div>
 
           <div class="template-summary" id="templateSummary">
@@ -116,7 +146,7 @@
           <div class="field">
             <label for="datePreset">Date range</label>
             <select id="datePreset">
-              <option value="all">All available data</option>
+              <option value="all">Auto latest available</option>
               <option value="last-7">Last 7 days</option>
               <option value="last-30">Last 30 days</option>
               <option value="this-month">This month</option>
@@ -350,7 +380,7 @@
 
     <main>
       <section id="emptyState" class="empty">
-        Configure a Google Sheet source and generate a dashboard preview.
+        Choose Analytics or a Google Sheet source and generate a dashboard preview.
         <br />
         The result will include KPI cards, charts, breakdown table, AI summary and recommendations.
       </section>
@@ -536,6 +566,14 @@
       paidTraffic: "Paid Traffic"
     };
 
+    const ANALYTICS_ACCOUNTS = [
+      {
+        id: "default-ga4",
+        name: "Connected GA4 account",
+        propertyId: ""
+      }
+    ];
+
     const EXTRA_CHART_MODULES = [
       {
         id: "comparison",
@@ -655,14 +693,61 @@
     }
 
     function initControls() {
+      renderAnalyticsAccounts();
+      loadAnalyticsAccounts();
       fillMetricSelect("primaryMetric", "conversions");
       fillMetricSelect("breakdownMetric", "conversions");
       renderMetricCheckboxes("kpiMetricsList", "kpiMetric", DEFAULT_PRESETS["campaign-performance-overview"].kpiMetrics);
       renderMetricCheckboxes("trendMetricsList", "trendMetric", DEFAULT_PRESETS["campaign-performance-overview"].trendMetrics);
       renderChartModules();
+      if (value("sourceType") === "analytics" && value("reportType") === "campaign-performance-overview") {
+        $("reportType").value = "seo-traffic-report";
+      }
       applyPreset(false);
       applyDatePreset();
+      updateSourceControls();
+      updateSourceSegment();
       updateChoiceCards();
+    }
+
+    function renderAnalyticsAccounts(accounts = ANALYTICS_ACCOUNTS) {
+      const select = $("analyticsAccount");
+      if (!select) return;
+      const currentValue = select.value;
+      select.innerHTML = accounts.map((account) => `
+        <option value="${escapeHtml(account.id)}" data-property-id="${escapeHtml(account.propertyId || "")}">${escapeHtml(account.name)}</option>
+      `).join("");
+      if (currentValue && Array.from(select.options).some((option) => option.value === currentValue)) {
+        select.value = currentValue;
+      }
+      updateAnalyticsConnectionCard(accounts);
+    }
+
+    async function loadAnalyticsAccounts() {
+      try {
+        const response = await fetch("/api/analytics/accounts");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!Array.isArray(data.accounts) || !data.accounts.length) return;
+        renderAnalyticsAccounts(data.accounts);
+      } catch {
+        // Keep the local placeholder account when the backend endpoint is unavailable.
+      }
+    }
+
+    function updateAnalyticsConnectionCard(accounts = null) {
+      const card = $("analyticsConnectionCard");
+      if (!card) return;
+      const account = selectedAnalyticsAccount();
+      const accountCount = accounts?.length || $("analyticsAccount")?.options?.length || 0;
+      const hasProperty = Boolean(account.propertyId);
+      card.classList.toggle("is-loading", false);
+      card.classList.toggle("is-connected", hasProperty || accountCount > 0);
+      card.classList.toggle("is-missing", !hasProperty && accountCount === 0);
+      $("analyticsConnectionTitle").textContent = hasProperty || accountCount > 0 ? "Analytics connected" : "Analytics account not found";
+      $("analyticsConnectionMeta").textContent = hasProperty
+        ? `${account.accountName} · property ${account.propertyId}`
+        : (accountCount > 0 ? account.accountName : "Check GA4_PROPERTY_ID or connected accounts.");
     }
 
     function fillMetricSelect(id, selected) {
@@ -725,8 +810,15 @@
       return { className: hit ? "is-hit" : "is-miss", label, text };
     }
 
+    function defaultChartModuleIds() {
+      if (value("sourceType") === "analytics") {
+        return ["comparison", "funnel", "share"];
+      }
+      return EXTRA_CHART_MODULES.filter((module) => module.defaultOn).map((module) => module.id);
+    }
+
     function renderChartModules(selectedIds) {
-      const selected = new Set(selectedIds || EXTRA_CHART_MODULES.filter((module) => module.defaultOn).map((module) => module.id));
+      const selected = new Set(selectedIds || defaultChartModuleIds());
 
       $("chartModulesList").innerHTML = EXTRA_CHART_MODULES.map((module) => `
         <div class="module-card">
@@ -921,7 +1013,10 @@
       });
     });
 
-    $("datePreset").addEventListener("change", applyDatePreset);
+    $("datePreset").addEventListener("change", () => {
+      applyDatePreset();
+      updateSourceControls();
+    });
 
     function applyDatePreset() {
       const preset = value("datePreset");
@@ -966,7 +1061,10 @@
     }
 
     function toDateInputValue(date) {
-      return date.toISOString().slice(0, 10);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
 
     function updateChoiceCards() {
@@ -976,8 +1074,60 @@
       });
     }
 
+    function selectedAnalyticsAccount() {
+      const select = $("analyticsAccount");
+      const option = select?.selectedOptions?.[0];
+      return {
+        accountId: select?.value || "default-ga4",
+        accountName: option?.textContent?.trim() || "Connected GA4 account",
+        propertyId: option?.dataset?.propertyId || ""
+      };
+    }
+
+    function updateSourceControls() {
+      const isAnalytics = value("sourceType") === "analytics";
+      document.body.classList.toggle("source-analytics", isAnalytics);
+      document.body.classList.toggle("source-sheet", !isAnalytics);
+      updateSourceSegment();
+      $("analyticsSourceFields").classList.toggle("is-open", isAnalytics);
+      $("sheetSourceFields").classList.toggle("is-open", !isAnalytics);
+      $("spreadsheetId").disabled = isAnalytics;
+      $("sourceTab").disabled = isAnalytics;
+      $("analyticsAccount").disabled = !isAnalytics;
+
+      if (isAnalytics && value("breakdown") === "campaign") {
+        $("breakdown").value = "channel";
+      }
+
+      $("exportToSheet").disabled = isAnalytics;
+      if (isAnalytics) $("exportToSheet").checked = false;
+      updateAnalyticsConnectionCard();
+      updateChoiceCards();
+    }
+
+    function updateSourceSegment() {
+      document.querySelectorAll("[data-source-option]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.sourceOption === value("sourceType"));
+      });
+    }
+
     ["dryRun", "exportToSheet"].forEach((id) => {
       $(id).addEventListener("change", updateChoiceCards);
+    });
+
+    $("sourceType").addEventListener("change", () => {
+      updateSourceControls();
+      const preset = value("sourceType") === "analytics" ? "seo-traffic-report" : "campaign-performance-overview";
+      $("reportType").value = preset;
+      renderChartModules();
+      applyPreset(false);
+    });
+    $("analyticsAccount")?.addEventListener("change", () => updateAnalyticsConnectionCard());
+    document.querySelectorAll("[data-source-option]").forEach((button) => {
+      button.addEventListener("click", () => {
+        $("sourceType").value = button.dataset.sourceOption;
+        $("sourceType").dispatchEvent(new Event("change", { bubbles: true }));
+      });
     });
 
     function buildDashboardConfig() {
@@ -1026,10 +1176,15 @@
     }
 
     function buildPayload() {
+      const sourceType = value("sourceType") || "analytics";
+      const analytics = selectedAnalyticsAccount();
+
       return {
         mode: "client-reports",
-        spreadsheetId: value("spreadsheetId"),
-        sourceTab: optionalValue("sourceTab"),
+        sourceType,
+        spreadsheetId: sourceType === "sheet" ? value("spreadsheetId") : "",
+        sourceTab: sourceType === "sheet" ? optionalValue("sourceTab") : undefined,
+        analytics: sourceType === "analytics" ? analytics : undefined,
 
         reportType: value("reportType"),
         primaryMetric: value("primaryMetric"),
@@ -1062,7 +1217,8 @@
           exportToSheet: checked("exportToSheet"),
           includeAiSummary: checked("includeAiSummary"),
           includeRecommendations: checked("includeRecommendations"),
-          outputTabName: optionalValue("outputTabName")
+          outputTabName: optionalValue("outputTabName"),
+          reportBrief: optionalValue("reportBrief")
         }
       };
     }
@@ -1102,8 +1258,13 @@
     runBtn.addEventListener("click", () => {
       const payload = buildPayload();
 
-      if (!payload.spreadsheetId) {
+      if (payload.sourceType === "sheet" && !payload.spreadsheetId) {
         alert("Please enter a Google Sheet ID or URL.");
+        return;
+      }
+
+      if (payload.sourceType === "analytics" && !payload.analytics?.accountId) {
+        alert("Please choose an Analytics account.");
         return;
       }
 
@@ -1186,15 +1347,17 @@
     function renderDashboardHero(result) {
       const dateInfo = result.dateInfo || {};
       const reportType = readableReportType(result.reportType);
-      const source = result.sourceTab || "Google Sheet";
+      const source = result.sourceName || result.sourceTab || (result.sourceType === "analytics" ? "Google Analytics" : "Google Sheet");
       const rows = result.filteredRowCount || 0;
-      const dateRange = dateInfo.minDate && dateInfo.maxDate ? `${dateInfo.minDate} - ${dateInfo.maxDate}` : "No date range detected";
+      const selectedDateRange = dateInfo.selectedStartDate && dateInfo.selectedEndDate ? `${dateInfo.selectedStartDate} - ${dateInfo.selectedEndDate}` : "";
+      const detectedDateRange = dateInfo.minDate && dateInfo.maxDate ? `${dateInfo.minDate} - ${dateInfo.maxDate}` : "No date range detected";
+      const dateRange = selectedDateRange || detectedDateRange;
 
       if ($("reportHeroTitle")) $("reportHeroTitle").textContent = `${reportType} dashboard`;
-      if ($("reportHeroEyebrow")) $("reportHeroEyebrow").textContent = "Live client report";
+      if ($("reportHeroEyebrow")) $("reportHeroEyebrow").textContent = result.sourceType === "analytics" ? "Live Analytics report" : "Live client report";
       if ($("reportHeroMeta")) {
         $("reportHeroMeta").innerHTML = [
-          ["Source", source],
+          [result.sourceType === "analytics" ? "Analytics" : "Source", source],
           ["Rows", rows],
           ["Dates", dateRange],
           ["Generated", new Date().toLocaleString()]
@@ -1235,10 +1398,12 @@
 
     function renderStatusStrip(result) {
       const dateInfo = result.dateInfo || {};
+      const selectedDateRange = dateInfo.selectedStartDate && dateInfo.selectedEndDate ? `${dateInfo.selectedStartDate} - ${dateInfo.selectedEndDate}` : "";
       const items = [
-        ["Source", result.sourceTab || "-"],
+        ["Source", result.sourceName || result.sourceTab || "-"],
+        ["Source type", result.sourceType === "analytics" ? "Google Analytics" : "Google Sheet"],
         ["Rows included", result.filteredRowCount || 0],
-        ["Detected dates", dateInfo.minDate && dateInfo.maxDate ? `${dateInfo.minDate} - ${dateInfo.maxDate}` : "No date detected"],
+        ["Date range", selectedDateRange || (dateInfo.minDate && dateInfo.maxDate ? `${dateInfo.minDate} - ${dateInfo.maxDate}` : "No date detected")],
         ["Report type", readableReportType(result.reportType)]
       ];
 
@@ -1820,16 +1985,23 @@
     });
 
     function hydrateFromPayload(payload) {
+      $("sourceType").value = payload.sourceType || (payload.analytics ? "analytics" : "sheet");
+      if (payload.analytics?.accountId) $("analyticsAccount").value = payload.analytics.accountId;
       if (payload.spreadsheetId) $("spreadsheetId").value = payload.spreadsheetId;
       if (payload.sourceTab) $("sourceTab").value = payload.sourceTab;
       if (payload.reportType) $("reportType").value = payload.reportType;
+      if (payload.options?.reportBrief) $("reportBrief").value = payload.options.reportBrief;
       if (payload.primaryMetric) $("primaryMetric").value = payload.primaryMetric;
       if (payload.breakdown) $("breakdown").value = payload.breakdown;
 
+      const hasExplicitDateRange = Boolean(payload.dateRange?.startDate || payload.dateRange?.endDate);
       $("startDate").value = payload.dateRange?.startDate || "";
       $("endDate").value = payload.dateRange?.endDate || "";
-      $("datePreset").value = payload.dateRange?.startDate || payload.dateRange?.endDate ? "custom" : "all";
+      $("datePreset").value = hasExplicitDateRange ? "custom" : (payload.datePreset || (value("sourceType") === "analytics" ? "last-30" : "all"));
       $("customDateFields").classList.toggle("is-open", $("datePreset").value === "custom");
+      if (!hasExplicitDateRange && $("datePreset").value !== "all") {
+        applyDatePreset();
+      }
 
       const map = payload.columnMapping || {};
       $("mapDate").value = map.date || "";
@@ -1845,6 +2017,7 @@
       $("mapSessions").value = map.sessions || "";
       $("mapUsers").value = map.users || "";
 
+      const preset = DEFAULT_PRESETS[payload.reportType || value("reportType")] || DEFAULT_PRESETS["campaign-performance-overview"];
       const cfg = payload.dashboardConfig || {};
       $("showKpis").checked = cfg.visibleSections?.kpiCards !== false;
       $("showTrend").checked = cfg.visibleSections?.trendChart !== false;
@@ -1854,20 +2027,43 @@
       $("showRecommendations").checked = cfg.visibleSections?.recommendations !== false;
       $("showSourcePreview").checked = Boolean(cfg.visibleSections?.sourcePreview);
 
-      renderMetricCheckboxes("kpiMetricsList", "kpiMetric", cfg.kpiMetrics || []);
-      renderMetricCheckboxes("trendMetricsList", "trendMetric", cfg.trendChart?.metrics || []);
+      renderMetricCheckboxes("kpiMetricsList", "kpiMetric", cfg.kpiMetrics || preset.kpiMetrics);
+      renderMetricCheckboxes("trendMetricsList", "trendMetric", cfg.trendChart?.metrics || preset.trendMetrics);
       renderChartModules(cfg.uiModules?.extraCharts);
 
       $("trendChartType").value = cfg.trendChart?.type || "line";
       if ($("breakdownChartType")) $("breakdownChartType").value = cfg.breakdownChart?.type || "horizontalBar";
-      $("breakdownMetric").value = cfg.breakdownChart?.metric || "conversions";
+      $("breakdownMetric").value = cfg.breakdownChart?.metric || preset.breakdownMetric || "conversions";
       $("breakdownLimit").value = String(cfg.breakdownChart?.limit || 8);
       $("breakdownSort").value = cfg.breakdownChart?.sort || "desc";
-      $("accentColor").value = cfg.display?.accentColor || "#00B3A4";
+      $("accentColor").value = cfg.display?.accentColor || preset.accent || "#00B3A4";
       $("currency").value = cfg.display?.currency || "₪";
       $("numberFormat").value = cfg.display?.numberFormat || "short";
 
       document.documentElement.style.setProperty("--accent", $("accentColor").value);
+      updateSourceControls();
+    }
+
+    function loadAssistantToolHandoff() {
+      const raw = localStorage.getItem("carmelonAssistantToolHandoff");
+      if (!raw) return;
+
+      let handoff = null;
+      try {
+        handoff = JSON.parse(raw);
+      } catch {
+        localStorage.removeItem("carmelonAssistantToolHandoff");
+        return;
+      }
+
+      if (!handoff || handoff.toolId !== "client-reports") return;
+
+      hydrateFromPayload({
+        ...(handoff.values || {}),
+        ...(handoff.payload || {})
+      });
+      localStorage.removeItem("carmelonAssistantToolHandoff");
+      appendLog("Loaded assistant handoff for Client Reports.");
     }
 
     function applyClientViewLock(isLocked) {
@@ -1969,6 +2165,7 @@ ${clonedDashboard.outerHTML}
     }
 
     initControls();
+    loadAssistantToolHandoff();
   </script>
 </body>
 </html>

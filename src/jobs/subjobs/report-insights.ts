@@ -17,6 +17,7 @@ export type ReportInsightInput = {
   comparison: ComparisonResult[];
   topBreakdownRows: BreakdownRow[];
   anomalies: string[];
+  reportBrief?: string;
 };
 
 export type ReportInsightOutput = {
@@ -212,6 +213,7 @@ Rules:
 }
 - Keep recommendations specific and action-oriented.
 - Observations should describe notable patterns or anomalies. Use 0-3 items.
+- If reportBrief is provided, use it to decide what to emphasize, but do not invent data outside the JSON.
 - Do not mention missing data unless it materially affects interpretation.
 - Do not use em dashes.
 

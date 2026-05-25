@@ -100,7 +100,11 @@
     const lower = String(text || "").toLowerCase();
     const boundary = "(?:^|\\s|,|;|\\/|:|\\.|!|\\?)";
     const named = Object.entries(languageMap)
-      .filter(([name]) => new RegExp(`${boundary}${name}(?=\\s|,|;|\\/|:|\\.|!|\\?|$)`, "i").test(lower))
+      .filter(([name]) => {
+        const isHebrewName = /[\u0590-\u05ff]/.test(name);
+        const prefix = isHebrewName ? `(?:${boundary}|[בלמו])` : boundary;
+        return new RegExp(`${prefix}${name}(?=\\s|,|;|\\/|:|\\.|!|\\?|$)`, "i").test(lower);
+      })
       .map(([, code]) => code);
     const explicitCodes = lower.match(/\b(en|he|de|fr|es|it|nl|pl|ru|zh|ar)\b/g) || [];
     return unique([...named, ...explicitCodes]).length ? unique([...named, ...explicitCodes]) : fallback;
@@ -146,8 +150,8 @@
     const patterns = [
       /\b(?:faq|questions|answers)\s+(?:for|about)\s+(.{2,140})/i,
       /\b(?:build|create|prepare|generate|make)\s+(?:an?\s+)?(?:faq|workflow)?\s*(?:for|about)\s+(.{2,140})/i,
-      /(?:FAQ|שאלות(?:\s+ותשובות)?|פאק)\s+(?:עבור|על|ל|ל-|ל־)\s+(.{2,140})/i,
-      /(?:לבנות|ליצור|להכין|תבנה|תכין|צור)\s+(?:FAQ|שאלות(?:\s+ותשובות)?)?\s*(?:עבור|על|ל|ל-|ל־)\s+(.{2,140})/i,
+      /(?:FAQ|שאלות(?:\s*(?:ו)?תשובות)?|פאק)\s+(?:עבור|על|ל|ל-|ל־)\s+(.{2,140})/i,
+      /(?:לבנות|ליצור|להכין|תבנה|תכין|צור)\s+(?:FAQ|שאלות(?:\s*(?:ו)?תשובות)?)?\s*(?:עבור|על|ל|ל-|ל־)\s+(.{2,140})/i,
       /(?:למלון|מלון)\s+(.{2,100})/i
     ];
 
@@ -948,7 +952,7 @@
         { key: "sourceInput", label: "Source Sheet or folder", type: "url" },
         { key: "groups", label: "Mapped groups", type: "multi-select" },
         { key: "maxPages", label: "Max pages", type: "number", defaultValue: 50 },
-        { key: "renderMode", label: "Render mode", type: "select", defaultValue: "static" }
+        { key: "renderMode", label: "Render mode", type: "select", defaultValue: "rendered" }
       ],
       quickReplies: [
         { label: "Static crawl", value: "faqaudit:static" },
@@ -964,7 +968,7 @@
           siteUrl: urls.find((url) => detectSourceType(url) === "website") || urls[0] || "",
           sourceInput: urls.find((url) => detectSourceType(url) === "sheet" || detectSourceType(url) === "folder") || "",
           maxPages: 50,
-          renderMode: /render|playwright|דפדפן/i.test(String(message || "")) ? "rendered" : "static"
+          renderMode: /static|html only|סטטית|סטטי/i.test(String(message || "")) ? "static" : "rendered"
         };
       },
       payloadBuilder(values) {
@@ -980,7 +984,7 @@
           maxFaqCandidateChecks: Number(values.maxFaqCandidateChecks) || 120,
           faqCandidateConcurrency: 12,
           fetchTimeoutMs: 5000,
-          renderMode: values.renderMode || "static",
+          renderMode: values.renderMode || "rendered",
           sourceCompareEnabled: Boolean(values.sourceInput),
           sourceInput: values.sourceInput || "",
           sourceTabName: values.sourceTabName || "",
@@ -1074,22 +1078,25 @@
       href: "/client-reports.html",
       icon: "REP",
       status: "workspace-ready",
-      risk: "reads-sheet-and-creates-report",
+      risk: "reads-analytics-or-sheet-and-creates-report",
       canRunDirectly: false,
-      description: "Build polished client performance dashboards from a Google Sheet, with KPI cards, charts, tables and summary sections.",
-      intentHints: ["client report", "client reports", "dashboard", "performance report", "monthly report", "kpi report", "דוח לקוח", "דוחות לקוח", "דשבורד", "ביצועים"],
-      requiredInputs: [
-        { key: "spreadsheetId", label: "Google Sheet", question: "Which Google Sheet should the client report use?", type: "url" }
-      ],
+      description: "Build polished client performance dashboards from Google Analytics or a Google Sheet, with KPI cards, charts, tables and summary sections.",
+      intentHints: ["client report", "client reports", "dashboard", "performance report", "monthly report", "kpi report", "analytics report", "ga4 report", "google analytics", "דוח לקוח", "דוחות לקוח", "דשבורד", "ביצועים", "אנליטיקס", "גוגל אנליטיקס"],
+      requiredInputs: [],
       optionalInputs: [
+        { key: "sourceType", label: "Data source", type: "select", defaultValue: "analytics" },
+        { key: "analyticsAccount", label: "Analytics account", type: "select", defaultValue: "default-ga4" },
+        { key: "spreadsheetId", label: "Google Sheet", question: "Which Google Sheet should the client report use?", type: "url" },
         { key: "sourceTab", label: "Source tab", type: "text" },
-        { key: "reportType", label: "Report type", type: "select", defaultValue: "campaign-performance-overview" },
+        { key: "reportType", label: "Report type", type: "select", defaultValue: "seo-traffic-report" },
         { key: "datePreset", label: "Date range", type: "select", defaultValue: "all" },
-        { key: "primaryMetric", label: "Primary metric", type: "text" },
-        { key: "breakdown", label: "Breakdown", type: "text", defaultValue: "campaign" },
-        { key: "includeAiSummary", label: "AI summary", type: "checkbox", defaultValue: false }
+        { key: "primaryMetric", label: "Primary metric", type: "text", defaultValue: "sessions" },
+        { key: "breakdown", label: "Breakdown", type: "text", defaultValue: "channel" },
+        { key: "includeAiSummary", label: "AI summary", type: "checkbox", defaultValue: true }
       ],
       quickReplies: [
+        { label: "Analytics report", value: "toolfield:sourceType:analytics" },
+        { label: "Google Sheet report", value: "toolfield:sourceType:sheet" },
         { label: "Campaign overview", value: "toolfield:reportType:campaign-performance-overview" },
         { label: "Monthly client report", value: "toolfield:reportType:monthly-client-report" },
         { label: "SEO traffic", value: "toolfield:reportType:seo-traffic-report" },
@@ -1100,30 +1107,52 @@
       },
       infer(message) {
         const text = String(message || "").toLowerCase();
+        const sheetUrl = extractUrls(message).find((url) => detectSourceType(url) === "sheet") || "";
+        const sourceType = sheetUrl || /sheet|spreadsheet|גיליון|שיט/i.test(text)
+          ? "sheet"
+          : "analytics";
+        const defaultReportType = sourceType === "analytics" ? "seo-traffic-report" : "campaign-performance-overview";
         return {
-          spreadsheetId: extractUrls(message).find((url) => detectSourceType(url) === "sheet") || extractUrl(message),
+          sourceType,
+          analyticsAccount: "default-ga4",
+          spreadsheetId: sheetUrl || (sourceType === "sheet" ? extractUrl(message) : ""),
           reportType: /seo/.test(text)
             ? "seo-traffic-report"
             : (/monthly|חודשי/.test(text)
               ? "monthly-client-report"
               : (/leads?|conversions?|לידים|המרות/.test(text)
                 ? "leads-conversions-report"
-                : "campaign-performance-overview")),
-          datePreset: /30/.test(text) ? "last-30" : "all",
-          includeAiSummary: /\bai\b|summary|סיכום/i.test(text)
+                : defaultReportType)),
+          datePreset: /7/.test(text) ? "last-7" : (/30/.test(text) ? "last-30" : "all"),
+          primaryMetric: sourceType === "analytics" ? "sessions" : "conversions",
+          breakdown: sourceType === "analytics" ? "channel" : "campaign",
+          includeAiSummary: /\bai\b|summary|סיכום/i.test(text) || sourceType === "analytics"
         };
       },
       payloadBuilder(values) {
+        const sourceType = values.sourceType === "sheet" || values.spreadsheetId ? "sheet" : "analytics";
+        const isAnalytics = sourceType === "analytics";
         return {
           mode: "client-reports",
-          spreadsheetId: values.spreadsheetId || "",
-          sourceTab: values.sourceTab || "",
-          reportType: values.reportType || "campaign-performance-overview",
+          sourceType,
+          spreadsheetId: isAnalytics ? "" : (values.spreadsheetId || ""),
+          sourceTab: isAnalytics ? "" : (values.sourceTab || ""),
+          analytics: isAnalytics ? {
+            accountId: values.analyticsAccount || "default-ga4",
+            accountName: "Connected GA4 account",
+            propertyId: ""
+          } : undefined,
+          reportType: values.reportType || (isAnalytics ? "seo-traffic-report" : "campaign-performance-overview"),
           datePreset: values.datePreset || "all",
-          primaryMetric: values.primaryMetric || "",
-          breakdown: values.breakdown || "campaign",
-          includeAiSummary: Boolean(values.includeAiSummary),
-          dryRun: true
+          primaryMetric: values.primaryMetric || (isAnalytics ? "sessions" : "conversions"),
+          breakdown: values.breakdown || (isAnalytics ? "channel" : "campaign"),
+          columnMapping: {},
+          options: {
+            dryRun: true,
+            exportToSheet: false,
+            includeAiSummary: values.includeAiSummary !== false,
+            includeRecommendations: true
+          }
         };
       }
     },
@@ -1240,7 +1269,7 @@
 
   function outputTypeForTool(tool) {
     if (tool.id === "site-ai-audit") return "audit-report";
-    if (tool.id === "site-ai-faq-audit") return "google-sheet-report";
+    if (tool.id === "site-ai-faq-audit") return "faq-audit-report";
     if (tool.id === "client-reports") return "client-dashboard-report";
     if (tool.id === "sheet-utilities") return "sheet-utility-preview-or-write";
     if (tool.id === "schema-builder") return "schema-preview-or-sheet-write";

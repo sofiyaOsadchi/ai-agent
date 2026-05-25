@@ -82,14 +82,14 @@ const HOTELS = [
   // ← התרגום
 const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
-    { spreadsheet: "https://docs.google.com/spreadsheets/d/1NfBNjiesq7sZ9VjGnVTDIKDnX5vN_ZA4eFoHPO5OPms/edit?usp=sharing" },
+    { spreadsheet: "https://docs.google.com/spreadsheets/d/1iE811ZiaxkAe7INLwh0d8IX_IZn_O0l5JzxhqXi0nVk/edit?usp=sharing" },
 
 
 ];
 
 const TRANSLATE_FOLDER: string = "";
 
-const LANGS = ["de", ];
+const LANGS = ["es", ];
 
 
 
@@ -119,9 +119,9 @@ const FILTER_CONFIG = {
   hotelColIndex: 0
 };
 const INJECT_LANG_CONFIG: InjectLangToMasterConfig = {
-  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/1ZJHC0T79FI_vjznJo-lkU6AbAIejwps2DrGY_eATZZE/edit?usp=sharing",
+  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/14C3Zc35-cuyQQSUjvs9jxQRiLvTD3CD8WjRBcXOgaL4/edit?usp=sharing",
   masterTabName: "Sheet1",
-  hotelsFolderId: "https://drive.google.com/drive/folders/1S1cC_Ef3gysxkbg1qBm1RCmbOv6lQmcm?usp=sharing",
+  hotelsFolderId: "https://drive.google.com/drive/folders/1N79sYiEFk3EvhYfqQc6ykq8CHAyiwkfh?usp=drive_link",
 
   // חדש
   targetLang: "es", // למשל
@@ -134,8 +134,10 @@ const INJECT_LANG_CONFIG: InjectLangToMasterConfig = {
   dryRun: false,
 };
 
+
+
 const QA_LANG_MASTER_CONFIG = {
-  spreadsheetId: "https://docs.google.com/spreadsheets/d/1EDhS6mGHvO0WxZyvOcU5ZKm3oPY9Gv5VclYOkdF7xUU/edit?usp=sharing",
+  spreadsheetId: "",
   tabName: "Sheet1",
   targetLang: "es",
 
@@ -150,9 +152,11 @@ const QA_LANG_MASTER_CONFIG = {
   checkNumbersPreserved: true,
 };
 
+const QA_MASTER_FOLDER = "https://drive.google.com/drive/folders/1MwHQYASki4Ab-QdTJKmAXNBq7_kNdtps?usp=sharing";
+const QA_MASTER_FOLDER_RECURSIVE = true;
 
 const QA_MASTER_TRIAGE_CONFIG: QaMasterTriageConfig = {
-  spreadsheetId: "1EDhS6mGHvO0WxZyvOcU5ZKm3oPY9Gv5VclYOkdF7xUU",
+  spreadsheetId: "",
   sourceQaTabName: "QA - ES Master", // זה הטאב שהדטרמיניסטי מייצר
   targetLang: "es",
 
@@ -1462,37 +1466,116 @@ aiMaxRows: 3000,
   }
 
 
-  } else if (MODE === "qa-lang-master") {
+ } else if (MODE === "qa-lang-master") {
   const job = new QaLangMasterJob(sheets);
 
   try {
-    const spreadsheetId = sheets.parseSpreadsheetId(QA_LANG_MASTER_CONFIG.spreadsheetId);
+    let spreadsheetIds: string[] = [];
 
-    await job.run({
-      spreadsheetId,
-      tabName: QA_LANG_MASTER_CONFIG.tabName,
+    if (QA_MASTER_FOLDER.trim()) {
+      const folderId =
+        QA_MASTER_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+        QA_MASTER_FOLDER.trim();
 
-      targetLang: (QA_LANG_MASTER_CONFIG.targetLang || "de").toLowerCase(),
+      spreadsheetIds = QA_MASTER_FOLDER_RECURSIVE
+        ? await sheets.listSpreadsheetIdsInFolderRecursive(folderId)
+        : await sheets.listSpreadsheetIdsInFolder(folderId);
 
-      outputTabName: QA_LANG_MASTER_CONFIG.outputTabName,
-      templateTabName: QA_LANG_MASTER_CONFIG.templateTabName,
+      console.log(chalk.cyan(`📂 Found ${spreadsheetIds.length} QA master files in folder.`));
+    } else {
+      spreadsheetIds = [
+        sheets.parseSpreadsheetId(QA_LANG_MASTER_CONFIG.spreadsheetId),
+      ];
+    }
 
-      maxIssuesInReport: QA_LANG_MASTER_CONFIG.maxIssuesInReport,
-
-      checkMissingTarget: QA_LANG_MASTER_CONFIG.checkMissingTarget,
-      checkLanguageHeuristic: QA_LANG_MASTER_CONFIG.checkLanguageHeuristic,
-      checkHotelNameInTarget: QA_LANG_MASTER_CONFIG.checkHotelNameInTarget,
-      checkNumbersPreserved: QA_LANG_MASTER_CONFIG.checkNumbersPreserved,
+    const seen = new Set<string>();
+    spreadsheetIds = spreadsheetIds.filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
     });
 
-    console.log(chalk.cyan("🎉 QA lang master completed."));
+    for (const spreadsheetId of spreadsheetIds) {
+      try {
+        await job.run({
+          spreadsheetId,
+          tabName: QA_LANG_MASTER_CONFIG.tabName,
+
+          targetLang: (QA_LANG_MASTER_CONFIG.targetLang || "de").toLowerCase(),
+
+          outputTabName: QA_LANG_MASTER_CONFIG.outputTabName,
+          templateTabName: QA_LANG_MASTER_CONFIG.templateTabName,
+
+          maxIssuesInReport: QA_LANG_MASTER_CONFIG.maxIssuesInReport,
+
+          checkMissingTarget: QA_LANG_MASTER_CONFIG.checkMissingTarget,
+          checkLanguageHeuristic: QA_LANG_MASTER_CONFIG.checkLanguageHeuristic,
+          checkHotelNameInTarget: QA_LANG_MASTER_CONFIG.checkHotelNameInTarget,
+          checkNumbersPreserved: QA_LANG_MASTER_CONFIG.checkNumbersPreserved,
+        });
+
+        const title = await sheets.getSpreadsheetTitle(spreadsheetId);
+        console.log(chalk.green(`✅ QA lang master completed: ${title}`));
+      } catch (err) {
+        console.error(chalk.red("⚠️ Skipping QA lang master file:"), spreadsheetId, err);
+        continue;
+      }
+    }
+
+    console.log(chalk.cyan("🎉 QA lang master run completed."));
   } catch (err) {
     console.error(chalk.red("❌ QA lang master failed:"), err);
   }
 
-  } else if (MODE === "qa-master-triage") {
+
+} else if (MODE === "qa-master-triage") {
   const job = new QaMasterTriageJob(agent, sheets);
-  await job.run(QA_MASTER_TRIAGE_CONFIG);
+
+  try {
+    let spreadsheetIds: string[] = [];
+
+    if (QA_MASTER_FOLDER.trim()) {
+      const folderId =
+        QA_MASTER_FOLDER.match(/\/folders\/([A-Za-z0-9_-]+)/)?.[1] ??
+        QA_MASTER_FOLDER.trim();
+
+      spreadsheetIds = QA_MASTER_FOLDER_RECURSIVE
+        ? await sheets.listSpreadsheetIdsInFolderRecursive(folderId)
+        : await sheets.listSpreadsheetIdsInFolder(folderId);
+
+      console.log(chalk.cyan(`📂 Found ${spreadsheetIds.length} QA triage files in folder.`));
+    } else {
+      spreadsheetIds = [
+        sheets.parseSpreadsheetId(QA_MASTER_TRIAGE_CONFIG.spreadsheetId),
+      ];
+    }
+
+    const seen = new Set<string>();
+    spreadsheetIds = spreadsheetIds.filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    for (const spreadsheetId of spreadsheetIds) {
+      try {
+        await job.run({
+          ...QA_MASTER_TRIAGE_CONFIG,
+          spreadsheetId,
+        });
+
+        const title = await sheets.getSpreadsheetTitle(spreadsheetId);
+        console.log(chalk.green(`✅ QA master triage completed: ${title}`));
+      } catch (err) {
+        console.error(chalk.red("⚠️ Skipping QA master triage file:"), spreadsheetId, err);
+        continue;
+      }
+    }
+
+    console.log(chalk.cyan("🎉 QA master triage run completed."));
+  } catch (err) {
+    console.error(chalk.red("❌ QA master triage failed:"), err);
+  }
 
   } else if (MODE === "qa-master-apply-fixes") {
   const job = new QaMasterApplyFixesJob(sheets);
