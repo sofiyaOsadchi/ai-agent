@@ -343,6 +343,7 @@
       sourceMode: "",
       sourceUrl: "",
       sourceInstructions: "Use the official website as the primary factual source. If a fact is missing, mark it as Needs source confirmation.",
+      forbiddenPhrases: "",
       categories: "",
       categoryCounts: "",
       questionGuidance: "",
@@ -1184,7 +1185,10 @@
     const cleaned = compact(value)
       .replace(/\bsource\s*:.*/i, "")
       .replace(/\b(?:primary\s+)?source\b.*/i, "")
-      .replace(/\b(?:audience|language|style|tone|qa|depth|count)\s*:.*/i, "")
+      .replace(/\b(?:audience|language|style|tone|qa|depth|count|words?\s+to\s+avoid|forbidden\s+phrases?)\s*:.*/i, "")
+      .replace(/(?:בלי|לא)\s+להשתמש\s+(?:במילים|בביטויים|במונחים)?.*$/i, "")
+      .replace(/(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן).*$/i, "")
+      .replace(/\b(?:do\s+not\s+use|don't\s+use|avoid\s+these)\b.*$/i, "")
       .replace(/\s+\b(?:in|to)\s+(?:english|hebrew|german|french|spanish|italian|dutch|polish|russian|chinese|arabic)\b.*$/i, "")
       .split(/\s+(?:לקהל|קהל|עבור קהל|for audience|for guests|for customers|for tourists)(?:\s|$)/i)[0]
       .replace(/^(hotel|property|business|product|service|מלון|עסק|מוצר|שירות)\s+/i, "")
@@ -1224,6 +1228,58 @@
     return "";
   }
 
+  function splitForbiddenPhrases(value) {
+    return String(value || "")
+      .replace(/[“”"']/g, "")
+      .split(/\n|;|,|،|\s+\+\s+|\s+\|\s+/)
+      .map((item) => compact(item))
+      .map((item) => item.replace(/^(?:במילים|בביטויים|מילים|ביטויים|words?|phrases?)\s+/i, ""))
+      .map((item) => item.replace(/[.!?]+$/g, "").trim())
+      .filter((item) => item.length > 1)
+      .slice(0, 20);
+  }
+
+  function extractForbiddenPhrases(text) {
+    const raw = String(text || "");
+    const patterns = [
+      /(?:בלי|לא)\s+להשתמש\s+(?:במילים|בביטויים|במונחים)?\s*[:：-]?\s*([^.!?\n]+)/i,
+      /(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן)\s*[:：-]?\s*([^.!?\n]+)/i,
+      /\b(?:words?\s+to\s+avoid|forbidden\s+phrases?|do\s+not\s+use|don't\s+use|avoid\s+these)\s*[:：-]?\s*([^.!?\n]+)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = raw.match(pattern);
+      if (match?.[1]) return splitForbiddenPhrases(match[1]);
+    }
+
+    return [];
+  }
+
+  function appendForbiddenPhrases(phrases) {
+    const existing = splitForbiddenPhrases(state.answers.forbiddenPhrases);
+    const seen = new Set(existing.map((item) => item.toLowerCase()));
+    for (const phrase of phrases || []) {
+      const clean = compact(phrase);
+      const key = clean.toLowerCase();
+      if (clean && !seen.has(key)) {
+        existing.push(clean);
+        seen.add(key);
+      }
+    }
+    state.answers.forbiddenPhrases = existing.join("\n");
+  }
+
+  function forbiddenPhrasesRulesText() {
+    const phrases = splitForbiddenPhrases(state.answers.forbiddenPhrases);
+    if (!phrases.length) return "No extra forbidden words or phrases.";
+    return `Do not use these words or phrases anywhere in the generated FAQ unless they are part of a required proper noun: ${phrases.join(", ")}.`;
+  }
+
+  function forbiddenPhrasesLabel() {
+    const phrases = splitForbiddenPhrases(state.answers.forbiddenPhrases);
+    return phrases.length ? phrases.join(", ") : "";
+  }
+
   function extractSubjects(text) {
     if (manifest.helpers?.extractSubjects) return manifest.helpers.extractSubjects(text);
     return [];
@@ -1250,6 +1306,7 @@
       sourceUrl: state.answers.sourceUrl,
       language: state.answers.languageConfirmed ? state.answers.language : "",
       count: state.answers.countConfirmed ? state.answers.count : "",
+      forbiddenPhrases: state.answers.forbiddenPhrases || "",
       categories: state.answers.categoriesConfirmed ? faqCategoryValues() : [],
       categoryCounts: state.answers.categoryCountsConfirmed ? state.answers.categoryCounts : "",
       qaMode: state.answers.qaConfirmed ? state.answers.qaMode : "",
@@ -1268,6 +1325,7 @@
     const inferredSubjects = extractSubjects(text);
     const inferredAudience = detectAudience(text);
     const inferredLanguage = detectLanguage(text);
+    const inferredForbiddenPhrases = extractForbiddenPhrases(text);
     const url = extractUrl(text);
 
     if (inferredScope && !state.answers.scope) state.answers.scope = inferredScope;
@@ -1279,6 +1337,9 @@
     if (inferredLanguage) {
       state.answers.language = inferredLanguage;
       state.answers.languageConfirmed = true;
+    }
+    if (inferredForbiddenPhrases.length) {
+      appendForbiddenPhrases(inferredForbiddenPhrases);
     }
     if (url) {
       state.answers.sourceMode = "url";
@@ -1772,6 +1833,15 @@
     syncConversationFromFaq();
     setQuickReplies(guidanceReplies("answerGuidance", answerGuidanceOptions, "answer-guidance-done", "answer-guidance-clear", "answer-guidance:custom"));
     renderWorkspace();
+  }
+
+  function askForbiddenPhrases(prefix = "") {
+    ask("forbiddenPhrases", [prefix, prefersHebrew()
+      ? "אילו מילים או ביטויים אסור להשתמש בהם בכל ה־FAQ? כתבי אחד בשורה, או הפרידי בפסיקים."
+      : "Which words or phrases should be avoided across the whole FAQ? Write one per line, or separate them with commas."].filter(Boolean).join("\n\n"), [
+      { label: prefersHebrew() ? "אין מילים אסורות" : "No words to avoid", value: "forbidden:none", echo: false },
+      { label: prefersHebrew() ? "חזרה" : "Back", value: "faq:back", echo: false }
+    ]);
   }
 
   function auditCheckOptions() {
@@ -3221,6 +3291,7 @@
       count: values.count || "20-30",
       categories: Array.isArray(values.categories) ? values.categories.join("\n") : (values.categories || ""),
       categoryCounts: values.categoryCounts || "",
+      forbiddenPhrases: Array.isArray(values.forbiddenPhrases) ? values.forbiddenPhrases.join("\n") : (values.forbiddenPhrases || values.wordsToAvoid || values.forbiddenTerms || ""),
       questionGuidance: values.questionGuidance || "",
       answerGuidance: values.answerGuidance || "",
       sourceUrl: values.sourceUrl || "",
@@ -3853,6 +3924,7 @@
       count: state.answers.count || "",
       categories: state.answers.categories || "",
       categoryCounts: state.answers.categoryCounts || "",
+      forbiddenPhrases: state.answers.forbiddenPhrases || "",
       qaMode: state.answers.qaMode || "",
       style: state.answers.style || "",
       questionGuidance: state.answers.questionGuidance || "",
@@ -3957,6 +4029,10 @@
     if (state.step === "ready" || state.step === "extraGuidance") {
       state.answers.qaConfirmed = false;
       askFaqQa(prefix);
+      return true;
+    }
+    if (state.step === "forbiddenPhrases") {
+      finishSetup(prefix);
       return true;
     }
     return false;
@@ -4620,8 +4696,8 @@
 
     if (value === "question-guidance:custom") {
       ask("questionGuidanceCustom", prefersHebrew()
-        ? "כתבי דגשים לפרומפט השאלות: איך לחקור, איך לנסח, מה לחפש ומה להימנע ממנו."
-        : "Write guidance for the question prompt: how to research, how to phrase, what to look for and what to avoid.", [
+        ? "כתבי דגשים לפרומפט השאלות: איך לחקור, איך לנסח ומה לתעדף. מילים אסורות מדויקות יישמרו בנפרד."
+        : "Write guidance for the question prompt: how to research, how to phrase and what to prioritize. Exact words to avoid are stored separately.", [
         { label: prefersHebrew() ? "להשתמש בדגשים המומלצים" : "Use recommended guidance", value: "question-guidance:recommended" },
         backReply()
       ]);
@@ -4771,6 +4847,17 @@
       return true;
     }
 
+    if (value === "forbidden:edit") {
+      askForbiddenPhrases();
+      return true;
+    }
+
+    if (value === "forbidden:none") {
+      state.answers.forbiddenPhrases = "";
+      finishSetup(prefersHebrew() ? "לא אוסיף מילים אסורות." : "No words-to-avoid guardrail added.");
+      return true;
+    }
+
     if (value === "run") {
       runWorkflow();
       return true;
@@ -4809,7 +4896,7 @@
     }
 
     if (value === "extra") {
-      ask("extraGuidance", prefersHebrew() ? "מעולה. כתבי עוד הנחיות לסוכן: מה חשוב לכלול, מה להימנע ממנו, או איזה זווית שיווקית/מקצועית לשמור." : "Great. Add any guidance for the agent: what to include, what to avoid, or which professional angle to keep.", [
+      ask("extraGuidance", prefersHebrew() ? "מעולה. כתבי עוד הנחיות תוכן לסוכן: מה חשוב לכלול או איזו זווית מקצועית לשמור. למילים אסורות מדויקות השתמשי בכפתור מילים אסורות." : "Great. Add any guidance for the agent: what to include or which professional angle to keep. For exact banned phrases, use Words to avoid.", [
         { label: prefersHebrew() ? "לא צריך, אפשר להריץ" : "No need, run it", value: "run" }
       ]);
       return true;
@@ -5047,6 +5134,17 @@
       return;
     }
 
+    const forbiddenPhrasesFromText = state.mode === "faq" ? extractForbiddenPhrases(clean) : [];
+    if (forbiddenPhrasesFromText.length) {
+      appendForbiddenPhrases(forbiddenPhrasesFromText);
+      if (state.step === "ready" || state.step === "extraGuidance") {
+        finishSetup(prefersHebrew()
+          ? `עדכנתי מילים אסורות: ${forbiddenPhrasesLabel()}.`
+          : `Updated words to avoid: ${forbiddenPhrasesLabel()}.`);
+        return;
+      }
+    }
+
     if (state.mode === "faq" && state.step === "scope" && (isFaqImplementationAuditIntent(clean) || /^(לא|no|not that|זה לא|לא זה)$/i.test(clean))) {
       const tool = getTool("site-ai-faq-audit");
       state.mode = "tool";
@@ -5064,6 +5162,25 @@
       advanceToolFlow(prefersHebrew()
         ? "הבנתי, זו לא יצירת FAQ. נעבור לבדיקה של הטמעת FAQ / Schema באתר."
         : "Got it, this is not FAQ creation. I’ll switch to checking FAQ / schema implementation on a site.");
+      return;
+    }
+
+    if (state.mode === "faq" && state.step === "forbiddenPhrases") {
+      const phrases = forbiddenPhrasesFromText.length ? forbiddenPhrasesFromText : splitForbiddenPhrases(clean);
+      if (!phrases.length && /אין|בלי|none|skip|no words/i.test(clean)) {
+        state.answers.forbiddenPhrases = "";
+        finishSetup(prefersHebrew() ? "לא אוסיף מילים אסורות." : "No words-to-avoid guardrail added.");
+        return;
+      }
+      if (!phrases.length) {
+        bot(prefersHebrew() ? "כתבי לפחות מילה או ביטוי אחד, או בחרי שאין מילים אסורות." : "Add at least one word or phrase, or choose no words to avoid.");
+        askForbiddenPhrases();
+        return;
+      }
+      appendForbiddenPhrases(phrases);
+      finishSetup(prefersHebrew()
+        ? `הוספתי מילים אסורות: ${forbiddenPhrasesLabel()}.`
+        : `Added words to avoid: ${forbiddenPhrasesLabel()}.`);
       return;
     }
 
@@ -5467,6 +5584,7 @@
     const style = styleText();
     const questionGuidance = questionGuidanceText();
     const answerGuidance = answerGuidanceText();
+    const forbiddenPhrases = forbiddenPhrasesRulesText();
     const extra = state.answers.extraGuidance ? `\n\nEXTRA USER GUIDANCE:\n${state.answers.extraGuidance}` : "";
     const model = state.answers.model || "o3";
     const tasks = [
@@ -5483,6 +5601,7 @@
           `Audience: ${audience}`,
           `Source policy: ${sourcePolicy}`,
           `Entity naming rules: ${namingRules()}`,
+          `Forbidden phrase rules: ${forbiddenPhrases}`,
           "",
           "CATEGORY PLAN:",
           categoryPlan,
@@ -5507,7 +5626,7 @@
       {
         id: 2,
         enabled: true,
-        name: "Write answers as TSV",
+        name: "Write answers",
         system: "You are a precise FAQ content editor. You write short, useful and verifiable answers without inventing facts.",
         user: [
           "Using the question plan below, write source-grounded FAQ answers for {{subject}}.",
@@ -5526,7 +5645,8 @@
           "- Keep wording natural and helpful, not promotional.",
           "- If information is unavailable after checking approved sources, write exactly: Information is currently not available. [VERIFY]",
           "- If a fact comes from a non-official source, keep it cautious and mark it with [VERIFY].",
-          "- Keep the exact question wording unless grammar must be fixed.",
+          "- Keep the exact question wording unless grammar, clarity, or forbidden-phrase cleanup is required.",
+          `- Apply these forbidden phrase rules across both questions and answers: ${forbiddenPhrases}.`,
           "",
           "ADDITIONAL ANSWER GUIDANCE:",
           answerGuidance,
@@ -5578,6 +5698,8 @@
           "DATA TO CHECK:",
           "{{answersTsv}}",
           "",
+          `If returning WRONG or FOUND text, apply these forbidden phrase rules: ${forbiddenPhrases}`,
+          "",
           "Return exactly:",
           "HEADER",
           "Source OK",
@@ -5595,6 +5717,7 @@
         id: 5,
         enabled: true,
         name: "Grammar and answer fit",
+        outputMode: "replace_base_tsv",
         system: "You are a strict FAQ editor. You check grammar, answer fit, clarity and tone without adding unsupported facts.",
         user: [
           "Review each TSV row for writing quality and question-answer fit.",
@@ -5603,15 +5726,15 @@
           "{{answersTsv}}",
           "",
           "Check direct answer fit, grammar, clarity, usefulness, non-promotional tone and natural use of the subject name.",
+          `Apply these forbidden phrase rules across the final TSV: ${forbiddenPhrases}.`,
           qaGuidance(),
           "",
-          "Return exactly:",
-          "HEADER",
-          "Grammar Fix",
-          "DATA",
-          "[one value per data row]",
-          "",
-          "Write - if the row is good. If any issue exists, write the complete fixed question or complete fixed answer in one line. Return exactly one line per data row, excluding the header."
+          "Return ONLY the full corrected TSV.",
+          "Keep the same header and row order as the input TSV.",
+          "Edit the Question and Answer cells directly where grammar, clarity, tone, forbidden phrases, or answer fit need improvement.",
+          "Keep Category and Frequency Level unchanged unless a tiny wording cleanup is required.",
+          "Do not add a Grammar Fix column.",
+          "Do not add commentary before or after the TSV."
         ].filter(Boolean).join("\n"),
         model
       });
@@ -5669,6 +5792,7 @@
         `קטגוריות: ${localizedCategoryLabel() || "לא הוגדרו"}`,
         `חלוקה: ${localizedCategoryCountsLabel() || categoryAllocationText()}`,
         `מקור: ${state.answers.sourceUrl || (state.answers.sourceMode === "none" ? "אין, נסמן לאימות" : "כללי מקור זהירים")}`,
+        `מילים אסורות: ${forbiddenPhrasesLabel() || "לא הוגדרו"}`,
         `דגשי שאלות: ${guidanceLabel("questionGuidance", questionGuidanceOptions) || "כללי ברירת מחדל"}`,
         `דגשי תשובות: ${guidanceLabel("answerGuidance", answerGuidanceOptions) || "כללי ברירת מחדל"}`,
         `סגנון: ${localizedStyleLabel()}`,
@@ -5683,6 +5807,7 @@
       `Categories: ${localizedCategoryLabel() || "not set"}`,
       `Split: ${localizedCategoryCountsLabel() || categoryAllocationText()}`,
       `Source: ${state.answers.sourceUrl || (state.answers.sourceMode === "none" ? "none, mark facts for verification" : "careful source policy")}`,
+      `Words to avoid: ${forbiddenPhrasesLabel() || "not set"}`,
       `Question guidance: ${guidanceLabel("questionGuidance", questionGuidanceOptions) || "default rules"}`,
       `Answer guidance: ${guidanceLabel("answerGuidance", answerGuidanceOptions) || "default rules"}`,
       `Style: ${localizedStyleLabel()}`,
@@ -5698,6 +5823,7 @@
       { label: hebrew ? "לפתוח Builder" : "Open builder", value: "open-tool" },
       { label: hebrew ? "להראות פרומפטים" : "Show prompts", value: "review-prompts" },
       { label: hebrew ? "להוסיף דגשים" : "Add guidance", value: "extra" },
+      { label: hebrew ? "מילים אסורות" : "Words to avoid", value: "forbidden:edit" },
       { label: hebrew ? "להראות סיכום" : "Show summary", value: "review" },
       { label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" }
     ]);

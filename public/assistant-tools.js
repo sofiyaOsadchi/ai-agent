@@ -131,7 +131,10 @@
     const cleaned = compact(value)
       .replace(/\bsource\s*:.*/i, "")
       .replace(/\b(?:primary\s+)?source\b.*/i, "")
-      .replace(/\b(?:audience|language|style|tone|qa|depth|count)\s*:.*/i, "")
+      .replace(/\b(?:audience|language|style|tone|qa|depth|count|words?\s+to\s+avoid|forbidden\s+phrases?)\s*:.*/i, "")
+      .replace(/(?:בלי|לא)\s+להשתמש\s+(?:במילים|בביטויים|במונחים)?.*$/i, "")
+      .replace(/(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן).*$/i, "")
+      .replace(/\b(?:do\s+not\s+use|don't\s+use|avoid\s+these)\b.*$/i, "")
       .replace(/\s+\b(?:in|to)\s+(?:english|hebrew|german|french|spanish|italian|dutch|polish|russian|chinese|arabic)\b.*$/i, "")
       .split(/\s+(?:for tourists|for audience|for guests|for customers|for visitors|לקהל|קהל|עבור קהל)(?:\s|$)/i)[0]
       .replace(/^(hotel|property|business|product|service|מלון|עסק|מוצר|שירות)\s+/i, "")
@@ -140,6 +143,33 @@
 
     if (/^(and\s+)?(?:abroad|israel|international|tourists?|guests?|source)$/i.test(cleaned)) return "";
     return cleaned;
+  }
+
+  function splitForbiddenPhrases(value) {
+    return String(value || "")
+      .replace(/[“”"']/g, "")
+      .split(/\n|;|,|،|\s+\+\s+|\s+\|\s+/)
+      .map((item) => compact(item))
+      .map((item) => item.replace(/^(?:במילים|בביטויים|מילים|ביטויים|words?|phrases?)\s+/i, ""))
+      .map((item) => item.replace(/[.!?]+$/g, "").trim())
+      .filter((item) => item.length > 1)
+      .slice(0, 20);
+  }
+
+  function extractForbiddenPhrases(text) {
+    const raw = String(text || "");
+    const patterns = [
+      /(?:בלי|לא)\s+להשתמש\s+(?:במילים|בביטויים|במונחים)?\s*[:：-]?\s*([^.!?\n]+)/i,
+      /(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן)\s*[:：-]?\s*([^.!?\n]+)/i,
+      /\b(?:words?\s+to\s+avoid|forbidden\s+phrases?|do\s+not\s+use|don't\s+use|avoid\s+these)\s*[:：-]?\s*([^.!?\n]+)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = raw.match(pattern);
+      if (match?.[1]) return splitForbiddenPhrases(match[1]);
+    }
+
+    return [];
   }
 
   function extractSubjects(text) {
@@ -496,6 +526,7 @@
         { key: "sourceUrl", label: "Primary source URL", type: "url" },
         { key: "language", label: "Output language", type: "text", defaultValue: "English (UK)" },
         { key: "count", label: "Question depth", type: "text", defaultValue: "20-30" },
+        { key: "forbiddenPhrases", label: "Words to avoid", type: "textarea" },
         { key: "qaMode", label: "QA checks", type: "text", defaultValue: "duplicates|writing" },
         { key: "style", label: "Answer style", type: "text", defaultValue: "Warm, concise, reliable." }
       ],
@@ -515,6 +546,7 @@
           workflowType: detectWorkflowType(message),
           sourceUrl: extractUrl(message),
           language: detectLanguages(message, [])[0] || "",
+          forbiddenPhrases: extractForbiddenPhrases(message).join("\n"),
           audience: ""
         };
       },
@@ -525,6 +557,7 @@
           subjects: splitList(values.subjects),
           workflowType: values.workflowType || "hotel",
           audience: values.audience || "",
+          forbiddenPhrases: values.forbiddenPhrases || "",
           sourceUrl: values.sourceUrl || ""
         };
       }

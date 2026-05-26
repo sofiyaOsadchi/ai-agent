@@ -13,63 +13,135 @@ import OpenAI from "openai";
 import chalk from "chalk";
 import ora from "ora";
 import { SafetyManager } from "../config/safety.js";
+import { AnthropicProvider } from "./ai/anthropic-provider.js";
+import type { AIProvider } from "./ai/types.js";
 
 // ממשק למשימה בודדת
 interface Task {
   id: number;
   prompt: string;
+  provider?: AIProvider;
   model?: string;
   response?: string;
   system?: string;
   useWebSearch?: boolean;
-   usedWebSearch?: boolean;
+  usedWebSearch?: boolean;
   webSearchCallsCount?: number;
 }
+
+type TaskRunOptions = {
+  useWebSearch?: boolean;
+};
+
+type ProviderOrOptions = AIProvider | TaskRunOptions;
 
 export class AIAgent {
   private tasks: Task[] = [];
   private taskCounter = 0;
   private openai: OpenAI; // 🔧 העברתי לכאן
+  private anthropicProvider?: AnthropicProvider;
 
-  constructor(private safety: SafetyManager) {
-    // 🔧 יוצר את OpenAI client כאן, אחרי שה-.env נטען
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+ constructor(private safety: SafetyManager) {
+  this.openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    this.anthropicProvider = new AnthropicProvider();
+  }
+}
+
+private getDefaultProvider(): AIProvider {
+  const provider = process.env.AI_PROVIDER;
+
+  if (provider === "anthropic" || provider === "openai") {
+    return provider;
   }
 
-  addTask(prompt: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): void {
-    if (!this.safety.canAddTask(this.tasks.length)) return;
+  return "openai";
+}
 
-    this.taskCounter++;
-    this.tasks.push({
-      id: this.taskCounter,
-      prompt,
-      model,
-      useWebSearch: options.useWebSearch
-    });
-
-    console.log(
-      chalk.green(
-        `➕ Task ${this.taskCounter} [${model}]: ${prompt.slice(0, 50)}...`
-      )
-    );
+private getDefaultModel(provider: AIProvider): string {
+  if (process.env.AI_MODEL) {
+    return process.env.AI_MODEL;
   }
 
-  addTaskWithSystem(userPrompt: string, system?: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): void {
+  return provider === "anthropic" ? "claude-sonnet-4-6" : "o3";
+}
+
+private resolveProviderAndOptions(
+  providerOrOptions?: ProviderOrOptions,
+  options: TaskRunOptions = {}
+): { provider?: AIProvider; options: TaskRunOptions } {
+  const provider = typeof providerOrOptions === "string" ? providerOrOptions : undefined;
+  const optionsFromProviderArg =
+    providerOrOptions && typeof providerOrOptions === "object" ? providerOrOptions : {};
+
+  return {
+    provider,
+    options: {
+      ...optionsFromProviderArg,
+      ...options,
+    },
+  };
+}
+
+addTask(
+  prompt: string,
+  model?: string,
+  providerOrOptions?: ProviderOrOptions,
+  options: TaskRunOptions = {}
+): void {
   if (!this.safety.canAddTask(this.tasks.length)) return;
+
+  const resolved = this.resolveProviderAndOptions(providerOrOptions, options);
+  const resolvedProvider = resolved.provider ?? this.getDefaultProvider();
+  const resolvedModel = model ?? this.getDefaultModel(resolvedProvider);
+
+  this.taskCounter++;
+  this.tasks.push({
+    id: this.taskCounter,
+    prompt,
+    model: resolvedModel,
+    provider: resolvedProvider,
+    useWebSearch: resolved.options.useWebSearch,
+  });
+
+  console.log(
+    chalk.green(
+      `➕ Task ${this.taskCounter} [${resolvedProvider}:${resolvedModel}]: ${prompt.slice(0, 50)}...`
+    )
+  );
+}
+
+ addTaskWithSystem(
+  userPrompt: string,
+  system?: string,
+  model?: string,
+  providerOrOptions?: ProviderOrOptions,
+  options: TaskRunOptions = {}
+): void {
+  if (!this.safety.canAddTask(this.tasks.length)) return;
+
+  const resolved = this.resolveProviderAndOptions(providerOrOptions, options);
+  const resolvedProvider = resolved.provider ?? this.getDefaultProvider();
+  const resolvedModel = model ?? this.getDefaultModel(resolvedProvider);
 
   this.taskCounter++;
   this.tasks.push({
     id: this.taskCounter,
     prompt: userPrompt,
-    model,
-    useWebSearch: options.useWebSearch,
-    
-    system, // נשמר על המשימה
+    model: resolvedModel,
+    provider: resolvedProvider,
+    system,
+    useWebSearch: resolved.options.useWebSearch,
   });
 
-  console.log(chalk.green(`➕ Task ${this.taskCounter} [${model}] (system+user)`));
+  console.log(
+    chalk.green(
+      `➕ Task ${this.taskCounter} [${resolvedProvider}:${resolvedModel}] (system+user)`
+    )
+  );
 }
 
   async executeTask(task: Task): Promise<string> {
@@ -80,6 +152,50 @@ export class AIAgent {
   const spinner = ora(`🤔 Task ${task.id} (${status.calls + 1}/${status.maxCalls})`).start();
 
   try {
+
+if (task.provider === "anthropic") {
+
+    if (!this.anthropicProvider) {
+
+      throw new Error("Anthropic provider is not configured. Missing ANTHROPIC_API_KEY.");
+
+    }
+
+    if (task.useWebSearch === true) {
+
+      throw new Error("Anthropic provider does not support web search in this agent. Use OpenAI for web-search tasks.");
+
+    }
+
+    const { text, tokens } = await this.anthropicProvider.run({
+
+      prompt: task.prompt,
+
+      system: task.system,
+
+      model: task.model,
+
+      maxTokens: limits.maxTokens,
+
+    });
+
+    task.response = text;
+
+    task.usedWebSearch = false;
+
+    task.webSearchCallsCount = 0;
+
+    this.safety.recordCall(tokens);
+
+    spinner.succeed(chalk.green(`✅ Task ${task.id} (${tokens} tokens)`));
+
+    console.log(chalk.yellow(`📝 ${text.slice(0, 100)}...`));
+
+    return text;
+
+  }
+
+    
 const model = task.model ?? "o3";
 
 const shouldUseResponsesApi =
@@ -219,15 +335,27 @@ if (shouldUseResponsesApi) {
   }
 
 
-  async run(prompt: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): Promise<string> {
+  async run(
+  prompt: string,
+  model?: string,
+  providerOrOptions?: ProviderOrOptions,
+  options: TaskRunOptions = {}
+): Promise<string> {
   this.clearTasks();
-  this.addTask(prompt, model, options);
+  this.addTask(prompt, model, providerOrOptions, options);
   await this.executeChain();
   return this.getLastResult() ?? "";
 }
-async runWithSystem(userPrompt: string, system?: string, model: string = "o3", options: { useWebSearch?: boolean } = {}): Promise<string> {
+
+async runWithSystem(
+  userPrompt: string,
+  system?: string,
+  model?: string,
+  providerOrOptions?: ProviderOrOptions,
+  options: TaskRunOptions = {}
+): Promise<string> {
   this.clearTasks();
-  this.addTaskWithSystem(userPrompt, system, model, options);
+  this.addTaskWithSystem(userPrompt, system, model, providerOrOptions, options);
   await this.executeChain();
   return this.getLastResult() ?? "";
 }

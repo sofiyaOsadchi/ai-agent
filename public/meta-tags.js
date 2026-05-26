@@ -1,5 +1,7 @@
 (function () {
   const STORAGE_KEY = "carmelon.metaTagsStudio.setup.v1";
+  const LEGACY_LONG_NAME_DESC = "Find essential details, services, location information and practical guidance before you book.";
+  const DEFAULT_LONG_NAME_DESC = "{{page}}: essential details, services, location information and practical guidance before you book.";
 
   const state = {
     mode: "template",
@@ -20,6 +22,7 @@
     languageButtons: Array.from(document.querySelectorAll(".language-button")),
     templatePanel: $("templatePanel"),
     aiPanel: $("aiPanel"),
+    optionalContextDetails: $("optionalContextDetails"),
     manualPagesPanel: $("manualPagesPanel"),
     manualTopicsDetails: $("manualTopicsDetails"),
     sourceLink: $("sourceLink"),
@@ -28,10 +31,14 @@
     domain: $("domain"),
     pageList: $("pageList"),
     titleMax: $("titleMax"),
+    descMin: $("descMin"),
     descMax: $("descMax"),
     variantCount: $("variantCount"),
     titleTemplate: $("titleTemplate"),
     descTemplate: $("descTemplate"),
+    longNameConditionEnabled: $("longNameConditionEnabled"),
+    longNameThreshold: $("longNameThreshold"),
+    longNameDescTemplate: $("longNameDescTemplate"),
     applyPresetBtn: $("applyPresetBtn"),
     voice: $("voice"),
     primaryKeyword: $("primaryKeyword"),
@@ -55,6 +62,9 @@
     clearBtn: $("clearBtn"),
     clearLogBtn: $("clearLogBtn"),
     outputMode: $("outputMode"),
+    outputModeCards: Array.from(document.querySelectorAll("[data-output-card]")),
+    existingOutputModeButtons: Array.from(document.querySelectorAll("[data-existing-output-mode]")),
+    existingTabOptions: $("existingTabOptions"),
     outputModeHint: $("outputModeHint"),
     writebackFields: $("writebackFields"),
     outputTabNameField: $("outputTabNameField"),
@@ -115,10 +125,52 @@
       h1Prefix: "",
       cta: "Consulta i dettagli principali prima di prenotare.",
     },
+    pt: {
+      faqTitle: "FAQ | {{brand}}",
+      faqDesc: "Encontre respostas claras sobre {{brand}}, incluindo servicos, localizacao, reservas e informacoes praticas.",
+      hotelTitle: "{{page}} | FAQ",
+      hotelDesc: "Descubra {{page}} com informacoes praticas sobre servicos, localizacao e estadia.",
+      h1Prefix: "",
+      cta: "Revise os principais detalhes antes de reservar.",
+    },
+    nl: {
+      faqTitle: "FAQ | {{brand}}",
+      faqDesc: "Vind duidelijke antwoorden over {{brand}}, inclusief diensten, locatie, boekingen en praktische informatie.",
+      hotelTitle: "{{page}} | FAQ",
+      hotelDesc: "Ontdek {{page}} met praktische informatie over diensten, locatie en verblijf.",
+      h1Prefix: "",
+      cta: "Bekijk de belangrijkste details voordat u boekt.",
+    },
+    pl: {
+      faqTitle: "FAQ | {{brand}}",
+      faqDesc: "Znajdz jasne odpowiedzi o {{brand}}, w tym uslugi, lokalizacje, rezerwacje i praktyczne informacje.",
+      hotelTitle: "{{page}} | FAQ",
+      hotelDesc: "Odkryj {{page}} z praktycznymi informacjami o uslugach, lokalizacji i pobycie.",
+      h1Prefix: "",
+      cta: "Sprawdz kluczowe szczegoly przed rezerwacja.",
+    },
+    ar: {
+      faqTitle: "FAQ | {{brand}}",
+      faqDesc: "اعثر على إجابات واضحة حول {{brand}}، بما في ذلك الخدمات والموقع والحجوزات والمعلومات العملية.",
+      hotelTitle: "{{page}} | FAQ",
+      hotelDesc: "اكتشف {{page}} مع معلومات عملية عن الخدمات والموقع والإقامة.",
+      h1Prefix: "",
+      cta: "راجع التفاصيل الأساسية قبل الحجز.",
+    },
+    ru: {
+      faqTitle: "FAQ | {{brand}}",
+      faqDesc: "Найдите понятные ответы о {{brand}}, включая услуги, расположение, бронирование и практическую информацию.",
+      hotelTitle: "{{page}} | FAQ",
+      hotelDesc: "Изучите {{page}} с практической информацией об услугах, расположении и проживании.",
+      h1Prefix: "",
+      cta: "Проверьте ключевые детали перед бронированием.",
+    },
   };
 
   function getSetup() {
     const detected = detectSource(els.sourceLink.value);
+    const descMax = Number(els.descMax.value) || 155;
+
     return {
       mode: state.mode,
       sourceType: detected.type,
@@ -135,10 +187,14 @@
       pageType: "general",
       intent: "search",
       titleMax: Number(els.titleMax.value) || 60,
-      descMax: Number(els.descMax.value) || 155,
+      descMin: normalizeDescMin(els.descMin?.value, descMax),
+      descMax,
       variantCount: state.mode === "ai" ? Number(els.variantCount.value) || 1 : 1,
       titleTemplate: els.titleTemplate.value,
       descTemplate: els.descTemplate.value,
+      longNameConditionEnabled: els.longNameConditionEnabled?.checked === true,
+      longNameThreshold: Number(els.longNameThreshold?.value) || 32,
+      longNameDescTemplate: normalizeLongNameDescTemplate(els.longNameDescTemplate?.value || ""),
       voice: els.voice.value,
       primaryKeyword: els.primaryKeyword.value.trim(),
       aiBrief: els.aiBrief.value.trim(),
@@ -162,14 +218,20 @@
     setValue(els.sourceLink, setup.sourceLink || setup.spreadsheetId || setup.folderId);
     setLanguages(setup.languages || [setup.language || "en"]);
     setValue(els.titleMax, setup.titleMax);
+    setValue(els.descMin, normalizeDescMin(setup.descMin, Number(setup.descMax) || 155));
     setValue(els.descMax, setup.descMax);
     setValue(els.variantCount, setup.variantCount);
     setValue(els.titleTemplate, setup.titleTemplate);
     setValue(els.descTemplate, setup.descTemplate);
+    if (els.longNameConditionEnabled) {
+      els.longNameConditionEnabled.checked = setup.longNameConditionEnabled !== false;
+    }
+    setValue(els.longNameThreshold, setup.longNameThreshold);
+    setValue(els.longNameDescTemplate, normalizeLongNameDescTemplate(setup.longNameDescTemplate));
     setValue(els.voice, setup.voice);
     setValue(els.primaryKeyword, setup.primaryKeyword);
     setValue(els.aiBrief, setup.aiBrief);
-    setValue(els.outputMode, setup.outputMode);
+    setValue(els.outputMode, normalizeOutputMode(setup.outputMode));
     setValue(els.outputTabName, setup.outputTabName);
     const start = splitCell(setup.outputStartCell || "A1");
     setValue(els.outputStartColumn, setup.outputStartColumn || start.col);
@@ -275,6 +337,30 @@
     return String(template || "").replace(/\{\{\s*(page|brand|intent|type|domain)\s*\}\}/g, (_, key) => data[key] || "");
   }
 
+  function normalizeLongNameDescTemplate(template) {
+    const value = String(template || "").trim();
+    if (!value || value === LEGACY_LONG_NAME_DESC) return DEFAULT_LONG_NAME_DESC;
+    return value;
+  }
+
+  function isLongNameConditionActive(setup, page) {
+    if (setup.longNameConditionEnabled === false) return false;
+    const threshold = Math.max(16, Math.min(Number(setup.longNameThreshold) || 32, 80));
+    return String(page || "").trim().length > threshold;
+  }
+
+  function templateDescriptionForPage(setup, item, data) {
+    const longNameApplied = isLongNameConditionActive(setup, item.page);
+    const template = longNameApplied
+      ? normalizeLongNameDescTemplate(setup.longNameDescTemplate)
+      : setup.descTemplate;
+
+    return {
+      description: fillTemplate(template, data),
+      longNameApplied,
+    };
+  }
+
   function limitSentence(text, max) {
     let s = String(text || "").replace(/\s+/g, " ").trim();
     if (s.length <= max) return s;
@@ -296,17 +382,43 @@
       fr: `${page} | FAQ`,
       es: `${page} | Preguntas frecuentes`,
       it: `${page} | FAQ`,
+      pt: `${page} | Perguntas frequentes`,
+      nl: `${page} | FAQ`,
+      pl: `${page} | FAQ`,
+      ar: `${page} | الأسئلة الشائعة`,
+      ru: `${page} | FAQ`,
     }[language] || currentTitle;
   }
 
-  function localizeTemplateDescription(language, page, currentDescription) {
-    if (!String(currentDescription).toLowerCase().startsWith("explore ")) return currentDescription;
+  function localizeTemplateDescription(language, page, currentDescription, longNameApplied = false) {
+    const current = String(currentDescription);
+    if (longNameApplied) {
+      return {
+        he: `${page}: פרטים חשובים, שירותים, מידע על המיקום והכוונה מעשית לפני ההזמנה.`,
+        de: `${page}: wichtige Details, Services, Lageinformationen und praktische Hinweise vor der Buchung.`,
+        fr: `${page} : details essentiels, services, localisation et conseils pratiques avant de reserver.`,
+        es: `${page}: detalles esenciales, servicios, ubicacion y orientacion practica antes de reservar.`,
+        it: `${page}: dettagli essenziali, servizi, posizione e indicazioni pratiche prima di prenotare.`,
+        pt: `${page}: detalhes essenciais, servicos, localizacao e orientacao pratica antes de reservar.`,
+        nl: `${page}: belangrijke details, diensten, locatie-informatie en praktische tips voordat u boekt.`,
+        pl: `${page}: najwazniejsze szczegoly, uslugi, lokalizacja i praktyczne wskazowki przed rezerwacja.`,
+        ar: `${page}: التفاصيل الأساسية والخدمات ومعلومات الموقع والإرشادات العملية قبل الحجز.`,
+        ru: `${page}: важные детали, услуги, расположение и практические советы перед бронированием.`,
+      }[language] || currentDescription;
+    }
+
+    if (!current.toLowerCase().startsWith("explore ")) return currentDescription;
     return {
       he: `גלו מידע שימושי על ${page}, כולל פרטים חשובים, שירותים, מיקום והכוונה מעשית לפני ההזמנה.`,
       de: `Entdecken Sie nuetzliche Informationen zu ${page}, darunter wichtige Details, Services, Lage und praktische Hinweise vor der Buchung.`,
       fr: `Decouvrez les informations utiles sur ${page}, avec les details essentiels, les services, la localisation et les conseils pratiques avant de reserver.`,
       es: `Descubre informacion util sobre ${page}, incluidos detalles clave, servicios, ubicacion y orientacion practica antes de reservar.`,
       it: `Scopri informazioni utili su ${page}, inclusi dettagli importanti, servizi, posizione e indicazioni pratiche prima di prenotare.`,
+      pt: `Descubra informacoes uteis sobre ${page}, incluindo detalhes essenciais, servicos, localizacao e orientacao pratica antes de reservar.`,
+      nl: `Ontdek nuttige informatie over ${page}, inclusief belangrijke details, diensten, locatie en praktische tips voordat u boekt.`,
+      pl: `Odkryj przydatne informacje o ${page}, w tym kluczowe szczegoly, uslugi, lokalizacje i praktyczne wskazowki przed rezerwacja.`,
+      ar: `اكتشف معلومات مفيدة عن ${page}، بما في ذلك التفاصيل الأساسية والخدمات والموقع والإرشادات العملية قبل الحجز.`,
+      ru: `Изучите полезную информацию о ${page}, включая важные детали, услуги, расположение и практические советы перед бронированием.`,
     }[language] || currentDescription;
   }
 
@@ -319,10 +431,11 @@
         domain: setup.domain || "example.com",
       };
     let title = fillTemplate(setup.titleTemplate, data);
-    let description = fillTemplate(setup.descTemplate, data);
+    const descriptionResult = templateDescriptionForPage(setup, item, data);
+    let description = descriptionResult.description;
     if (language !== "en") {
       title = localizeTemplateTitle(language, item.page, title);
-      description = localizeTemplateDescription(language, item.page, description);
+      description = localizeTemplateDescription(language, item.page, description, descriptionResult.longNameApplied);
     }
     if (variantIndex === 1) {
       title = state.activeRules.has("brandInTitle") ? `${item.page} - ${setup.brandName}` : item.page;
@@ -335,7 +448,7 @@
     if (state.activeRules.has("cta")) {
       description = `${description} ${getLanguageCopy(language).cta}`;
     }
-    return finalizeResult(setup, item, title, description, language);
+    return finalizeResult(setup, item, title, description, language, { longNameApplied: descriptionResult.longNameApplied });
   }
 
   function makeAiResult(setup, item, variantIndex, language = setup.language) {
@@ -361,13 +474,14 @@
     return finalizeResult(setup, item, titleOptions[variantIndex] || titleOptions[0], descOptions[variantIndex] || descOptions[0], language);
   }
 
-  function finalizeResult(setup, item, title, description, language = setup.language) {
+  function finalizeResult(setup, item, title, description, language = setup.language, context = {}) {
     const titleMax = setup.titleMax || 60;
     const descMax = setup.descMax || 155;
     const finalTitle = limitSentence(title, titleMax);
     const finalDescription = limitSentence(description, descMax);
     const h1 = state.activeRules.has("includeH1") ? item.page : "";
     const url = makeUrl(setup.domain, item.path);
+    const qa = reviewMetadataRow(setup, finalTitle, finalDescription, language, context);
     return {
       language,
       page: item.page,
@@ -379,7 +493,9 @@
       ogDescription: state.activeRules.has("openGraph") ? finalDescription : "",
       titleLength: finalTitle.length,
       descriptionLength: finalDescription.length,
-      status: scoreRow(setup, finalTitle, finalDescription),
+      status: qa.status,
+      languageQa: qa.languageQa,
+      qaNotes: qa.notes,
     };
   }
 
@@ -389,14 +505,50 @@
     return `https://${cleanDomain}/${cleanPath}`;
   }
 
-  function scoreRow(setup, title, description) {
+  function languageLooksRight(language, text) {
+    const value = String(text || "");
+    if (language === "he") return /[\u0590-\u05ff]/.test(value);
+    if (language === "de") return /\b(?:finden|entdecken|informationen|buchung|aufenthalt|services|lage)\b/i.test(value);
+    if (language === "fr") return /\b(?:trouvez|decouvrez|informations|services|reservation|sejour|localisation)\b/i.test(value);
+    if (language === "es") return /\b(?:encuentra|descubre|informacion|servicios|ubicacion|reserva|estancia)\b/i.test(value);
+    if (language === "it") return /\b(?:trova|scopri|informazioni|servizi|posizione|prenotare|soggiorno)\b/i.test(value);
+    if (language === "pt") return /\b(?:encontre|descubra|informacoes|servicos|localizacao|reserva|estadia)\b/i.test(value);
+    if (language === "nl") return /\b(?:vind|ontdek|informatie|diensten|locatie|boeking|verblijf)\b/i.test(value);
+    if (language === "pl") return /\b(?:znajdz|odkryj|informacje|uslugi|lokalizacja|rezerwacja|pobyt)\b/i.test(value);
+    if (language === "ar") return /[\u0600-\u06ff]/.test(value);
+    if (language === "ru") return /[\u0400-\u04ff]/.test(value);
+    return true;
+  }
+
+  function normalizeDescMin(value, descMax = 155) {
+    const raw = Number(value);
+    const fallback = 120;
+    const max = Number(descMax) || 155;
+    return Math.max(40, Math.min(Number.isFinite(raw) && raw > 0 ? raw : fallback, Math.max(40, max - 5)));
+  }
+
+  function minimumDescriptionLength(setup) {
+    return normalizeDescMin(setup.descMin, setup.descMax);
+  }
+
+  function reviewMetadataRow(setup, title, description, language, context = {}) {
     const keyword = (setup.primaryKeyword || "").toLowerCase();
-    const titleOk = title.length >= 30 && title.length <= setup.titleMax;
-    const descOk = description.length >= 80 && description.length <= setup.descMax;
     const keywordOk = !keyword || `${title} ${description}`.toLowerCase().includes(keyword.split(/\s+/)[0]);
-    if (titleOk && descOk && keywordOk) return "good";
-    if (title.length > setup.titleMax || description.length > setup.descMax) return "bad";
-    return "warn";
+    const notes = [];
+
+    if (title.length > setup.titleMax) notes.push(`Title exceeds ${setup.titleMax} characters.`);
+    if (description.length > setup.descMax) notes.push(`Description exceeds ${setup.descMax} characters.`);
+    if (title.length < 30) notes.push("Title is short.");
+    if (description.length < minimumDescriptionLength(setup)) notes.push(`Description is shorter than ${minimumDescriptionLength(setup)} characters.`);
+    if (!keywordOk) notes.push("Priority keyword may be missing.");
+    if (!languageLooksRight(language, `${title} ${description}`)) notes.push(`Check ${language.toUpperCase()} wording.`);
+    if (context.longNameApplied) notes.push("Long-name description rule applied.");
+
+    const hasBadLength = title.length > setup.titleMax || description.length > setup.descMax;
+    const languageQa = notes.some((note) => /^Check /.test(note)) ? "check" : "ok";
+    const status = hasBadLength ? "bad" : notes.some((note) => !note.includes("Long-name")) ? "warn" : "good";
+
+    return { status, languageQa, notes };
   }
 
   function intentLabel(intent) {
@@ -456,6 +608,7 @@
     renderResults();
     updatePreview();
     addLog(`Generated ${results.length} metadata rows from ${pages.length} page${pages.length === 1 ? "" : "s"}.`, "success");
+    addLog(`Language QA checked: ${languages.join(", ")}.`, results.some((row) => row.languageQa === "check") ? "warn" : "success");
     addLog(`Mode: ${state.mode === "ai" ? "AI assisted brief" : "Template engine"}.`, "dim");
     els.summaryText.textContent = `${results.length} draft rows ready for review`;
   }
@@ -502,7 +655,7 @@
     state.pendingBackendJson = false;
     state.backendJsonLines = [];
     els.generateBtn.disabled = false;
-    els.generateBtn.textContent = "Generate tags";
+    updateGenerateButtonLabel();
 
     if (!raw) {
       addLog("Backend returned an empty metadata result.", "warn");
@@ -514,6 +667,7 @@
       state.results = Array.isArray(result.rows) ? result.rows : [];
       renderResults();
       updatePreview();
+      updateGenerateButtonLabel();
       els.summaryText.textContent = `${state.results.length} metadata rows ready`;
       addLog(`Loaded ${state.results.length} generated metadata rows.`, "success");
       if (result.summary?.writeback?.enabled) {
@@ -538,7 +692,8 @@
         <td><span class="chip active">${escapeHtml(row.language || "en")}</span></td>
         <td>
           <strong>${escapeHtml(row.page)}</strong><br>
-          <span class="hint">${escapeHtml(row.status)}</span>
+          <span class="hint">${escapeHtml(row.status)} · language ${escapeHtml(row.languageQa || "ok")}</span>
+          ${Array.isArray(row.qaNotes) && row.qaNotes.length ? `<br><span class="hint">${escapeHtml(row.qaNotes.join(" · "))}</span>` : ""}
         </td>
         <td><textarea class="editable-output" data-index="${index}" data-field="metaTitle">${escapeHtml(row.metaTitle)}</textarea><span class="hint">${row.titleLength} chars</span></td>
         <td><textarea class="editable-output" data-index="${index}" data-field="metaDescription">${escapeHtml(row.metaDescription)}</textarea><span class="hint">${row.descriptionLength} chars</span></td>
@@ -565,7 +720,7 @@
     els.titleScore.textContent = preview.titleLength;
     els.descScore.textContent = preview.descriptionLength;
     setScoreClass(els.titleScoreCard, preview.titleLength, 30, setup.titleMax);
-    setScoreClass(els.descScoreCard, preview.descriptionLength, 80, setup.descMax);
+    setScoreClass(els.descScoreCard, preview.descriptionLength, minimumDescriptionLength(setup), setup.descMax);
     const keyword = setup.primaryKeyword;
     const hasKeyword = !keyword || `${preview.metaTitle} ${preview.metaDescription}`.toLowerCase().includes(keyword.toLowerCase().split(/\s+/)[0]);
     els.keywordScore.textContent = hasKeyword ? "OK" : "Check";
@@ -583,18 +738,15 @@
     });
     els.templatePanel.classList.toggle("hidden", state.mode !== "template");
     els.aiPanel.classList.toggle("hidden", state.mode !== "ai");
+    els.optionalContextDetails?.classList.toggle("hidden", state.mode !== "ai");
     els.summaryText.textContent = state.mode === "ai" ? "AI brief mode selected" : "Template mode selected";
   }
 
   function renderSourceType() {
     const detected = detectSource(els.sourceLink.value);
     state.sourceType = detected.type;
-    const labels = {
-      manual: "Manual fallback",
-      sheet: "Detected: Google Sheet",
-      folder: "Detected: Drive folder",
-    };
-    els.detectedSource.textContent = labels[state.sourceType];
+    els.detectedSource.textContent = sourceStatusText(state.sourceType);
+    els.detectedSource.dataset.sourceType = state.sourceType;
     if (els.manualTopicsDetails) {
       els.manualTopicsDetails.classList.toggle("hidden", state.sourceType !== "manual");
     }
@@ -607,28 +759,77 @@
     if (state.sourceType === "manual") {
       els.summaryText.textContent = "Manual topics fallback selected";
     }
+    updateGenerateButtonLabel();
+  }
+
+  function sourceStatusText(sourceType) {
+    const hasBackend = Boolean(socket);
+    if (sourceType === "sheet") {
+      return hasBackend
+        ? "Google Sheet detected - click Generate tags to load it"
+        : "Google Sheet detected - open via localhost to load it";
+    }
+    if (sourceType === "folder") {
+      return hasBackend
+        ? "Drive folder detected - click Generate tags to load files"
+        : "Drive folder detected - open via localhost to load it";
+    }
+    return "Manual preview - no Sheet or folder connected";
+  }
+
+  function updateGenerateButtonLabel() {
+    if (!els.generateBtn || els.generateBtn.disabled) return;
+    if ((state.sourceType === "sheet" || state.sourceType === "folder") && socket) {
+      els.generateBtn.textContent = "Load source & generate tags";
+      return;
+    }
+    if ((state.sourceType === "sheet" || state.sourceType === "folder") && !socket) {
+      els.generateBtn.textContent = "Open via localhost to load";
+      return;
+    }
+    els.generateBtn.textContent = "Generate tags";
   }
 
   function renderOutputMode() {
     const mode = getOutputMode();
+    const selectedMode = normalizeOutputMode(els.outputMode?.value);
+    if (els.outputMode && els.outputMode.value !== selectedMode) {
+      els.outputMode.value = selectedMode;
+    }
     const writing = mode !== "preview";
-    els.writebackFields.classList.toggle("hidden", !writing);
-    els.outputTabNameField?.classList.toggle("hidden", mode === "firstTabRange");
+    const existingSelected = selectedMode === "firstTabRange" || selectedMode === "existingRange";
+
+    els.outputModeCards.forEach((button) => {
+      const active = button.dataset.outputCard === "existing" ? existingSelected : selectedMode === "newTab";
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+
+    els.existingOutputModeButtons.forEach((button) => {
+      const active = button.dataset.existingOutputMode === selectedMode;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+
+    const showTargetFields = writing || selectedMode === "existingRange" || selectedMode === "newTab";
+    els.existingTabOptions?.classList.toggle("hidden", !existingSelected);
+    els.writebackFields.classList.toggle("hidden", !showTargetFields);
+    els.outputTabNameField?.classList.toggle("hidden", selectedMode === "firstTabRange");
     if (mode === "preview") {
-      els.outputModeHint.textContent = "Manual topics stay in this screen because there is no spreadsheet to write back to.";
+      els.outputModeHint.textContent = "Manual topics stay in preview. Connect a Google Sheet or Drive folder to write generated tags back.";
     }
     if (mode === "newTab") {
       if (!els.outputTabName.value.trim()) els.outputTabName.value = "Meta Tags";
       ensureOutputPosition();
-      els.outputModeHint.textContent = `Writes to a tab named "${els.outputTabName.value || "Meta Tags"}", starting at column ${cleanColumn(els.outputStartColumn.value)}, row ${cleanRow(els.outputStartRow.value)}. The output spans 9 columns.`;
+      els.outputModeHint.textContent = `Creates or updates a dedicated "${els.outputTabName.value || "Meta Tags"}" tab in the source file. Start position: ${cleanColumn(els.outputStartColumn.value)}${cleanRow(els.outputStartRow.value)}.`;
     }
     if (mode === "firstTabRange") {
       ensureOutputPosition();
-      els.outputModeHint.textContent = `Writes into the first tab of the source file, starting at column ${cleanColumn(els.outputStartColumn.value)}, row ${cleanRow(els.outputStartRow.value)}. The output spans 9 columns.`;
+      els.outputModeHint.textContent = `Writes generated tags into the first tab of the source file. Start position: ${cleanColumn(els.outputStartColumn.value)}${cleanRow(els.outputStartRow.value)}.`;
     }
     if (mode === "existingRange") {
       ensureOutputPosition();
-      els.outputModeHint.textContent = `Writes to the named tab, starting at column ${cleanColumn(els.outputStartColumn.value)}, row ${cleanRow(els.outputStartRow.value)}. The output spans 9 columns.`;
+      els.outputModeHint.textContent = `Writes generated tags into the named tab in the source file. Start position: ${cleanColumn(els.outputStartColumn.value)}${cleanRow(els.outputStartRow.value)}.`;
     }
     if (writing && state.sourceType === "manual") {
       els.summaryText.textContent = "Choose a sheet source to write back";
@@ -638,9 +839,21 @@
   function getOutputMode() {
     const detected = detectSource(els.sourceLink.value);
     if (detected.type === "manual") return "preview";
+    if (els.outputMode.value === "newTab") return "newTab";
     if (els.outputMode.value === "firstTabRange") return "firstTabRange";
     if (els.outputMode.value === "existingRange") return "existingRange";
-    return "newTab";
+    return "firstTabRange";
+  }
+
+  function normalizeOutputMode(mode) {
+    return ["newTab", "firstTabRange", "existingRange"].includes(mode) ? mode : "firstTabRange";
+  }
+
+  function setOutputMode(mode) {
+    if (!els.outputMode) return;
+    els.outputMode.value = normalizeOutputMode(mode);
+    renderOutputMode();
+    updatePreview();
   }
 
   function ensureOutputPosition() {
@@ -809,16 +1022,32 @@
       });
     });
 
+    els.outputModeCards.forEach((button) => {
+      button.addEventListener("click", () => {
+        setOutputMode(button.dataset.outputCard === "new" ? "newTab" : "firstTabRange");
+      });
+    });
+
+    els.existingOutputModeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setOutputMode(button.dataset.existingOutputMode);
+      });
+    });
+
     [
       els.brandName,
       els.domain,
       els.sourceLink,
       els.pageList,
       els.titleMax,
+      els.descMin,
       els.descMax,
       els.variantCount,
       els.titleTemplate,
       els.descTemplate,
+      els.longNameConditionEnabled,
+      els.longNameThreshold,
+      els.longNameDescTemplate,
       els.voice,
       els.primaryKeyword,
       els.aiBrief,
@@ -870,7 +1099,7 @@
       });
       socket.on("done", () => {
         els.generateBtn.disabled = false;
-        els.generateBtn.textContent = "Generate tags";
+        updateGenerateButtonLabel();
       });
     }
 

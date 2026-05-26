@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Carmelon FAQ Creator Studio</title>
+  <title>Carmelon FAQ Builder</title>
+  <link rel="icon" type="image/png" href="./carmelon-favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
@@ -151,6 +152,28 @@
       font-weight: 900;
     }
 
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .topbar-load-btn {
+      min-height: 40px;
+      padding: 0 16px;
+      border-color: rgba(126, 90, 174, 0.46);
+      color: var(--purple-dark);
+      background: var(--purple-soft);
+      box-shadow: 0 12px 26px rgba(126, 90, 174, 0.12);
+    }
+
+    .topbar-load-btn:hover {
+      border-color: var(--purple);
+      background: #ffffff;
+    }
+
     .page {
       width: min(1720px, calc(100% - 36px));
       margin: 24px auto 48px;
@@ -253,16 +276,26 @@
       min-height: 118px;
     }
 
+    .subject-field {
+      grid-column: 1 / -1;
+    }
+
     .control-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .setup-controls {
-      grid-template-columns: minmax(230px, 1.28fr) minmax(240px, 1.18fr) minmax(180px, 1fr) minmax(180px, 1fr);
+      grid-template-columns: minmax(210px, 1.2fr) minmax(210px, 1fr) minmax(170px, 0.82fr);
+      min-width: 0;
     }
 
     .setup-controls > .field:nth-child(4) {
       grid-column: 1 / -1;
+    }
+
+    .setup-controls > .wide-field {
+      grid-column: 1 / -1;
+      min-width: 0;
     }
 
     .question-range-select {
@@ -461,85 +494,217 @@
     .output-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 8px;
+      gap: 14px;
+    }
+
+    .rail-output-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .rail-output-grid .output-section {
+      gap: 4px;
+    }
+
+    .rail-output-grid .output-section-head {
+      padding: 0;
+    }
+
+    .rail-output-grid .artifact-card {
+      padding: 7px 0;
+    }
+
+    .rail-output-grid .output-empty {
+      padding: 9px 0 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+    }
+
+    .rail-output-note {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .output-section {
+      display: grid;
+      gap: 6px;
+    }
+
+    .output-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 4px;
+    }
+
+    .output-section-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.3;
+    }
+
+    .output-section-count {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .artifact-list {
+      display: grid;
+      gap: 0;
     }
 
     .artifact-card {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      grid-template-areas:
-        "type title actions"
-        "type desc actions"
-        "type url actions";
+      grid-template-columns: 22px minmax(0, 1fr);
       align-items: center;
-      gap: 4px 10px;
+      gap: 9px;
       min-height: 0;
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      padding: 8px 4px;
+      border-bottom: 1px solid var(--border);
+      background: transparent;
+    }
+
+    .artifact-card:last-child {
+      border-bottom: 0;
+    }
+
+    .artifact-file-icon {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
       background: #fff;
     }
 
-    .artifact-card > .badge.teal {
-      grid-area: type;
-      align-self: start;
-      margin-top: 1px;
+    .artifact-file-icon::before,
+    .artifact-file-icon::after {
+      content: "";
+      position: absolute;
+      box-sizing: border-box;
     }
 
-    .artifact-card h3 {
-      grid-area: title;
-      margin: 0;
+    .artifact-file-icon.is-sheet {
+      border-color: rgba(62, 142, 86, 0.36);
+      background: rgba(232, 245, 234, 0.92);
+    }
+
+    .artifact-file-icon.is-sheet::before {
+      inset: 4px;
+      border: 1px solid rgba(62, 142, 86, 0.74);
+      border-radius: 2px;
+      background:
+        linear-gradient(rgba(62, 142, 86, 0.62), rgba(62, 142, 86, 0.62)) 50% 0 / 1px 100% no-repeat,
+        linear-gradient(rgba(62, 142, 86, 0.62), rgba(62, 142, 86, 0.62)) 0 50% / 100% 1px no-repeat,
+        #fff;
+    }
+
+    .artifact-file-icon.is-plan {
+      border-color: rgba(126, 90, 174, 0.34);
+      background: rgba(240, 233, 248, 0.92);
+    }
+
+    .artifact-file-icon.is-plan::before {
+      width: 11px;
+      height: 14px;
+      border: 1px solid rgba(126, 90, 174, 0.68);
+      border-radius: 3px;
+      background:
+        linear-gradient(rgba(126, 90, 174, 0.62), rgba(126, 90, 174, 0.62)) 3px 4px / 5px 1px no-repeat,
+        linear-gradient(rgba(126, 90, 174, 0.62), rgba(126, 90, 174, 0.62)) 3px 7px / 5px 1px no-repeat,
+        linear-gradient(135deg, transparent 0 62%, rgba(126, 90, 174, 0.18) 62% 100%),
+        #fff;
+    }
+
+    .artifact-file-icon.is-generated {
+      border-color: rgba(74, 127, 199, 0.34);
+      background: rgba(230, 239, 252, 0.92);
+    }
+
+    .artifact-file-icon.is-generated::before {
+      inset: 4px;
+      border: 1px solid rgba(74, 127, 199, 0.66);
+      border-radius: 2px;
+      background:
+        linear-gradient(rgba(74, 127, 199, 0.58), rgba(74, 127, 199, 0.58)) 0 33% / 100% 1px no-repeat,
+        linear-gradient(rgba(74, 127, 199, 0.58), rgba(74, 127, 199, 0.58)) 0 66% / 100% 1px no-repeat,
+        #fff;
+    }
+
+    .artifact-file-link {
       min-width: 0;
-      font-size: 14px;
-      line-height: 1.25;
-    }
-
-    .artifact-card p {
-      grid-area: desc;
-      margin: 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-      overflow-wrap: anywhere;
-    }
-
-    .artifact-card p.ltr {
-      grid-area: url;
-      max-width: 100%;
       overflow: hidden;
-      color: var(--muted);
-      font-family: var(--vx-mono, monospace);
-      font-size: 11px;
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.35;
+      padding: 0;
+      text-align: left;
+      text-decoration: none;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .artifact-actions {
-      grid-area: actions;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-end;
-      margin-top: 0;
+    .artifact-file-link:hover {
+      text-decoration: underline;
     }
 
-    .artifact-actions .ghost-btn,
-    .artifact-actions .badge {
-      min-height: 30px;
-      padding-inline: 9px;
-      font-size: 11px;
+    .artifact-file-link.is-static {
+      color: var(--text);
+      cursor: default;
+      font-weight: 550;
+    }
+
+    .artifact-file-link.is-static:hover {
+      text-decoration: none;
     }
 
     .empty-output {
       grid-column: 1 / -1;
-      padding: 18px;
+      padding: 10px 12px;
       border: 1px dashed var(--border-strong);
-      border-radius: 18px;
+      border-radius: 12px;
       color: var(--muted);
       background: #fff;
       text-align: center;
-      line-height: 1.6;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .signals-list .empty-output {
+      margin-top: 4px;
+      padding: 9px 11px;
+      color: var(--vx-dim);
+      background: var(--vx-surface-soft);
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .output-empty {
+      padding: 8px 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    #clearArtifactsBtn {
+      min-height: 30px;
+      padding-inline: 10px;
+      font-size: 12px;
     }
 
     .compact-combo {
@@ -666,6 +831,87 @@
       min-height: 74px;
     }
 
+    .forbidden-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 0;
+      width: 100%;
+      min-width: 0;
+      padding: 0;
+      border-color: rgba(217, 122, 60, 0.28);
+      background: linear-gradient(180deg, rgba(248, 234, 220, 0.58), rgba(255, 253, 249, 0.94));
+      overflow: hidden;
+    }
+
+    .forbidden-panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      min-width: 0;
+      padding: 14px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .forbidden-panel-head::-webkit-details-marker {
+      display: none;
+    }
+
+    .forbidden-panel-head > div {
+      flex: 1 1 min(360px, 100%);
+      min-width: 0;
+    }
+
+    .forbidden-panel-title::before {
+      background: var(--orange);
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
+    }
+
+    .forbidden-panel-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .forbidden-panel .textarea {
+      min-height: 84px;
+      resize: vertical;
+    }
+
+    .forbidden-panel-body {
+      display: grid;
+      padding: 0 14px 14px;
+    }
+
+    .forbidden-panel-pill {
+      flex: 0 0 auto;
+      min-height: 28px;
+      min-width: 54px;
+      padding: 0 10px;
+      border: 1px solid rgba(217, 122, 60, 0.24);
+      border-radius: 999px;
+      color: var(--vx-orange);
+      background: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 28px;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .forbidden-panel-pill::before {
+      content: "Open";
+    }
+
+    .forbidden-panel[open] .forbidden-panel-pill::before {
+      content: "Close";
+    }
+
     .naming-panel {
       align-self: stretch;
     }
@@ -764,6 +1010,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 12px;
       min-height: 48px;
       border: 1px dashed var(--border-strong);
@@ -775,8 +1022,17 @@
       line-height: 1.45;
     }
 
+    .read-only-note > span {
+      min-width: 0;
+    }
+
     .read-only-note strong {
+      flex: 1 1 220px;
+      min-width: 0;
       color: var(--ink);
+      overflow-wrap: anywhere;
+      text-align: end;
+      word-break: break-word;
     }
 
     .signals-grid {
@@ -792,6 +1048,12 @@
       background: #fff;
       padding: 16px;
       min-width: 0;
+    }
+
+    .demand-source-card {
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--surface-soft);
     }
 
     .signals-card h3 {
@@ -821,6 +1083,159 @@
 
     .signals-source-row .source-chip {
       margin: 0;
+    }
+
+    .demand-source-card .signals-source-row {
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .demand-source-card .source-chip {
+      min-height: 29px;
+      padding: 0 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .demand-source-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 11px;
+    }
+
+    .demand-source-card .field {
+      gap: 6px;
+    }
+
+    .demand-source-card .field span,
+    .demand-source-card .field-label {
+      font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .demand-source-card .input,
+    .demand-source-card .select,
+    .demand-source-card select {
+      min-height: 38px !important;
+      padding: 8px 10px !important;
+      border-radius: 10px !important;
+      font-family: "Inter", "DM Sans", "Segoe UI", Arial, sans-serif !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+      line-height: 1.25;
+    }
+
+    .demand-subject-field {
+      grid-column: 1 / -1;
+    }
+
+    .demand-source-card .linked-subject {
+      min-height: 0;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .demand-source-card .linked-subject strong {
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 650;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .demand-source-card .linked-subject small {
+      margin-top: 2px;
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .demand-source-card .signals-actions {
+      gap: 8px;
+      margin-top: 12px !important;
+    }
+
+    .demand-source-card .signals-actions .btn,
+    .demand-source-card .signals-actions .ghost-btn,
+    #faqDemandRefreshSourcesBtn {
+      min-height: 32px !important;
+      padding: 0 11px !important;
+      font-size: 12px !important;
+      white-space: nowrap;
+    }
+
+    #faqDemandRunBtn.btn.secondary {
+      color: #fff;
+      background: var(--purple);
+      border-color: var(--purple);
+      box-shadow: 0 10px 22px rgba(126, 90, 174, 0.18);
+    }
+
+    #faqDemandRunBtn.btn.secondary:hover {
+      background: var(--purple-dark);
+      border-color: var(--purple-dark);
+    }
+
+    .demand-source-note {
+      margin-bottom: 12px !important;
+      font-size: 12px !important;
+      line-height: 1.4 !important;
+    }
+
+    .demand-advanced {
+      grid-column: 1 / -1;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .demand-advanced > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 34px;
+      padding: 0 10px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+      list-style: none;
+    }
+
+    .demand-advanced > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .demand-advanced > summary::after {
+      content: "Open";
+      color: var(--blue);
+      font-size: 11px;
+    }
+
+    .demand-advanced[open] > summary {
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .demand-advanced[open] > summary::after {
+      content: "Close";
+    }
+
+    .demand-advanced-body {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .demand-advanced:not([open]) .demand-advanced-body {
+      display: none;
+    }
+
+    .demand-advanced-help {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
     }
 
     .signals-metrics {
@@ -949,6 +1364,40 @@
       line-height: 1.45;
     }
 
+    .signals-status-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .signals-status:empty {
+      display: none;
+    }
+
+    .help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .help-icon:hover,
+    .help-icon:focus-visible {
+      color: var(--purple-dark);
+      border-color: rgba(126, 90, 174, 0.34);
+      background: var(--purple-soft);
+    }
+
     .signals-diagnostics {
       display: none;
       margin-top: 12px;
@@ -981,6 +1430,78 @@
       margin-top: 4px;
     }
 
+    .category-tools {
+      position: relative;
+      align-self: flex-start;
+      flex: 0 0 auto;
+    }
+
+    .category-tools > summary {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      min-width: max-content;
+      padding: 0 13px;
+      border: 1px solid rgba(74, 127, 199, 0.22);
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      list-style: none;
+      white-space: nowrap;
+    }
+
+    .category-tools > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .category-tools > summary::after {
+      content: "Open";
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .category-tools[open] > summary::after {
+      content: "Close";
+    }
+
+    .category-tools-menu {
+      position: absolute;
+      z-index: 25;
+      inset-block-start: calc(100% + 8px);
+      inset-inline-end: 0;
+      width: min(320px, calc(100vw - 48px));
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 16px 36px rgba(26, 20, 16, 0.12);
+    }
+
+    .category-tools-menu .field {
+      margin: 0;
+    }
+
+    .category-tools-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .category-tools-actions .ghost-btn,
+    .category-tools-actions .btn {
+      min-height: 34px;
+      padding-inline: 12px;
+      font-size: 12px;
+    }
+
     .demand-helper {
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -989,13 +1510,22 @@
     }
 
     .demand-helper > summary {
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 16px;
+      width: 100%;
+      min-width: 0;
       padding: 16px 18px;
       cursor: pointer;
       list-style: none;
+    }
+
+    .demand-helper > summary > span {
+      flex: 1 1 260px;
+      min-width: 0;
     }
 
     .demand-helper > summary::-webkit-details-marker {
@@ -1005,6 +1535,7 @@
     .demand-helper > summary::after {
       content: "Open";
       flex: 0 0 auto;
+      margin-inline-start: auto;
       border: 1px solid var(--border);
       border-radius: 999px;
       padding: 7px 12px;
@@ -1037,6 +1568,7 @@
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
+      overflow-wrap: anywhere;
     }
 
     .demand-helper-body {
@@ -1044,10 +1576,6 @@
       grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
       gap: 14px;
       padding: 14px;
-    }
-
-    .demand-brief-card {
-      grid-column: 1 / -1;
     }
 
     .field {
@@ -1068,14 +1596,24 @@
     .textarea,
     .select {
       width: 100%;
-      min-height: 48px;
+      min-height: 42px;
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 10px;
       background: #fff;
       color: var(--ink);
-      padding: 12px 14px;
+      padding: 10px 12px;
       outline: none;
+      font-family: "Inter", "DM Sans", "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
       transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .select,
+    select {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0;
     }
 
     .textarea {
@@ -1136,7 +1674,8 @@
     }
 
     .workflow-type-panel .preset-row {
-      margin-top: 8px;
+      margin-top: 10px;
+      gap: 7px;
     }
 
     .workflow-type-copy {
@@ -1161,10 +1700,69 @@
       white-space: nowrap;
     }
 
+    .setup-suggest-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      margin-top: 10px;
+    }
+
+    .setup-suggest-row .inline-action {
+      margin-top: 0;
+    }
+
+    .setup-suggest-feedback {
+      display: none;
+      max-width: min(520px, 100%);
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 650;
+      line-height: 1.35;
+    }
+
+    .setup-suggest-feedback.is-visible {
+      display: inline-flex;
+    }
+
+    .setup-suggest-feedback.is-warning {
+      color: #9a6a1f;
+    }
+
+    .inline-action {
+      width: fit-content;
+      min-height: 28px;
+      margin-top: 10px;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--blue);
+      font: 700 0.76rem/1.2 "Inter", "DM Sans", "Segoe UI", Arial, sans-serif;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .inline-action:hover {
+      color: var(--ink);
+      background: transparent;
+    }
+
+    .workflow-type-panel .seg-btn {
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 12px;
+      font-size: 0.84rem;
+      font-weight: 650;
+    }
+
     .seg-btn,
     .btn,
     .ghost-btn,
     .var-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       min-height: 42px;
       border-radius: 999px;
       border: 1px solid var(--border);
@@ -1205,6 +1803,24 @@
 
     .ghost-btn {
       background: var(--surface-soft);
+    }
+
+    .icon-btn {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
+      gap: 0;
+    }
+
+    .icon-btn svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .btn:disabled {
@@ -1258,6 +1874,7 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
+      align-items: start;
     }
 
     .category-card,
@@ -1393,29 +2010,69 @@
     }
 
     .prompt-advanced {
-      border: 1px solid var(--border);
+      border: 1px solid rgba(217, 122, 60, 0.28);
       border-radius: 14px;
-      background: #fff;
+      background: linear-gradient(180deg, rgba(248, 234, 220, 0.74), rgba(255, 253, 249, 0.96));
       overflow: hidden;
     }
 
     .prompt-advanced summary {
+      box-sizing: border-box;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 12px;
-      min-height: 44px;
-      padding: 0 12px;
+      width: 100%;
+      min-width: 0;
+      padding: 12px 14px;
       cursor: pointer;
+      color: var(--text);
+      list-style: none;
+    }
+
+    .system-prompt-mark {
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(217, 122, 60, 0.26);
+      border-radius: 10px;
+      color: var(--vx-orange);
+      background: #fff;
+      font: 750 11px/1 var(--vx-mono);
+      letter-spacing: 0.02em;
+    }
+
+    .system-prompt-copy {
+      min-width: 0;
+      flex: 1 1 240px;
+    }
+
+    .system-prompt-copy strong {
+      display: block;
+      margin: 2px 0 0;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 750;
+      line-height: 1.28;
+    }
+
+    .system-prompt-copy small {
+      display: block;
+      margin-top: 3px;
       color: var(--muted);
       font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      font-weight: 500;
+      line-height: 1.42;
+      overflow-wrap: anywhere;
     }
 
     .prompt-advanced summary::after {
       content: "Open";
+      flex: 0 0 auto;
+      margin-inline-start: auto;
       min-width: 52px;
       min-height: 28px;
       display: inline-flex;
@@ -1433,6 +2090,7 @@
 
     .prompt-advanced[open] summary {
       border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.58);
     }
 
     .prompt-advanced[open] summary::after {
@@ -1649,7 +2307,7 @@
       color: var(--muted);
       background: #fff;
       font-size: 12px;
-      font-weight: 900;
+      font-weight: 650;
     }
 
     .badge.active {
@@ -1675,6 +2333,31 @@
       gap: 14px;
     }
 
+    .task-group-label {
+      display: grid;
+      align-items: center;
+      margin: 4px 2px -2px;
+      color: var(--muted);
+    }
+
+    .task-group-label strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    .task-group-label span {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+
     .task-card:not(.is-active) {
       background: #ffffff;
     }
@@ -1683,12 +2366,39 @@
       opacity: 0.8;
     }
 
-    .task-meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .task-step-heading {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .task-step-kicker {
+      display: inline-flex;
       align-items: center;
-      margin-top: 8px;
+      gap: 8px;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .task-step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(111, 147, 85, 0.12);
+    }
+
+    .task-card:not(.is-active) .task-step-kicker {
+      color: var(--muted);
+    }
+
+    .task-card:not(.is-active) .task-step-dot {
+      background: #cfc6b5;
+      box-shadow: 0 0 0 5px rgba(207, 198, 181, 0.16);
     }
 
     .has-tooltip {
@@ -1784,6 +2494,12 @@
       padding: 0 12px;
       font-size: 13px;
       white-space: nowrap;
+    }
+
+    .run-strip .icon-btn {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
     }
 
     .rail-card {
@@ -1990,6 +2706,25 @@
       box-shadow: none !important;
     }
 
+    .topbar-actions {
+      gap: 9px;
+    }
+
+    .topbar-load-btn {
+      min-height: 34px;
+      padding: 0 14px;
+      border-color: rgba(85, 112, 180, 0.34) !important;
+      color: var(--vx-blue) !important;
+      background: #eef4ff !important;
+      font: 650 0.74rem/1.1 var(--vx-font);
+      box-shadow: none !important;
+    }
+
+    .topbar-load-btn:hover {
+      border-color: var(--vx-blue) !important;
+      background: #ffffff !important;
+    }
+
     .page {
       width: min(1480px, calc(100% - 64px)) !important;
       grid-template-columns: minmax(0, 1fr) 400px !important;
@@ -2090,6 +2825,49 @@
       border-color: var(--vx-border-strong) !important;
     }
 
+    .inline-action {
+      min-height: 28px !important;
+      margin-top: 9px !important;
+      color: var(--vx-blue) !important;
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      font: 600 0.74rem/1.2 var(--vx-font) !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .inline-action:hover {
+      color: var(--vx-ink) !important;
+      background: transparent !important;
+    }
+
+    .workflow-type-panel {
+      padding: 12px 14px !important;
+      border-radius: 14px !important;
+      background: rgba(255, 253, 249, 0.72) !important;
+    }
+
+    .workflow-type-panel .preset-row {
+      gap: 6px !important;
+      margin-top: 9px !important;
+    }
+
+    .workflow-type-panel .seg-btn {
+      min-height: 32px !important;
+      padding: 0 11px !important;
+      border-radius: 10px !important;
+      font-size: 0.8rem !important;
+      font-weight: 550 !important;
+    }
+
+    .workflow-type-panel .auto-configure-btn {
+      min-height: 34px !important;
+      padding: 0 12px !important;
+      border-radius: 10px !important;
+      font-size: 0.82rem !important;
+    }
+
     .input,
     .textarea,
     .select,
@@ -2103,8 +2881,8 @@
       color: var(--vx-ink) !important;
       box-shadow: none !important;
       font-family: var(--vx-font) !important;
-      font-size: 0.9rem !important;
-      font-weight: 500;
+      font-size: 0.82rem !important;
+      font-weight: 450;
       line-height: 1.35;
     }
 
@@ -2114,6 +2892,9 @@
     input[type="number"],
     select {
       color: var(--vx-dim) !important;
+      min-height: 42px !important;
+      padding-block: 9px !important;
+      padding-inline: 12px !important;
     }
 
     .textarea,
@@ -2223,17 +3004,65 @@
 
     .seg-btn.active,
     .btn,
-    .btn.secondary {
+    #runBtn {
       background: var(--vx-ink) !important;
       border-color: var(--vx-ink) !important;
       color: #fff !important;
       box-shadow: none !important;
     }
 
+    .btn.secondary:not(#runBtn) {
+      background: var(--vx-surface) !important;
+      border-color: var(--vx-border) !important;
+      color: var(--vx-dim) !important;
+      box-shadow: none !important;
+    }
+
+    #faqDemandRunBtn.btn.secondary {
+      background: var(--vx-blue) !important;
+      border-color: var(--vx-blue) !important;
+      color: #fff !important;
+      box-shadow: 0 10px 22px rgba(74, 127, 199, 0.18) !important;
+      font-weight: 700 !important;
+    }
+
+    #faqDemandRunBtn.btn.secondary:hover {
+      background: #3f6fb1 !important;
+      border-color: #3f6fb1 !important;
+    }
+
     .ghost-btn,
     .quick-reply,
     .var-btn {
       min-height: 36px;
+    }
+
+    #clearArtifactsBtn {
+      min-height: 30px !important;
+      padding: 0 10px !important;
+      font-size: 12px !important;
+    }
+
+    .artifact-card {
+      border: 0 !important;
+      border-bottom: 1px solid var(--vx-border) !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .artifact-card:last-child {
+      border-bottom: 0 !important;
+    }
+
+    .artifact-file-link {
+      color: var(--vx-blue) !important;
+      font: 550 0.82rem/1.35 var(--vx-font) !important;
+      letter-spacing: 0 !important;
+    }
+
+    .artifact-file-link.is-static {
+      color: var(--vx-ink) !important;
     }
 
     .source-chip,
@@ -2246,6 +3075,7 @@
       border-color: var(--vx-border-soft) !important;
       color: var(--vx-dim) !important;
       box-shadow: none !important;
+      font-weight: 600 !important;
     }
 
     .source-chip {
@@ -2254,11 +3084,17 @@
       color: var(--vx-dim) !important;
     }
 
-    .source-chip:has(input:checked),
-    .badge.active {
+    .source-chip:has(input:checked) {
       background: var(--vx-blue-soft) !important;
       border-color: rgba(74, 127, 199, 0.22) !important;
       color: var(--vx-blue) !important;
+      box-shadow: none !important;
+    }
+
+    .badge.active {
+      background: var(--vx-green-soft) !important;
+      border-color: rgba(111, 147, 85, 0.24) !important;
+      color: var(--vx-green) !important;
       box-shadow: none !important;
     }
 
@@ -2312,13 +3148,27 @@
       box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
     }
 
-    #categoryPanel .panel-head h2::before,
-    .rail-card:nth-of-type(3) h3::before {
+    #workflowPanel .panel-head .toolbar {
+      gap: 6px;
+      align-items: center;
+    }
+
+    #workflowPanel .panel-head .toolbar .ghost-btn {
+      min-height: 28px !important;
+      padding: 0 9px !important;
+      border-radius: 999px !important;
+      font-size: 0.7rem !important;
+      font-weight: 600 !important;
+      line-height: 1 !important;
+    }
+
+    #categoryPanel .panel-head h2::before {
       background: var(--vx-orange);
       box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
     }
 
     #outputsPanel .panel-head h2::before,
+    .rail-card:nth-of-type(3) h3::before,
     .terminal-head h3::before {
       background: var(--vx-blue);
       box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
@@ -2399,6 +3249,65 @@
       font-size: 1rem !important;
     }
 
+    .task-card .card-summary {
+      min-height: 76px;
+      padding: 18px 20px !important;
+    }
+
+    .task-card .summary-main {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .task-card .summary-main h3 {
+      margin: 0 !important;
+      font-size: 1.04rem !important;
+      line-height: 1.25 !important;
+    }
+
+    .task-step-heading {
+      gap: 6px;
+    }
+
+    .task-step-kicker {
+      color: var(--vx-green) !important;
+      font: 600 0.67rem/1.15 var(--vx-mono) !important;
+      letter-spacing: 0.06em !important;
+    }
+
+    .task-step-dot {
+      background: var(--vx-green);
+      box-shadow: 0 0 0 5px rgba(111, 147, 85, 0.12);
+    }
+
+    .task-group-label {
+      margin: 8px 0 0;
+      color: var(--vx-muted) !important;
+    }
+
+    .task-group-label strong {
+      color: var(--vx-ink) !important;
+      font: 600 0.78rem/1.25 var(--vx-font) !important;
+      letter-spacing: 0;
+    }
+
+    .task-group-label span {
+      color: var(--vx-muted) !important;
+      font: 500 0.66rem/1.25 var(--vx-mono) !important;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .task-card:not(.is-active) .task-step-kicker {
+      color: var(--vx-muted) !important;
+    }
+
+    .task-card:not(.is-active) .task-step-dot {
+      background: #cfc6b5;
+      box-shadow: 0 0 0 5px rgba(207, 198, 181, 0.16);
+    }
+
     .category-title-input,
     .category-description-input {
       color: var(--vx-ink) !important;
@@ -2415,19 +3324,37 @@
     }
 
     .task-config-grid {
-      grid-template-columns: minmax(280px, 1fr) 176px !important;
+      grid-template-columns: minmax(260px, 1fr) 176px minmax(210px, 0.7fr) !important;
       align-items: end;
     }
 
-    .task-model-field {
+    .task-model-field,
+    .task-output-field {
       max-width: 176px;
       justify-self: end;
     }
 
-    .task-model-field .select {
+    .task-output-field {
+      max-width: 240px;
+    }
+
+    .task-model-field .select,
+    .task-output-field .select {
       min-height: 42px !important;
       padding-inline: 11px !important;
       font-size: 0.86rem !important;
+    }
+
+    .select,
+    select {
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      padding-inline-end: 38px !important;
+      background-color: var(--vx-surface) !important;
+      background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 5.5L7 8.5L10 5.5' stroke='%237A7067' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 14px center !important;
+      background-size: 14px 14px !important;
     }
 
     .switch-ui {
@@ -2446,8 +3373,8 @@
     }
 
     .switch input:checked + .switch-ui {
-      background: var(--vx-ink) !important;
-      border-color: var(--vx-ink) !important;
+      background: var(--vx-green) !important;
+      border-color: var(--vx-green) !important;
     }
 
     .switch input:checked + .switch-ui::after {
@@ -2455,14 +3382,21 @@
     }
 
     .caret {
+      width: 36px !important;
+      height: 36px !important;
+      display: grid !important;
+      place-items: center !important;
+      padding: 0 !important;
       color: var(--vx-muted) !important;
       border-color: var(--vx-border-soft) !important;
       background: var(--vx-surface-warm) !important;
+      font-size: 15px !important;
+      line-height: 1 !important;
     }
 
     details[open] .caret {
-      background: var(--vx-blue-soft) !important;
-      color: var(--vx-blue) !important;
+      background: var(--vx-green-soft) !important;
+      color: var(--vx-green) !important;
     }
 
     .chat-shell {
@@ -2541,19 +3475,19 @@
       border: 1px solid #c8b9a3 !important;
       border-radius: 18px !important;
       background: rgba(255, 255, 255, 0.96) !important;
-      box-shadow: 0 -12px 34px rgba(26, 20, 16, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset !important;
+      box-shadow: 0 -8px 24px rgba(26, 20, 16, 0.07), 0 1px 0 rgba(255, 255, 255, 0.8) inset !important;
       backdrop-filter: blur(18px);
       position: sticky;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .run-strip::before {
       content: "";
       position: absolute;
       inset: 10px auto 10px 10px;
-      width: 5px;
+      width: 3px;
       border-radius: 999px;
-      background: var(--vx-ink);
+      background: var(--vx-border-strong);
       box-shadow: none;
     }
 
@@ -2574,6 +3508,21 @@
       border-radius: 10px !important;
     }
 
+    .run-strip .icon-btn {
+      width: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      padding: 0 !important;
+      color: var(--vx-dim) !important;
+      background: var(--vx-surface) !important;
+    }
+
+    .run-strip .icon-btn:hover {
+      color: var(--vx-ink) !important;
+      border-color: var(--vx-border-strong) !important;
+      background: #fff !important;
+    }
+
     .terminal {
       background: #15110d !important;
       color: rgba(255, 255, 255, 0.82) !important;
@@ -2592,12 +3541,11 @@
 
     @media (max-width: 1180px) {
       .page {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
       }
 
       .rail {
-        position: static;
-        order: -1;
+        display: none;
       }
 
       .rail .terminal-wrap {
@@ -2615,6 +3563,11 @@
         flex-direction: column;
       }
 
+      .topbar-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
       .brand {
         align-items: flex-start;
         flex-direction: column;
@@ -2625,8 +3578,40 @@
         padding-inline-start: 0;
       }
 
+      .setup-suggest-row {
+        gap: 5px 8px;
+      }
+
+      .setup-suggest-feedback {
+        flex-basis: 100%;
+        font-size: 0.7rem;
+      }
+
+      .prompt-advanced summary {
+        align-items: flex-start;
+        gap: 10px;
+        padding: 11px 12px;
+      }
+
+      .system-prompt-mark {
+        width: 30px;
+        height: 30px;
+      }
+
+      .system-prompt-copy {
+        flex: 1 1 calc(100% - 42px);
+      }
+
+      .system-prompt-copy small {
+        display: none;
+      }
+
+      .prompt-advanced summary::after {
+        margin-inline-start: 40px;
+      }
+
       .page {
-        width: min(100% - 18px, 1720px);
+        width: min(100% - 18px, 1720px) !important;
       }
 
       .setup-grid,
@@ -2638,7 +3623,12 @@
       .demand-helper-body,
       .output-grid,
       .mini-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+      }
+
+      .header-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        justify-content: stretch;
       }
 
       .panel-head,
@@ -2692,6 +3682,10 @@
         flex-wrap: wrap;
       }
 
+      .run-strip > div:first-child {
+        min-width: 0 !important;
+      }
+
       .run-strip .btn,
       .run-strip .ghost-btn {
         flex: 1;
@@ -2710,8 +3704,9 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/mobile-responsive.css" media="(max-width: 760px)" />
 </head>
-<body>
+<body class="faq-builder-page">
   <header class="topbar">
     <div class="brand">
       <a class="brand-home-link" href="/index.html" aria-label="Go to home page">
@@ -2719,19 +3714,23 @@
         <div class="brand-ai" aria-label="Carmelon AI">AI</div>
       </a>
       <div class="brand-copy">
-        <p class="eyebrow">Creator Studio</p>
+        <p class="eyebrow">FAQ Builder</p>
         <h1>FAQ Workflow Builder</h1>
-        <p class="subtitle">Build FAQ questions, answers, and QA checks by real user categories, with full control over models and prompts.</p>
+        <p class="subtitle">Build questions, answers, and checks from real customer intent. Keep everything editable before you run.</p>
       </div>
     </div>
-    <span class="status-pill" id="saveStatus">Saved locally</span>
+    <div class="topbar-actions">
+      <input id="importPlanInput" type="file" accept="application/json,.json" hidden />
+      <button class="ghost-btn topbar-load-btn" type="button" id="importPlanBtn">Load plan</button>
+      <span class="status-pill" id="saveStatus">Saved locally</span>
+    </div>
   </header>
 
   <main class="page">
     <section class="workspace">
       <nav class="builder-tabs" aria-label="FAQ builder views">
-        <button class="view-tab active" type="button" data-view-tab="builder">Manual editing</button>
-        <button class="view-tab" type="button" data-view-tab="chat">Guided chat</button>
+        <button class="view-tab active" type="button" data-view-tab="builder">Editor</button>
+        <button class="view-tab" type="button" data-view-tab="chat">Guided setup</button>
       </nav>
 
       <section class="panel hidden" id="chatPanel" data-chat-section>
@@ -2761,7 +3760,7 @@
               <h3>What the chat filled</h3>
               <div class="chat-summary-list" id="faqChatSummary"></div>
               <button class="ghost-btn" type="button" id="chatOpenBuilderBtn">Open manual editor</button>
-              <button class="ghost-btn" type="button" id="chatSavePlanBtn">Save JSON plan</button>
+              <button class="ghost-btn" type="button" id="chatSavePlanBtn">Save plan</button>
             </aside>
           </div>
         </div>
@@ -2770,9 +3769,13 @@
       <section class="panel" id="setupPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Step 1</p>
+            <p class="eyebrow">Setup</p>
             <h2>Workflow setup</h2>
             <p class="subtitle">Enter a hotel, page, product, or topic. Use multiple lines when each subject should run as a separate job.</p>
+            <div class="setup-suggest-row">
+              <button class="inline-action auto-configure-btn" type="button" id="autoConfigureBtn">Suggest setup</button>
+              <span class="setup-suggest-feedback" id="autoConfigureStatus" role="status" aria-live="polite"></span>
+            </div>
           </div>
           <div class="header-metrics" aria-label="Workflow summary">
             <div class="strip-metric">
@@ -2807,10 +3810,9 @@
                   <button class="seg-btn" type="button" data-preset="vehicle">Vehicle models</button>
                 </div>
               </div>
-              <button class="ghost-btn auto-configure-btn" type="button" id="autoConfigureBtn">Auto-fit from setup</button>
             </div>
 
-            <label class="field">
+            <label class="field subject-field">
               <span>Subjects / topics</span>
               <textarea id="subjects" class="textarea ltr" rows="3" placeholder="Leonardo Royal Berlin&#10;Toyota Corolla Hybrid&#10;Small business CRM"></textarea>
               <span class="hint">Use a new line or comma between subjects. The setup is saved in this browser so you can continue later.</span>
@@ -2824,10 +3826,11 @@
             <label class="field">
               <span>Main model</span>
               <select id="globalModel" class="select ltr">
-                <option value="o3">o3 - balanced</option>
-                <option value="gpt-5.5">gpt-5.5 - deep</option>
-                <option value="gpt-5.4">gpt-5.4 - strong</option>
-                <option value="gpt-5.4-mini">gpt-5.4-mini - quick</option>
+                <option value="o3">OpenAI o3 - balanced</option>
+                <option value="gpt-5.5">OpenAI gpt-5.5 - deep</option>
+                <option value="gpt-5.4">OpenAI gpt-5.4 - strong</option>
+                <option value="gpt-5.4-mini">OpenAI gpt-5.4-mini - quick</option>
+                <option value="anthropic:claude-sonnet-4-6">Claude Sonnet 4.6 - strong writing</option>
               </select>
             </label>
 
@@ -2861,6 +3864,19 @@
               <input id="audience" class="input ltr" value="Guests before booking, guests before arrival, and in-house guests" />
             </label>
 
+            <details class="field compact-panel forbidden-panel wide-field">
+              <summary class="forbidden-panel-head">
+                <div>
+                  <h3 class="source-panel-title forbidden-panel-title">Words to avoid</h3>
+                  <p class="forbidden-panel-note">Optional global guardrail. These words or phrases are avoided across questions, answers, and final polish.</p>
+                </div>
+                <span class="forbidden-panel-pill" aria-hidden="true"></span>
+              </summary>
+              <div class="forbidden-panel-body">
+                <textarea id="forbiddenPhrases" class="textarea ltr" rows="3" placeholder="One forbidden word or phrase per line"></textarea>
+              </div>
+            </details>
+
             <div class="field compact-panel source-panel">
               <span>Global sources</span>
               <div class="source-group">
@@ -2886,26 +3902,26 @@
               <summary>
                 <span>
                   <span class="eyebrow">Optional question helper</span>
-                  <strong>Use Analytics and Search Console phrases</strong>
-                  <small>Find long-tail search phrases that include the brand or product name, then choose which phrases should guide the question prompt.</small>
+                  <strong>Use search phrases for guidance</strong>
+                  <small>Optional: add GA4/Search Console terms to shape question research.</small>
                 </span>
               </summary>
 
               <div class="demand-helper-body">
-                <div class="signals-card">
+                <div class="signals-card demand-source-card">
                   <div class="source-panel-head">
                     <h3 class="source-panel-title">Search phrase source</h3>
-                    <button class="ghost-btn" type="button" id="faqDemandRefreshSourcesBtn">Refresh sources</button>
+                    <button class="ghost-btn" type="button" id="faqDemandRefreshSourcesBtn" aria-label="Refresh search phrase sources">Refresh</button>
                   </div>
-                  <p>Use this only to discover question demand. It does not replace factual sources for answers.</p>
+                  <p class="demand-source-note">Question-demand only. Factual answers still use the selected research sources.</p>
 
                   <div class="signals-source-row">
                     <label class="source-chip"><input id="faqDemandUseAnalytics" type="checkbox" checked />Google Analytics</label>
                     <label class="source-chip"><input id="faqDemandUseSearchConsole" type="checkbox" checked />Search Console</label>
                   </div>
 
-                  <div class="grid control-grid">
-                    <div class="field">
+                  <div class="grid demand-source-grid">
+                    <div class="field demand-subject-field">
                       <span>Using subject</span>
                       <div class="linked-subject ltr">
                         <strong id="faqDemandSubjectName">No subject yet</strong>
@@ -2941,26 +3957,39 @@
                     </label>
 
                     <label class="field">
-                      <span>GA4 account</span>
-                      <select id="faqDemandAnalyticsAccount" class="select ltr"></select>
-                    </label>
-
-                    <label class="field">
                       <span>Search Console site</span>
                       <select id="faqDemandSearchSite" class="select ltr"></select>
                     </label>
 
-                    <label class="field wide-field">
-                      <span>Website URL fallback</span>
-                      <input id="faqDemandWebsiteUrl" class="input ltr" placeholder="https://www.example.com/" />
-                    </label>
+                    <details class="demand-advanced">
+                      <summary>Advanced source settings</summary>
+                      <div class="demand-advanced-body">
+                        <label class="field">
+                          <span>GA4 account</span>
+                          <select id="faqDemandAnalyticsAccount" class="select ltr"></select>
+                        </label>
+                        <label class="field">
+                          <span>Manual Search Console URL</span>
+                          <input id="faqDemandWebsiteUrl" class="input ltr" placeholder="https://www.example.com/" />
+                        </label>
+                        <p class="demand-advanced-help">Optional. Use only when you need a specific Analytics property or the right Search Console site is not listed above.</p>
+                      </div>
+                    </details>
                   </div>
 
                   <div class="signals-actions" style="margin-top: 16px;">
                     <button class="btn secondary" type="button" id="faqDemandRunBtn">Find phrases</button>
-                    <button class="ghost-btn" type="button" id="faqDemandCopyBriefBtn">Copy phrase brief</button>
                   </div>
-                  <div class="signals-status" id="faqDemandStatus" style="margin-top: 12px;">Open this helper when you want Analytics/Search Console terms to guide question generation.</div>
+                  <div class="signals-status-row">
+                    <button
+                      class="help-icon has-tooltip"
+                      type="button"
+                      aria-label="What this helper does"
+                      title="Open this helper when you want Analytics/Search Console terms to guide question generation."
+                      data-tooltip="Open this helper when you want Analytics/Search Console terms to guide question generation."
+                    >?</button>
+                    <div class="signals-status" id="faqDemandStatus" aria-live="polite"></div>
+                  </div>
                   <div class="signals-diagnostics" id="faqDemandDiagnostics" aria-live="polite"></div>
                 </div>
 
@@ -2977,21 +4006,6 @@
                     <div class="empty-output">Find phrases to see selectable search demand here.</div>
                   </div>
                 </div>
-
-                <div class="signals-card demand-brief-card">
-                  <div class="section-title">
-                    <div>
-                      <p class="eyebrow">Prompt bridge</p>
-                      <h2>Search phrase brief</h2>
-                      <p class="subtitle">This gets inserted into the Research questions prompt. The FAQ agent should generate natural questions from the selected phrases and avoid duplicates.</p>
-                    </div>
-                    <div class="toolbar">
-                      <button class="ghost-btn" type="button" id="faqDemandApplyCategoriesBtn">Use intent categories</button>
-                      <button class="ghost-btn" type="button" id="faqDemandApplyPromptBtn">Apply to question prompt</button>
-                    </div>
-                  </div>
-                  <textarea id="faqDemandBrief" class="textarea signals-brief ltr" placeholder="Find phrases to generate a brief."></textarea>
-                </div>
               </div>
             </details>
 
@@ -3006,13 +4020,13 @@
       <section class="panel" id="workflowPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Step 3</p>
-            <h2>Prompt workflow</h2>
-            <p class="subtitle">Keep the defaults, or open any step and edit it manually. Step IDs stay stable so Google Sheets export keeps working.</p>
+            <p class="eyebrow">Workflow</p>
+            <h2>FAQ workflow</h2>
+            <p class="subtitle">Review the default steps or edit the instructions before running.</p>
           </div>
           <div class="toolbar">
-            <button class="ghost-btn" type="button" id="expandTasksBtn">Expand tasks</button>
-            <button class="ghost-btn" type="button" id="collapseTasksBtn">Collapse tasks</button>
+            <button class="ghost-btn" type="button" id="expandTasksBtn" aria-label="Expand all workflow tasks" title="Expand all workflow tasks">Expand</button>
+            <button class="ghost-btn" type="button" id="collapseTasksBtn" aria-label="Collapse all workflow tasks" title="Collapse all workflow tasks">Collapse</button>
           </div>
         </div>
         <div class="panel-body">
@@ -3027,22 +4041,27 @@
             <h2>Question-generation categories</h2>
             <p class="subtitle">Open this only when you need to refine the types of questions. These settings feed the question-generation prompt.</p>
           </div>
-          <div class="toolbar">
-            <label class="field" style="min-width: 180px;">
-              <span>Range for all categories</span>
-              <select id="globalCategoryTarget" class="select">
-                <option value="inherit">No change</option>
-                <option value="2-4">2-4 questions</option>
-                <option value="3-5">3-5 questions</option>
-                <option value="4-6">4-6 questions</option>
-                <option value="as_found">As many as found</option>
-                <option value="quality_first">No fixed target</option>
-              </select>
-            </label>
-            <button class="ghost-btn" type="button" id="applyCategoryTargetBtn">Apply</button>
-            <button class="ghost-btn" type="button" id="expandCategoriesBtn">Expand all</button>
-            <button class="ghost-btn" type="button" id="collapseCategoriesBtn">Collapse all</button>
-          </div>
+          <details class="category-tools">
+            <summary>Category tools</summary>
+            <div class="category-tools-menu">
+              <label class="field">
+                <span>Range for all categories</span>
+                <select id="globalCategoryTarget" class="select">
+                  <option value="inherit">No change</option>
+                  <option value="2-4">2-4 questions</option>
+                  <option value="3-5">3-5 questions</option>
+                  <option value="4-6">4-6 questions</option>
+                  <option value="as_found">As many as found</option>
+                  <option value="quality_first">No fixed target</option>
+                </select>
+              </label>
+              <div class="category-tools-actions">
+                <button class="btn secondary" type="button" id="applyCategoryTargetBtn">Apply range</button>
+                <button class="ghost-btn" type="button" id="expandCategoriesBtn">Expand all</button>
+                <button class="ghost-btn" type="button" id="collapseCategoriesBtn">Collapse all</button>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="panel-body">
           <div id="categoryContainer" class="category-grid"></div>
@@ -3053,11 +4072,11 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Outputs</p>
-            <h2>Outputs and files</h2>
-            <p class="subtitle">Created Google Sheets and saved workflow JSON files will appear here after runs or exports.</p>
+            <h2>Plans and generated files</h2>
+            <p class="subtitle">Saved plans stay separate from files created by workflow runs.</p>
           </div>
           <div class="toolbar">
-            <button class="ghost-btn" type="button" id="clearArtifactsBtn">Clear list</button>
+            <button class="ghost-btn" type="button" id="clearArtifactsBtn">Clear all</button>
           </div>
         </div>
         <div class="panel-body">
@@ -3081,11 +4100,14 @@
           <p id="runDetails">Choose at least one subject, then run the FAQ workflow.</p>
         </div>
         <div class="actions-row">
-          <input id="importPlanInput" type="file" accept="application/json,.json" hidden />
           <button class="ghost-btn" type="button" id="resetBtn">Reset</button>
-          <button class="ghost-btn" type="button" id="downloadPlanBtn">Save JSON</button>
-          <button class="ghost-btn" type="button" id="importPlanBtn">Load JSON</button>
-          <button class="ghost-btn" type="button" id="copyPlanBtn">Copy plan</button>
+          <button class="ghost-btn" type="button" id="downloadPlanBtn">Save plan</button>
+          <button class="ghost-btn icon-btn has-tooltip" type="button" id="copyPlanBtn" aria-label="Copy JSON plan" title="Copy JSON plan" data-tooltip="Copy JSON plan">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <rect x="9" y="9" width="10" height="10" rx="2"></rect>
+              <path d="M5 15V7a2 2 0 0 1 2-2h8"></path>
+            </svg>
+          </button>
           <button class="btn secondary" type="button" id="runBtn">Run FAQ Workflow</button>
         </div>
       </div>
@@ -3110,18 +4132,11 @@
       </section>
 
       <section class="rail-card">
-        <p class="eyebrow">Variables</p>
-        <h3>Available variables</h3>
-        <div class="chips">
-          <span class="badge active">{{subject}}</span>
-          <span class="badge active">{{last}}</span>
-          <span class="badge active">{{answersTsv}}</span>
-          <span class="badge teal">{{categoryPlan}}</span>
-          <span class="badge teal">{{questionTarget}}</span>
-          <span class="badge orange">{{language}}</span>
-          <span class="badge orange">{{namingRules}}</span>
+        <p class="eyebrow">Outputs</p>
+        <h3>Plans and files</h3>
+        <div class="rail-output-grid" id="railArtifactList">
+          <div class="output-empty">Saved plans and generated files will stay here.</div>
         </div>
-        <p style="margin: 12px 0 0;">Preview variables are replaced before sending. `{{subject}}`, `{{last}}`, and `{{answersTsv}}` are preserved for the server at runtime.</p>
       </section>
 
       <section class="rail-card terminal-wrap">
@@ -3142,16 +4157,23 @@
     const STORAGE_KEY = "carmelon.faqPlayground.v3";
     const OUTPUTS_STORAGE_KEY = "carmelon.faqPlayground.outputs.v1";
     const SUBJECT_HISTORY_KEY = "carmelon.faqPlayground.subjectHistory.v1";
+    let autoConfigureFeedbackTimer = null;
 
     const MODEL_OPTIONS = [
       { value: "inherit", label: "Use global model" },
-      { value: "o3", label: "o3" },
-      { value: "gpt-5.5", label: "gpt-5.5" },
-      { value: "gpt-5.4", label: "gpt-5.4" },
-      { value: "gpt-5.4-mini", label: "gpt-5.4-mini" }
+      { value: "o3", label: "OpenAI o3" },
+      { value: "gpt-5.5", label: "OpenAI gpt-5.5" },
+      { value: "gpt-5.4", label: "OpenAI gpt-5.4" },
+      { value: "gpt-5.4-mini", label: "OpenAI gpt-5.4-mini" },
+      { value: "anthropic:claude-sonnet-4-6", label: "Claude Sonnet 4.6" }
     ];
 
     const QUESTION_RANGES = ["10-15", "20-30", "30-45", "45-60"];
+
+    const GRAMMAR_OUTPUT_MODES = [
+      { value: "replace_base_tsv", label: "Apply polish to final sheet" },
+      { value: "append_column", label: "Add review column" }
+    ];
 
     const CATEGORY_LIBRARY = [
       {
@@ -3432,6 +4454,7 @@
           "Audience: {{audience}}.",
           "Source policy: {{sourceStrategy}}.",
           "Entity naming rules: {{namingRules}}.",
+          "Forbidden phrase rules: {{forbiddenPhrases}}",
           "",
           "CATEGORY PLAN:",
           "{{categoryPlan}}",
@@ -3444,7 +4467,6 @@
           "- Avoid sales copy, vague questions, and questions that cannot be answered from reliable sources.",
           "- Use the exact subject name naturally in questions where it helps clarity.",
           "- Include questions that help AI/search systems understand the entity, service, policies, location and trust signals.",
-          "",
           "Return ONLY a Markdown table with columns:",
           "Category | Question | Frequency Level | Evidence needed"
         ].join("\n"),
@@ -3453,7 +4475,7 @@
       },
       {
         id: 2,
-        name: "Write answers as TSV",
+        name: "Write answers",
         enabled: true,
         model: "inherit",
         system: "You are a precise FAQ content editor. You write short, useful and verifiable answers without inventing facts.",
@@ -3474,7 +4496,8 @@
           "- Keep wording natural and helpful, not promotional.",
           "- If information is unavailable after checking approved sources, write exactly: Information is currently not available. [VERIFY]",
           "- If a fact comes from a non-official source, keep it cautious and mark it with [VERIFY].",
-          "- Keep the exact question wording unless grammar must be fixed."
+          "- Keep the exact question wording unless grammar, clarity, or forbidden-phrase cleanup is required.",
+          "- Apply these forbidden phrase rules across both questions and answers: {{forbiddenPhrases}}."
         ].join("\n"),
         tone: "Warm, concise, reliable.",
         sources: "Official website and approved business sources only."
@@ -3522,6 +4545,8 @@
           "DATA TO CHECK:",
           "{{answersTsv}}",
           "",
+          "If returning WRONG or FOUND text, apply these forbidden phrase rules: {{forbiddenPhrases}}",
+          "",
           "Return exactly:",
           "HEADER",
           "Source OK",
@@ -3545,6 +4570,7 @@
         name: "Grammar and answer fit",
         enabled: false,
         model: "inherit",
+        outputMode: "replace_base_tsv",
         system: "You are a strict FAQ editor. You check grammar, answer fit, clarity and tone without adding unsupported facts.",
         user: [
           "Review each TSV row for writing quality and question-answer fit.",
@@ -3558,21 +4584,21 @@
           "- Is the answer concise and useful rather than promotional?",
           "- For yes/no questions, does it start with Yes, No, or Currently when appropriate?",
           "- Does the question include the subject name naturally when needed, without keyword stuffing?",
+          "- Apply these forbidden phrase rules across the final TSV: {{forbiddenPhrases}}.",
           "",
-          "Return exactly:",
-          "HEADER",
-          "Grammar Fix",
-          "DATA",
-          "[one value per data row]",
-          "",
-          "Write - if the row is good.",
-          "If any issue exists, write the complete fixed question or complete fixed answer in one line.",
-          "Do not add extra commentary. Return exactly one line per data row, excluding the header."
+          "{{grammarOutputInstructions}}"
         ].join("\n"),
         tone: "Precise, clean and practical.",
         sources: ""
       }
     ];
+
+    function normalizeTaskName(task) {
+      if (Number(task?.id) === 2 && /^write answers as tsv$/i.test(String(task?.name || "").trim())) {
+        return "Write answers";
+      }
+      return task?.name || "";
+    }
 
     const $ = (id) => document.getElementById(id);
     const logsDiv = $("logs");
@@ -3581,6 +4607,7 @@
     const tasksContainer = $("tasksContainer");
     const categoryContainer = $("categoryContainer");
     const artifactList = $("artifactList");
+    const railArtifactList = $("railArtifactList");
     let outputArtifacts = loadOutputArtifacts();
     let activeRunSubject = "";
     let faqDemandSourcesLoaded = false;
@@ -3697,43 +4724,119 @@
         title: artifact.title || "New output",
         description: artifact.description || "",
         url,
-        fileName: artifact.fileName || ""
+        fileName: artifact.fileName || "",
+        content: typeof artifact.content === "string" ? artifact.content : "",
+        mimeType: artifact.mimeType || ""
       });
       outputArtifacts = outputArtifacts.slice(0, 30);
       saveOutputArtifacts();
       renderOutputArtifacts();
     }
 
-    function renderOutputArtifacts() {
-      if (!artifactList) return;
-      if (!outputArtifacts.length) {
-        artifactList.innerHTML = `
-          <div class="empty-output">
-            No outputs yet. Created Google Sheets and JSON files saved from this screen will appear here after a run.
+    function isSavedPlanArtifact(artifact) {
+      const type = String(artifact?.type || "").toLowerCase();
+      const fileName = String(artifact?.fileName || "").toLowerCase();
+      return type.includes("work plan") || type.includes("plan json") || fileName.endsWith("-faq-work-plan.json");
+    }
+
+    function isGoogleSheetArtifact(artifact) {
+      const type = String(artifact?.type || "").toLowerCase();
+      const url = String(artifact?.url || "").toLowerCase();
+      return type.includes("google sheet") || url.includes("docs.google.com/spreadsheets");
+    }
+
+    function artifactIconClass(artifact) {
+      if (isSavedPlanArtifact(artifact)) return "is-plan";
+      return "is-sheet";
+    }
+
+    function artifactIconLabel(artifact) {
+      if (isSavedPlanArtifact(artifact)) return "Saved plan";
+      if (isGoogleSheetArtifact(artifact)) return "Google Sheet";
+      return "Generated table file";
+    }
+
+    function renderArtifactRows(artifacts) {
+      if (!artifacts.length) return "";
+
+      return `
+        <div class="artifact-list">
+          ${artifacts.map((artifact) => {
+            const label = artifact.fileName || artifact.title || "Output file";
+            const title = artifact.description || artifact.url || artifact.type || label;
+            const iconClass = artifactIconClass(artifact);
+            const iconLabel = artifactIconLabel(artifact);
+            const fileLink = artifact.url
+              ? `<a class="artifact-file-link" href="${escapeHtml(artifact.url)}" target="_blank" rel="noreferrer" title="${escapeHtml(title)}">${escapeHtml(label)}</a>`
+              : artifact.content && artifact.fileName
+                ? `<button class="artifact-file-link" type="button" data-download-artifact="${escapeHtml(artifact.id)}" title="${escapeHtml(title)}">${escapeHtml(label)}</button>`
+                : `<span class="artifact-file-link is-static" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+            return `
+              <article class="artifact-card">
+                <span class="artifact-file-icon ${iconClass}" aria-label="${escapeHtml(iconLabel)}" role="img"></span>
+                ${fileLink}
+              </article>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function renderOutputSection(title, artifacts, emptyText) {
+      return `
+        <section class="output-section">
+          <div class="output-section-head">
+            <h3 class="output-section-title">${escapeHtml(title)}</h3>
+            <span class="output-section-count">${artifacts.length ? `${artifacts.length} item${artifacts.length === 1 ? "" : "s"}` : "Empty"}</span>
           </div>
-        `;
+          ${artifacts.length ? renderArtifactRows(artifacts) : `<div class="output-empty">${escapeHtml(emptyText)}</div>`}
+        </section>
+      `;
+    }
+
+    function renderOutputArtifactsInto(container, options = {}) {
+      if (!container) return;
+      const savedPlans = outputArtifacts.filter(isSavedPlanArtifact);
+      const generatedFiles = outputArtifacts.filter((artifact) => !isSavedPlanArtifact(artifact));
+
+      if (options.compact) {
+        const savedPreview = savedPlans.slice(0, 3);
+        const generatedPreview = generatedFiles.slice(0, 4);
+        const hiddenCount = Math.max(0, savedPlans.length + generatedFiles.length - savedPreview.length - generatedPreview.length);
+        const sections = [
+          savedPreview.length ? renderOutputSection("Saved plans", savedPreview, "") : "",
+          generatedPreview.length ? renderOutputSection("Generated files", generatedPreview, "") : ""
+        ].filter(Boolean);
+
+        container.innerHTML = sections.length
+          ? `${sections.join("")}${hiddenCount ? `<p class="rail-output-note">${hiddenCount} more item${hiddenCount === 1 ? "" : "s"} in Outputs below.</p>` : ""}`
+          : `<div class="output-empty">Saved plans and generated files will appear here.</div>`;
         return;
       }
 
-      artifactList.innerHTML = outputArtifacts.map((artifact) => {
-        const date = new Date(artifact.createdAt);
-        const dateLabel = Number.isNaN(date.getTime()) ? "" : date.toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" });
-        const urlAction = artifact.url
-          ? `<a class="ghost-btn" href="${escapeHtml(artifact.url)}" target="_blank" rel="noreferrer">Open</a>`
-          : "";
-        return `
-          <article class="artifact-card">
-            <span class="badge teal">${escapeHtml(artifact.type)}</span>
-            <h3>${escapeHtml(artifact.title)}</h3>
-            <p>${escapeHtml(artifact.description || artifact.fileName || "Output saved from the builder.")}</p>
-            ${artifact.url ? `<p class="ltr">${escapeHtml(artifact.url)}</p>` : ""}
-            <div class="artifact-actions">
-              ${urlAction}
-              ${dateLabel ? `<span class="badge">${escapeHtml(dateLabel)}</span>` : ""}
-            </div>
-          </article>
-        `;
-      }).join("");
+      container.innerHTML = [
+        renderOutputSection("Saved plans", savedPlans, "Saved plans will appear here after Save plan."),
+        renderOutputSection("Generated files", generatedFiles, "Generated Google Sheets and run files will appear here after a workflow run.")
+      ].join("");
+    }
+
+    function renderOutputArtifacts() {
+      renderOutputArtifactsInto(artifactList);
+      renderOutputArtifactsInto(railArtifactList, { compact: true });
+    }
+
+    function downloadStoredArtifact(artifactId) {
+      const artifact = outputArtifacts.find((item) => item.id === artifactId);
+      if (!artifact?.content || !artifact.fileName) return;
+      const blob = new Blob([artifact.content], { type: artifact.mimeType || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = artifact.fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
     }
 
     function inspectLogForArtifacts(message) {
@@ -3758,11 +4861,24 @@
       return /[\u0590-\u05ff]/.test(String(value || ""));
     }
 
+    function stripDeprecatedWordRuleBlocks(value) {
+      return String(value || "")
+        .replace(/\n+QUESTION WORDING RULES:\s*\n\{\{\s*questionLanguageRules\s*\}\}/gi, "")
+        .replace(/\n+ANSWER WORDING RULES:\s*\n\{\{\s*answerLanguageRules\s*\}\}/gi, "")
+        .replace(/\n+POLISH-ONLY WORDING RULES:\s*\n\{\{\s*polishLanguageRules\s*\}\}/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
     function mergeTasks(savedTasks) {
       const savedById = new Map((Array.isArray(savedTasks) ? savedTasks : []).map((task) => [Number(task.id), task]));
       return DEFAULT_TASKS.map((task) => {
         const saved = savedById.get(task.id) || {};
         const merged = { ...task, ...saved };
+        merged.name = normalizeTaskName(merged) || task.name;
+        if (typeof merged.user === "string") {
+          merged.user = stripDeprecatedWordRuleBlocks(merged.user);
+        }
         ["name", "description", "systemPrompt", "userPrompt"].forEach((key) => {
           if (hasHebrewText(saved[key])) {
             merged[key] = task[key];
@@ -3838,6 +4954,27 @@
       }
 
       return document.querySelector(".seg-btn.active")?.dataset.preset || "hotel";
+    }
+
+    function hasAutoConfigureSignal() {
+      return [
+        $("subjects")?.value,
+        $("audience")?.value,
+        $("sourceInstructions")?.value
+      ].some((value) => String(value || "").trim());
+    }
+
+    function setAutoConfigureFeedback(message, kind = "info") {
+      const target = $("autoConfigureStatus");
+      if (!target) return;
+
+      window.clearTimeout(autoConfigureFeedbackTimer);
+      target.textContent = message;
+      target.classList.toggle("is-warning", kind === "warning");
+      target.classList.add("is-visible");
+      autoConfigureFeedbackTimer = window.setTimeout(() => {
+        target.classList.remove("is-visible", "is-warning");
+      }, 4200);
     }
 
     function upsertTextBlock(text, label, content) {
@@ -3916,12 +5053,34 @@
       $("questionCount").value = range;
     }
 
+    function savedForbiddenPhrases() {
+      const controls = savedState.controls || {};
+      const seen = new Set();
+      return [
+        controls.forbiddenPhrases,
+        controls.questionForbiddenTerms,
+        controls.answerForbiddenTerms,
+        controls.polishForbiddenTerms
+      ]
+        .flatMap((value) => String(value || "").split(/\n|;/))
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .filter((value) => {
+          const key = value.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .join("\n");
+    }
+
     function applySavedControls() {
       $("subjects").value = savedState.subjects || "";
-      $("globalModel").value = savedState.controls?.globalModel || "o3";
+      $("globalModel").value = normalizeModelOptionValue(savedState.controls?.globalModel || "o3");
       applyQuestionRange(savedState.controls?.questionCount || savedState.controls?.questionRangePreset || "20-30");
       $("outputLanguage").value = savedState.controls?.outputLanguage || "English (UK)";
       $("audience").value = savedState.controls?.audience || "Guests before booking, guests before arrival, and in-house guests";
+      $("forbiddenPhrases").value = savedForbiddenPhrases();
       $("sourceInstructions").value = savedState.controls?.sourceInstructions || "Use selected sources to discover common questions. Use the official source for factual answers. Mark missing facts as Needs source confirmation.";
       $("namingPolicy").value = savedState.controls?.namingPolicy || "natural_exact";
       const savedNamingRules = savedState.controls?.namingRules || "";
@@ -3931,11 +5090,68 @@
       setActivePreset(normalizePreset(savedPreset), false);
     }
 
+    function normalizeModelOptionValue(value, fallback = "o3") {
+      const clean = String(value || fallback || "o3").trim();
+      if (clean === "inherit") return "inherit";
+
+      const providerModel = clean.match(/^(openai|anthropic):(.+)$/i);
+      if (providerModel) {
+        const provider = providerModel[1].toLowerCase();
+        const model = providerModel[2].trim();
+        return provider === "anthropic" ? `anthropic:${model || "claude-sonnet-4-6"}` : model || "o3";
+      }
+
+      if (/^claude/i.test(clean)) return `anthropic:${clean}`;
+      return clean || "o3";
+    }
+
     function modelOptions(selected) {
+      const selectedValue = normalizeModelOptionValue(selected || "inherit", "inherit");
       return MODEL_OPTIONS.map((option) => {
+        const isSelected = option.value === selectedValue ? "selected" : "";
+        return `<option value="${escapeHtml(option.value)}" ${isSelected}>${escapeHtml(option.label)}</option>`;
+      }).join("");
+    }
+
+    function resolveModelSelection(value, fallback = "o3") {
+      const clean = String(value || fallback || "o3").trim();
+      const providerModel = clean.match(/^(openai|anthropic):(.+)$/i);
+
+      if (providerModel) {
+        const provider = providerModel[1].toLowerCase();
+        const model = providerModel[2].trim();
+        return {
+          provider,
+          model: model || (provider === "anthropic" ? "claude-sonnet-4-6" : "o3"),
+          selection: clean
+        };
+      }
+
+      if (/^claude/i.test(clean)) {
+        return { provider: "anthropic", model: clean, selection: `anthropic:${clean}` };
+      }
+
+      return { provider: "openai", model: clean || "o3", selection: clean || "o3" };
+    }
+
+    function modelLabel(value) {
+      const option = MODEL_OPTIONS.find((item) => item.value === value);
+      if (option) return option.label.replace(/^OpenAI\s+/, "");
+      const resolved = resolveModelSelection(value);
+      return resolved.provider === "anthropic" ? `Claude ${resolved.model.replace(/^claude-?/i, "")}` : resolved.model;
+    }
+
+    function grammarOutputModeOptions(selected) {
+      return GRAMMAR_OUTPUT_MODES.map((option) => {
         const isSelected = option.value === selected ? "selected" : "";
         return `<option value="${escapeHtml(option.value)}" ${isSelected}>${escapeHtml(option.label)}</option>`;
       }).join("");
+    }
+
+    function controlValue(id) {
+      const element = $(id);
+      if (element) return element.value || "";
+      return savedState.controls?.[id] || "";
     }
 
     function categoryTargetValue(category) {
@@ -3995,18 +5211,45 @@
       updateSummary();
     }
 
-    function renderTasks() {
-      tasksContainer.innerHTML = taskDrafts.map((task) => {
+    function renderTaskGroupLabel(taskId) {
+      if (Number(taskId) === 1) {
+        return `
+          <div class="task-group-label" aria-label="Core workflow steps">
+            <div>
+              <strong>Core build</strong>
+              <span>Questions and answers</span>
+            </div>
+          </div>
+        `;
+      }
+
+      if (Number(taskId) === 3) {
+        return `
+          <div class="task-group-label" aria-label="Quality check steps">
+            <div>
+              <strong>Quality checks</strong>
+              <span>Duplicates, sources and final fit</span>
+            </div>
+          </div>
+        `;
+      }
+
+      return "";
+    }
+
+    function renderTaskCard(task) {
         const active = task.enabled ? "is-active" : "";
+        const taskName = normalizeTaskName(task);
         return `
           <details class="task-card ${active}" id="card-${task.id}">
             <summary class="card-summary">
               <div class="summary-main">
-                <h3>#${task.id} ${escapeHtml(task.name)}</h3>
-                <div class="task-meta">
-                  <span class="badge ${task.enabled ? "active" : ""}" id="task-badge-${task.id}">${task.enabled ? "Active" : "Skipped"}</span>
-                  <span class="badge teal has-tooltip" tabindex="0" data-tooltip="The task ID stays fixed so saved plans and Google Sheets export keep the same step order.">ID kept</span>
-                  <span class="badge">Task ${task.id}</span>
+                <div class="task-step-heading">
+                  <span class="task-step-kicker">
+                    <span class="task-step-dot" aria-hidden="true"></span>
+                    Step ${task.id}
+                  </span>
+                  <h3>${escapeHtml(taskName)}</h3>
                 </div>
               </div>
               <div class="summary-controls">
@@ -4018,7 +5261,7 @@
               </div>
             </summary>
             <div class="card-body">
-              <input type="hidden" id="name-${task.id}" value="${escapeHtml(task.name)}" />
+              <input type="hidden" id="name-${task.id}" value="${escapeHtml(taskName)}" />
               <div class="grid control-grid task-config-grid">
                 <label class="field task-tone-field">
                   <span>Writing style</span>
@@ -4028,6 +5271,10 @@
                   <span>Task model</span>
                   <select class="select ltr" id="model-${task.id}">${modelOptions(task.model || "inherit")}</select>
                 </label>
+                ${task.id === 5 ? `<label class="field task-output-field">
+                  <span>Result</span>
+                  <select class="select" id="output-mode-${task.id}">${grammarOutputModeOptions(task.outputMode || "replace_base_tsv")}</select>
+                </label>` : ""}
               </div>
 
               <label class="field">
@@ -4036,7 +5283,14 @@
               </label>
 
               <details class="prompt-advanced">
-                <summary>Model background instructions</summary>
+                <summary>
+                  <span class="system-prompt-mark">SYS</span>
+                  <span class="system-prompt-copy">
+                    <span class="prompt-editor-kicker">System prompt</span>
+                    <strong>Model role & boundaries</strong>
+                    <small>Behind-the-scenes context sent before the Agent work instructions.</small>
+                  </span>
+                </summary>
                 <div class="prompt-advanced-body">
                   <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
                 </div>
@@ -4059,6 +5313,7 @@
                   <button class="var-btn" type="button" data-insert-var="{{questionTarget}}" data-task-id="${task.id}">{{questionTarget}}</button>
                   <button class="var-btn" type="button" data-insert-var="{{language}}" data-task-id="${task.id}">{{language}}</button>
                   <button class="var-btn" type="button" data-insert-var="{{namingRules}}" data-task-id="${task.id}">{{namingRules}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{forbiddenPhrases}}" data-task-id="${task.id}">{{forbiddenPhrases}}</button>
                 </div>
                 <span class="prompt-help">Variables are shortcuts preserved in the prompt; subject and last are replaced at runtime.</span>
                 <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(task.user || "")}</textarea>
@@ -4066,7 +5321,10 @@
             </div>
           </details>
         `;
-      }).join("");
+    }
+
+    function renderTasks() {
+      tasksContainer.innerHTML = taskDrafts.map((task) => `${renderTaskGroupLabel(task.id)}${renderTaskCard(task)}`).join("");
       updateSummary();
     }
 
@@ -4109,6 +5367,7 @@
         enabled: $(`enable-${base.id}`)?.checked === true,
         name: $(`name-${base.id}`)?.value || base.name,
         model: $(`model-${base.id}`)?.value || base.model,
+        outputMode: $(`output-mode-${base.id}`)?.value || base.outputMode || "append_column",
         tone: $(`tone-${base.id}`)?.value || "",
         sources: $(`src-${base.id}`)?.value || "",
         system: $(`sys-${base.id}`)?.value || "",
@@ -4177,6 +5436,47 @@
         .join("\n");
     }
 
+    function ruleLines(elementId) {
+      return String($(elementId)?.value || "")
+        .split(/\n|;/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    function buildForbiddenPhrasesRules() {
+      const forbidden = ruleLines("forbiddenPhrases");
+      if (!forbidden.length) {
+        return "No extra forbidden words or phrases.";
+      }
+
+      return `Do not use these words or phrases anywhere in the generated FAQ unless they are part of a required proper noun: ${forbidden.join(", ")}.`;
+    }
+
+    function grammarOutputInstructions(outputMode) {
+      if (outputMode === "replace_base_tsv") {
+        return [
+          "Return ONLY the full corrected TSV.",
+          "Keep the same header and row order as the input TSV.",
+          "Edit the Question and Answer cells directly where grammar, clarity, tone, forbidden phrases, or answer fit need improvement.",
+          "Keep Category and Frequency Level unchanged unless a tiny wording cleanup is required.",
+          "Do not add a Grammar Fix column.",
+          "Do not add commentary before or after the TSV."
+        ].join("\n");
+      }
+
+      return [
+        "Return exactly:",
+        "HEADER",
+        "Grammar Fix",
+        "DATA",
+        "[one value per data row]",
+        "",
+        "Write - if the row is good.",
+        "If any issue exists, write the complete fixed question or complete fixed answer in one line.",
+        "Do not add extra commentary. Return exactly one line per data row, excluding the header."
+      ].join("\n");
+    }
+
     function buildCategoryPlan() {
       const categories = readCategoryDraftsFromDom().filter((category) => category.enabled);
       if (!categories.length) return "No categories selected.";
@@ -4193,7 +5493,7 @@
       ].join("\n");
     }
 
-    function replaceUiVars(text) {
+    function replaceUiVars(text, task = {}) {
       const replacements = {
         categoryPlan: buildCategoryPlan(),
         questionCount: $("questionCount").value || "30",
@@ -4201,7 +5501,12 @@
         language: $("outputLanguage").value || "English (UK)",
         audience: $("audience").value || "",
         sourceStrategy: buildSourcePolicy(),
-        namingRules: buildNamingRules()
+        namingRules: buildNamingRules(),
+        forbiddenPhrases: buildForbiddenPhrasesRules(),
+        questionLanguageRules: buildForbiddenPhrasesRules(),
+        answerLanguageRules: buildForbiddenPhrasesRules(),
+        polishLanguageRules: buildForbiddenPhrasesRules(),
+        grammarOutputInstructions: grammarOutputInstructions(task.outputMode || "append_column")
       };
 
       let output = String(text || "");
@@ -4211,10 +5516,35 @@
       return output;
     }
 
+    function promptIncludesForbiddenPhrases(rawPrompt, renderedPrompt) {
+      const raw = String(rawPrompt || "");
+      const rendered = String(renderedPrompt || "");
+      return /\{\{\s*(forbiddenPhrases|questionLanguageRules|answerLanguageRules|polishLanguageRules)\s*\}\}/i.test(raw)
+        || /\bForbidden phrases:/i.test(rendered)
+        || /\bForbidden phrase rules:/i.test(rendered)
+        || /\bFORBIDDEN PHRASES:/i.test(rendered);
+    }
+
     function collectTasksForPayload() {
       return readTaskDraftsFromDom().map((task) => {
-        let userPrompt = replaceUiVars(task.user);
-        const systemPrompt = replaceUiVars(task.system);
+        const rawUserPrompt = String(task.user || "");
+        let userPrompt = replaceUiVars(rawUserPrompt, task);
+        const systemPrompt = replaceUiVars(task.system, task);
+
+        if (task.id === 1) {
+          const demandBrief = selectedFaqDemandBrief().trim();
+          if (demandBrief && !userPrompt.includes("SEARCH-DEMAND FAQ BRIEF")) {
+            userPrompt += `\n\nSEARCH PHRASE DEMAND SIGNALS:\n${demandBrief}`;
+          }
+        }
+
+        if (task.id === 5 && task.outputMode === "replace_base_tsv") {
+          userPrompt += `\n\nOUTPUT MODE OVERRIDE:\n${grammarOutputInstructions("replace_base_tsv")}`;
+        }
+
+        if ((task.id === 1 || task.id === 2 || task.id === 4 || task.id === 5) && ruleLines("forbiddenPhrases").length && !promptIncludesForbiddenPhrases(rawUserPrompt, userPrompt)) {
+          userPrompt += `\n\nFORBIDDEN PHRASES:\n${buildForbiddenPhrasesRules()}`;
+        }
 
         if (task.tone.trim()) {
           userPrompt += `\n\nTONE & STYLE:\n${task.tone.trim()}`;
@@ -4224,13 +5554,18 @@
           userPrompt += `\n\nAPPROVED SOURCES:\n${task.sources.trim()}`;
         }
 
+        const modelSelection = task.model === "inherit" ? $("globalModel").value : task.model;
+        const aiModel = resolveModelSelection(modelSelection);
+
         return {
           id: task.id,
           enabled: task.enabled === true,
           name: task.name,
+          outputMode: task.outputMode || "append_column",
           system: systemPrompt,
           user: userPrompt,
-          model: task.model === "inherit" ? $("globalModel").value : task.model
+          model: aiModel.model,
+          provider: aiModel.provider
         };
       });
     }
@@ -4247,6 +5582,7 @@
           audience: $("audience").value,
           sourceOptions: getSelectedSourceOptions(),
           sourceInstructions: $("sourceInstructions").value,
+          forbiddenPhrases: $("forbiddenPhrases").value,
           namingPolicy: $("namingPolicy").value,
           namingRules: $("namingRules").value,
           preset: document.querySelector(".seg-btn.active")?.dataset.preset || "hotel"
@@ -4277,11 +5613,6 @@
         const card = $(`card-${task.id}`);
         const enabled = $(`enable-${task.id}`)?.checked === true;
         card?.classList.toggle("is-active", enabled);
-        const badge = $(`task-badge-${task.id}`);
-        if (badge) {
-          badge.textContent = enabled ? "Active" : "Skipped";
-          badge.classList.toggle("active", enabled);
-        }
       });
     }
 
@@ -4295,7 +5626,7 @@
       $("subjectCount").textContent = subjects.length;
       $("categoryCount").textContent = selectedCategories.length;
       $("taskCount").textContent = enabledTasks.length;
-      $("modelShort").textContent = model.replace("gpt-", "");
+      $("modelShort").textContent = modelLabel(model).replace("gpt-", "");
       $("sheetNamePreview").textContent = subjects.length
         ? subjects.slice(0, 3).join(" | ")
         : "Generated automatically from the subject name";
@@ -4308,7 +5639,7 @@
         : "Choose at least one category to give the model clear direction.";
 
       $("workflowChips").innerHTML = enabledTasks
-        .map((task) => `<span class="badge active">#${task.id} ${escapeHtml(task.name)}</span>`)
+        .map((task) => `<span class="badge active">Step ${task.id} · ${escapeHtml(normalizeTaskName(task))}</span>`)
         .join("") || `<span class="badge">No active tasks</span>`;
 
       updateCardStates();
@@ -4384,7 +5715,7 @@
               ${escapeHtml(site.name || site.siteUrl)}
             </option>
           `).join("")
-          : `<option value="">Use website URL fallback</option>`;
+          : `<option value="">Add URL in advanced fallback</option>`;
 
         faqDemandSourcesLoaded = true;
         if (status) status.textContent = "Sources loaded. Choose a range and analyze demand.";
@@ -4395,7 +5726,6 @@
 
     function renderFaqDemandResult(result) {
       faqDemandLastResult = result;
-      $("faqDemandBrief").value = result.promptBrief || "";
       $("faqDemandQueryCount").textContent = String(result.topQueries?.length || 0);
       $("faqDemandPageCount").textContent = String(result.topLandingPages?.length || 0);
       const phrases = Array.isArray(result.phrases) ? result.phrases : [];
@@ -4422,7 +5752,7 @@
         ? "No matching Analytics/Search Console rows were found. Starter ideas are shown unchecked so they are not mistaken for real data."
         : warnings.length
         ? `Phrase scan finished with ${warnings.length} warning(s).`
-        : "Phrase scan finished. Select phrases, then apply the brief to the question prompt.";
+        : "Phrase scan finished. Checked phrases will be included automatically in the Research questions prompt.";
 
       renderFaqDemandDiagnostics(result, warnings);
     }
@@ -4467,6 +5797,7 @@
         "",
         "Use these selected phrases to influence the Research questions task. They do not replace factual answer sources.",
         "For final answers, verify facts against official or otherwise approved sources.",
+        "Selected phrases are demand signals only; rewrite or skip wording that conflicts with forbidden phrase rules.",
         hasStarter ? "Some selected phrases are fallback suggestions, not proof that users searched those exact terms." : "All selected phrases are real source signals from Analytics/Search Console.",
         "",
         "SELECTED PHRASES TO TURN INTO FAQ QUESTIONS:",
@@ -4530,49 +5861,6 @@
         runButton.disabled = false;
         runButton.textContent = "Find phrases";
       }
-    }
-
-    function applyFaqDemandToQuestionPrompt() {
-      const brief = selectedFaqDemandBrief().trim();
-      if (!brief) {
-        alert("Select at least one source phrase or starter idea before applying.");
-        return;
-      }
-
-      upsertPromptBlock("user-1", "Search phrase demand signals", brief);
-      const taskToggle = $("enable-1");
-      if (taskToggle) taskToggle.checked = true;
-      updateSummary();
-      saveState();
-      $("saveStatus").textContent = "Demand brief applied";
-      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
-    }
-
-    function applyFaqDemandCategories() {
-      const result = faqDemandLastResult;
-      const categories = Array.isArray(result?.categories) ? result.categories : [];
-      if (!categories.length) {
-        alert("Analyze signals first to generate category ideas.");
-        return;
-      }
-
-      applyCustomCategories(categories.map((category) => {
-        const signals = category.signals?.length ? ` Signals: ${category.signals.join(", ")}` : "";
-        return `${category.title} - ${category.description}${signals}`;
-      }).join("\n"));
-      $("saveStatus").textContent = "Demand categories applied";
-      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
-    }
-
-    function copyFaqDemandBrief() {
-      const brief = selectedFaqDemandBrief().trim();
-      if (!brief) {
-        alert("Select at least one source phrase or starter idea first.");
-        return;
-      }
-      navigator.clipboard?.writeText(brief);
-      $("saveStatus").textContent = "Demand brief copied";
-      setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1600);
     }
 
     function setActivePreset(preset, shouldApply = true, options = {}) {
@@ -4658,7 +5946,7 @@
       runBtn.disabled = true;
       runBtn.textContent = "Running FAQ Workflow...";
       appendLog(`> Starting FAQ workflow for ${subjects.length} subject(s).`);
-      appendLog(`> Global model: ${$("globalModel").value}`);
+      appendLog(`> Global model: ${modelLabel($("globalModel").value)}`);
       appendLog(`> Active tasks: ${tasks.filter((task) => task.enabled).map((task) => `#${task.id}`).join(", ")}`);
       socket.emit("start-agent", payload);
     }
@@ -4687,7 +5975,8 @@
         exportedAt: new Date().toISOString(),
         state: collectState()
       };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const fileContent = JSON.stringify(payload, null, 2);
+      const blob = new Blob([fileContent], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       const fileName = `${safeFileName(subjects[0] || "faq-work-plan")}-faq-work-plan.json`;
@@ -4701,7 +5990,9 @@
         type: "Work plan JSON",
         title: "Saved work plan",
         description: "JSON file that can be loaded back into this screen to continue from the same point.",
-        fileName
+        fileName,
+        content: fileContent,
+        mimeType: "application/json"
       });
       $("saveStatus").textContent = "JSON saved";
       setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1600);
@@ -4934,9 +6225,15 @@
     });
 
     $("autoConfigureBtn")?.addEventListener("click", () => {
+      if (!hasAutoConfigureSignal()) {
+        setAutoConfigureFeedback("Add a subject first so the builder can infer the setup.", "warning");
+        return;
+      }
+
       const preset = inferWorkflowPreset();
       setActivePreset(preset, true, { updateFields: true, preserveAudience: true });
       $("saveStatus").textContent = `Auto-fit: ${WORKFLOW_PRESETS[preset].label}`;
+      setAutoConfigureFeedback(`${WORKFLOW_PRESETS[preset].label} setup applied: categories, source rules and task notes updated.`);
       setTimeout(() => ($("saveStatus").textContent = "Saved locally"), 1800);
     });
 
@@ -4983,6 +6280,15 @@
       renderOutputArtifacts();
     });
 
+    function handleArtifactDownloadClick(event) {
+      const button = event.target.closest("[data-download-artifact]");
+      if (!button) return;
+      downloadStoredArtifact(button.dataset.downloadArtifact || "");
+    }
+
+    artifactList?.addEventListener("click", handleArtifactDownloadClick);
+    railArtifactList?.addEventListener("click", handleArtifactDownloadClick);
+
     $("runBtn").addEventListener("click", runWorkflow);
     $("copyPlanBtn").addEventListener("click", copyCategoryPlan);
     $("downloadPlanBtn").addEventListener("click", downloadWorkPlan);
@@ -5000,9 +6306,6 @@
     });
     $("faqDemandRefreshSourcesBtn")?.addEventListener("click", () => loadFaqDemandSources(true));
     $("faqDemandRunBtn")?.addEventListener("click", analyzeFaqDemandSignals);
-    $("faqDemandApplyPromptBtn")?.addEventListener("click", applyFaqDemandToQuestionPrompt);
-    $("faqDemandApplyCategoriesBtn")?.addEventListener("click", applyFaqDemandCategories);
-    $("faqDemandCopyBriefBtn")?.addEventListener("click", copyFaqDemandBrief);
 
     socket.on("log", (msg) => appendLog(msg));
 
@@ -5039,9 +6342,10 @@
         if (!task || !task.id) return;
         const id = task.id;
         const fields = {
-          [`name-${id}`]: task.name,
+          [`name-${id}`]: normalizeTaskName(task),
           [`tone-${id}`]: task.tone,
-          [`model-${id}`]: task.model,
+          [`model-${id}`]: normalizeModelOptionValue(task.provider && task.model ? `${task.provider}:${task.model}` : task.model),
+          [`output-mode-${id}`]: task.outputMode,
           [`src-${id}`]: task.sources,
           [`sys-${id}`]: task.system,
           [`user-${id}`]: task.user
@@ -5103,9 +6407,24 @@
         $("audience").value = String(values.audience);
       }
 
+      const handoffForbiddenPhrases =
+        values.forbiddenPhrases ||
+        values.forbiddenTerms ||
+        values.wordsToAvoid ||
+        handoff.payload?.state?.controls?.forbiddenPhrases ||
+        handoff.payload?.controls?.forbiddenPhrases;
+      if (handoffForbiddenPhrases) {
+        $("forbiddenPhrases").value = Array.isArray(handoffForbiddenPhrases)
+          ? handoffForbiddenPhrases.join("\n")
+          : String(handoffForbiddenPhrases);
+      }
+
       if (values.language) $("outputLanguage").value = String(values.language);
       if (values.count) applyAssistantQuestionTarget(values.count);
-      if (values.model) $("globalModel").value = String(values.model);
+      if (values.model) {
+        const provider = String(values.provider || values.aiProvider || "").trim();
+        $("globalModel").value = normalizeModelOptionValue(provider ? `${provider}:${values.model}` : values.model);
+      }
       if (values.style) $("tone-2").value = String(values.style);
       if (values.qaMode) applyAssistantQaMode(values.qaMode);
 

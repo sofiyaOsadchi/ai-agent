@@ -5,6 +5,9 @@ import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
 import { SheetsService } from "../services/sheets.js";
 
+const LEGACY_LONG_NAME_DESC = "Find essential details, services, location information and practical guidance before you book.";
+const DEFAULT_LONG_NAME_DESC = "{{page}}: essential details, services, location information and practical guidance before you book.";
+
 export type MetaTagsPayload = {
   mode?: "template" | "ai";
   generationMode?: "template" | "ai";
@@ -21,10 +24,14 @@ export type MetaTagsPayload = {
   pageType?: string;
   intent?: string;
   titleMax?: number;
+  descMin?: number;
   descMax?: number;
   variantCount?: number;
   titleTemplate?: string;
   descTemplate?: string;
+  longNameConditionEnabled?: boolean;
+  longNameThreshold?: number;
+  longNameDescTemplate?: string;
   voice?: string;
   primaryKeyword?: string;
   aiBrief?: string;
@@ -46,6 +53,8 @@ export type MetaTagsResultRow = {
   titleLength: number;
   descriptionLength: number;
   status: "good" | "warn" | "bad";
+  languageQa?: "ok" | "check";
+  qaNotes?: string[];
 };
 
 export type MetaTagsResult = {
@@ -149,6 +158,7 @@ export class MetaTagsJob {
         constraints: {
           language,
           titleMax: payload.titleMax,
+          descriptionMin: payload.descMin,
           descriptionMax: payload.descMax,
           variantsPerPage: payload.variantCount,
           voice: payload.voice,
@@ -217,10 +227,11 @@ export class MetaTagsJob {
         };
 
         let title = this.fillTemplate(payload.titleTemplate, data);
-        let description = this.fillTemplate(payload.descTemplate, data);
+        const descriptionResult = this.templateDescriptionForPage(payload, page, data);
+        let description = descriptionResult.description;
         if (language !== "en") {
           title = this.localizeTemplateTitle(language, page.page, title);
-          description = this.localizeTemplateDescription(language, page.page, description);
+          description = this.localizeTemplateDescription(language, page.page, description, descriptionResult.longNameApplied);
         }
 
         if (i === 1) {
@@ -240,7 +251,9 @@ export class MetaTagsJob {
         const h1 = payload.activeRules.includes("includeH1") ? page.page : "";
         const ogTitle = payload.activeRules.includes("openGraph") ? metaTitle : "";
         const ogDescription = payload.activeRules.includes("openGraph") ? metaDescription : "";
-        rows.push(this.finalizeRow(payload, page, metaTitle, metaDescription, h1, ogTitle, ogDescription, undefined, language));
+        rows.push(this.finalizeRow(payload, page, metaTitle, metaDescription, h1, ogTitle, ogDescription, undefined, language, {
+          longNameApplied: descriptionResult.longNameApplied,
+        }));
       }
       }
     }
@@ -269,6 +282,8 @@ export class MetaTagsJob {
       payload.outputMode === "existingRange"
         ? payload.outputMode
         : "preview";
+    const descMax = this.clamp(Number(payload.descMax) || 155, 110, 180);
+    const descMin = this.clamp(Number(payload.descMin) || 120, 40, Math.max(40, descMax - 5));
 
     return {
       mode,
@@ -286,10 +301,17 @@ export class MetaTagsJob {
       pageType: String(payload.pageType || "general").trim(),
       intent: String(payload.intent || "search").trim(),
       titleMax: this.clamp(Number(payload.titleMax) || 60, 35, 80),
-      descMax: this.clamp(Number(payload.descMax) || 155, 110, 180),
+      descMin,
+      descMax,
       variantCount,
       titleTemplate: String(payload.titleTemplate || "{{page}} | FAQ"),
       descTemplate: String(payload.descTemplate || "Explore {{page}}."),
+      longNameConditionEnabled: payload.longNameConditionEnabled !== false,
+      longNameThreshold: this.clamp(Number(payload.longNameThreshold) || 32, 16, 80),
+      longNameDescTemplate: String(
+        payload.longNameDescTemplate ||
+        DEFAULT_LONG_NAME_DESC
+      ),
       voice: String(payload.voice || "clear"),
       primaryKeyword: String(payload.primaryKeyword || "").trim(),
       aiBrief: String(payload.aiBrief || "").trim(),
@@ -466,8 +488,10 @@ export class MetaTagsJob {
     ogTitle: string,
     ogDescription: string,
     url = this.makeUrl(payload.domain, page.path),
-    language = payload.language
+    language = payload.language,
+    context: { longNameApplied?: boolean } = {}
   ): MetaTagsResultRow {
+    const qa = this.reviewMetadataRow(payload, metaTitle, metaDescription, language, context);
     return {
       language,
       page: page.page,
@@ -479,14 +503,51 @@ export class MetaTagsJob {
       ogDescription,
       titleLength: metaTitle.length,
       descriptionLength: metaDescription.length,
-      status: this.score(payload, metaTitle, metaDescription),
+      status: qa.status,
+      languageQa: qa.languageQa,
+      qaNotes: qa.notes,
     };
   }
 
-  private score(payload: Required<MetaTagsPayload>, title: string, description: string): "good" | "warn" | "bad" {
-    if (title.length > payload.titleMax || description.length > payload.descMax) return "bad";
-    if (title.length < 30 || description.length < 80) return "warn";
-    return "good";
+  private languageLooksRight(language: string, text: string): boolean {
+    if (language === "he") return /[\u0590-\u05ff]/.test(text);
+    if (language === "de") return /\b(?:finden|entdecken|informationen|buchung|aufenthalt|services|lage)\b/i.test(text);
+    if (language === "fr") return /\b(?:trouvez|decouvrez|informations|services|reservation|sejour|localisation)\b/i.test(text);
+    if (language === "es") return /\b(?:encuentra|descubre|informacion|servicios|ubicacion|reserva|estancia)\b/i.test(text);
+    if (language === "it") return /\b(?:trova|scopri|informazioni|servizi|posizione|prenotare|soggiorno)\b/i.test(text);
+    if (language === "pt") return /\b(?:encontre|descubra|informacoes|servicos|localizacao|reserva|estadia)\b/i.test(text);
+    if (language === "nl") return /\b(?:vind|ontdek|informatie|diensten|locatie|boeking|verblijf)\b/i.test(text);
+    if (language === "pl") return /\b(?:znajdz|odkryj|informacje|uslugi|lokalizacja|rezerwacja|pobyt)\b/i.test(text);
+    if (language === "ar") return /[\u0600-\u06ff]/.test(text);
+    if (language === "ru") return /[\u0400-\u04ff]/.test(text);
+    return true;
+  }
+
+  private minimumDescriptionLength(payload: Required<MetaTagsPayload>): number {
+    return payload.descMin;
+  }
+
+  private reviewMetadataRow(
+    payload: Required<MetaTagsPayload>,
+    title: string,
+    description: string,
+    language: string,
+    context: { longNameApplied?: boolean } = {}
+  ): { status: "good" | "warn" | "bad"; languageQa: "ok" | "check"; notes: string[] } {
+    const notes: string[] = [];
+    if (title.length > payload.titleMax) notes.push(`Title exceeds ${payload.titleMax} characters.`);
+    if (description.length > payload.descMax) notes.push(`Description exceeds ${payload.descMax} characters.`);
+    if (title.length < 30) notes.push("Title is short.");
+    if (description.length < this.minimumDescriptionLength(payload)) {
+      notes.push(`Description is shorter than ${this.minimumDescriptionLength(payload)} characters.`);
+    }
+    if (!this.languageLooksRight(language, `${title} ${description}`)) notes.push(`Check ${language.toUpperCase()} wording.`);
+    if (context.longNameApplied) notes.push("Long-name description rule applied.");
+
+    const hasBadLength = title.length > payload.titleMax || description.length > payload.descMax;
+    const languageQa = notes.some((note) => /^Check /.test(note)) ? "check" : "ok";
+    const status = hasBadLength ? "bad" : notes.some((note) => !note.includes("Long-name")) ? "warn" : "good";
+    return { status, languageQa, notes };
   }
 
   private parseAiJson(raw: string): any {
@@ -502,6 +563,30 @@ export class MetaTagsJob {
 
   private fillTemplate(template: string, data: Record<string, string>): string {
     return template.replace(/\{\{\s*(page|brand|intent|type|domain)\s*\}\}/g, (_, key) => data[key] || "");
+  }
+
+  private normalizeLongNameDescTemplate(template: string): string {
+    const value = String(template || "").trim();
+    if (!value || value === LEGACY_LONG_NAME_DESC) return DEFAULT_LONG_NAME_DESC;
+    return value;
+  }
+
+  private isLongNameConditionActive(payload: Required<MetaTagsPayload>, page: string): boolean {
+    return payload.longNameConditionEnabled !== false && page.trim().length > payload.longNameThreshold;
+  }
+
+  private templateDescriptionForPage(
+    payload: Required<MetaTagsPayload>,
+    page: PageInput,
+    data: Record<string, string>
+  ): { description: string; longNameApplied: boolean } {
+    const longNameApplied = this.isLongNameConditionActive(payload, page.page);
+    const template = longNameApplied ? this.normalizeLongNameDescTemplate(payload.longNameDescTemplate) : payload.descTemplate;
+
+    return {
+      description: this.fillTemplate(template, data),
+      longNameApplied,
+    };
   }
 
   private limit(input: string, max: number): string {
@@ -543,7 +628,7 @@ export class MetaTagsJob {
   }
 
   private normalizeLanguages(languages?: string[], language?: string): string[] {
-    const allowed = new Set(["en", "he", "de", "fr", "es", "it"]);
+    const allowed = new Set(["en", "he", "de", "fr", "es", "it", "pt", "nl", "pl", "ar", "ru"]);
     const values = Array.isArray(languages) ? languages : [language || "en"];
     const normalized = values
       .map((value) => String(value || "").trim())
@@ -559,6 +644,11 @@ export class MetaTagsJob {
       fr: "French",
       es: "Spanish",
       it: "Italian",
+      pt: "Portuguese",
+      nl: "Dutch",
+      pl: "Polish",
+      ar: "Arabic",
+      ru: "Russian",
     }[language] || language;
   }
 
@@ -571,10 +661,35 @@ export class MetaTagsJob {
       fr: `${page} | FAQ`,
       es: `${page} | Preguntas frecuentes`,
       it: `${page} | FAQ`,
+      pt: `${page} | Perguntas frequentes`,
+      nl: `${page} | FAQ`,
+      pl: `${page} | FAQ`,
+      ar: `${page} | الأسئلة الشائعة`,
+      ru: `${page} | FAQ`,
     }[language] || currentTitle;
   }
 
-  private localizeTemplateDescription(language: string, page: string, currentDescription: string): string {
+  private localizeTemplateDescription(
+    language: string,
+    page: string,
+    currentDescription: string,
+    longNameApplied = false
+  ): string {
+    if (longNameApplied) {
+      return {
+        he: `${page}: פרטים חשובים, שירותים, מידע על המיקום והכוונה מעשית לפני ההזמנה.`,
+        de: `${page}: wichtige Details, Services, Lageinformationen und praktische Hinweise vor der Buchung.`,
+        fr: `${page} : details essentiels, services, localisation et conseils pratiques avant de reserver.`,
+        es: `${page}: detalles esenciales, servicios, ubicacion y orientacion practica antes de reservar.`,
+        it: `${page}: dettagli essenziali, servizi, posizione e indicazioni pratiche prima di prenotare.`,
+        pt: `${page}: detalhes essenciais, servicos, localizacao e orientacao pratica antes de reservar.`,
+        nl: `${page}: belangrijke details, diensten, locatie-informatie en praktische tips voordat u boekt.`,
+        pl: `${page}: najwazniejsze szczegoly, uslugi, lokalizacja i praktyczne wskazowki przed rezerwacja.`,
+        ar: `${page}: التفاصيل الأساسية والخدمات ومعلومات الموقع والإرشادات العملية قبل الحجز.`,
+        ru: `${page}: важные детали, услуги, расположение и практические советы перед бронированием.`,
+      }[language] || currentDescription;
+    }
+
     if (!currentDescription.toLowerCase().startsWith("explore ")) return currentDescription;
     return {
       he: `גלו מידע שימושי על ${page}, כולל פרטים חשובים, שירותים, מיקום והכוונה מעשית לפני ההזמנה.`,
@@ -582,6 +697,11 @@ export class MetaTagsJob {
       fr: `Decouvrez les informations utiles sur ${page}, avec les details essentiels, les services, la localisation et les conseils pratiques avant de reserver.`,
       es: `Descubre informacion util sobre ${page}, incluidos detalles clave, servicios, ubicacion y orientacion practica antes de reservar.`,
       it: `Scopri informazioni utili su ${page}, inclusi dettagli importanti, servizi, posizione e indicazioni pratiche prima di prenotare.`,
+      pt: `Descubra informacoes uteis sobre ${page}, incluindo detalhes essenciais, servicos, localizacao e orientacao pratica antes de reservar.`,
+      nl: `Ontdek nuttige informatie over ${page}, inclusief belangrijke details, diensten, locatie en praktische tips voordat u boekt.`,
+      pl: `Odkryj przydatne informacje o ${page}, w tym kluczowe szczegoly, uslugi, lokalizacje i praktyczne wskazowki przed rezerwacja.`,
+      ar: `اكتشف معلومات مفيدة عن ${page}، بما في ذلك التفاصيل الأساسية والخدمات والموقع والإرشادات العملية قبل الحجز.`,
+      ru: `Изучите полезную информацию о ${page}, включая важные детали, услуги, расположение и практические советы перед бронированием.`,
     }[language] || currentDescription;
   }
 

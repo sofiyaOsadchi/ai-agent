@@ -275,6 +275,47 @@ async function scenarioFaqStyleAndQaMulti(browser) {
   await page.close();
 }
 
+async function scenarioFaqWordsToAvoidStayGlobal(browser) {
+  const name = "faq-words-to-avoid-stay-global";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות faq");
+  await clickReply(page, "מלון / אירוח");
+  await send(page, "Bachar House");
+  await clickReply(page, "אורחים לפני הזמנה");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "אנגלית UK");
+  await clickReply(page, "סטנדרטי");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "לפי ביקוש וכוונת חיפוש");
+  await clickReply(page, "אין מקור כרגע");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+
+  expectIncludes(name, await quickText(page), "מילים אסורות");
+  await clickReply(page, "מילים אסורות");
+  await send(page, "יוקרתי\nהכי טוב");
+  const readyText = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, readyText, "מילים אסורות: יוקרתי, הכי טוב");
+
+  await clickReply(page, "להראות פרומפטים");
+  const prompts = await chatText(page);
+  expectIncludes(name, prompts, "Forbidden phrase rules");
+  expectIncludes(name, prompts, "Do not use these words or phrases anywhere");
+  expectIncludes(name, prompts, "יוקרתי");
+  expectIncludes(name, prompts, "forbidden-phrase cleanup");
+  expectNotIncludes(name, prompts, "QUESTION WORDING RULES");
+  expectNotIncludes(name, prompts, "ANSWER WORDING RULES");
+
+  await clickReply(page, "לפתוח Builder");
+  const handoff = await page.evaluate(() => JSON.parse(localStorage.getItem("carmelonAssistantHandoff") || "{}"));
+  if (handoff?.values?.forbiddenPhrases !== "יוקרתי\nהכי טוב") {
+    fail(name, "FAQ handoff should carry global words-to-avoid into the Builder", { handoff });
+  }
+  await page.close();
+}
+
 async function scenarioFaqSourceUrlBack(browser) {
   const name = "faq-source-url-back";
   const page = await setupPage(browser);
@@ -1036,6 +1077,7 @@ async function main() {
     scenarioFaqAudienceMulti,
     scenarioFaqAudienceCanClearAndGoBack,
     scenarioFaqStyleAndQaMulti,
+    scenarioFaqWordsToAvoidStayGlobal,
     scenarioFaqSourceUrlBack,
     scenarioEnglishLocaleStableAfterGuidance,
     scenarioTranslateTargetLangsMulti,

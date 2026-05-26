@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Carmelon AI Hub</title>
+  <link rel="icon" type="image/png" href="./carmelon-favicon.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -254,6 +255,29 @@
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
+    }
+
+    .assistant-console-label-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .assistant-beta-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 19px;
+      padding: 4px 8px;
+      border: 1px solid #7aa7f5;
+      border-radius: 999px;
+      background: #eaf2ff;
+      color: #1558c8;
+      font: 800 0.56rem/1 var(--mono);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: 0 0 0 3px rgba(74, 127, 199, 0.10);
     }
 
     .assistant-console-title {
@@ -714,6 +738,10 @@
         padding: 6px;
       }
 
+      .assistant-prompt-row {
+        display: none;
+      }
+
       .assistant-launch-button {
         width: 100%;
       }
@@ -727,6 +755,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/mobile-responsive.css" media="(max-width: 760px)" />
 </head>
 
 <body>
@@ -754,7 +783,10 @@
           <div class="assistant-console-header">
             <div class="assistant-orb">AI</div>
             <div>
-              <span class="assistant-console-kicker">Start from chat</span>
+              <div class="assistant-console-label-row">
+                <span class="assistant-console-kicker">Start from chat</span>
+                <span class="assistant-beta-badge" aria-label="Beta version">Beta</span>
+              </div>
               <h2 class="assistant-console-title" id="assistantConsoleTitle">What’s on your mind?</h2>
             </div>
           </div>
@@ -980,7 +1012,7 @@
     </section>
 
     <div class="note">
-      If one of these pages does not exist yet, the link stays disabled until the matching HTML file is added to the public folder.
+        Build with clarity, move with intention, and turn innovative ideas into tools that create real momentum.
     </div>
   </main>
 

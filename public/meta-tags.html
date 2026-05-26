@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meta Tags Studio</title>
+  <link rel="icon" type="image/png" href="./carmelon-favicon.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -316,6 +317,13 @@
       box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.1);
     }
 
+    .source-note[data-source-type="sheet"],
+    .source-note[data-source-type="folder"] {
+      border-color: rgba(74, 127, 199, 0.30);
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
     .primary-source {
       gap: 10px;
       padding: 14px;
@@ -393,6 +401,12 @@
 
     .three-col {
       grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .length-rule-grid {
+      display: grid;
+      grid-template-columns: minmax(130px, 0.8fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr);
+      gap: 12px;
     }
 
     .field {
@@ -545,6 +559,74 @@
       font: 600 0.68rem/1 var(--mono);
     }
 
+    .template-condition {
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-warm);
+      overflow: hidden;
+    }
+
+    .template-condition summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 12px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 0.86rem;
+      font-weight: 800;
+      list-style: none;
+    }
+
+    .template-condition summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .template-condition summary::after {
+      content: "Open";
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font: 600 0.62rem/1 var(--mono);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .template-condition[open] summary::after {
+      content: "Close";
+    }
+
+    .template-condition-body {
+      display: grid;
+      gap: 12px;
+      padding: 0 12px 12px;
+    }
+
+    .condition-toggle {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      color: var(--dim);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    .condition-toggle input {
+      width: auto;
+      min-height: 0;
+      margin-top: 3px;
+    }
+
+    .compact-number-field {
+      max-width: 170px;
+    }
+
     .quality-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -645,6 +727,104 @@
     .btn.blue {
       background: var(--blue-soft);
       border-color: rgba(74, 127, 199, 0.22);
+      color: var(--blue);
+    }
+
+    .native-output-mode {
+      display: none;
+    }
+
+    .output-mode-picker {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .output-mode-card {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      text-align: center;
+    }
+
+    .output-mode-card strong {
+      color: var(--ink);
+      font-size: 0.82rem;
+      line-height: 1.15;
+    }
+
+    .output-mode-card small {
+      color: var(--dim);
+      font-size: 0.68rem;
+      line-height: 1.2;
+      font-weight: 600;
+    }
+
+    .output-mode-card.active {
+      border-color: rgba(74, 127, 199, 0.45);
+      background: var(--blue-soft);
+      box-shadow: 0 0 0 3px rgba(74, 127, 199, 0.10);
+    }
+
+    .existing-tab-options {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .existing-tab-options .field-label {
+      margin-right: 2px;
+    }
+
+    .output-mode-note {
+      position: relative;
+      display: block;
+      margin-top: 10px;
+      padding: 10px 12px 10px 28px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: var(--surface-warm);
+      color: var(--dim);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    .output-mode-note::before {
+      content: "";
+      position: absolute;
+      top: 14px;
+      left: 12px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(111, 148, 93, 0.12);
+    }
+
+    .small-mode-button {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--dim);
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .small-mode-button.active {
+      border-color: rgba(74, 127, 199, 0.42);
+      background: var(--blue-soft);
       color: var(--blue);
     }
 
@@ -802,6 +982,7 @@
 
       .two-col,
       .three-col,
+      .length-rule-grid,
       .quality-grid,
       .output-actions,
       .button-row {
@@ -809,6 +990,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/mobile-responsive.css" media="(max-width: 760px)" />
 </head>
 
 <body>
@@ -855,7 +1037,7 @@
             </div>
           </label>
 
-          <details class="optional-context">
+          <details class="optional-context" id="optionalContextDetails">
             <summary>Optional context</summary>
             <div class="optional-context-body two-col grid">
               <label class="field">
@@ -892,6 +1074,11 @@ Contact</textarea>
               <button class="language-button" type="button" data-lang="fr"><span class="flag">🇫🇷</span>French</button>
               <button class="language-button" type="button" data-lang="es"><span class="flag">🇪🇸</span>Spanish</button>
               <button class="language-button" type="button" data-lang="it"><span class="flag">🇮🇹</span>Italian</button>
+              <button class="language-button" type="button" data-lang="pt"><span class="flag">🇵🇹</span>Portuguese</button>
+              <button class="language-button" type="button" data-lang="nl"><span class="flag">🇳🇱</span>Dutch</button>
+              <button class="language-button" type="button" data-lang="pl"><span class="flag">🇵🇱</span>Polish</button>
+              <button class="language-button" type="button" data-lang="ar"><span class="flag">🇸🇦</span>Arabic</button>
+              <button class="language-button" type="button" data-lang="ru"><span class="flag">🇷🇺</span>Russian</button>
             </div>
             <span class="hint">Choose one or more. Each selected language creates its own output row.</span>
           </div>
@@ -904,10 +1091,14 @@ Contact</textarea>
           <span class="badge">Step 2</span>
         </div>
         <div class="card-body grid">
-          <div class="two-col grid">
+          <div class="length-rule-grid">
             <label class="field">
               <span class="field-label">Title max</span>
               <input id="titleMax" type="number" min="35" max="80" value="60" />
+            </label>
+            <label class="field">
+              <span class="field-label">Description min</span>
+              <input id="descMin" type="number" min="50" max="170" value="120" />
             </label>
             <label class="field">
               <span class="field-label">Description max</span>
@@ -935,6 +1126,24 @@ Contact</textarea>
               <span class="field-label">Description template</span>
               <textarea id="descTemplate" rows="3">Explore {{page}}. Find essential details, services, location information and practical guidance before you book.</textarea>
             </label>
+            <details class="template-condition" open>
+              <summary>Conditional template rule</summary>
+              <div class="template-condition-body">
+                <label class="condition-toggle">
+                  <input id="longNameConditionEnabled" type="checkbox" checked />
+                  <span>If the page or property name is long, use a shorter description pattern so the output does not get cut awkwardly.</span>
+                </label>
+                <label class="field compact-number-field">
+                  <span class="field-label">Long name starts at</span>
+                  <input id="longNameThreshold" type="number" min="16" max="80" value="32" />
+                </label>
+                <label class="field">
+                  <span class="field-label">Short description template</span>
+                  <textarea id="longNameDescTemplate" rows="2">{{page}}: essential details, services, location information and practical guidance before you book.</textarea>
+                  <span class="hint">Used only for long names. Keep {{page}} in the sentence when the page name should still appear in the description.</span>
+                </label>
+              </div>
+            </details>
             <div class="token-bar" aria-label="Template tokens">
               <span class="token">{{page}}</span>
               <span class="token">{{brand}}</span>
@@ -983,12 +1192,27 @@ Contact</textarea>
           <div class="writeback-panel grid">
             <label class="field">
               <span class="field-label">Where to place generated tags</span>
-              <select id="outputMode">
-                <option value="newTab" selected>Create or update a Meta Tags tab</option>
-                <option value="firstTabRange">Write to the first tab</option>
+              <select id="outputMode" class="native-output-mode" aria-hidden="true" tabindex="-1">
+                <option value="firstTabRange" selected>Write to the first tab</option>
                 <option value="existingRange">Write to a named tab</option>
+                <option value="newTab">Create or update a Meta Tags tab</option>
               </select>
-              <span class="hint" id="outputModeHint">Writing back is available for Single Sheet and Drive folder sources. Manual pages stay in preview/export mode.</span>
+              <div class="output-mode-picker" id="outputModePicker" aria-label="Output destination">
+                <button class="output-mode-card" type="button" data-output-card="existing">
+                  <strong>Existing tab</strong>
+                  <small>First or named</small>
+                </button>
+                <button class="output-mode-card" type="button" data-output-card="new">
+                  <strong>New Meta Tags tab</strong>
+                  <small>Dedicated tab</small>
+                </button>
+              </div>
+              <div class="existing-tab-options" id="existingTabOptions" aria-label="Existing tab target">
+                <span class="field-label">Existing tab target</span>
+                <button class="small-mode-button" type="button" data-existing-output-mode="firstTabRange">First tab</button>
+                <button class="small-mode-button" type="button" data-existing-output-mode="existingRange">Named tab</button>
+              </div>
+              <span class="output-mode-note" id="outputModeHint">Manual topics stay in preview. Connect a Google Sheet or Drive folder to write generated tags back.</span>
             </label>
             <div class="two-col grid hidden" id="writebackFields">
               <label class="field" id="outputTabNameField">
@@ -1041,7 +1265,7 @@ Contact</textarea>
 
           <div class="button-row">
             <button class="btn" type="button" id="saveSetupBtn">Save setup</button>
-            <button class="btn" type="button" id="loadSetupBtn">Load setup</button>
+            <button class="btn" type="button" id="loadSetupBtn">Load saved setup</button>
             <button class="btn primary" type="button" id="generateBtn">Generate tags</button>
           </div>
         </div>
@@ -1094,6 +1318,6 @@ Contact</textarea>
     </aside>
   </main>
 
-  <script src="/meta-tags.js"></script>
+  <script src="./meta-tags.js"></script>
 </body>
 </html>

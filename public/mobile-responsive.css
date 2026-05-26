@@ -1,0 +1,843 @@
+/* Mobile-only safety layer. Desktop layouts are intentionally untouched. */
+@media (max-width: 760px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  svg,
+  canvas,
+  video,
+  iframe,
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  .shell,
+  .page,
+  .layout,
+  .main-grid,
+  .workspace,
+  main {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .shell,
+  .page,
+  .layout,
+  .workspace,
+  .main-grid,
+  .content-grid,
+  .dashboard-grid,
+  .assistant-panel,
+  .side-panel,
+  .panel,
+  .card,
+  .tool-card,
+  .module-card,
+  .choice-card,
+  .metric,
+  .kpi,
+  .terminal-panel,
+  .terminal-wrap,
+  .table-wrap,
+  .result-wrap,
+  .results-wrap,
+  .preview-wrap,
+  .sheet-preview-wrap,
+  .source-preview,
+  .report-shell,
+  .dashboard,
+  .chat-shell,
+  .chat-main,
+  .chat-sidebar,
+  header,
+  .topbar,
+  .demo-header,
+  .brand,
+  .brand-lockup,
+  .brand-home-link,
+  .brand-copy,
+  .header-actions,
+  .card-body {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .message,
+  .message *,
+  .subtitle,
+  .hint,
+  .empty-state,
+  .resource-item,
+  .resource-item *,
+  .action-card,
+  .action-card *,
+  .tool-card,
+  .tool-card *,
+  .card,
+  .card *,
+  .panel,
+  .panel *,
+  .terminal,
+  .terminal-body,
+  .terminal-line,
+  .log-line,
+  .logs,
+  .payload-preview,
+  .prompt-preview,
+  pre,
+  code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .terminal,
+  .terminal-body,
+  .logs,
+  .payload-preview,
+  .prompt-preview,
+  pre {
+    white-space: pre-wrap;
+  }
+
+  body > header,
+  .topbar,
+  .demo-header {
+    overflow: visible !important;
+  }
+
+  body > header,
+  .topbar,
+  .demo-header {
+    position: static !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    padding: 7px 10px !important;
+    backdrop-filter: none !important;
+  }
+
+  .brand,
+  .brand-lockup,
+  .brand-home-link,
+  .header-actions,
+  .toolbar,
+  .actions-row,
+  .topbar-actions,
+  .terminal-bar,
+  .terminal-head,
+  .panel-head,
+  .btn-row,
+  .quick-replies,
+  .reply-row,
+  .tool-footer,
+  .assistant-launch-footer,
+  .tool-strip {
+    flex-wrap: wrap;
+  }
+
+  .brand-logo {
+    width: auto;
+    max-width: min(96px, 34vw);
+    height: auto;
+  }
+
+  .header-actions,
+  .topbar-actions {
+    width: auto;
+    justify-content: flex-end !important;
+  }
+
+  .tool-strip {
+    overflow-x: visible !important;
+  }
+
+  .tool-chip,
+  .terminal-title,
+  .badge,
+  .status-pill,
+  .summary-pill,
+  .tiny-pill,
+  .risk-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .quick-reply,
+  .ghost-btn,
+  .btn,
+  .seg-btn,
+  .tab,
+  .view-tab,
+  .language-button,
+  .output-mode-card,
+  .small-mode-button {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: start;
+  }
+
+  .grid,
+  .two-col,
+  .three-col,
+  .grid-2,
+  .grid-3,
+  .mini-grid,
+  .input-row,
+  .source-grid,
+  .control-grid,
+  .summary-grid,
+  .output-grid,
+  .language-rules-grid,
+  .module-options,
+  .toggle-grid,
+  .ai-switches,
+  .inline-control-grid,
+  .status-strip,
+  .kpi-grid,
+  .summary-strip,
+  .report-head,
+  .audit-hero,
+  .report-strip,
+  .breakdown-grid,
+  .score-method-grid,
+  .action-grid,
+  .hero-metrics,
+  .insight-row,
+  .visual-dashboard,
+  .donut-layout,
+  .page-map-grid,
+  .reader-grid,
+  .schema-grid,
+  .task-body,
+  .setup-mode-tabs,
+  .demand-source-grid,
+  .output-mode-picker,
+  .setup-controls,
+  .task-config-grid,
+  .card-body .two-col,
+  .writeback-card .two-col,
+  .source-card .two-col,
+  .schema-preview .two-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .main-grid,
+  .layout,
+  .content-grid,
+  .report-layout {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+
+  .chat-shell {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .chat-log {
+    max-height: min(62vh, 520px);
+  }
+
+  .composer {
+    grid-template-columns: 1fr !important;
+  }
+
+  .composer .send-btn,
+  .composer button[type="submit"] {
+    width: 100%;
+  }
+
+  .action-card-head,
+  .card-head,
+  .quick-actions,
+  .schema-preview .quick-actions,
+  .report-hero,
+  .report-hero-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .action-card-head > div {
+    min-width: 0;
+  }
+
+  .check-item {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+  }
+
+  .check-item strong {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .category-tools {
+    width: 100%;
+  }
+
+  .category-tools > summary {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .category-tools-menu {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 8px;
+    box-shadow: 0 10px 24px rgba(26, 20, 16, 0.1) !important;
+  }
+
+  .category-tools-menu .field,
+  .category-tools-actions {
+    width: 100%;
+  }
+
+  .category-tools-actions .btn,
+  .category-tools-actions .ghost-btn,
+  .quick-actions .btn,
+  .quick-actions .ghost-btn,
+  .schema-preview .quick-actions .btn,
+  .schema-preview .quick-actions .ghost-btn,
+  .report-hero-actions .btn,
+  .report-hero-actions .ghost-btn {
+    flex: 1 1 min(160px, 100%);
+  }
+
+  .report-head p {
+    max-width: none !important;
+  }
+
+  .accordion-summary {
+    grid-template-columns: 30px minmax(0, 1fr) !important;
+  }
+
+  .accordion-meta {
+    grid-column: 2;
+    justify-content: flex-start !important;
+  }
+
+  .sheet-grid td,
+  .sheet-grid th {
+    width: clamp(140px, 42vw, 210px) !important;
+  }
+
+  .option-row,
+  .compact-option {
+    flex-wrap: wrap;
+  }
+
+  .option-row > *,
+  .compact-option > * {
+    min-width: 0;
+  }
+
+  .output-mode-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .result-table {
+    display: block;
+    width: 100%;
+  }
+
+  .result-table thead {
+    display: none;
+  }
+
+  .result-table tbody,
+  .result-table tr,
+  .result-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .result-table tr {
+    padding: 10px;
+    border-bottom: 1px solid var(--border, #e4ddd1);
+  }
+
+  .result-table td {
+    border: 0 !important;
+    padding: 8px 0 !important;
+  }
+
+  .result-table td::before {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted, #6b7280);
+    font: 700 0.64rem/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .result-table td:nth-child(1)::before { content: "Language"; }
+  .result-table td:nth-child(2)::before { content: "Page"; }
+  .result-table td:nth-child(3)::before { content: "Meta title"; }
+  .result-table td:nth-child(4)::before { content: "Meta description"; }
+  .result-table td:nth-child(5)::before { content: "H1"; }
+
+  body > header .brand,
+  .demo-header .brand,
+  .demo-header .brand-lockup,
+  .topbar .brand,
+  .topbar .brand-lockup {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  body > header .brand-home-link,
+  .demo-header .brand-home-link,
+  .topbar .brand-home-link {
+    flex-wrap: nowrap !important;
+  }
+
+  body > header .brand-logo,
+  .demo-header .brand-logo,
+  .topbar .brand-logo {
+    width: 96px !important;
+    max-width: 34vw !important;
+    height: auto !important;
+  }
+
+  body > header .brand-copy,
+  .demo-header .brand-copy,
+  .topbar .brand-copy {
+    min-width: 0 !important;
+    max-width: 46vw !important;
+    overflow: hidden !important;
+    padding-inline-start: 8px !important;
+  }
+
+  body > header h1,
+  .demo-header h1,
+  .topbar h1 {
+    margin: 0 !important;
+    max-width: 100% !important;
+    font-size: 0.94rem !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body > header .brand-copy p,
+  body > header .brand p,
+  body > header .brand-copy .eyebrow,
+  body > header > .badge,
+  .demo-header .brand-copy p,
+  .demo-header .brand p,
+  .demo-header .brand-copy .eyebrow,
+  .demo-header .subtitle,
+  .demo-header > .badge,
+  .topbar .brand-copy p,
+  .topbar .brand p,
+  .topbar .brand-copy .eyebrow,
+  .topbar > .badge,
+  .topbar .status-pill,
+  .setup-hero p,
+  .panel-head p,
+  .section-hint,
+  .field-help,
+  .field-hint,
+  .setup-intro p,
+  .setup-intro span,
+  .operation-chip span,
+  .operation-chip small,
+  .summary-steps,
+  .summary-meta,
+  #payloadPreview {
+    display: none !important;
+  }
+
+  .mode-switch,
+  .setup-mode-tabs {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 32 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+    padding: 5px !important;
+    margin-bottom: 8px !important;
+    background: var(--surface, #fff) !important;
+    border: 1px solid var(--border, #e4ddd1) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 8px 18px rgba(26, 20, 16, 0.06) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+
+  .mode-button,
+  .setup-mode-btn {
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    text-align: center !important;
+  }
+
+  .mode-button span,
+  .setup-mode-btn span {
+    display: none !important;
+  }
+
+  .operation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .operation-chip {
+    min-height: 48px !important;
+    padding: 10px !important;
+  }
+
+  body:has(#discoverBtn) .side-panel,
+  body:has(#runAuditBtn) .sidebar,
+  body:has(#schemaPreview) .hero-console,
+  body:has(#schemaPreview) .workflow-strip {
+    display: none !important;
+  }
+
+  body:has(#schemaPreview) .hero {
+    padding: 16px !important;
+  }
+
+  body:has(#schemaPreview) .hero p {
+    display: none !important;
+  }
+
+  .actions,
+  .button-row,
+  .btn-row,
+  .report-actions,
+  .sticky-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 35 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    margin-inline: -6px !important;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid var(--border, rgba(0, 0, 0, 0.1)) !important;
+    background: var(--surface, var(--bg, #fff)) !important;
+    box-shadow: 0 -8px 18px rgba(26, 20, 16, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+
+  .actions .btn,
+  .button-row .btn,
+  .button-row .run-btn,
+  .btn-row .btn,
+  .report-actions .btn,
+  .sticky-actions .btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    font-size: 0.72rem !important;
+    line-height: 1.12 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    overflow: hidden !important;
+  }
+
+  .actions .primary,
+  .button-row .primary,
+  .button-row .run-btn:not(.secondary):not(.ghost),
+  .btn-row .primary,
+  .sticky-actions .teal,
+  .sticky-actions #runBtn {
+    flex-grow: 1.35 !important;
+  }
+
+  body:has(#generateBtn),
+  body:has(#loadSheetBtn),
+  body:has(#outputReportTabName),
+  body:has(#manualModeBtn),
+  body:has(#schemaPreview),
+  body:has(#clientViewBtn) {
+    padding-bottom: 62px !important;
+  }
+
+  body:has(#generateBtn) .button-row,
+  body:has(#loadSheetBtn) .button-row,
+  body:has(#outputReportTabName) .button-row,
+  body:has(#schemaPreview) .sticky-actions {
+    position: fixed !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    border-radius: 14px 14px 0 0 !important;
+  }
+
+  body:has(#manualModeBtn) .manual-setup > .run-btn,
+  body:has(#clientViewBtn) #runBtn {
+    position: fixed !important;
+    right: 8px !important;
+    bottom: calc(6px + env(safe-area-inset-bottom)) !important;
+    left: 8px !important;
+    z-index: 38 !important;
+    width: auto !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    border-radius: 10px !important;
+  }
+
+  body:has(#clientViewBtn) .header-actions {
+    flex: 0 1 auto !important;
+    max-width: 38vw !important;
+    flex-wrap: nowrap !important;
+    overflow: visible !important;
+    scrollbar-width: none;
+  }
+
+  body:has(#clientViewBtn) .header-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  body:has(#clientViewBtn) .header-actions .btn {
+    flex: 0 0 auto !important;
+    min-height: 30px !important;
+    padding: 6px 8px !important;
+    font-size: 0.68rem !important;
+    white-space: nowrap !important;
+  }
+
+  body:has(#clientViewBtn) #printBtn,
+  body:has(#clientViewBtn) #downloadHtmlBtn,
+  body:has(#clientViewBtn) .header-actions .badge,
+  body:has(#runAuditBtn) .actions .btn:not(.primary),
+  body:has(#discoverBtn) .btn-row .btn:not(.primary) {
+    display: none !important;
+  }
+
+  body:has(#runAuditBtn) .setup-intro,
+  body:has(#runAuditBtn) .note,
+  body:has(#runAuditBtn) .render-card span {
+    display: none !important;
+  }
+
+  body:has(#clientViewBtn) #runBtn {
+    box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  body:has(#clientViewBtn) .advanced-panel,
+  body:has(#clientViewBtn) .setup-progress,
+  body:has(#clientViewBtn) .setup-hero p {
+    display: none !important;
+  }
+
+  .formatting-workspace-page .desktop-title {
+    display: none !important;
+  }
+
+  .formatting-workspace-page .mobile-title {
+    display: inline !important;
+  }
+
+  .formatting-workspace-page .demo-header .brand-copy {
+    max-width: calc(100vw - 154px) !important;
+  }
+
+  .formatting-workspace-page .category-title span {
+    display: none !important;
+  }
+
+  .terminal-panel,
+  .output-panel {
+    min-height: 300px !important;
+    max-height: 420px !important;
+  }
+
+  .assistant-panel,
+  .side-panel {
+    min-height: auto !important;
+  }
+
+  body:has(#assistantForm) .chat-log {
+    max-height: 45dvh !important;
+  }
+
+  body:has(#assistantForm) .composer {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 20 !important;
+    padding: 8px !important;
+    background: var(--surface, #fff) !important;
+    border-top: 1px solid var(--border, rgba(0, 0, 0, 0.1)) !important;
+  }
+
+  body:has(#assistantForm) .terminal,
+  body:has(#assistantForm) .terminal-body {
+    min-height: 0 !important;
+    max-height: 150px !important;
+  }
+
+  body:has(#assistantForm) .history-stack {
+    max-height: 180px !important;
+    overflow: auto !important;
+  }
+
+  body:has(#assistantForm) .tool-strip {
+    padding: 6px 8px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .faq-builder-page .topbar {
+    position: static !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 7px !important;
+    padding: 5px 8px !important;
+    backdrop-filter: none !important;
+  }
+
+  .faq-builder-page .brand,
+  .faq-builder-page .brand-home-link {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .faq-builder-page .brand-logo {
+    width: 92px !important;
+    max-width: 32vw !important;
+  }
+
+  .faq-builder-page .brand-ai {
+    align-self: center !important;
+    margin: 0 !important;
+    padding-left: 8px !important;
+    border-left: 1px solid var(--vx-border-strong, #d7cbb8) !important;
+    font-size: 0.58rem !important;
+    line-height: 1 !important;
+  }
+
+  .faq-builder-page .brand-copy,
+  .faq-builder-page .status-pill,
+  .faq-builder-page .header-metrics {
+    display: none !important;
+  }
+
+  .faq-builder-page .topbar-actions {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    justify-content: flex-end !important;
+  }
+
+  .faq-builder-page .topbar-load-btn {
+    min-height: 28px !important;
+    padding: 0 8px !important;
+    border-radius: 9px !important;
+    font-size: 0.68rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+  }
+
+  .faq-builder-page .page {
+    width: min(100% - 12px, 1720px) !important;
+    margin-top: 10px !important;
+    margin-bottom: 64px !important;
+  }
+
+  .faq-builder-page .builder-tabs {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 28 !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    padding: 5px !important;
+    gap: 5px !important;
+    background: rgba(255, 253, 249, 0.96) !important;
+    box-shadow: 0 8px 18px rgba(26, 20, 16, 0.06) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+
+  .faq-builder-page .view-tab {
+    min-height: 32px !important;
+    padding: 0 8px !important;
+    font-size: 0.72rem !important;
+    text-align: center !important;
+  }
+
+  .faq-builder-page .rail {
+    display: none !important;
+  }
+
+  .faq-builder-page .run-strip {
+    bottom: 0 !important;
+    z-index: 30 !important;
+    display: block !important;
+    margin: 10px -6px 0 !important;
+    padding: 5px 7px calc(5px + env(safe-area-inset-bottom)) !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-left: 0 !important;
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 -8px 18px rgba(26, 20, 16, 0.08) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+
+  .faq-builder-page .run-strip::before,
+  .faq-builder-page .run-strip > div:first-child,
+  .faq-builder-page .run-strip #resetBtn,
+  .faq-builder-page .run-strip #downloadPlanBtn,
+  .faq-builder-page .run-strip #copyPlanBtn {
+    display: none !important;
+  }
+
+  .faq-builder-page .run-strip .actions-row {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+
+  .faq-builder-page .run-strip #runBtn {
+    width: 100% !important;
+    min-height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 0.82rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+}

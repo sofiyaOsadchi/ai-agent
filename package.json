@@ -50,6 +50,7 @@
     "faq-audit:render": "cross-env MODE=faq-audit FAQ_AUDIT_RENDER=1 FAQ_AUDIT_PLAYWRIGHT_CHANNEL=chrome FAQ_AUDIT_MAX_CALLS_PER_HOTEL=2 tsx src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
     "@google-analytics/data": "^6.0.0",
     "chalk": "^5.4.1",
     "cheerio": "^1.1.2",

@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
+import type { AIProvider } from "../core/ai/types.js";
 import { SheetsService } from "../services/sheets.js";
 import {
   createDuplicateCheckPrompt,
@@ -41,7 +42,9 @@ export type UiTask = {
   name?: string;
   system?: string;
   user: string;
+  provider?: AIProvider | string;
   model?: string;
+  outputMode?: "append_column" | "replace_base_tsv" | string;
 };
 
 export type UiTasksConfig = {
@@ -149,6 +152,40 @@ function padToDataRows(arr: string[], dataRowCount: number): string[] {
   return res.slice(0, dataRowCount);
 }
 
+function isBaseTsvReplacementTask(task: UiTask | undefined): boolean {
+  return task?.outputMode === "replace_base_tsv";
+}
+
+function isAiProvider(value: unknown): value is AIProvider {
+  return value === "openai" || value === "anthropic";
+}
+
+function resolveTaskAi(task: UiTask): { provider?: AIProvider; model: string } {
+  const rawProvider = String(task.provider || "").trim().toLowerCase();
+  const rawModel = String(task.model || "").trim();
+  const encoded = rawModel.match(/^(openai|anthropic):(.+)$/i);
+
+  if (encoded) {
+    const provider = encoded[1].toLowerCase();
+    const model = encoded[2].trim();
+    return {
+      provider: isAiProvider(provider) ? provider : undefined,
+      model: model || (provider === "anthropic" ? "claude-sonnet-4-6" : "o3"),
+    };
+  }
+
+  const provider = isAiProvider(rawProvider)
+    ? rawProvider
+    : /^claude/i.test(rawModel)
+    ? "anthropic"
+    : undefined;
+
+  return {
+    provider,
+    model: rawModel || (provider === "anthropic" ? "claude-sonnet-4-6" : "o3"),
+  };
+}
+
 /**
  * =========================
  * UI Mode Runner (subjects + tasks)
@@ -196,13 +233,13 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
 
       const system = replaceVars(t.system || "", vars).trim();
       const user = replaceVars(t.user || "", vars).trim();
-      const model = t.model || "o3";
+      const { provider, model } = resolveTaskAi(t);
 
-      console.log(chalk.yellow(`🧩 Running Task #${t.id}${t.name ? `: ${t.name}` : ""}`));
+      console.log(chalk.yellow(`🧩 Running Task #${t.id}${t.name ? `: ${t.name}` : ""} [${provider || "openai"}:${model}]`));
 
       agent.clearTasks();
-      if (system) agent.addTaskWithSystem(user, system, model);
-      else agent.addTask(user, model);
+      if (system) agent.addTaskWithSystem(user, system, model, provider);
+      else agent.addTask(user, model, provider);
 
       try {
         await agent.executeChain();
@@ -244,6 +281,27 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
       continue;
     }
 
+    const enabledTasksSorted = tasks
+      .filter((t) => t?.enabled === true)
+      .slice()
+      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+
+    for (const t of enabledTasksSorted) {
+      if (!t || !isBaseTsvReplacementTask(t) || (t.id ?? 0) <= baseTaskId) continue;
+
+      const polishedTsv = outputsById.get(t.id) || "";
+      if (looksLikeTsv(polishedTsv)) {
+        baseTsv = polishedTsv;
+        console.log(chalk.green(`✨ Task #${t.id} applied polish directly to the final TSV.`));
+      } else if (polishedTsv.trim()) {
+        console.log(
+          chalk.yellow(
+            `⚠️ Task #${t.id} was set to polish the final TSV, but did not return TSV. Keeping the original answer table.`
+          )
+        );
+      }
+    }
+
     // Parse base TSV
     const rows = baseTsv.trim().split("\n").map((r) => r.split("\t"));
     if (rows.length < 2) {
@@ -265,16 +323,12 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
       return `Task ${id}`;
     };
 
-    const enabledTasksSorted = tasks
-      .filter((t) => t?.enabled === true)
-      .slice()
-      .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-
     for (const t of enabledTasksSorted) {
       if (!t) continue;
 
       // Only tasks after base TSV are treated as "column appenders"
       if ((t.id ?? 0) <= baseTaskId) continue;
+      if (isBaseTsvReplacementTask(t)) continue;
 
       const out = outputsById.get(t.id) || "";
       if (!out.trim()) continue;
