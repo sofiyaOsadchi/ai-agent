@@ -6,6 +6,7 @@ import {
 } from "./analytics.js";
 import {
   SearchConsoleService,
+  type SearchConsoleDimensionFilter,
   type SearchConsoleQueryRow,
   type SearchConsoleSite,
 } from "./search-console.js";
@@ -148,6 +149,91 @@ const SUBJECT_GENERIC_TOKENS = new Set([
   "www",
 ]);
 
+const HOSPITALITY_ENTITY_TOKENS = new Set([
+  "apartment",
+  "apartments",
+  "hotel",
+  "hotels",
+  "house",
+  "inn",
+  "resort",
+  "suite",
+  "suites",
+  "villa",
+  "villas",
+]);
+
+const DEMAND_INTENT_TOKENS = new Set([
+  "access",
+  "accessible",
+  "accessibility",
+  "address",
+  "airport",
+  "amenities",
+  "amenity",
+  "arrival",
+  "attraction",
+  "attractions",
+  "balcony",
+  "bar",
+  "beach",
+  "book",
+  "booking",
+  "breakfast",
+  "cancel",
+  "cancellation",
+  "center",
+  "centre",
+  "check",
+  "checkin",
+  "checkout",
+  "close",
+  "contact",
+  "cost",
+  "deal",
+  "deals",
+  "deposit",
+  "directions",
+  "distance",
+  "email",
+  "facilities",
+  "facility",
+  "fee",
+  "fees",
+  "help",
+  "kid",
+  "kids",
+  "kitchen",
+  "landmark",
+  "location",
+  "map",
+  "near",
+  "nearby",
+  "parking",
+  "payment",
+  "pets",
+  "phone",
+  "policy",
+  "pool",
+  "price",
+  "rate",
+  "rates",
+  "refund",
+  "restaurant",
+  "review",
+  "reviews",
+  "room",
+  "rooms",
+  "service",
+  "spa",
+  "support",
+  "train",
+  "transport",
+  "wifi",
+  "wi",
+  "fi",
+]);
+
 export class FaqDemandService {
   private analytics = new AnalyticsService();
   private searchConsole = new SearchConsoleService();
@@ -189,8 +275,8 @@ export class FaqDemandService {
           limit,
         });
         analyticsAccount = analyticsResult.account;
-        topLandingPages = analyticsResult.landingPages.slice(0, 20);
-        topSiteSearchTerms = analyticsResult.siteSearchTerms.slice(0, 20);
+        topLandingPages = analyticsResult.landingPages;
+        topSiteSearchTerms = analyticsResult.siteSearchTerms;
       } catch (error: any) {
         warnings.push(`Analytics signals were not loaded: ${error?.message || "unknown error"}`);
       }
@@ -204,9 +290,15 @@ export class FaqDemandService {
           limit,
         });
         searchConsoleSite = searchResult.site;
-        topQueries = searchResult.rows
-          .sort((a, b) => (b.impressions + b.clicks * 8) - (a.impressions + a.clicks * 8))
-          .slice(0, 40);
+        const subjectRows = await this.fetchSubjectSearchConsoleRows({
+          subject,
+          siteUrl: searchConsoleSite.siteUrl,
+          dateRange: input.dateRange,
+          limit: Math.min(limit, 50),
+        });
+        topQueries = this.uniqueSearchConsoleRows([...searchResult.rows, ...subjectRows.rows])
+          .sort((a, b) => this.searchConsoleScore(b) - this.searchConsoleScore(a));
+        warnings.push(...subjectRows.warnings);
       } catch (error: any) {
         warnings.push(`Search Console signals were not loaded: ${error?.message || "unknown error"}`);
       }
@@ -216,15 +308,15 @@ export class FaqDemandService {
     const rawLandingPages = topLandingPages.length;
     const rawSiteSearchTerms = topSiteSearchTerms.length;
     const rawSignalCount = rawQueries + rawLandingPages + rawSiteSearchTerms;
-    topQueries = this.filterBySubject(topQueries, subject, (row) => `${row.query} ${row.page}`);
-    topLandingPages = this.filterBySubject(topLandingPages, subject, (page) => `${page.pageTitle} ${page.pagePath}`);
-    topSiteSearchTerms = this.filterBySubject(topSiteSearchTerms, subject, (term) => term.searchTerm);
+    topQueries = this.filterBySubject(topQueries, subject, (row) => `${row.query} ${row.page}`).slice(0, 40);
+    topLandingPages = this.filterBySubject(topLandingPages, subject, (page) => `${page.pageTitle} ${page.pagePath}`).slice(0, 20);
+    topSiteSearchTerms = this.filterBySubject(topSiteSearchTerms, subject, (term) => term.searchTerm).slice(0, 20);
 
     const matchedQueries = topQueries.length;
     const matchedLandingPages = topLandingPages.length;
     const matchedSiteSearchTerms = topSiteSearchTerms.length;
     const subjectSignalCount = topQueries.length + topLandingPages.length + topSiteSearchTerms.length;
-    if (rawSignalCount && subjectSignalCount < rawSignalCount) {
+    if (rawSignalCount && !subjectSignalCount) {
       warnings.push(`Ignored ${rawSignalCount - subjectSignalCount} signals that did not match "${subject}". Check the selected GA4 property or Search Console site if this looks too strict.`);
     }
 
@@ -274,6 +366,87 @@ export class FaqDemandService {
     };
   }
 
+  private async fetchSubjectSearchConsoleRows(input: {
+    subject: string;
+    siteUrl: string;
+    dateRange?: DateRangeInput;
+    limit: number;
+  }): Promise<{ rows: SearchConsoleQueryRow[]; warnings: string[] }> {
+    const filterSets = this.searchConsoleFilterSetsForSubject(input.subject);
+    if (!filterSets.length) return { rows: [], warnings: [] };
+
+    const results = await Promise.allSettled(
+      filterSets.map((dimensionFilters) =>
+        this.searchConsole.fetchQueryRows({
+          siteUrl: input.siteUrl,
+          dateRange: input.dateRange,
+          dimensionFilters,
+          limit: input.limit,
+        })
+      )
+    );
+
+    const rows: SearchConsoleQueryRow[] = [];
+    const warnings: string[] = [];
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        rows.push(...result.value.rows);
+      } else {
+        warnings.push(`A targeted Search Console lookup failed: ${result.reason?.message || String(result.reason)}`);
+      }
+    }
+
+    return {
+      rows: this.uniqueSearchConsoleRows(rows),
+      warnings,
+    };
+  }
+
+  private searchConsoleFilterSetsForSubject(subject: string): SearchConsoleDimensionFilter[][] {
+    const filters: SearchConsoleDimensionFilter[] = [];
+    const seen = new Set<string>();
+    const anchors = this.subjectAnchorTokens(subject);
+    const subjectPhrase = this.cleanSignal(subject).toLowerCase();
+    const anchorPhrase = anchors.join(" ");
+    const tailPhrase = anchors.slice(-2).join(" ");
+    const subjectSlug = this.slugifyForSearchConsole(subjectPhrase);
+    const tailSlug = this.slugifyForSearchConsole(tailPhrase);
+
+    const add = (dimension: SearchConsoleDimensionFilter["dimension"], expression: string) => {
+      const cleanExpression = String(expression || "").trim().toLowerCase();
+      if (cleanExpression.length < 3) return;
+      const key = `${dimension}:${cleanExpression}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      filters.push({ dimension, operator: "contains", expression: cleanExpression });
+    };
+
+    add("query", subjectPhrase);
+    add("query", anchorPhrase);
+    add("query", tailPhrase);
+    add("page", subjectSlug);
+    add("page", tailSlug);
+
+    return filters.map((filter) => [filter]);
+  }
+
+  private uniqueSearchConsoleRows(rows: SearchConsoleQueryRow[]): SearchConsoleQueryRow[] {
+    const byKey = new Map<string, SearchConsoleQueryRow>();
+    for (const row of rows) {
+      const key = `${row.query.toLowerCase()}|${row.page.toLowerCase()}`;
+      const existing = byKey.get(key);
+      if (!existing || this.searchConsoleScore(row) > this.searchConsoleScore(existing)) {
+        byKey.set(key, row);
+      }
+    }
+    return Array.from(byKey.values());
+  }
+
+  private searchConsoleScore(row: SearchConsoleQueryRow): number {
+    return row.impressions + row.clicks * 8 + (row.position ? Math.max(0, 20 - row.position) * 3 : 0);
+  }
+
   private buildPhrases(
     subject: string,
     queries: SearchConsoleQueryRow[],
@@ -294,6 +467,7 @@ export class FaqDemandService {
       const phrase = this.cleanSignal(row.query || this.pathToSignal(row.page));
       const intent = this.intentFromPhrase(subject, phrase);
       if (!this.matchesSubject(subject, `${phrase} ${row.page}`)) continue;
+      if (this.isLikelySiblingEntitySignal(subject, `${phrase} ${row.page}`)) continue;
       if (!this.isUsefulPhrase(subject, phrase, intent)) continue;
       const category = this.classify(`${phrase} ${intent}`);
       add({
@@ -311,6 +485,7 @@ export class FaqDemandService {
       const phrase = this.cleanSignal(term.searchTerm);
       const intent = this.intentFromPhrase(subject, phrase);
       if (!this.matchesSubject(subject, phrase)) continue;
+      if (this.isLikelySiblingEntitySignal(subject, phrase)) continue;
       if (!this.isUsefulPhrase(subject, phrase, intent)) continue;
       const category = this.classify(`${phrase} ${intent}`);
       add({
@@ -327,6 +502,7 @@ export class FaqDemandService {
       const phrase = this.cleanSignal(this.pageSignal(page));
       const intent = this.intentFromPhrase(subject, phrase);
       if (!this.matchesSubject(subject, `${phrase} ${page.pagePath}`)) continue;
+      if (this.isLikelySiblingEntitySignal(subject, `${phrase} ${page.pagePath}`)) continue;
       if (!this.isUsefulPhrase(subject, phrase, intent)) continue;
       const category = this.classify(`${phrase} ${page.pagePath} ${intent}`);
       add({
@@ -499,6 +675,26 @@ export class FaqDemandService {
     return phraseTokens.every((token) => subjectTokens.has(token) || ["hotel", "hotels", "official", "website"].includes(token));
   }
 
+  private isLikelySiblingEntitySignal(subject: string, signal: string): boolean {
+    const anchors = this.subjectAnchorTokens(subject);
+    if (anchors.length !== 2) return false;
+
+    const signalTokens = this.tokenize(signal);
+    const signalTokenSet = new Set(signalTokens);
+    if (!anchors.every((token) => signalTokenSet.has(token))) return false;
+    if (!signalTokens.some((token) => HOSPITALITY_ENTITY_TOKENS.has(token))) return false;
+
+    const subjectAnchorSet = new Set(anchors);
+    const nonIntentExtraTokens = Array.from(new Set(signalTokens.filter((token) => {
+      return token.length >= 3
+        && !subjectAnchorSet.has(token)
+        && !SUBJECT_GENERIC_TOKENS.has(token)
+        && !DEMAND_INTENT_TOKENS.has(token);
+    })));
+
+    return nonIntentExtraTokens.length > 0;
+  }
+
   private tokenize(value: string): string[] {
     return String(value || "")
       .toLowerCase()
@@ -598,11 +794,11 @@ export class FaqDemandService {
   private classify(value: string): string {
     const text = String(value || "").toLowerCase();
     if (/price|cost|fee|fees|deposit|refund|cancel|cancellation|payment|book|booking|rate|rates|cheap|deal|מחיר|עלות|ביטול|הזמנה/.test(text)) return "booking";
-    if (/where|address|location|near|nearby|airport|train|metro|parking|transport|map|directions|beach|center|centre|distance|איפה|כתובת|חניה|קרוב|שדה/.test(text)) return "location";
-    if (/room|suite|apartment|amenit|facility|facilities|wifi|wi-fi|breakfast|pool|spa|kitchen|balcony|air conditioning|ac|accessible|accessibility|חדר|בריכה|ארוחת|מטבח|מרפסת|נגיש/.test(text)) return "amenities";
+    if (/contact|support|help|phone|email|change|problem|request|service|customer|צור קשר|עזרה|תמיכה|טלפון|שירות/.test(text)) return "support";
+    if (/where|address|location|near|nearby|close|airport|train|metro|parking|transport|map|directions|beach|center|centre|distance|attraction|attractions|landmark|איפה|כתובת|חניה|קרוב|שדה/.test(text)) return "location";
+    if (/room|suite|apartment|amenit|facility|facilities|wifi|wi-fi|breakfast|pool|spa|kitchen|balcony|air conditioning|\bac\b|accessible|accessibility|חדר|בריכה|ארוחת|מטבח|מרפסת|נגיש/.test(text)) return "amenities";
     if (/policy|policies|check.?in|check.?out|pet|pets|smok|children|kid|age|rules|allowed|hours|צ.?ק|חיות|עישון|ילדים|מותר/.test(text)) return "policy";
     if (/review|reviews|best|vs|versus|compare|comparison|rating|worth|safe|legit|recommended|המלצות|ביקורות|מומלץ|השוואה/.test(text)) return "comparison";
-    if (/contact|support|help|phone|email|change|problem|request|service|customer|צור קשר|עזרה|תמיכה|טלפון|שירות/.test(text)) return "support";
     return "general";
   }
 
@@ -627,6 +823,15 @@ export class FaqDemandService {
       .replace(/\s+/g, " ")
       .replace(/[?!.]+$/g, "")
       .trim()
+      .slice(0, 120);
+  }
+
+  private slugifyForSearchConsole(value: string): string {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[^a-z0-9\u0590-\u05ff]+/g, "-")
+      .replace(/^-+|-+$/g, "")
       .slice(0, 120);
   }
 

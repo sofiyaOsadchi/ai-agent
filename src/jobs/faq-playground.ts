@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
 import type { AIProvider } from "../core/ai/types.js";
+import { FaqDemandService, type FaqDemandPhrase, type FaqDemandResult } from "../services/faq-demand.js";
 import { SheetsService } from "../services/sheets.js";
 import {
   createDuplicateCheckPrompt,
@@ -50,6 +51,26 @@ export type UiTask = {
 export type UiTasksConfig = {
   subjects: string[];
   tasks: UiTask[];
+  faqDemand?: {
+    enabled?: boolean;
+    websiteUrl?: string;
+    dateRange?: {
+      startDate?: string;
+      endDate?: string;
+    };
+    analytics?: {
+      enabled?: boolean;
+      accountId?: string;
+      propertyId?: string;
+    };
+    searchConsole?: {
+      enabled?: boolean;
+      siteUrl?: string;
+    };
+    limit?: number;
+    maxPhrases?: number;
+    questionsPerPhrase?: number;
+  };
 };
 
 // Union input for runFaqPlayground
@@ -186,6 +207,29 @@ function resolveTaskAi(task: UiTask): { provider?: AIProvider; model: string } {
   };
 }
 
+function sourceDemandPhrases(result: FaqDemandResult): FaqDemandPhrase[] {
+  return (Array.isArray(result.phrases) ? result.phrases : [])
+    .filter((phrase) => phrase.source !== "starter-intent");
+}
+
+function buildAutomaticDemandBrief(result: FaqDemandResult, questionsPerPhrase: number): string {
+  const phrases = sourceDemandPhrases(result);
+  if (!phrases.length) return "";
+
+  return [
+    `SEARCH-DEMAND FAQ BRIEF FOR ${result.subject}`,
+    "",
+    "Use these source phrases to influence the Research questions task. They do not replace factual answer sources.",
+    "For final answers, verify facts against official or otherwise approved sources.",
+    "Selected phrases are demand signals only; rewrite or skip wording that conflicts with forbidden phrase rules.",
+    "All selected phrases are real source signals from Analytics/Search Console.",
+    "",
+    "SELECTED PHRASES TO TURN INTO FAQ QUESTIONS:",
+    `Generate up to ${questionsPerPhrase} natural FAQ question(s) from each selected phrase, but merge duplicates across similar intents.`,
+    ...phrases.map((phrase) => `- ${phrase.phrase} | Intent: ${phrase.intent || phrase.phrase} | ${phrase.source}: ${phrase.evidence}${phrase.page ? ` | Page: ${phrase.page}` : ""}`),
+  ].join("\n");
+}
+
 /**
  * =========================
  * UI Mode Runner (subjects + tasks)
@@ -204,6 +248,8 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
 
   const tasks = Array.isArray(cfg.tasks) ? [...cfg.tasks] : [];
   tasks.sort((a, b) => (a?.id ?? 0) - (b?.id ?? 0));
+  const demandConfig = cfg.faqDemand?.enabled === true ? cfg.faqDemand : null;
+  const demandService = demandConfig ? new FaqDemandService() : null;
 
   if (subjects.length === 0) {
     console.log(chalk.yellow("⚠️ No subjects provided."));
@@ -215,8 +261,41 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
     console.log(chalk.blue(`\n🏨 [${i + 1}/${subjects.length}] Processing Subject: ${subject}`));
 
     let last = "";
+    let automaticDemandBrief = "";
 
     const outputsById = new Map<number, string>();
+
+    if (demandService && tasks.some((task) => task?.enabled === true && task.id === 1)) {
+      const questionsPerPhrase = Math.max(1, Math.min(Number(demandConfig?.questionsPerPhrase || 1), 5));
+
+      try {
+        console.log(chalk.gray("📈 Loading Analytics/Search Console question inspiration..."));
+        const demandResult = await demandService.analyze({
+          subject,
+          websiteUrl: demandConfig?.websiteUrl,
+          dateRange: demandConfig?.dateRange,
+          analytics: demandConfig?.analytics,
+          searchConsole: demandConfig?.searchConsole,
+          limit: demandConfig?.limit || 80,
+          maxPhrases: demandConfig?.maxPhrases || 5,
+          questionsPerPhrase,
+        });
+        automaticDemandBrief = buildAutomaticDemandBrief(demandResult, questionsPerPhrase);
+
+        const phraseCount = sourceDemandPhrases(demandResult).length;
+        if (phraseCount) {
+          console.log(chalk.green(`📈 Added ${phraseCount} demand phrase(s) for this subject.`));
+        } else {
+          console.log(chalk.yellow("⚠️ No subject-matching Analytics/Search Console phrases found. Continuing without demand inspiration."));
+        }
+
+        for (const warning of demandResult.sources?.warnings || []) {
+          console.log(chalk.yellow(`⚠️ ${warning}`));
+        }
+      } catch (error: any) {
+        console.log(chalk.yellow(`⚠️ Demand inspiration skipped: ${error?.message || "unknown error"}`));
+      }
+    }
 
     for (const t of tasks) {
       // Important: strict boolean check
@@ -232,7 +311,10 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
       };
 
       const system = replaceVars(t.system || "", vars).trim();
-      const user = replaceVars(t.user || "", vars).trim();
+      let user = replaceVars(t.user || "", vars).trim();
+      if (t.id === 1 && automaticDemandBrief && !user.includes("SEARCH-DEMAND FAQ BRIEF")) {
+        user += `\n\nSEARCH PHRASE DEMAND SIGNALS:\n${automaticDemandBrief}`;
+      }
       const { provider, model } = resolveTaskAi(t);
 
       console.log(chalk.yellow(`🧩 Running Task #${t.id}${t.name ? `: ${t.name}` : ""} [${provider || "openai"}:${model}]`));
@@ -569,7 +651,7 @@ export async function runFaqPlayground(agent: AIAgent, sheets: SheetsService, co
       ? config.subjects.map((s: any) => String(s).trim()).filter(Boolean)
       : [];
 
-    return runFromUiTasks(agent, sheets, { subjects, tasks: config.tasks });
+    return runFromUiTasks(agent, sheets, { subjects, tasks: config.tasks, faqDemand: config.faqDemand });
   }
 
   // Legacy mode: hotels + steps + prompts

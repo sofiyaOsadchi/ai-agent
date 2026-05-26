@@ -111,6 +111,9 @@
     },
     questionBrief: {
       question: "What matters most when choosing questions?",
+      multi: true,
+      doneLabel: "Use selected question focus",
+      exclusiveValues: ["none", "custom_question_brief"],
       replies: [
         { label: "No extra focus", value: "none" },
         { label: "Pre-booking questions", value: "Focus on practical pre-booking questions and comparison intent." },
@@ -138,6 +141,9 @@
     },
     answerBrief: {
       question: "What matters most in the answers?",
+      multi: true,
+      doneLabel: "Use selected answer rules",
+      exclusiveValues: ["none", "custom_answer_brief"],
       replies: [
         { label: "No extra focus", value: "none" },
         { label: "Short and practical", value: "Keep answers short, useful and easy to scan. Avoid filler." },
@@ -167,6 +173,7 @@
       question: "Which quality checks should be added at the end? Select all that apply.",
       multi: true,
       doneLabel: "Use selected checks",
+      exclusiveValues: ["no_qa"],
       replies: [
         { label: "Duplicate check", value: "duplicates" },
         { label: "Source verification", value: "sources" },
@@ -198,6 +205,7 @@
       question: "Do you want to replace the main prompt for any task now? Select the tasks you want to edit, or skip this step.",
       multi: true,
       doneLabel: "Edit selected prompts",
+      exclusiveValues: ["skip_prompts"],
       replies: [
         { label: "Research questions", value: "task:1" },
         { label: "Write answers", value: "task:2" },
@@ -231,7 +239,11 @@
       return {
         step: saved.step || "scope",
         answers,
-        transcript
+        transcript,
+        promptQueue: Array.isArray(saved.promptQueue) ? saved.promptQueue : [],
+        promptIndex: Number.isFinite(saved.promptIndex) ? saved.promptIndex : 0,
+        pendingQuestionBriefParts: Array.isArray(saved.pendingQuestionBriefParts) ? saved.pendingQuestionBriefParts : [],
+        pendingAnswerBriefParts: Array.isArray(saved.pendingAnswerBriefParts) ? saved.pendingAnswerBriefParts : []
       };
     } catch {
       return { step: "scope", answers: { ...defaultAnswers }, transcript: [] };
@@ -251,13 +263,18 @@
     const quick = $("faqChatQuickReplies");
     const form = $("faqChatForm");
     const input = $("faqChatInput");
+    const sendButton = $("faqChatSendBtn");
     const summary = $("faqChatSummary");
 
-    if (!log || !quick || !form || !input || !summary) return;
+    if (!log || !quick || !form || !input || !sendButton || !summary) return;
+
+    let activeMultiSelection = new Set();
+    let activeMultiReplies = [];
 
     function addMessage(role, text, persist = true) {
       const item = document.createElement("div");
       item.className = `chat-message ${role}`;
+      item.dir = "auto";
       item.textContent = text;
       log.appendChild(item);
       log.scrollTop = log.scrollHeight;
@@ -282,6 +299,14 @@
         return new Set(state.answers.sources || ["Official website"]);
       }
 
+      if (stepName === "questionBrief") {
+        return initialBriefSelection("questionBrief", state.answers.questionUserNote, "none");
+      }
+
+      if (stepName === "answerBrief") {
+        return initialBriefSelection("answerBrief", state.answers.answerUserNote, "none");
+      }
+
       if (stepName === "qaChecks") {
         if (state.answers.qaMode === "no_qa") return new Set(["no_qa"]);
         if (state.answers.qaMode === "duplicates_only") return new Set(["duplicates"]);
@@ -289,17 +314,67 @@
         return new Set(["duplicates", "writing"]);
       }
 
+      if (stepName === "promptTasks") {
+        const editedTaskIds = Object.keys(state.answers.taskPrompts || {})
+          .map((taskId) => `task:${taskId}`)
+          .filter((taskId) => steps.promptTasks.replies.some((reply) => reply.value === taskId));
+        return new Set(editedTaskIds.length ? editedTaskIds : ["skip_prompts"]);
+      }
+
       return new Set();
+    }
+
+    function initialBriefSelection(stepName, answerValue, emptyValue) {
+      const clean = String(answerValue || "").trim();
+      if (!clean) return new Set([emptyValue]);
+      const step = steps[stepName] || {};
+      const exclusive = new Set(step.exclusiveValues || []);
+      const selected = new Set();
+      (step.replies || []).forEach((reply) => {
+        if (!reply.value || exclusive.has(reply.value)) return;
+        if (clean.includes(reply.value)) selected.add(reply.value);
+      });
+      return selected.size ? selected : new Set();
+    }
+
+    function orderedSelectedValues(replies, selectedSet) {
+      return (replies || [])
+        .map((reply) => reply.value)
+        .filter((value) => selectedSet.has(value));
+    }
+
+    function selectedLabel(replies, selectedValues) {
+      if (!selectedValues.length) return "No selection";
+      return selectedValues.map((value) => {
+        const match = replies.find((reply) => reply.value === value);
+        return match?.label || value;
+      }).join(", ");
+    }
+
+    function updateComposerForStep(step = {}) {
+      const isMulti = Boolean(step.multi);
+      form.classList.toggle("is-multi-select", isMulti);
+      sendButton.textContent = isMulti ? (step.doneLabel || "Continue") : "Send";
+    }
+
+    function submitActiveMultiSelection() {
+      const step = steps[state.step] || {};
+      if (!step.multi) return false;
+      const selected = orderedSelectedValues(activeMultiReplies, activeMultiSelection);
+      handleAnswer(selected.join("|"), selectedLabel(activeMultiReplies, selected));
+      return true;
     }
 
     function setReplies(replies = []) {
       quick.innerHTML = "";
       const step = steps[state.step] || {};
-      const multiSelection = step.multi ? initialMultiSelection(state.step) : new Set();
+      activeMultiReplies = replies;
+      activeMultiSelection = step.multi ? initialMultiSelection(state.step) : new Set();
+      updateComposerForStep(step);
 
       function refreshMultiButtons() {
         quick.querySelectorAll("[data-chat-value]").forEach((button) => {
-          button.classList.toggle("is-selected", multiSelection.has(button.dataset.chatValue));
+          button.classList.toggle("is-selected", activeMultiSelection.has(button.dataset.chatValue));
         });
       }
 
@@ -312,16 +387,16 @@
         button.addEventListener("click", () => {
           if (String(reply.value).startsWith("__")) return;
           if (step.multi) {
-            if (reply.value === "no_qa" || reply.value === "skip_prompts") {
-              multiSelection.clear();
-              multiSelection.add(reply.value);
+            const exclusive = new Set(step.exclusiveValues || []);
+            if (exclusive.has(reply.value)) {
+              activeMultiSelection.clear();
+              activeMultiSelection.add(reply.value);
             } else {
-              multiSelection.delete("no_qa");
-              multiSelection.delete("skip_prompts");
-              if (multiSelection.has(reply.value)) {
-                multiSelection.delete(reply.value);
+              exclusive.forEach((value) => activeMultiSelection.delete(value));
+              if (activeMultiSelection.has(reply.value)) {
+                activeMultiSelection.delete(reply.value);
               } else {
-                multiSelection.add(reply.value);
+                activeMultiSelection.add(reply.value);
               }
             }
             refreshMultiButtons();
@@ -331,22 +406,7 @@
         });
         quick.appendChild(button);
       });
-
-      if (step.multi) {
-        const done = document.createElement("button");
-        done.type = "button";
-        done.className = "quick-reply quick-reply-done";
-        done.textContent = step.doneLabel || "Done";
-        done.addEventListener("click", () => {
-          const selected = Array.from(multiSelection);
-          handleAnswer(selected.join("|"), selected.length ? selected.map((value) => {
-            const match = replies.find((reply) => reply.value === value);
-            return match?.label || value;
-          }).join(", ") : "No selection");
-        });
-        quick.appendChild(done);
-        refreshMultiButtons();
-      }
+      refreshMultiButtons();
     }
 
     function renderSummary() {
@@ -478,7 +538,9 @@
         renderSummary();
         return;
       }
-      input.placeholder = step.placeholder || "Type a short answer...";
+      input.placeholder = step.multi
+        ? (step.placeholder || "Select one or more options, then press Send.")
+        : (step.placeholder || "Type a short answer...");
       setReplies(step.replies || []);
       if (shouldAsk) bot(step.question);
       renderSummary();
@@ -647,16 +709,20 @@
       }
 
       if (currentStep === "questionBrief") {
-        if (text === "custom_question_brief") {
+        const selected = text.split("|").filter(Boolean);
+        if (selected.includes("custom_question_brief")) {
+          state.pendingQuestionBriefParts = selected.filter((item) => item !== "none" && item !== "custom_question_brief");
           return showStep("customQuestionBrief");
         }
-        state.answers.questionUserNote = text === "none" ? "" : text;
+        state.pendingQuestionBriefParts = [];
+        state.answers.questionUserNote = selected.includes("none") ? "" : selected.join(" ");
         applyAnswersToBuilder();
         return showStep("questionTone");
       }
 
       if (currentStep === "customQuestionBrief") {
-        state.answers.questionUserNote = text;
+        state.answers.questionUserNote = [...(state.pendingQuestionBriefParts || []), text].filter(Boolean).join(" ");
+        state.pendingQuestionBriefParts = [];
         applyAnswersToBuilder();
         return showStep("questionTone");
       }
@@ -677,16 +743,20 @@
       }
 
       if (currentStep === "answerBrief") {
-        if (text === "custom_answer_brief") {
+        const selected = text.split("|").filter(Boolean);
+        if (selected.includes("custom_answer_brief")) {
+          state.pendingAnswerBriefParts = selected.filter((item) => item !== "none" && item !== "custom_answer_brief");
           return showStep("customAnswerBrief");
         }
-        state.answers.answerUserNote = text === "none" ? "" : text;
+        state.pendingAnswerBriefParts = [];
+        state.answers.answerUserNote = selected.includes("none") ? "" : selected.join(" ");
         applyAnswersToBuilder();
         return showStep("answerTone");
       }
 
       if (currentStep === "customAnswerBrief") {
-        state.answers.answerUserNote = text;
+        state.answers.answerUserNote = [...(state.pendingAnswerBriefParts || []), text].filter(Boolean).join(" ");
+        state.pendingAnswerBriefParts = [];
         applyAnswersToBuilder();
         return showStep("answerTone");
       }
@@ -799,6 +869,7 @@
       event.preventDefault();
       const value = input.value.trim();
       input.value = "";
+      if (!value && submitActiveMultiSelection()) return;
       if (!value) return;
       handleAnswer(value);
     });

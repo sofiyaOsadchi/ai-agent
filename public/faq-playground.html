@@ -1097,6 +1097,29 @@
       font-weight: 700;
     }
 
+    .demand-source-card .auto-demand-toggle {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-basis: 100%;
+      width: 100%;
+      min-height: 36px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .demand-source-card .auto-demand-toggle input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+      flex: 0 0 auto;
+    }
+
     .demand-source-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 11px;
@@ -3002,6 +3025,13 @@
       color: #fff !important;
     }
 
+    .quick-reply-done:hover,
+    .quick-reply-done:focus-visible {
+      border-color: var(--vx-ink) !important;
+      background: var(--vx-ink) !important;
+      color: #fff !important;
+    }
+
     .seg-btn.active,
     .btn,
     #runBtn {
@@ -3016,6 +3046,20 @@
       border-color: var(--vx-border) !important;
       color: var(--vx-dim) !important;
       box-shadow: none !important;
+    }
+
+    .chat-composer.is-multi-select #faqChatSendBtn {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
+      font-weight: 700 !important;
+    }
+
+    .chat-composer.is-multi-select #faqChatSendBtn:hover,
+    .chat-composer.is-multi-select #faqChatSendBtn:focus-visible {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
     }
 
     #faqDemandRunBtn.btn.secondary {
@@ -3464,9 +3508,12 @@
     }
 
     .chat-message.user {
+      align-self: flex-end !important;
       background: var(--vx-ink) !important;
       border-color: var(--vx-ink) !important;
       color: #fff !important;
+      margin-inline-start: auto;
+      text-align: right;
     }
 
     .run-strip {
@@ -3913,11 +3960,12 @@
                     <h3 class="source-panel-title">Search phrase source</h3>
                     <button class="ghost-btn" type="button" id="faqDemandRefreshSourcesBtn" aria-label="Refresh search phrase sources">Refresh</button>
                   </div>
-                  <p class="demand-source-note">Question-demand only. Factual answers still use the selected research sources.</p>
+                  <p class="demand-source-note">Question-demand only. Factual answers still use the selected research sources. Automatic mode scans each subject during the workflow.</p>
 
                   <div class="signals-source-row">
                     <label class="source-chip"><input id="faqDemandUseAnalytics" type="checkbox" checked />Google Analytics</label>
                     <label class="source-chip"><input id="faqDemandUseSearchConsole" type="checkbox" checked />Search Console</label>
+                    <label class="auto-demand-toggle"><input id="faqDemandAutoRun" type="checkbox" />Use these signals automatically when running the workflow</label>
                   </div>
 
                   <div class="grid demand-source-grid">
@@ -5086,6 +5134,20 @@
       const savedNamingRules = savedState.controls?.namingRules || "";
       $("namingRules").value = hasHebrewText(savedNamingRules) ? "Do not shorten or translate the name" : savedNamingRules || "Do not shorten or translate the name";
       applySourceOptions(savedState.controls?.sourceOptions);
+      const savedDemand = savedState.controls?.faqDemand || {};
+      if ($("faqDemandAutoRun")) $("faqDemandAutoRun").checked = savedDemand.enabled === true;
+      if ($("faqDemandUseAnalytics")) $("faqDemandUseAnalytics").checked = savedDemand.analytics?.enabled !== false;
+      if ($("faqDemandUseSearchConsole")) $("faqDemandUseSearchConsole").checked = savedDemand.searchConsole?.enabled !== false;
+      if ($("faqDemandRange") && savedDemand.dateRange?.startDate && savedDemand.dateRange?.endDate) {
+        const savedStart = new Date(`${savedDemand.dateRange.startDate}T00:00:00`);
+        const savedEnd = new Date(`${savedDemand.dateRange.endDate}T00:00:00`);
+        const days = Math.round((savedEnd - savedStart) / (24 * 60 * 60 * 1000));
+        const matchingRange = Array.from($("faqDemandRange").options).find((option) => Number(option.value) === days);
+        if (matchingRange) $("faqDemandRange").value = matchingRange.value;
+      }
+      if ($("faqDemandMaxPhrases") && savedDemand.maxPhrases) $("faqDemandMaxPhrases").value = String(savedDemand.maxPhrases);
+      if ($("faqDemandQuestionsPerPhrase") && savedDemand.questionsPerPhrase) $("faqDemandQuestionsPerPhrase").value = String(savedDemand.questionsPerPhrase);
+      if ($("faqDemandWebsiteUrl")) $("faqDemandWebsiteUrl").value = savedDemand.websiteUrl || "";
       const savedPreset = savedState.controls?.preset;
       setActivePreset(normalizePreset(savedPreset), false);
     }
@@ -5531,7 +5593,7 @@
         let userPrompt = replaceUiVars(rawUserPrompt, task);
         const systemPrompt = replaceUiVars(task.system, task);
 
-        if (task.id === 1) {
+        if (task.id === 1 && !isFaqDemandAutoRunEnabled()) {
           const demandBrief = selectedFaqDemandBrief().trim();
           if (demandBrief && !userPrompt.includes("SEARCH-DEMAND FAQ BRIEF")) {
             userPrompt += `\n\nSEARCH PHRASE DEMAND SIGNALS:\n${demandBrief}`;
@@ -5585,6 +5647,7 @@
           forbiddenPhrases: $("forbiddenPhrases").value,
           namingPolicy: $("namingPolicy").value,
           namingRules: $("namingRules").value,
+          faqDemand: collectFaqDemandSettings(),
           preset: document.querySelector(".seg-btn.active")?.dataset.preset || "hotel"
         },
         categories: Object.fromEntries(readCategoryDraftsFromDom().map((category) => [category.id, category])),
@@ -5687,6 +5750,34 @@
       };
     }
 
+    function isFaqDemandAutoRunEnabled() {
+      return $("faqDemandAutoRun")?.checked === true;
+    }
+
+    function collectFaqDemandSettings() {
+      const analyticsAccount = selectedFaqDemandAnalyticsAccount();
+      const searchSite = $("faqDemandSearchSite")?.value || "";
+      const websiteUrl = $("faqDemandWebsiteUrl")?.value || "";
+
+      return {
+        enabled: isFaqDemandAutoRunEnabled(),
+        websiteUrl,
+        dateRange: faqDemandDateRange(),
+        analytics: {
+          enabled: $("faqDemandUseAnalytics")?.checked === true,
+          accountId: analyticsAccount.accountId,
+          propertyId: analyticsAccount.propertyId
+        },
+        searchConsole: {
+          enabled: $("faqDemandUseSearchConsole")?.checked === true,
+          siteUrl: searchSite || websiteUrl
+        },
+        maxPhrases: Number($("faqDemandMaxPhrases")?.value || 5),
+        questionsPerPhrase: Number($("faqDemandQuestionsPerPhrase")?.value || 1),
+        limit: 80
+      };
+    }
+
     async function loadFaqDemandSources(force = false) {
       if (faqDemandSourcesLoaded && !force) return;
       const status = $("faqDemandStatus");
@@ -5716,6 +5807,13 @@
             </option>
           `).join("")
           : `<option value="">Add URL in advanced fallback</option>`;
+        const savedDemand = savedState.controls?.faqDemand || {};
+        if (savedDemand.analytics?.accountId && analyticsSelect.querySelector(`option[value="${CSS.escape(savedDemand.analytics.accountId)}"]`)) {
+          analyticsSelect.value = savedDemand.analytics.accountId;
+        }
+        if (savedDemand.searchConsole?.siteUrl && searchSelect.querySelector(`option[value="${CSS.escape(savedDemand.searchConsole.siteUrl)}"]`)) {
+          searchSelect.value = savedDemand.searchConsole.siteUrl;
+        }
 
         faqDemandSourcesLoaded = true;
         if (status) status.textContent = "Sources loaded. Choose a range and analyze demand.";
@@ -5940,7 +6038,8 @@
       const payload = {
         mode: "faq-playground",
         subjects,
-        tasks
+        tasks,
+        faqDemand: collectFaqDemandSettings()
       };
 
       runBtn.disabled = true;
@@ -5948,6 +6047,9 @@
       appendLog(`> Starting FAQ workflow for ${subjects.length} subject(s).`);
       appendLog(`> Global model: ${modelLabel($("globalModel").value)}`);
       appendLog(`> Active tasks: ${tasks.filter((task) => task.enabled).map((task) => `#${task.id}`).join(", ")}`);
+      if (payload.faqDemand.enabled) {
+        appendLog("> Demand inspiration: automatic per subject.");
+      }
       socket.emit("start-agent", payload);
     }
 

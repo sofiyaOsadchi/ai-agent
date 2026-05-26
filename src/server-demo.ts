@@ -37,11 +37,12 @@ const AUTH_COOKIE_NAME = "carmelon_workspace_auth";
 const AUTH_TTL_MS = resolveAuthTtlMs(process.env.APP_AUTH_TTL_HOURS);
 const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET || APP_PASSWORD;
+const IS_DEPLOYED_RUNTIME = Boolean(process.env.K_SERVICE || process.env.K_REVISION || process.env.K_CONFIGURATION);
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
-if (process.env.NODE_ENV === "production" && !APP_PASSWORD) {
+if ((process.env.NODE_ENV === "production" || IS_DEPLOYED_RUNTIME) && !APP_PASSWORD) {
   throw new Error("APP_PASSWORD must be configured before starting the production workspace server.");
 }
 
@@ -198,7 +199,7 @@ type AuthState = "ok" | "missing-config" | "unauthorized";
 
 function getRequestAuthState(req: IncomingMessage): AuthState {
   if (!APP_PASSWORD) {
-    return "missing-config";
+    return (process.env.NODE_ENV === "production" || IS_DEPLOYED_RUNTIME) ? "missing-config" : "ok";
   }
 
   const authTokens = parseCookieValues(req.headers.cookie, AUTH_COOKIE_NAME);
@@ -821,6 +822,7 @@ function buildPayloadData(mode: string, config: any): any {
     return {
       subjects: config.subjects,
       tasks: config.tasks,
+      faqDemand: config.faqDemand,
     };
   }
 

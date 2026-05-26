@@ -6,6 +6,8 @@ type GoogleServiceAccount = {
   private_key: string;
 };
 
+const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+
 export type SearchConsoleSite = {
   id: string;
   siteUrl: string;
@@ -27,18 +29,26 @@ export type SearchConsoleDateRange = {
   endDate: string;
 };
 
+export type SearchConsoleDimensionFilter = {
+  dimension: "query" | "page";
+  operator: "contains" | "equals" | "includingRegex" | "notContains" | "notEquals" | "excludingRegex";
+  expression: string;
+};
+
 export type SearchConsoleQueryInput = {
   siteUrl?: string;
   dateRange?: Partial<SearchConsoleDateRange>;
+  dimensionFilters?: SearchConsoleDimensionFilter[];
   limit?: number;
 };
 
 function loadServiceAccount(): GoogleServiceAccount {
-  const credentialsPath =
-    process.env.GOOGLE_APPLICATION_CREDENTIALS || "./src/credentials/service-account.json";
-
-  const raw = fs.readFileSync(credentialsPath, "utf8");
+  const raw = fs.readFileSync(credentialsPath(), "utf8");
   return JSON.parse(raw) as GoogleServiceAccount;
+}
+
+function credentialsPath(): string {
+  return process.env.GOOGLE_APPLICATION_CREDENTIALS || "./src/credentials/service-account.json";
 }
 
 function cleanSiteUrl(input: string): string {
@@ -51,17 +61,12 @@ function dateOffset(daysAgo: number): string {
 }
 
 export class SearchConsoleService {
-  private webmasters = google.webmasters({
-    version: "v3",
-    auth: this.auth(),
-  });
-
   async listSites(): Promise<SearchConsoleSite[]> {
     const configured = this.sitesFromEnv();
     if (configured.length) return configured;
 
     try {
-      const response = await this.webmasters.sites.list();
+      const response = await this.withWebmasters((webmasters) => webmasters.sites.list());
       const sites = response.data.siteEntry || [];
       const parsedSites: Array<SearchConsoleSite | null> = sites
         .map((site, index): SearchConsoleSite | null => {
@@ -87,15 +92,21 @@ export class SearchConsoleService {
   }> {
     const site = await this.resolveSite(input.siteUrl);
     const dateRange = this.resolveDateRange(input.dateRange);
-    const response = await this.webmasters.searchanalytics.query({
+    const requestBody: Record<string, unknown> = {
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      dimensions: ["query", "page"],
+      rowLimit: input.limit || 100,
+    };
+
+    if (input.dimensionFilters?.length) {
+      requestBody.dimensionFilterGroups = [{ filters: input.dimensionFilters }];
+    }
+
+    const response = await this.withWebmasters((webmasters) => webmasters.searchanalytics.query({
       siteUrl: site.siteUrl,
-      requestBody: {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-        dimensions: ["query", "page"],
-        rowLimit: input.limit || 100,
-      },
-    });
+      requestBody,
+    }));
 
     return {
       site,
@@ -111,15 +122,53 @@ export class SearchConsoleService {
     };
   }
 
-  private auth() {
-    const serviceAccount = loadServiceAccount();
+  private authAttempts(): Array<{ label: string; auth: any }> {
+    const attempts: Array<{ label: string; auth: any }> = [{
+      label: "service-account",
+      auth: new google.auth.GoogleAuth({
+        keyFile: credentialsPath(),
+        scopes: [SEARCH_CONSOLE_SCOPE],
+      }),
+    }];
 
-    return new google.auth.JWT({
-      email: serviceAccount.client_email,
-      key: serviceAccount.private_key,
-      scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
-      subject: process.env.OWNER_EMAIL,
+    const impersonatedEmail = cleanSiteUrl(
+      process.env.SEARCH_CONSOLE_IMPERSONATE_EMAIL
+      || process.env.GSC_IMPERSONATE_EMAIL
+      || process.env.OWNER_EMAIL
+      || ""
+    );
+    if (!impersonatedEmail) return attempts;
+
+    const serviceAccount = loadServiceAccount();
+    attempts.push({
+      label: "impersonated-user",
+      auth: new google.auth.JWT({
+        email: serviceAccount.client_email,
+        key: serviceAccount.private_key,
+        scopes: [SEARCH_CONSOLE_SCOPE],
+        subject: impersonatedEmail,
+      }),
     });
+
+    return attempts;
+  }
+
+  private async withWebmasters<T>(operation: (webmasters: ReturnType<typeof google.webmasters>) => Promise<T>): Promise<T> {
+    const failures: string[] = [];
+
+    for (const attempt of this.authAttempts()) {
+      try {
+        const webmasters = google.webmasters({
+          version: "v3",
+          auth: attempt.auth,
+        });
+        return await operation(webmasters);
+      } catch (error: any) {
+        failures.push(`${attempt.label}: ${error?.message || String(error)}`);
+      }
+    }
+
+    throw new Error(`Search Console auth failed. ${failures.join(" | ")}`);
   }
 
   private sitesFromEnv(): SearchConsoleSite[] {
