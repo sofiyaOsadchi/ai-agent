@@ -26,7 +26,7 @@ import {
 } from "./jobs/translate-from-sheet-demo.js";
 import { TRANSLATION_GLOSSARY } from "./jobs/subjobs/translation-glossary.js";
 import { TERMINOLOGY_MANAGEMENT } from "./jobs/subjobs/terminology-management.js";
-import { getFirestoreDebugInfo, writeFirestoreHealthCheck } from "./firebase/firestore.js";
+import { writeFirestoreHealthCheck } from "./firebase/firestore.js";
 
 loadEnv();
 
@@ -646,16 +646,13 @@ app.get("/api/translate-demo/defaults", (_req, res) => {
 });
 
 app.get("/api/firestore-health", async (_req, res) => {
-  const debug = await getFirestoreDebugInfo();
-
   try {
     await writeFirestoreHealthCheck();
-    res.json({ ok: true, debug });
-  } catch (error: any) {
+    res.json({ ok: true });
+  } catch {
     res.status(500).json({
       ok: false,
-      debug,
-      error: error?.message || "Firestore health check failed.",
+      error: "Firestore health check failed",
     });
   }
 });
