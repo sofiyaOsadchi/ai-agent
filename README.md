@@ -92,6 +92,9 @@ npm run snapshot:restore -- <snapshot-id> --force
 OPENAI_API_KEY=...
 OWNER_EMAIL=...
 GOOGLE_APPLICATION_CREDENTIALS=./src/credentials/service-account.json
+DEV_USER_EMAIL=
+FIRST_ADMIN_EMAIL=
+FIRESTORE_PROJECT_ID=
 PORT=3000
 ```
 
@@ -99,6 +102,9 @@ PORT=3000
 
 - `src/services/sheets.ts` מחפש credentials ב-`GOOGLE_APPLICATION_CREDENTIALS`, ואם לא קיים אז ב-`./src/credentials/service-account.json`.
 - `OWNER_EMAIL` משמש כ-subject של Google JWT delegation.
+- `DEV_USER_EMAIL` מאפשר זיהוי משתמש רק בהרצה מקומית, כשאין IAP header.
+- `FIRST_ADMIN_EMAIL` מקבל role של `admin` ביצירת המשתמש, וגם המשתמש הראשון ב-Firestore נוצר כ-admin.
+- `FIRESTORE_PROJECT_ID` מכוון את Firebase Admin לפרויקט Firestore הרצוי בלי hardcode בקוד.
 - אל תכניסו credentials או קבצי service account לתיעוד או לקומיטים.
 - רוב ה-jobs כותבים ישירות ל-Google Sheets. בממשקים שתומכים בזה, התחילו ב-`dryRun`.
 

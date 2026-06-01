@@ -27,6 +27,9 @@ import {
 import { TRANSLATION_GLOSSARY } from "./jobs/subjobs/translation-glossary.js";
 import { TERMINOLOGY_MANAGEMENT } from "./jobs/subjobs/terminology-management.js";
 import { writeFirestoreHealthCheck } from "./firebase/firestore.js";
+import { getCurrentUser } from "./auth/current-user.js";
+import planRoutes from "./plans/plan.routes.js";
+import runRoutes from "./runs/run.routes.js";
 
 loadEnv();
 
@@ -558,6 +561,27 @@ function logout(req: Request, res: Response): void {
 
 app.get("/logout", logout);
 app.post("/logout", logout);
+
+app.get("/api/me", async (req, res) => {
+  try {
+    const user = await getCurrentUser(req);
+
+    if (!user) {
+      res.json({ authenticated: false });
+      return;
+    }
+
+    res.json({
+      authenticated: true,
+      user,
+    });
+  } catch {
+    res.status(500).json({ error: "Failed to resolve current user" });
+  }
+});
+
+app.use("/api/plans", express.json({ limit: "1mb" }), planRoutes);
+app.use("/api/runs", runRoutes);
 
 app.post(
   "/api/site-ai-audit/export-pdf",
