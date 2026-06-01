@@ -103,6 +103,7 @@ export async function createRun(input: CreateRunInput): Promise<RunRecord> {
     status: "running",
     startedAt: FieldValue.serverTimestamp(),
     configSnapshot: input.configSnapshot ?? {},
+    outputLinks: {},
   };
 
   if (input.planId) {

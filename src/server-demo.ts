@@ -1,8 +1,8 @@
 // src/server-demo.ts
 // Code in English. Comments can be Hebrew.
 
-import express, { type NextFunction, type Request, type Response } from "express";
-import { createServer, type IncomingMessage, type ServerResponse } from "http";
+import express from "express";
+import { createServer } from "http";
 import { Server } from "socket.io";
 import { spawn } from "child_process";
 import path from "path";
@@ -10,7 +10,6 @@ import { fileURLToPath } from "url";
 import open from "open";
 import OpenAI from "openai";
 import { config as loadEnv } from "dotenv";
-import crypto from "crypto";
 
 import { AnalyticsService } from "./services/analytics.js";
 import { FaqDemandService } from "./services/faq-demand.js";
@@ -27,9 +26,10 @@ import {
 import { TRANSLATION_GLOSSARY } from "./jobs/subjobs/translation-glossary.js";
 import { TERMINOLOGY_MANAGEMENT } from "./jobs/subjobs/terminology-management.js";
 import { writeFirestoreHealthCheck } from "./firebase/firestore.js";
-import { getCurrentUser } from "./auth/current-user.js";
+import { getCurrentUser, getCurrentUserFromHeaders } from "./auth/current-user.js";
 import planRoutes from "./plans/plan.routes.js";
 import runRoutes from "./runs/run.routes.js";
+import { createRun, updateRun } from "./runs/run.service.js";
 
 loadEnv();
 
@@ -44,43 +44,6 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 const publicPath = path.join(__dirname, "..", "public");
-
-const AUTH_COOKIE_NAME = "carmelon_workspace_auth";
-const AUTH_TTL_MS = resolveAuthTtlMs(process.env.APP_AUTH_TTL_HOURS);
-const APP_PASSWORD = process.env.APP_PASSWORD || "";
-const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET || APP_PASSWORD;
-const IS_DEPLOYED_RUNTIME = Boolean(process.env.K_SERVICE || process.env.K_REVISION || process.env.K_CONFIGURATION);
-const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
-const LOGIN_MAX_ATTEMPTS = 10;
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-
-if ((process.env.NODE_ENV === "production" || IS_DEPLOYED_RUNTIME) && !APP_PASSWORD) {
-  throw new Error("APP_PASSWORD must be configured before starting the production workspace server.");
-}
-
-function resolveAuthTtlMs(rawValue?: string): number {
-  const hours = Number(rawValue);
-
-  if (Number.isFinite(hours) && hours > 0) {
-    return Math.min(hours, 168) * 60 * 60 * 1000;
-  }
-
-  return 12 * 60 * 60 * 1000;
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => {
-    const replacements: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      "\"": "&quot;",
-      "'": "&#39;",
-    };
-
-    return replacements[char] || char;
-  });
-}
 
 function slugifyReportPart(value: string): string {
   return String(value || "site-audit")
@@ -142,425 +105,7 @@ async function renderHtmlToPdf(html: string): Promise<Buffer> {
   }
 }
 
-function safeCompare(a: string, b: string): boolean {
-  const aBuffer = Buffer.from(a);
-  const bBuffer = Buffer.from(b);
-
-  if (aBuffer.length !== bBuffer.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(aBuffer, bBuffer);
-}
-
-function passwordMatches(candidate: string): boolean {
-  return Boolean(APP_PASSWORD) && safeCompare(candidate, APP_PASSWORD);
-}
-
-function parseCookies(cookieHeader?: string): Record<string, string> {
-  const cookies: Record<string, string> = {};
-
-  for (const part of String(cookieHeader || "").split(";")) {
-    const separatorIndex = part.indexOf("=");
-
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = part.slice(0, separatorIndex).trim();
-    const value = part.slice(separatorIndex + 1).trim();
-
-    if (!key) {
-      continue;
-    }
-
-    try {
-      cookies[key] = decodeURIComponent(value);
-    } catch {
-      cookies[key] = value;
-    }
-  }
-
-  return cookies;
-}
-
-function parseCookieValues(cookieHeader: string | undefined, cookieName: string): string[] {
-  const values: string[] = [];
-
-  for (const part of String(cookieHeader || "").split(";")) {
-    const separatorIndex = part.indexOf("=");
-
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = part.slice(0, separatorIndex).trim();
-
-    if (key !== cookieName) {
-      continue;
-    }
-
-    const value = part.slice(separatorIndex + 1).trim();
-
-    try {
-      values.push(decodeURIComponent(value));
-    } catch {
-      values.push(value);
-    }
-  }
-
-  return values;
-}
-
-function signAuthPayload(payload: string): string {
-  return crypto.createHmac("sha256", APP_AUTH_SECRET).update(payload).digest("base64url");
-}
-
-function createAuthToken(): string {
-  const payload = ["v1", Date.now().toString(36), crypto.randomBytes(16).toString("hex")].join(".");
-  return `${payload}.${signAuthPayload(payload)}`;
-}
-
-function verifyAuthToken(token?: string): boolean {
-  if (!APP_PASSWORD || !APP_AUTH_SECRET || !token) {
-    return false;
-  }
-
-  const parts = token.split(".");
-
-  if (parts.length !== 4 || parts[0] !== "v1") {
-    return false;
-  }
-
-  const payload = parts.slice(0, 3).join(".");
-  const signature = parts[3];
-
-  if (!safeCompare(signature, signAuthPayload(payload))) {
-    return false;
-  }
-
-  const issuedAt = Number.parseInt(parts[1], 36);
-
-  if (!Number.isFinite(issuedAt)) {
-    return false;
-  }
-
-  const ageMs = Date.now() - issuedAt;
-  return ageMs >= 0 && ageMs <= AUTH_TTL_MS;
-}
-
-function requestHasBasicAuth(req: IncomingMessage): boolean {
-  const header = req.headers.authorization || "";
-
-  if (!header.toLowerCase().startsWith("basic ")) {
-    return false;
-  }
-
-  try {
-    const decoded = Buffer.from(header.slice(6).trim(), "base64").toString("utf8");
-    const separatorIndex = decoded.indexOf(":");
-    const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : decoded;
-
-    return passwordMatches(password);
-  } catch {
-    return false;
-  }
-}
-
-type AuthState = "ok" | "missing-config" | "unauthorized";
-
-function getRequestAuthState(req: IncomingMessage): AuthState {
-  if (!APP_PASSWORD) {
-    return (process.env.NODE_ENV === "production" || IS_DEPLOYED_RUNTIME) ? "missing-config" : "ok";
-  }
-
-  const authTokens = parseCookieValues(req.headers.cookie, AUTH_COOKIE_NAME);
-
-  if (authTokens.some((token) => verifyAuthToken(token)) || requestHasBasicAuth(req)) {
-    return "ok";
-  }
-
-  return "unauthorized";
-}
-
-function isSecureRequest(req: Request): boolean {
-  return req.secure || req.headers["x-forwarded-proto"] === "https";
-}
-
-function serializeAuthCookie(token: string, req: Request): string {
-  const parts = [
-    `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
-    "HttpOnly",
-    "Path=/",
-    `Max-Age=${Math.floor(AUTH_TTL_MS / 1000)}`,
-    "SameSite=Strict",
-  ];
-
-  if (isSecureRequest(req)) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
-}
-
-function serializeClearAuthCookie(req: Request): string {
-  const parts = [
-    `${AUTH_COOKIE_NAME}=`,
-    "HttpOnly",
-    "Path=/",
-    "Max-Age=0",
-    "SameSite=Strict",
-  ];
-
-  if (isSecureRequest(req)) {
-    parts.push("Secure");
-  }
-
-  return parts.join("; ");
-}
-
-function getSafeNext(rawValue: unknown): string {
-  const raw = Array.isArray(rawValue) ? rawValue[0] : rawValue;
-  const next = String(raw || "/index.html");
-
-  if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/login")) {
-    return "/index.html";
-  }
-
-  return next;
-}
-
-function getClientKey(req: Request): string {
-  return req.ip || String(req.socket.remoteAddress || "unknown");
-}
-
-function isLoginRateLimited(req: Request): boolean {
-  const now = Date.now();
-  const key = getClientKey(req);
-  const entry = loginAttempts.get(key);
-
-  if (!entry || entry.resetAt <= now) {
-    return false;
-  }
-
-  return entry.count >= LOGIN_MAX_ATTEMPTS;
-}
-
-function recordFailedLogin(req: Request): void {
-  const now = Date.now();
-  const key = getClientKey(req);
-  const entry = loginAttempts.get(key);
-
-  if (!entry || entry.resetAt <= now) {
-    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_ATTEMPT_WINDOW_MS });
-    return;
-  }
-
-  entry.count += 1;
-}
-
-function clearFailedLogins(req: Request): void {
-  loginAttempts.delete(getClientKey(req));
-}
-
-function wantsHtml(req: Request): boolean {
-  if (req.method !== "GET" || req.path.startsWith("/api/")) {
-    return false;
-  }
-
-  return Boolean(req.accepts("html"));
-}
-
-function renderLoginPage(options: {
-  next: string;
-  error?: string;
-  missingConfig?: boolean;
-}): string {
-  const title = options.missingConfig ? "Authentication is not configured" : "Carmelon AI Workspace";
-  const message = options.missingConfig
-    ? "APP_PASSWORD must be configured on the server before this workspace can be used."
-    : "Enter the workspace password to continue.";
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)} | Carmelon AI Workspace</title>
-  <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f6f7fb; color: #111827; }
-    main { width: min(420px, calc(100vw - 32px)); padding: 28px; border: 1px solid #d8dee8; border-radius: 8px; background: #fff; box-shadow: 0 24px 60px rgba(15, 23, 42, .12); }
-    h1 { margin: 0 0 10px; font-size: 24px; line-height: 1.2; letter-spacing: 0; }
-    p { margin: 0 0 18px; color: #526071; line-height: 1.5; }
-    label { display: grid; gap: 8px; font-size: 13px; font-weight: 800; color: #293241; }
-    input { width: 100%; min-height: 44px; border: 1px solid #bac4d3; border-radius: 6px; padding: 10px 12px; font: inherit; }
-    input:focus { outline: 3px solid rgba(37, 99, 235, .18); border-color: #2563eb; }
-    .show-password { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; font-weight: 800; color: #526071; }
-    .show-password input { width: 16px; min-height: 16px; margin: 0; }
-    button { width: 100%; min-height: 44px; margin-top: 16px; border: 0; border-radius: 6px; background: #111827; color: #fff; font: inherit; font-weight: 900; cursor: pointer; }
-    .error { margin: 0 0 14px; padding: 10px 12px; border: 1px solid #fecaca; border-radius: 6px; background: #fef2f2; color: #991b1b; font-size: 13px; font-weight: 800; }
-    code { padding: 2px 5px; border-radius: 4px; background: #eef2f7; color: #111827; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>${escapeHtml(title)}</h1>
-    <p>${escapeHtml(message)}</p>
-    ${options.error ? `<div class="error">${escapeHtml(options.error)}</div>` : ""}
-    ${options.missingConfig ? `<p>Set <code>APP_PASSWORD</code> as a Google Cloud environment variable or Secret Manager value, then restart the service.</p>` : `<form method="post" action="/login" autocomplete="off">
-      <input type="hidden" name="next" value="${escapeHtml(options.next)}" />
-      <label>
-        Password
-        <input name="password" id="passwordInput" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus required />
-      </label>
-      <label class="show-password"><input type="checkbox" id="showPassword" /> Show password</label>
-      <button type="submit">Continue</button>
-    </form>`}
-  </main>
-  <script>
-    const passwordInput = document.getElementById("passwordInput");
-    document.getElementById("showPassword")?.addEventListener("change", (event) => {
-      passwordInput.type = event.target.checked ? "text" : "password";
-      passwordInput.focus();
-    });
-  </script>
-</body>
-</html>`;
-}
-
-function sendAuthFailure(req: Request, res: Response, state: AuthState): void {
-  if (state === "missing-config") {
-    if (wantsHtml(req)) {
-      res.status(503).type("html").send(renderLoginPage({
-        next: getSafeNext(req.originalUrl),
-        missingConfig: true,
-      }));
-      return;
-    }
-
-    res.status(503).json({ error: "APP_PASSWORD is not configured for the workspace server." });
-    return;
-  }
-
-  if (wantsHtml(req)) {
-    res.redirect(303, `/login?next=${encodeURIComponent(getSafeNext(req.originalUrl))}`);
-    return;
-  }
-
-  res.setHeader("WWW-Authenticate", 'Basic realm="Carmelon AI Workspace"');
-  res.status(401).json({ error: "Authentication required." });
-}
-
-function requireWorkspaceAuth(req: Request, res: Response, next: NextFunction): void {
-  const state = getRequestAuthState(req);
-
-  if (state === "ok") {
-    next();
-    return;
-  }
-
-  sendAuthFailure(req, res, state);
-}
-
-function sendSocketHttpAuthFailure(res: ServerResponse, state: AuthState): void {
-  const status = state === "missing-config" ? 503 : 401;
-  const error = state === "missing-config"
-    ? "APP_PASSWORD is not configured for the workspace server."
-    : "Authentication required.";
-
-  res.writeHead(status, {
-    "Cache-Control": "no-store",
-    "Content-Type": "application/json",
-    "WWW-Authenticate": 'Basic realm="Carmelon AI Workspace"',
-  });
-  res.end(JSON.stringify({ error }));
-}
-
-function installSocketClientAuth(): void {
-  type SocketIoServeHost = {
-    serve?: (req: IncomingMessage, res: ServerResponse) => void;
-  };
-
-  const serverWithServe = io as unknown as SocketIoServeHost;
-  const originalServe = serverWithServe.serve?.bind(io);
-
-  if (!originalServe) {
-    return;
-  }
-
-  serverWithServe.serve = (req: IncomingMessage, res: ServerResponse) => {
-    const state = getRequestAuthState(req);
-
-    if (state === "ok") {
-      originalServe(req, res);
-      return;
-    }
-
-    sendSocketHttpAuthFailure(res, state);
-  };
-}
-
-installSocketClientAuth();
-
 app.use(express.urlencoded({ extended: false }));
-
-app.get("/login", (req, res) => {
-  const next = getSafeNext(req.query.next);
-  const state = getRequestAuthState(req);
-  res.setHeader("Cache-Control", "no-store");
-
-  if (state === "ok") {
-    res.redirect(303, next);
-    return;
-  }
-
-  res.status(state === "missing-config" ? 503 : 200).type("html").send(renderLoginPage({
-    next,
-    missingConfig: state === "missing-config",
-  }));
-});
-
-app.post("/login", (req, res) => {
-  const next = getSafeNext(req.body?.next || req.query.next);
-  res.setHeader("Cache-Control", "no-store");
-
-  if (!APP_PASSWORD) {
-    res.status(503).type("html").send(renderLoginPage({ next, missingConfig: true }));
-    return;
-  }
-
-  if (isLoginRateLimited(req)) {
-    res.status(429).type("html").send(renderLoginPage({
-      next,
-      error: "Too many attempts. Wait 15 minutes and try again.",
-    }));
-    return;
-  }
-
-  if (!passwordMatches(String(req.body?.password || ""))) {
-    recordFailedLogin(req);
-    res.status(401).type("html").send(renderLoginPage({
-      next,
-      error: "Incorrect password.",
-    }));
-    return;
-  }
-
-  clearFailedLogins(req);
-  res.setHeader("Set-Cookie", serializeAuthCookie(createAuthToken(), req));
-  res.redirect(303, next);
-});
-
-function logout(req: Request, res: Response): void {
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("Set-Cookie", serializeClearAuthCookie(req));
-  res.redirect(303, "/login");
-}
-
-app.get("/logout", logout);
-app.post("/logout", logout);
 
 app.get("/api/me", async (req, res) => {
   try {
@@ -585,7 +130,6 @@ app.use("/api/runs", runRoutes);
 
 app.post(
   "/api/site-ai-audit/export-pdf",
-  requireWorkspaceAuth,
   express.json({ limit: "25mb" }),
   async (req, res) => {
     try {
@@ -604,7 +148,6 @@ app.post(
   }
 );
 
-app.use(requireWorkspaceAuth);
 app.use((req, res, next) => {
   if (req.method === "GET") {
     res.setHeader("Cache-Control", "no-store");
@@ -614,17 +157,6 @@ app.use((req, res, next) => {
 });
 app.use(express.static(publicPath));
 app.use(express.json());
-
-io.engine.use((req: IncomingMessage, res: ServerResponse, next: (err?: Error) => void) => {
-  const state = getRequestAuthState(req);
-
-  if (state === "ok") {
-    next();
-    return;
-  }
-
-  sendSocketHttpAuthFailure(res, state);
-});
 
 app.get("/api/analytics/accounts", (_req, res) => {
   try {
@@ -1560,10 +1092,6 @@ function buildDynamicEnv(mode: string, config: any, payloadData: any): Record<st
     DYNAMIC_PAYLOAD: JSON.stringify(payloadData),
   };
 
-  delete dynamicEnv.APP_PASSWORD;
-  delete dynamicEnv.APP_AUTH_SECRET;
-  delete dynamicEnv.APP_AUTH_TTL_HOURS;
-
   if (mode === "client-reports") {
     dynamicEnv.DYNAMIC_TARGET_ID = config?.spreadsheetId || "";
     dynamicEnv.DYNAMIC_INPUT_TYPE = config?.sourceType || "sheet";
@@ -1612,6 +1140,65 @@ if (mode === "translate-demo") {
   dynamicEnv.DYNAMIC_LANGS = config?.langs || "";
 
   return dynamicEnv;
+}
+
+type OutputLinks = {
+  sheets: string[];
+  driveFolders: string[];
+  docs: string[];
+  googleUrls: string[];
+};
+
+function createEmptyOutputLinks(): OutputLinks {
+  return {
+    sheets: [],
+    driveFolders: [],
+    docs: [],
+    googleUrls: [],
+  };
+}
+
+function addUniqueLink(links: string[], url: string): void {
+  if (!links.includes(url)) {
+    links.push(url);
+  }
+}
+
+function normalizeDetectedUrl(value: string): string {
+  return value.replace(/[),.;\]}]+$/g, "");
+}
+
+function collectOutputLinksFromText(text: string, outputLinks: OutputLinks): void {
+  const matches = text.match(/https?:\/\/[^\s"'<>]+/g) || [];
+
+  for (const match of matches) {
+    const url = normalizeDetectedUrl(match);
+
+    try {
+      const parsedUrl = new URL(url);
+
+      if (!parsedUrl.hostname.endsWith("google.com")) {
+        continue;
+      }
+
+      if (parsedUrl.hostname === "docs.google.com" && parsedUrl.pathname.startsWith("/spreadsheets/d/")) {
+        addUniqueLink(outputLinks.sheets, url);
+      } else if (parsedUrl.hostname === "drive.google.com" && parsedUrl.pathname.startsWith("/drive/folders/")) {
+        addUniqueLink(outputLinks.driveFolders, url);
+      } else if (parsedUrl.hostname === "docs.google.com" && parsedUrl.pathname.startsWith("/document/d/")) {
+        addUniqueLink(outputLinks.docs, url);
+      } else {
+        addUniqueLink(outputLinks.googleUrls, url);
+      }
+    } catch {
+      // Ignore malformed URLs in process output.
+    }
+  }
+}
+
+function getPlanIdFromConfig(config: any): string | undefined {
+  const planId = String(config?.planId || "").trim();
+  return planId || undefined;
 }
 
 function createStreamHandler(socket: any) {
@@ -1671,13 +1258,81 @@ function flushStreamBuffer(socket: any, handlerBufferGetter: () => string) {
 io.on("connection", (socket) => {
   console.log("Client connected");
 
-  socket.on("start-agent", (config) => {
+  socket.on("start-agent", async (config) => {
+    let user;
+
+    try {
+      user = await getCurrentUserFromHeaders(socket.handshake.headers);
+    } catch {
+      socket.emit("log", "Unauthorized");
+      socket.emit("done");
+      return;
+    }
+
+    if (!user) {
+      socket.emit("log", "Unauthorized");
+      socket.emit("done");
+      return;
+    }
+
+    if (user.status === "blocked") {
+      socket.emit("log", "User blocked");
+      socket.emit("done");
+      return;
+    }
+
     const mode = normalizeMode(config);
 
     console.log(`🔹 WEB COMMAND: ${mode}`);
 
+    let run;
+
+    try {
+      run = await createRun({
+        userEmail: user.email,
+        mode,
+        planId: getPlanIdFromConfig(config),
+        configSnapshot: config ?? {},
+      });
+    } catch {
+      socket.emit("log", "Could not create run history item");
+      socket.emit("done");
+      return;
+    }
+
     const payloadData = buildPayloadData(mode, config);
     const dynamicEnv = buildDynamicEnv(mode, config, payloadData);
+    dynamicEnv.RUN_ID = run.id;
+    dynamicEnv.USER_EMAIL = user.email;
+    const outputLinks = createEmptyOutputLinks();
+    let runFinalized = false;
+    let doneEmitted = false;
+
+    const emitDoneOnce = () => {
+      if (!doneEmitted) {
+        doneEmitted = true;
+        socket.emit("done");
+      }
+    };
+
+    const finalizeRun = async (status: "completed" | "failed", errorMessage?: string) => {
+      if (runFinalized) {
+        return;
+      }
+
+      runFinalized = true;
+
+      try {
+        await updateRun(run.id, {
+          status,
+          finishedAt: true,
+          outputLinks,
+          ...(errorMessage ? { errorMessage } : {}),
+        });
+      } catch {
+        socket.emit("log", "Could not update run history item");
+      }
+    };
 
     const child = spawn("npx", ["tsx", "src/index.ts"], {
       env: dynamicEnv as any,
@@ -1700,6 +1355,8 @@ io.on("connection", (socket) => {
         if (!cleanLine.trim()) {
           continue;
         }
+
+        collectOutputLinksFromText(cleanLine, outputLinks);
 
         if (isPreviewEventLine(cleanLine)) {
           const event = parsePreviewEventLine(cleanLine);
@@ -1728,6 +1385,8 @@ io.on("connection", (socket) => {
           continue;
         }
 
+        collectOutputLinksFromText(cleanLine, outputLinks);
+
         if (isPreviewEventLine(cleanLine)) {
           const event = parsePreviewEventLine(cleanLine);
 
@@ -1745,11 +1404,13 @@ io.on("connection", (socket) => {
     child.stdout.on("data", handleStdout);
     child.stderr.on("data", handleStderr);
 
-    child.on("close", (code) => {
+    child.on("close", async (code) => {
       const remainingStdout = stdoutBuffer.trim();
       const remainingStderr = stderrBuffer.trim();
 
       if (remainingStdout) {
+        collectOutputLinksFromText(remainingStdout, outputLinks);
+
         if (isPreviewEventLine(remainingStdout)) {
           const event = parsePreviewEventLine(remainingStdout);
           if (event) socket.emit("preview-event", event);
@@ -1759,6 +1420,8 @@ io.on("connection", (socket) => {
       }
 
       if (remainingStderr) {
+        collectOutputLinksFromText(remainingStderr, outputLinks);
+
         if (isPreviewEventLine(remainingStderr)) {
           const event = parsePreviewEventLine(remainingStderr);
           if (event) socket.emit("preview-event", event);
@@ -1767,13 +1430,20 @@ io.on("connection", (socket) => {
         }
       }
 
-      socket.emit("done");
+      if (code === 0) {
+        await finalizeRun("completed");
+      } else {
+        await finalizeRun("failed", `Process exited with code ${code ?? "unknown"}`);
+      }
+
+      emitDoneOnce();
       console.log(`Process finished with code ${code}`);
     });
 
-    child.on("error", (error) => {
+    child.on("error", async (error) => {
+      await finalizeRun("failed", "Failed to start process");
       socket.emit("log", `❌ Failed to start process: ${error.message}`);
-      socket.emit("done");
+      emitDoneOnce();
     });
   });
 });

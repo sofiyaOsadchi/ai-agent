@@ -1,3 +1,4 @@
+import type { IncomingHttpHeaders } from "http";
 import type { Request, Response } from "express";
 import { getOrCreateUser, normalizeUserEmail } from "../users/user.service.js";
 
@@ -19,8 +20,8 @@ function isProductionRuntime(): boolean {
   );
 }
 
-function extractEmailFromIapHeader(value?: string): string | null {
-  const rawValue = String(value || "").trim();
+function extractEmailFromIapHeader(value?: string | string[]): string | null {
+  const rawValue = String(Array.isArray(value) ? value[0] : value || "").trim();
 
   if (!rawValue) {
     return null;
@@ -33,8 +34,8 @@ function extractEmailFromIapHeader(value?: string): string | null {
   return normalizeUserEmail(email);
 }
 
-export function getCurrentUserEmailFromRequest(req: Request): string | null {
-  const iapEmail = extractEmailFromIapHeader(req.get("x-goog-authenticated-user-email"));
+export function getCurrentUserEmailFromHeaders(headers: IncomingHttpHeaders): string | null {
+  const iapEmail = extractEmailFromIapHeader(headers["x-goog-authenticated-user-email"]);
 
   if (iapEmail) {
     return iapEmail;
@@ -45,6 +46,20 @@ export function getCurrentUserEmailFromRequest(req: Request): string | null {
   }
 
   return null;
+}
+
+export function getCurrentUserEmailFromRequest(req: Request): string | null {
+  return getCurrentUserEmailFromHeaders(req.headers);
+}
+
+export async function getCurrentUserFromHeaders(headers: IncomingHttpHeaders): Promise<CurrentUser | null> {
+  const email = getCurrentUserEmailFromHeaders(headers);
+
+  if (!email) {
+    return null;
+  }
+
+  return getOrCreateUser(email);
 }
 
 export async function getCurrentUser(req: Request): Promise<CurrentUser | null> {
