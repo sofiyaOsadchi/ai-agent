@@ -13,7 +13,7 @@
     { code: "ar", label: "Arabic" },
   ];
 
-  const MODEL_OPTIONS = ["o3", "o4-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini"];
+  const MODEL_OPTIONS = ["o3", "o4-mini", "gpt-5.5", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "anthropic:claude-sonnet-4-6"];
   const DEFAULT_MODEL = "o3";
   const STORAGE_KEY = "translate-demo-chat-workspaces-v1";
 
@@ -228,10 +228,16 @@
 
   function renderModelOptions() {
     setOptions(MODEL_OPTIONS.map((model) => ({
-      label: model === DEFAULT_MODEL ? `${model} - recommended` : model,
+      label: model === DEFAULT_MODEL ? `${model} - recommended` : formatModelLabel(model),
       selected: state.model === model,
       onClick: () => selectModel(model),
     })));
+  }
+
+  function formatModelLabel(model) {
+    const value = String(model || "");
+    if (value === "anthropic:claude-sonnet-4-6") return "Claude Sonnet 4.6";
+    return value;
   }
 
   function selectModel(model) {

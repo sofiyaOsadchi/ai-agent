@@ -251,32 +251,32 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 14px;
       align-items: center;
-      padding: 14px;
-      border: 1px solid rgba(126, 90, 174, 0.18);
-      border-radius: 16px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
       background: var(--surface-warm);
     }
 
     .setup-intro strong {
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 900;
     }
 
     .setup-intro p {
       margin-top: 4px;
       color: var(--text-dim);
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       line-height: 1.55;
     }
 
     .setup-intro span {
-      padding: 7px 10px;
+      padding: 6px 9px;
       border-radius: 999px;
       border: 1px solid var(--accent-border);
       background: #fff;
       color: var(--text-dim);
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       font-weight: 900;
       white-space: nowrap;
     }
@@ -288,16 +288,16 @@
 
     .field label,
     .section-label {
-      color: var(--text-muted);
-      font: 600 0.66rem/1.2 var(--mono);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0;
     }
 
     .field-help {
       color: var(--text-muted);
       font-size: 0.76rem;
-      font-weight: 700;
+      font-weight: 600;
       line-height: 1.45;
     }
 
@@ -305,7 +305,7 @@
     select {
       width: 100%;
       min-height: 44px;
-      padding: 10px 12px;
+      padding: 10px 13px;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: #fff;
@@ -321,10 +321,82 @@
       box-shadow: 0 0 0 3px var(--blue-soft);
     }
 
+    .scope-select {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scope-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .choice-card {
+      position: relative;
+      min-height: 96px;
+      padding: 13px 14px;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--text-dim);
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .choice-card strong {
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .choice-card span {
+      color: var(--text-dim);
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+
+    .choice-card.active {
+      border-color: var(--blue);
+      background: #f7faff;
+      box-shadow: inset 0 0 0 1px rgba(74, 127, 199, 0.18);
+    }
+
+    .choice-card.active::before {
+      content: "";
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--blue);
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
+    }
+
+    .number-grid {
+      align-items: start;
+    }
+
+    .control-card {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
     }
 
     .checks {
@@ -333,23 +405,66 @@
       gap: 8px;
     }
 
+    .check-groups {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      align-items: start;
+    }
+
+    .check-group {
+      padding: 11px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #fff 0%, var(--surface-soft) 100%);
+      display: grid;
+      gap: 9px;
+    }
+
+    .check-group-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+
+    .check-group-head strong {
+      color: var(--text);
+      font-size: 0.86rem;
+      font-weight: 900;
+    }
+
+    .check-group-head span {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .check-group .checks {
+      grid-template-columns: 1fr;
+    }
+
     .check {
       position: relative;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      min-height: 44px;
-      padding: 9px 12px;
+      min-height: 56px;
+      padding: 10px 58px 10px 12px;
       border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface-soft);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.74);
       color: var(--text-dim);
       font-size: 0.78rem;
-      font-weight: 900;
+      font-weight: 800;
       cursor: pointer;
-      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
       user-select: none;
+    }
+
+    .check:hover {
+      border-color: var(--border-strong);
+      background: #fff;
+      transform: translateY(-1px);
     }
 
     .check input {
@@ -358,33 +473,75 @@
       pointer-events: none;
     }
 
+    .check-copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .check-copy strong {
+      color: var(--text);
+      font-size: 0.8rem;
+      line-height: 1.2;
+    }
+
+    .check-copy span {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+
     .check::after {
       content: "";
-      display: grid;
-      place-items: center;
-      width: 20px;
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      width: 36px;
       height: 20px;
-      flex: 0 0 auto;
-      border-radius: 6px;
+      border-radius: 999px;
       border: 1px solid var(--border);
-      background: #fff;
+      background: #eee9df;
+      transform: translateY(-50%);
       transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .check::before {
+      content: "";
+      position: absolute;
+      right: 30px;
+      top: 50%;
+      z-index: 1;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(31, 26, 19, 0.18);
+      transform: translateY(-50%);
+      transition: right 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
     }
 
     .check:has(input:checked) {
       color: var(--text);
-      border-color: var(--accent-border);
-      background: #fff;
+      border-color: var(--border);
+      background: rgba(255, 255, 255, 0.74);
       box-shadow: none;
     }
 
     .check:has(input:checked)::after {
-      content: "✓";
-      background: var(--green);
+      background: #b7d09d;
+      border-color: #9db983;
+      box-shadow: none;
+    }
+
+    .check:has(input:checked)::before {
+      right: 15px;
+      background: #fff;
+    }
+
+    .check:has(input:focus-visible) {
       border-color: var(--green);
-      color: #fff;
-      font-size: 0.82rem;
-      font-weight: 1000;
+      box-shadow: 0 0 0 3px var(--green-soft);
     }
 
     .render-mode-select {
@@ -403,14 +560,14 @@
 
     .render-card {
       position: relative;
-      min-height: 112px;
-      padding: 18px 14px 14px;
+      min-height: 104px;
+      padding: 13px 14px;
       display: grid;
       gap: 8px;
       align-content: start;
       border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface-soft);
+      border-radius: 12px;
+      background: #fff;
       color: var(--text-dim);
       cursor: pointer;
       text-align: left;
@@ -419,34 +576,81 @@
 
     .render-card strong {
       color: var(--text);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 900;
-      padding-right: 74px;
+      padding-right: 0;
+      line-height: 1.25;
     }
 
     .render-card span {
       color: var(--text-dim);
-      font-size: 0.8rem;
-      line-height: 1.5;
+      font-size: 0.76rem;
+      line-height: 1.45;
     }
 
     .render-card.active {
-      border-color: #c7d8f0;
-      background: var(--blue-soft);
-      box-shadow: none;
+      border-color: var(--blue);
+      background: #f7faff;
+      box-shadow: inset 0 0 0 1px rgba(74, 127, 199, 0.18);
     }
 
-    .render-card.active::after {
-      content: "Selected";
+    .render-card.active::before {
+      content: "";
       position: absolute;
-      top: 10px;
-      right: 10px;
-      padding: 4px 8px;
+      top: 12px;
+      right: 12px;
+      width: 9px;
+      height: 9px;
       border-radius: 999px;
       background: var(--blue);
-      color: #fff;
-      font-size: 0.68rem;
-      font-weight: 1000;
+      box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
+    }
+
+    .language-select {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .language-picker {
+      min-height: 104px;
+      padding: 12px;
+      display: flex;
+      align-content: flex-start;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .language-pill {
+      min-height: 34px;
+      padding: 0 13px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      font-weight: 850;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .language-pill.active {
+      border-color: var(--blue);
+      background: var(--blue-soft);
+      color: var(--blue-strong);
+      box-shadow: inset 0 0 0 1px rgba(74, 127, 199, 0.12);
+    }
+
+    .language-pill:focus-visible {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-soft);
     }
 
     .actions {
@@ -981,17 +1185,28 @@
       box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
     }
 
+    .score-ring-inner {
+      display: grid;
+      place-items: center;
+      gap: 4px;
+      text-align: center;
+      transform: translateY(1px);
+    }
+
     .score-ring strong {
+      display: block;
+      width: 100%;
       color: var(--text);
       font-size: 2rem;
       line-height: 1;
       font-weight: 800;
       letter-spacing: 0;
+      text-align: center;
     }
 
     .score-ring span {
       display: block;
-      margin-top: 4px;
+      margin-top: 0;
       color: var(--text-muted);
       font-size: 0.72rem;
       font-weight: 900;
@@ -1559,59 +1774,6 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-    }
-
-    .action-focus-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .action-focus-card {
-      padding: 15px;
-      display: grid;
-      gap: 10px;
-      border: 1px solid rgba(111, 74, 168, 0.18);
-      border-radius: 15px;
-      background: #fff;
-      box-shadow: 0 12px 24px rgba(84, 55, 112, 0.04);
-    }
-
-    .action-focus-card.urgent {
-      border-color: rgba(185, 28, 28, 0.18);
-      background: #fff7f7;
-    }
-
-    .action-focus-card.verify {
-      border-color: rgba(242, 116, 34, 0.2);
-      background: #fffaf3;
-    }
-
-    .action-focus-card strong {
-      color: var(--text);
-      font-size: 0.95rem;
-      font-weight: 900;
-    }
-
-    .action-focus-card p {
-      color: var(--text-dim);
-      font-size: 0.8rem;
-      line-height: 1.55;
-    }
-
-    .action-focus-list {
-      display: grid;
-      gap: 7px;
-    }
-
-    .action-focus-item {
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.72);
-      color: var(--text-dim);
-      font-size: 0.78rem;
-      line-height: 1.45;
-      font-weight: 800;
     }
 
     .task-note {
@@ -2557,8 +2719,7 @@
       .insight-row,
       .visual-dashboard,
       .page-map-grid,
-      .action-grid,
-      .action-focus-grid {
+      .action-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
@@ -2663,6 +2824,8 @@
       }
 
       .grid-2,
+      .scope-cards,
+      .check-groups,
       .checks,
       .render-mode-cards,
       .setup-intro,
@@ -2678,8 +2841,7 @@
       .visual-dashboard,
       .donut-layout,
       .page-map-grid,
-      .action-grid,
-      .action-focus-grid {
+      .action-grid {
         grid-template-columns: 1fr;
       }
 
@@ -2734,40 +2896,48 @@
       <div class="panel-body">
         <div class="setup-intro">
           <div>
-            <strong>One audit, actionable working report</strong>
-            <p>Choose crawl depth, reading mode and audit checks. After the run, switch between internal and client views without losing the collected data.</p>
+            <strong>Recommended first pass is ready</strong>
+            <p>Start with a balanced site sample. Use rendered reading only when the site depends on JavaScript for visible content.</p>
           </div>
-          <span>Saved locally</span>
+          <span>25 pages · static</span>
         </div>
 
         <div class="field">
-          <label for="startUrl">Starting website URL</label>
+          <label for="startUrl">Site to audit</label>
           <input id="startUrl" type="text" placeholder="https://www.example.com" autocomplete="url" />
         </div>
 
-        <div class="grid-2">
-          <div class="field">
-            <label for="crawlScope">Audit scope</label>
-            <select id="crawlScope" onchange="updateScopeHint()">
+        <div class="field">
+          <label for="crawlScope">Audit type</label>
+          <select id="crawlScope" class="scope-select" tabindex="-1" aria-label="Audit type" onchange="syncScopeCards(); updateScopeHint(); buildAuditConfig();">
               <option value="site">Full site sample</option>
               <option value="faq-only">FAQ pages only</option>
-            </select>
+          </select>
+          <div class="scope-cards" role="group" aria-label="Choose audit type">
+            <button class="choice-card active" type="button" data-crawl-scope="site" onclick="setCrawlScope('site')">
+              <strong>Full site sample</strong>
+              <span>Best default for client audits. Checks page types, metadata, FAQ, schema and links.</span>
+            </button>
+            <button class="choice-card" type="button" data-crawl-scope="faq-only" onclick="setCrawlScope('faq-only')">
+              <strong>FAQ-focused audit</strong>
+              <span>Use when the task is only FAQ coverage, visible Q&A and FAQPage schema alignment.</span>
+            </button>
           </div>
-          <div class="note" id="scopeHint">
-            Full site mode returns a broad page sample. FAQ mode focuses on pages with visible FAQ, FAQPage schema or clear FAQ signals in titles and URLs.
+          <div class="field-help" id="scopeHint">
+            Balanced default: a broad page sample selected by page type and importance.
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="field">
+        <div class="grid-2 number-grid">
+          <div class="field control-card">
             <label for="maxPages">Page budget</label>
             <input id="maxPages" type="number" min="1" max="250" value="25" />
-            <div class="field-help">This is the working sample size. The crawler maps many URLs and selects representative pages by type and importance.</div>
+            <div class="field-help">25 is the usual first-pass sample. Increase only when the site has many templates.</div>
           </div>
-          <div class="field">
+          <div class="field control-card">
             <label for="maxDepth">Crawl depth</label>
             <input id="maxDepth" type="number" min="0" max="8" value="2" />
-            <div class="field-help">Higher depth improves discovery of internal pages, but increases run time.</div>
+            <div class="field-help">2 is enough for most sitemap-led audits. Higher depth takes longer.</div>
           </div>
         </div>
 
@@ -2780,18 +2950,18 @@
             </select>
             <div class="render-mode-cards" role="group" aria-label="Choose reading mode">
               <button class="render-card active" type="button" data-render-mode="static" onclick="setRenderMode('static')">
-                <strong>Fast: static HTML</strong>
-                <span>Best for most first passes. Shows what crawlers receive before JavaScript rendering.</span>
+                <strong>Static HTML</strong>
+                <span>Recommended first pass. Fast, stable and close to what crawlers receive immediately.</span>
               </button>
               <button class="render-card" type="button" data-render-mode="rendered" onclick="setRenderMode('rendered')">
-                <strong>Deep: render JavaScript</strong>
-                <span>Useful for dynamic sites or pages with thin initial HTML. Slower, but more complete.</span>
+                <strong>Rendered browser</strong>
+                <span>Use when content appears only after JavaScript, accordions, tabs or client-side loading.</span>
               </button>
             </div>
           </div>
           <div class="field">
-            <label for="acceptLanguage">Site language to request</label>
-            <select id="acceptLanguage">
+            <label id="acceptLanguageLabel" for="acceptLanguage">Request language</label>
+            <select id="acceptLanguage" class="language-select" tabindex="-1" aria-label="Request language" onchange="syncLanguagePills(); buildAuditConfig();">
               <option value="en-GB,en;q=0.9">English</option>
               <option value="he-IL,he;q=0.9,en;q=0.7">Hebrew</option>
               <option value="de-DE,de;q=0.9,en;q=0.7">German</option>
@@ -2799,29 +2969,50 @@
               <option value="fr-FR,fr;q=0.9,en;q=0.7">French</option>
               <option value="es-ES,es;q=0.9,en;q=0.7">Spanish</option>
             </select>
-            <div class="field-help">Affects what the server returns to the crawler. The audit report itself stays in English.</div>
+            <div class="language-picker" role="group" aria-labelledby="acceptLanguageLabel">
+              <button class="language-pill active" type="button" data-accept-language="en-GB,en;q=0.9" onclick="setAcceptLanguage('en-GB,en;q=0.9')">English</button>
+              <button class="language-pill" type="button" data-accept-language="he-IL,he;q=0.9,en;q=0.7" onclick="setAcceptLanguage('he-IL,he;q=0.9,en;q=0.7')">Hebrew</button>
+              <button class="language-pill" type="button" data-accept-language="de-DE,de;q=0.9,en;q=0.7" onclick="setAcceptLanguage('de-DE,de;q=0.9,en;q=0.7')">German</button>
+              <button class="language-pill" type="button" data-accept-language="it-IT,it;q=0.9,en;q=0.7" onclick="setAcceptLanguage('it-IT,it;q=0.9,en;q=0.7')">Italian</button>
+              <button class="language-pill" type="button" data-accept-language="fr-FR,fr;q=0.9,en;q=0.7" onclick="setAcceptLanguage('fr-FR,fr;q=0.9,en;q=0.7')">French</button>
+              <button class="language-pill" type="button" data-accept-language="es-ES,es;q=0.9,en;q=0.7" onclick="setAcceptLanguage('es-ES,es;q=0.9,en;q=0.7')">Spanish</button>
+            </div>
           </div>
         </div>
 
         <div>
-          <div class="section-label">Checks to run</div>
-          <div class="checks" style="margin-top:8px">
-            <label class="check"><input id="includeSitemap" type="checkbox" checked /> Sitemap</label>
-            <label class="check"><input id="includeLlms" type="checkbox" checked /> llms.txt</label>
-            <label class="check"><input id="includeFaq" type="checkbox" checked /> Visible FAQ</label>
-            <label class="check"><input id="includeSchema" type="checkbox" checked /> JSON-LD schema</label>
-            <label class="check"><input id="includeAnswerability" type="checkbox" checked /> Answer blocks</label>
-            <label class="check"><input id="includeMeta" type="checkbox" checked /> Titles & meta</label>
-            <label class="check"><input id="includeLinks" type="checkbox" checked /> Links & domains</label>
-            <label class="check"><input id="includeAiAnalysis" type="checkbox" /> AI summary</label>
-            <label class="check"><input id="respectRobots" type="checkbox" /> Respect robots.txt</label>
+          <div class="section-label">Audit checks</div>
+          <div class="check-groups" style="margin-top:8px">
+            <div class="check-group">
+              <div class="check-group-head"><strong>Core evidence</strong><span>Keep on for normal audits</span></div>
+              <div class="checks">
+                <label class="check"><input id="includeSitemap" type="checkbox" checked /><span class="check-copy"><strong>Sitemap</strong><span>URL map and sampling</span></span></label>
+                <label class="check"><input id="includeMeta" type="checkbox" checked /><span class="check-copy"><strong>Titles & meta</strong><span>Title, H1 and descriptions</span></span></label>
+                <label class="check"><input id="includeLinks" type="checkbox" checked /><span class="check-copy"><strong>Links</strong><span>Internal and external domains</span></span></label>
+              </div>
+            </div>
+            <div class="check-group">
+              <div class="check-group-head"><strong>AI readiness</strong><span>FAQ, schema and answer evidence</span></div>
+              <div class="checks">
+                <label class="check"><input id="includeFaq" type="checkbox" checked /><span class="check-copy"><strong>Visible FAQ</strong><span>Questions on the page</span></span></label>
+                <label class="check"><input id="includeSchema" type="checkbox" checked /><span class="check-copy"><strong>JSON-LD schema</strong><span>Structured data signals</span></span></label>
+                <label class="check"><input id="includeAnswerability" type="checkbox" checked /><span class="check-copy"><strong>Answer blocks</strong><span>Direct-answer content</span></span></label>
+              </div>
+            </div>
+            <div class="check-group">
+              <div class="check-group-head"><strong>Optional</strong><span>Use when needed</span></div>
+              <div class="checks">
+                <label class="check"><input id="includeLlms" type="checkbox" checked /><span class="check-copy"><strong>llms.txt</strong><span>AI content map</span></span></label>
+                <label class="check"><input id="includeAiAnalysis" type="checkbox" /><span class="check-copy"><strong>AI summary</strong><span>Slower narrative layer</span></span></label>
+                <label class="check"><input id="respectRobots" type="checkbox" /><span class="check-copy"><strong>Respect robots.txt</strong><span>Use strict crawl rules</span></span></label>
+              </div>
+            </div>
           </div>
-          <div class="field-help" style="margin-top:8px">AI summary is optional and slower. The deterministic audit and report work without it.</div>
         </div>
 
         <div class="actions">
-          <button class="btn primary" type="button" id="runAuditBtn" onclick="runAudit()">Run Audit</button>
-          <button class="btn" type="button" onclick="buildAuditConfig()">Show CLI Command</button>
+          <button class="btn primary" type="button" id="runAuditBtn" onclick="runAudit()">Run site audit</button>
+          <button class="btn" type="button" onclick="buildAuditConfig()">Preview command</button>
           <button class="btn" type="button" onclick="copyCommand()">Copy Command</button>
           <button class="btn" type="button" onclick="resetForm()">Reset</button>
         </div>
@@ -2852,6 +3043,10 @@
                   <button class="export-option" type="button" role="menuitem" onclick="downloadClientReport(); closeExportMenu();">
                     <span class="export-copy"><strong>Client report</strong><span class="export-description">Clean HTML report for sharing</span></span>
                     <span class="export-chip">HTML</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadClientReportPdf(); closeExportMenu();">
+                    <span class="export-copy"><strong>Client report PDF</strong><span class="export-description">Rendered PDF file for sending or archiving</span></span>
+                    <span class="export-chip">PDF</span>
                   </button>
                   <button class="export-option" type="button" role="menuitem" onclick="downloadInternalReport(); closeExportMenu();">
                     <span class="export-copy"><strong>Internal report</strong><span class="export-description">Full working report with internal detail</span></span>
@@ -3040,6 +3235,7 @@
 
     const pageTypeLabels = {
       "site-wide": "Site-wide",
+      mixed: "Multiple page types",
       homepage: "Homepage",
       hotel: "Hotel pages",
       destination: "Destination / city pages",
@@ -3248,6 +3444,22 @@
       input.addEventListener("input", () => rememberStartUrl(input.value.trim()));
     }
 
+    function setCrawlScope(scope) {
+      document.getElementById("crawlScope").value = scope;
+      syncScopeCards();
+      updateScopeHint();
+      buildAuditConfig();
+    }
+
+    function syncScopeCards() {
+      const selected = document.getElementById("crawlScope").value || "site";
+      document.querySelectorAll("[data-crawl-scope]").forEach((button) => {
+        const active = button.dataset.crawlScope === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
     function setRenderMode(mode) {
       document.getElementById("renderMode").value = mode;
       syncRenderModeCards();
@@ -3258,6 +3470,21 @@
       const selected = document.getElementById("renderMode").value || "static";
       document.querySelectorAll("[data-render-mode]").forEach((button) => {
         const active = button.dataset.renderMode === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    function setAcceptLanguage(value) {
+      document.getElementById("acceptLanguage").value = value;
+      syncLanguagePills();
+      buildAuditConfig();
+    }
+
+    function syncLanguagePills() {
+      const selected = document.getElementById("acceptLanguage").value || "en-GB,en;q=0.9";
+      document.querySelectorAll("[data-accept-language]").forEach((button) => {
+        const active = button.dataset.acceptLanguage === selected;
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", active ? "true" : "false");
       });
@@ -3303,7 +3530,7 @@
         lastCommand,
         "",
         "UI RUN STATUS",
-        socket ? "Ready. Click Run Audit to run through the demo server." : "Socket.IO is not available. Use the local command."
+        socket ? "Ready. Click Run site audit to run through the demo server." : "Socket.IO is not available. Use the local command."
       ].join("\n");
     }
 
@@ -3327,7 +3554,7 @@
 
       const runBtn = document.getElementById("runAuditBtn");
       runBtn.disabled = true;
-      runBtn.textContent = "Running audit...";
+      runBtn.textContent = "Running...";
       startAuditProgress(config);
 
       document.getElementById("output").textContent = [
@@ -3810,7 +4037,7 @@
       const rawItems = Array.isArray(result.actionItems) ? result.actionItems : [];
 
       if (rawItems.length) {
-        return rawItems.map((item) => {
+        const normalized = rawItems.map((item) => {
           const affectedUrls = Array.isArray(item.affectedUrls) ? item.affectedUrls : item.pageUrl ? [item.pageUrl] : [];
           const requiresVerification = affectedUrls.some((url) => isPageExtractionUnreliable(pageByUrl.get(canonicalUrl(url))));
           const priority = requiresVerification && /h1|title|description|meta|content|schema|faq/i.test(`${item.finding || ""} ${item.recommendedFix || ""}`)
@@ -3826,10 +4053,12 @@
             affectedUrls,
             pageType: item.pageType || (item.pageUrl ? classifyPageType({ url: item.pageUrl, title: item.pageTitle || "", h1: "" }) : "site-wide")
           };
-        }).map(normalizeActionItemEnglish).sort(sortActionItems);
+        }).map(normalizeActionItemEnglish);
+
+        return compactRecurringActionItems(normalized).sort(sortActionItems).map(assignActionItemId);
       }
 
-      return (issues || []).map((issue, index) => {
+      const normalized = (issues || []).map((issue, index) => {
         const affectedUrls = issue.pageUrl ? [issue.pageUrl] : [];
         const requiresVerification = affectedUrls.some((url) => isPageExtractionUnreliable(pageByUrl.get(canonicalUrl(url))));
 
@@ -3854,7 +4083,132 @@
           evidence: issue.detail || "",
           sourceIssues: [issue.title || "Issue"]
         };
-      }).map(normalizeActionItemEnglish).sort(sortActionItems);
+      }).map(normalizeActionItemEnglish);
+
+      return compactRecurringActionItems(normalized).sort(sortActionItems).map(assignActionItemId);
+    }
+
+    function assignActionItemId(item, index) {
+      return {
+        ...item,
+        id: `A-${String(index + 1).padStart(3, "0")}`
+      };
+    }
+
+    function compactRecurringActionItems(items) {
+      const groups = new Map();
+
+      (items || []).filter(Boolean).forEach((item) => {
+        const affectedUrls = normalizeActionUrls(item);
+        const pageTypes = normalizeActionPageTypes(item);
+        const verificationBucket = isExtractionSensitiveActionItem(item) && item.requiresVerification ? "needs-verification" : "confirmed";
+        const clientBucket = item.clientVisible === false ? "internal" : "client";
+        const key = [
+          normalizeActionGroupingText(item.workstream || "technical"),
+          normalizeActionGroupingText(item.finding || ""),
+          normalizeActionGroupingText(item.recommendedFix || ""),
+          verificationBucket,
+          clientBucket
+        ].join("|");
+
+        if (!groups.has(key)) {
+          groups.set(key, {
+            items: [],
+            urls: new Set(),
+            pageTypes: new Set(),
+            sourceIssues: new Set(),
+            affectedCount: 0
+          });
+        }
+
+        const group = groups.get(key);
+        group.items.push(item);
+        affectedUrls.forEach((url) => group.urls.add(url));
+        pageTypes.forEach((pageType) => group.pageTypes.add(pageType));
+        (Array.isArray(item.sourceIssues) ? item.sourceIssues : []).filter(Boolean).forEach((source) => group.sourceIssues.add(source));
+        group.affectedCount += Number(item.affectedCount || affectedUrls.length || (item.pageUrl ? 1 : 0) || 1);
+      });
+
+      return Array.from(groups.values()).map((group) => {
+        const orderedItems = group.items.slice().sort(sortActionItems);
+        const primary = orderedItems[0] || {};
+        const affectedUrls = Array.from(group.urls);
+        const pageTypes = Array.from(group.pageTypes);
+        const affectedCount = Math.max(group.affectedCount, affectedUrls.length, 1);
+        const sourceIssues = Array.from(group.sourceIssues);
+        const mergedFrom = group.items.length;
+        const pageType = pageTypes.length === 1 ? pageTypes[0] : "mixed";
+        const sourceActionIds = group.items.map((item) => item.id).filter(Boolean);
+
+        return {
+          ...primary,
+          priority: strongestActionValue(group.items, "priority", actionPriorityWeight) || primary.priority,
+          impact: strongestActionValue(group.items, "impact", actionImpactWeight) || primary.impact,
+          effort: strongestActionValue(group.items, "effort", actionEffortWeight) || primary.effort,
+          clientVisible: group.items.some((item) => item.clientVisible !== false),
+          requiresVerification: group.items.some((item) => item.requiresVerification),
+          affectedCount,
+          affectedUrls,
+          pageTypes,
+          pageType,
+          pageUrl: affectedCount === 1 ? affectedUrls[0] || primary.pageUrl || "" : "",
+          pageTitle: pageTypes.length > 1 ? "Multiple page types" : primary.pageTitle,
+          evidence: buildCompactedActionEvidence(primary, affectedCount, affectedUrls, pageTypes, sourceIssues, mergedFrom),
+          sourceIssues: sourceIssues.length ? sourceIssues : primary.sourceIssues || [],
+          mergedFrom,
+          sourceActionIds
+        };
+      });
+    }
+
+    function normalizeActionGroupingText(value) {
+      return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function isExtractionSensitiveActionItem(item) {
+      const text = `${item?.finding || ""} ${item?.recommendedFix || ""} ${item?.evidence || ""}`.toLowerCase();
+      if (/noindex|nofollow|robots|blocks indexing/.test(text)) return false;
+      return /h1|heading|title|description|meta|content|schema|faq|json-ld/.test(text);
+    }
+
+    function normalizeActionUrls(item) {
+      const urls = Array.isArray(item?.affectedUrls) && item.affectedUrls.length
+        ? item.affectedUrls
+        : item?.pageUrl ? [item.pageUrl] : [];
+
+      return Array.from(new Set(urls.map((url) => String(url || "").trim()).filter(Boolean)));
+    }
+
+    function normalizeActionPageTypes(item) {
+      const raw = Array.isArray(item?.pageTypes) && item.pageTypes.length
+        ? item.pageTypes
+        : [item?.pageType || "site-wide"];
+
+      return Array.from(new Set(raw.map((pageType) => String(pageType || "site-wide")).filter(Boolean)));
+    }
+
+    function strongestActionValue(items, field, weightFn) {
+      return (items || []).reduce((best, item) => {
+        const value = item?.[field];
+        if (!value) return best;
+        return weightFn(value) > weightFn(best) ? value : best;
+      }, "");
+    }
+
+    function buildCompactedActionEvidence(primary, affectedCount, affectedUrls, pageTypes, sourceIssues, mergedFrom) {
+      const countText = `${affectedCount} affected URL${affectedCount === 1 ? "" : "s"}`;
+      const pageTypeText = pageTypes.length ? `Page types: ${formatActionPageTypeList(pageTypes, 4)}` : "";
+      const sourceText = sourceIssues.length ? `Source findings: ${sourceIssues.slice(0, 4).join(", ")}` : "";
+      const examples = affectedUrls.slice(0, 4).join(", ");
+      const groupedText = mergedFrom > 1 ? `Grouped from ${mergedFrom} repeated task groups.` : "";
+
+      return [
+        countText,
+        pageTypeText,
+        sourceText,
+        examples ? `Examples: ${examples}` : primary?.evidence || "",
+        groupedText
+      ].filter(Boolean).join(" ");
     }
 
     function normalizeActionItemEnglish(item) {
@@ -4127,7 +4481,7 @@
         <section class="audit-hero">
           <div class="score-ring-card">
             <div class="score-ring" style="--score:${escapeHtml(Math.max(0, Math.min(100, model.scoreTotal)))}">
-              <div>
+              <div class="score-ring-inner">
                 <strong>${escapeHtml(model.scoreTotal)}</strong>
                 <span>out of 100</span>
               </div>
@@ -4994,50 +5348,8 @@
             ${isInternal && model.unreliablePages.length ? renderMetric("Needs verification", model.unreliablePages.length, "Pages that were not read well enough and should not automatically become metadata/content tasks", "amber") : ""}
             ${isInternal ? renderMetric("In client report", clientVisibleCount, "Tasks marked for the client-facing version", "blue") : ""}
           </div>
-          ${isInternal ? renderActionFocus(model, allItems) : ""}
           ${items.length ? `<div>${actionGroups.map((group, index) => renderActionGroup(group, index, isInternal, model)).join("")}</div>` : `<div class="report-empty">No action items were found in the current result.</div>`}
         </section>
-      `;
-    }
-
-    function renderActionFocus(model, allItems) {
-      const urgentItems = (allItems || [])
-        .filter((item) => item.priority === "critical" || item.priority === "high")
-        .slice(0, 3);
-      const verifyItems = (allItems || [])
-        .filter((item) => getUnreliableActionUrls(item, model).length)
-        .slice(0, 3);
-      const nextItems = urgentItems.length ? urgentItems : (allItems || []).slice(0, 3);
-
-      if (!nextItems.length && !verifyItems.length) return "";
-
-      return `
-        <div class="action-focus-grid" aria-label="Open treatment focus areas">
-          ${renderActionFocusCard("What to open now", "The first tasks that should become operational work.", nextItems, "urgent")}
-          ${renderActionFocusCard("What to verify before fixing", "Findings where reading or evidence should be confirmed before opening a task.", verifyItems, "verify")}
-        </div>
-      `;
-    }
-
-    function renderActionFocusCard(title, subtitle, items, tone) {
-      if (!items.length) {
-        return `
-          <div class="action-focus-card ${tone}">
-            <strong>${escapeHtml(title)}</strong>
-            <p>${escapeHtml(subtitle)}</p>
-            <div class="action-focus-item">There are no open items in this category right now.</div>
-          </div>
-        `;
-      }
-
-      return `
-        <div class="action-focus-card ${tone}">
-          <strong>${escapeHtml(title)}</strong>
-          <p>${escapeHtml(subtitle)}</p>
-          <div class="action-focus-list">
-            ${items.map((item) => `<div class="action-focus-item">${escapeHtml(item.recommendedFix || item.finding || "Review and define the right fix.")}</div>`).join("")}
-          </div>
-        </div>
       `;
     }
 
@@ -5065,14 +5377,14 @@
 
     function renderActionGroup(group, index, isInternal, model) {
       const highCount = group.items.filter((item) => item.priority === "critical" || item.priority === "high").length;
-      const pageTypes = Array.from(new Set(group.items.map((item) => pageTypeLabels[item.pageType || "site-wide"] || "Site-wide"))).slice(0, 3);
+      const pageTypes = Array.from(new Set(group.items.flatMap(normalizeActionPageTypes)));
 
       return `
         <details class="report-accordion" ${index < 1 ? "open" : ""}>
           <summary class="accordion-summary">
             <div class="accordion-title">
               <strong>${escapeHtml(group.label)}</strong>
-              <span>${escapeHtml(group.items.length)} actions${highCount ? `, including ${escapeHtml(highCount)} high-priority` : ""}. ${escapeHtml(pageTypes.join(" · "))}</span>
+              <span>${escapeHtml(group.items.length)} summarized actions${highCount ? `, including ${escapeHtml(highCount)} high-priority` : ""}. ${escapeHtml(formatActionPageTypeList(pageTypes, 3))}</span>
             </div>
             <div class="accordion-meta">
               <span class="count-pill">${escapeHtml(group.items.length)} to handle</span>
@@ -5145,10 +5457,8 @@
     function renderActionTaskCard(item, isInternal, model) {
       const tone = actionPriorityTone(item.priority);
       const affectedCount = Number(item.affectedCount || (item.affectedUrls || []).length || (item.pageUrl ? 1 : 0));
-      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "Site-wide";
-      const examples = Array.isArray(item.affectedUrls) && item.affectedUrls.length
-        ? item.affectedUrls.slice(0, isInternal ? 4 : 2).map((url) => renderUrlLink(url)).join("")
-        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">Site-wide</div>`;
+      const pageType = formatActionItemPageTypes(item, isInternal ? 4 : 2);
+      const examples = renderActionExamples(item, isInternal);
       const actionKey = getClientActionKey(item);
       const taskTone = item.priority === "critical" || item.priority === "high" ? "high" : item.priority === "medium" ? "medium" : "low";
       const jumpHref = getActionJumpHref(item, model);
@@ -5164,8 +5474,9 @@
               <div class="task-title">${escapeHtml(item.finding || "Finding")}</div>
               <div class="diagnostic-meta">
                 <span class="severity-pill ${tone}">${escapeHtml(actionPriorityLabels[item.priority] || item.priority || "-")}</span>
-                <span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} pages</span>
+                <span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(formatAffectedCount(affectedCount || 1))}</span>
                 <span class="count-pill">${escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")} impact</span>
+                ${item.mergedFrom > 1 ? `<span class="count-pill">Grouped · ${escapeHtml(item.mergedFrom)} repeated groups</span>` : ""}
                 ${unreliableExamples.length ? `<span class="severity-pill warning">Needs verification</span>` : ""}
               </div>
             </div>
@@ -5230,10 +5541,8 @@
     function renderActionItemRow(item, isInternal) {
       const tone = actionPriorityTone(item.priority);
       const affectedCount = Number(item.affectedCount || (item.affectedUrls || []).length || (item.pageUrl ? 1 : 0));
-      const pageType = pageTypeLabels[item.pageType || "site-wide"] || "Site-wide";
-      const examples = Array.isArray(item.affectedUrls) && item.affectedUrls.length
-        ? item.affectedUrls.slice(0, isInternal ? 5 : 2).map((url) => renderUrlLink(url)).join("")
-        : item.pageUrl ? renderUrlLink(item.pageUrl) : `<div class="page-url">Site-wide</div>`;
+      const pageType = formatActionItemPageTypes(item, isInternal ? 5 : 2);
+      const examples = renderActionExamples(item, isInternal);
       const evidence = isInternal && item.evidence ? `<div class="issue-detail">${escapeHtml(item.evidence)}</div>` : "";
       const actionKey = getClientActionKey(item);
 
@@ -5251,9 +5560,45 @@
             ? `${escapeHtml(actionOwnerLabels[item.owner] || item.owner || "-")} · ${escapeHtml(actionEffortLabels[item.effort] || item.effort || "-")} · ${escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")}`
             : escapeHtml(actionImpactLabels[item.impact] || item.impact || "-")}
           </td>
-          <td><span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(affectedCount || 1)} pages</span>${examples}${evidence}</td>
+          <td><span class="count-pill">${escapeHtml(pageType)} · ${escapeHtml(formatAffectedCount(affectedCount || 1))}</span>${examples}${evidence}</td>
         </tr>
       `;
+    }
+
+    function formatActionItemPageTypes(item, limit = 3) {
+      return formatActionPageTypeList(normalizeActionPageTypes(item), limit);
+    }
+
+    function formatActionPageTypeList(pageTypes, limit = 3) {
+      const values = Array.from(new Set((pageTypes || []).filter(Boolean)));
+      const labels = values.map((pageType) => pageTypeLabels[pageType] || pageType || "Site-wide");
+      const visible = labels.slice(0, limit);
+      const extra = labels.length - visible.length;
+
+      if (!visible.length) return "Site-wide";
+      return `${visible.join(", ")}${extra > 0 ? ` +${extra} more` : ""}`;
+    }
+
+    function formatAffectedCount(count) {
+      const value = Number(count || 0) || 1;
+      return `${value} page${value === 1 ? "" : "s"}`;
+    }
+
+    function renderActionExamples(item, isInternal) {
+      const urls = normalizeActionUrls(item);
+      const affectedCount = Number(item?.affectedCount || urls.length || (item?.pageUrl ? 1 : 0) || 1);
+      const limit = isInternal ? 4 : 2;
+      const shown = urls.slice(0, limit);
+      const remaining = Math.max(0, affectedCount - shown.length);
+
+      if (!shown.length) {
+        return `<div class="page-url">Site-wide</div>`;
+      }
+
+      return [
+        shown.map((url) => renderUrlLink(url)).join(""),
+        remaining > 0 ? `<div class="issue-detail">${escapeHtml(remaining)} more affected URL${remaining === 1 ? "" : "s"} summarized in this item.</div>` : ""
+      ].filter(Boolean).join("");
     }
 
     function getClientActionKey(item) {
@@ -5694,7 +6039,7 @@
         lines.push("", "## Action Items", "");
         actionItems.forEach((item) => {
           const countText = item.affectedCount ? `${item.affectedCount} pages` : item.pageUrl ? "one page" : "site-wide";
-          lines.push(`- [${actionPriorityLabels[item.priority] || item.priority}] ${actionWorkstreamLabels[item.workstream] || item.workstream} | ${pageTypeLabels[item.pageType || "site-wide"] || ""} | ${countText} | ${item.finding}`);
+          lines.push(`- [${actionPriorityLabels[item.priority] || item.priority}] ${actionWorkstreamLabels[item.workstream] || item.workstream} | ${formatActionItemPageTypes(item, 4)} | ${countText} | ${item.finding}`);
           lines.push(`  Fix: ${item.recommendedFix}`);
           lines.push(`  Examples: ${Array.isArray(item.affectedUrls) && item.affectedUrls.length ? item.affectedUrls.slice(0, 5).join(", ") : item.pageUrl || "site-wide"}`);
           if (options.mode === "internal") {
@@ -5873,8 +6218,9 @@
     .audit-hero { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; padding: 18px; border: 1px solid #e9dfd2; border-radius: 18px; background: #fff; }
     .score-ring-card { min-height: 260px; display: grid; place-items: center; gap: 12px; border-radius: 16px; border: 1px solid #e9dfd2; background: #fffaf3; text-align: center; }
     .score-ring { --score: 0; width: 168px; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at center, #fff 0 58%, transparent 59%), conic-gradient(#4f7fc7 calc(var(--score) * 1%), #e5e7eb 0); box-shadow: 0 18px 38px rgba(55, 45, 35, 0.08); }
-    .score-ring strong { display: block; color: #111827; font-size: 42px; font-weight: 900; line-height: 1; }
-    .score-ring span { color: #64748b; font-size: 12px; font-weight: 800; }
+    .score-ring-inner { display: grid; place-items: center; gap: 4px; text-align: center; transform: translateY(1px); }
+    .score-ring strong { display: block; width: 100%; color: #111827; font-size: 42px; font-weight: 900; line-height: 1; text-align: center; }
+    .score-ring span { display: block; color: #64748b; font-size: 12px; font-weight: 800; text-align: center; }
     .score-ring-card h3 { font-size: 18px; }
     .hero-insights { display: grid; gap: 12px; }
     .hero-metrics, .insight-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -6160,6 +6506,38 @@
       downloadText(`${buildFileBaseName(lastAuditResult)}-client-report.html`, buildStandaloneClientReportHtml(lastAuditResult, options), "text/html;charset=utf-8");
     }
 
+    async function downloadClientReportPdf() {
+      if (!lastAuditResult) return;
+
+      const options = getReportOptions("client");
+      const html = buildStandaloneClientReportHtml(lastAuditResult, options);
+
+      appendOutput("Generating client PDF...");
+
+      try {
+        const response = await fetch("/api/site-ai-audit/export-pdf", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            html,
+            host: lastAuditResult.host || lastAuditResult.normalizedStartUrl || lastAuditResult.startUrl || "site-audit",
+            title: `Client report - ${lastAuditResult.host || "site audit"}`
+          })
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Could not generate PDF.");
+        }
+
+        const blob = await response.blob();
+        downloadBlob(`${buildFileBaseName(lastAuditResult)}-client-report.pdf`, blob);
+        appendOutput("Client PDF downloaded.");
+      } catch (error) {
+        appendOutput(`PDF export failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     function downloadInternalReport() {
       if (!lastAuditResult) return;
       const options = getReportOptions("internal");
@@ -6186,7 +6564,7 @@
           item.id,
           actionPriorityLabels[item.priority] || item.priority || "",
           actionWorkstreamLabels[item.workstream] || item.workstream || "",
-          pageTypeLabels[item.pageType || "site-wide"] || item.pageType || "",
+          formatActionItemPageTypes(item, 5),
           item.affectedCount || (item.affectedUrls || []).length || "",
           actionOwnerLabels[item.owner] || item.owner || "",
           actionEffortLabels[item.effort] || item.effort || "",
@@ -6232,6 +6610,10 @@
 
     function downloadText(filename, content, mimeType) {
       const blob = new Blob(["\ufeff", content], { type: mimeType });
+      downloadBlob(filename, blob);
+    }
+
+    function downloadBlob(filename, blob) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -6322,6 +6704,13 @@
       if (impact === "high") return 3;
       if (impact === "medium") return 2;
       return 1;
+    }
+
+    function actionEffortWeight(effort) {
+      if (effort === "large") return 3;
+      if (effort === "medium") return 2;
+      if (effort === "quick") return 1;
+      return 0;
     }
 
     function actionPriorityTone(priority) {
@@ -6420,7 +6809,9 @@
       document.getElementById("includeAiAnalysis").checked = false;
       document.getElementById("respectRobots").checked = false;
       updateScopeHint();
+      syncScopeCards();
       syncRenderModeCards();
+      syncLanguagePills();
       buildAuditConfig();
     }
 
@@ -6456,7 +6847,9 @@
       setCheckboxValue("respectRobots", config.respectRobots);
 
       updateScopeHint();
+      syncScopeCards();
       syncRenderModeCards();
+      syncLanguagePills();
       buildAuditConfig();
       appendOutput("Loaded Site Audit setup from AI Workspace Assistant.");
       return true;
@@ -6516,8 +6909,8 @@
     function updateScopeHint() {
       const scope = document.getElementById("crawlScope").value;
       document.getElementById("scopeHint").textContent = scope === "faq-only"
-        ? "FAQ-only mode: the crawler checks more candidates behind the scenes, but returns only pages with visible FAQ, FAQPage schema or clear FAQ signals."
-        : "General mode: the crawler returns a broad page sample and checks AI readiness, metadata, FAQ, schema and links.";
+        ? "Focused mode: returns only pages with visible FAQ, FAQPage schema or strong FAQ signals."
+        : "Balanced default: a broad page sample selected by page type and importance.";
     }
 
     function shellQuote(value) {
@@ -6559,7 +6952,7 @@
       socket.on("done", () => {
         const runBtn = document.getElementById("runAuditBtn");
         runBtn.disabled = false;
-        runBtn.textContent = "Run Audit";
+        runBtn.textContent = "Run site audit";
 
         if (!collectingResult) {
           if (auditProgressTimer) stopAuditProgress("Audit complete");
@@ -6570,7 +6963,9 @@
 
     initializeStartUrl();
     updateScopeHint();
+    syncScopeCards();
     syncRenderModeCards();
+    syncLanguagePills();
     buildAuditConfig();
     consumeAssistantHandoff();
     consumeStoredAuditResult();

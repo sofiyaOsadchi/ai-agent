@@ -57,6 +57,18 @@ async function setupPage(browser) {
   });
   await page.route("**/api/assistant-chat", async (route) => {
     const body = route.request().postDataJSON?.() || {};
+    if (String(body.message || "").includes("__scroll_long_message__")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          reply: Array.from({ length: 90 }, (_, index) => `Long assistant line ${index + 1}: keeping the latest message visible after quick replies resize the chat.`).join("\n"),
+          actions: [],
+          modelUsed: "stubbed-scroll-reply"
+        })
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -69,6 +81,39 @@ async function setupPage(browser) {
   });
   await page.route("**/api/assistant-preflight", async (route) => {
     preflightBodies.push(route.request().postDataJSON?.() || {});
+    const body = route.request().postDataJSON?.() || {};
+    if (body.phase === "faq-subject-validation") {
+      const serialized = JSON.stringify({ values: body.values, payload: body.payload });
+      const unknownHebrewSubject = serialized.includes("אבגד");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          reply: "בדקתי את הנושא והשפה לפני יצירה.",
+          warnings: [],
+          faqValidation: {
+            normalizedSubject: unknownHebrewSubject ? "מלון אבגד ברלין" : "לאונדרו ברלין",
+            detectedBrandOrEntity: unknownHebrewSubject ? "מלון אבגד ברלין" : "לאונדרו ברלין",
+            requestedLanguage: "English",
+            requestedLocale: "UK",
+            contentGoal: "Build an FAQ question plan",
+            removedInstructionFragments: ["אנגלית uk"],
+            confidence: 0.78,
+            needsConfirmation: true,
+            sourceUrlCandidate: unknownHebrewSubject ? "" : "https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin",
+            sourceTitle: unknownHebrewSubject ? "" : "Leonardo Hotel Berlin official page",
+            sourceType: unknownHebrewSubject ? "" : "official",
+            sourceConfidence: unknownHebrewSubject ? 0 : 0.9,
+            needsSourceConfirmation: !unknownHebrewSubject,
+            confirmationQuestion: unknownHebrewSubject
+              ? "הבנתי שהנושא הוא מלון אבגד ברלין והשפה היא UK English. להמשיך?"
+              : "הבנתי שהנושא הוא לאונדרו ברלין והשפה היא UK English. להמשיך?"
+          },
+          modelUsed: "stubbed-test-faq-validation"
+        })
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -308,6 +353,9 @@ async function scenarioFaqWordsToAvoidStayGlobal(browser) {
   expectNotIncludes(name, prompts, "QUESTION WORDING RULES");
   expectNotIncludes(name, prompts, "ANSWER WORDING RULES");
 
+  await page.evaluate(() => {
+    window.open = () => null;
+  });
   await clickReply(page, "לפתוח Builder");
   const handoff = await page.evaluate(() => JSON.parse(localStorage.getItem("carmelonAssistantHandoff") || "{}"));
   if (handoff?.values?.forbiddenPhrases !== "יוקרתי\nהכי טוב") {
@@ -384,6 +432,89 @@ async function scenarioEnglishLocaleStableAfterGuidance(browser) {
   await page.close();
 }
 
+async function scenarioFaqSubjectValidationBeforeRun(browser) {
+  const name = "faq-subject-validation-before-run";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות faq");
+  await clickReply(page, "מלון / אירוח");
+  await send(page, "מלון לאונדרו ברלין? אנגלית uk");
+  await clickReply(page, "אורחים לפני הזמנה");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "סטנדרטי");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "לפי ביקוש וכוונת חיפוש");
+  await clickReply(page, "אין מקור כרגע");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להריץ עכשיו");
+  await page.waitForTimeout(160);
+
+  const preflights = page.__assistantPreflightBodies || [];
+  if (!preflights.some((body) => body.phase === "faq-subject-validation")) {
+    fail(name, "FAQ run should call the subject validation preflight before creating a sheet", { preflights });
+  }
+
+  let emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  if (emits.some((item) => item.event === "start-agent")) {
+    fail(name, "FAQ run should wait for subject validation confirmation before emitting start-agent", { emits });
+  }
+
+  const confirmationText = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, confirmationText, "Leonardo Hotel Berlin");
+  expectIncludes(name, confirmationText, "אנגלית UK");
+  expectIncludes(name, confirmationText, "https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin");
+  expectIncludes(name, confirmationText, "זיהיתי שהשם נכתב בעברית");
+  expectIncludes(name, confirmationText, "כן, להשתמש בשם ובמקור");
+  expectNotIncludes(name, confirmationText, "להשאיר כמו שכתבתי");
+
+  await clickReply(page, "כן, להשתמש בשם ובמקור");
+  await page.waitForTimeout(160);
+  emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  const runEmit = emits.find((item) => item.event === "start-agent");
+  if (runEmit?.payload?.mode !== "faq-playground") fail(name, "Confirmed FAQ validation should start the FAQ workflow", { emits });
+  if (!Array.isArray(runEmit.payload.subjects) || runEmit.payload.subjects[0] !== "Leonardo Hotel Berlin") {
+    fail(name, "FAQ validation should apply normalized subject before run", { payload: runEmit.payload });
+  }
+  const taskText = JSON.stringify(runEmit.payload.tasks || []);
+  expectIncludes(name, taskText, "Output language: English (UK).");
+  expectIncludes(name, taskText, "https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin");
+  expectNotIncludes(name, taskText, "אנגלית uk");
+  await page.close();
+}
+
+async function scenarioFaqSubjectValidationBlocksUnnormalizedEnglishSubject(browser) {
+  const name = "faq-subject-validation-blocks-unnormalized-english-subject";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות faq");
+  await clickReply(page, "מלון / אירוח");
+  await send(page, "מלון אבגד ברלין? אנגלית uk");
+  await clickReply(page, "אורחים לפני הזמנה");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "סטנדרטי");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "לפי ביקוש וכוונת חיפוש");
+  await clickReply(page, "אין מקור כרגע");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "להריץ עכשיו");
+  await page.waitForTimeout(160);
+
+  const text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "לא אריץ על הטקסט המקורי");
+  expectIncludes(name, text, "לשנות נושא");
+  expectNotIncludes(name, text, "כן, להשתמש בשם הזה");
+  expectNotIncludes(name, text, "להשאיר כמו שכתבתי");
+  const emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  if (emits.some((item) => item.event === "start-agent")) {
+    fail(name, "FAQ validation should block a Hebrew subject that was not normalized for English output", { emits });
+  }
+  await page.close();
+}
+
 async function scenarioTranslateTargetLangsMulti(browser) {
   const name = "translate-target-langs-multi";
   const page = await setupPage(browser);
@@ -442,7 +573,7 @@ async function scenarioSiteAuditChecksMulti(browser) {
   expectNotIncludes(name, afterAuditDoneUsers.at(-1), "להמשיך");
   await clickReply(page, "סטנדרטי");
   const chat = await chatText(page);
-  expectIncludes(name, chat, "אודיט מוכן");
+  expectIncludes(name, chat, "אודיט האתר מוכן");
   expectIncludes(name, chat, "FAQ");
   expectIncludes(name, chat, "Schema");
   expectIncludes(name, chat, "קישורים ואמון");
@@ -533,7 +664,8 @@ async function scenarioSchemaRemainsSingleChoice(browser) {
   await send(page, "create schema for https://docs.google.com/spreadsheets/d/1FakeSchemaSheetFakeSchema12/edit");
   const replies = await quickText(page);
   expectIncludes(name, replies, "Run schema preview");
-  expectIncludes(name, replies, "Write to Sheet");
+  expectIncludes(name, replies, "Write to E73 if empty");
+  expectIncludes(name, replies, "Overwrite E73");
   expectNotIncludes(name, replies, "Continue");
   await expectPrimaryReply(page, "Run schema preview");
   await page.close();
@@ -551,6 +683,76 @@ async function scenarioSchemaPreviewSkipsPreflight(browser) {
   const runEmit = emits.find((item) => item.event === "start-agent");
   if (runEmit?.payload?.mode !== "schema-builder") fail(name, "Schema preview should still emit schema-builder run", { emits });
   if (runEmit.payload?.previewOnly !== true) fail(name, "Schema preview payload should stay previewOnly", { payload: runEmit.payload });
+  if (runEmit.payload?.existingValuePolicy !== "skip") fail(name, "Schema default existing-value policy should be skip", { payload: runEmit.payload });
+  await page.close();
+}
+
+async function scenarioSchemaWriteChoiceAndNoDoubleConfirmation(browser) {
+  const name = "schema-write-choice-no-double-confirmation";
+  const page = await setupPage(browser);
+  await send(page, "תבני schema מהגיליון הזה https://docs.google.com/spreadsheets/d/1FakeSchemaWriteChoice12/edit ולכתוב לתא F79");
+  const text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "אם נכתוב לתא F79 ויש שם כבר ערך, מה לעשות?");
+  expectIncludes(name, text, "לכתוב לתא F79 רק אם ריק");
+  expectIncludes(name, text, "לדרוס את F79");
+  expectIncludes(name, text, "להישאר בבדיקה מקדימה");
+  await expectPrimaryReply(page, "לכתוב לתא F79 רק אם ריק");
+  await clickReply(page, "לכתוב לתא F79 רק אם ריק");
+  await page.waitForTimeout(160);
+  const userMessages = await userMessageTexts(page);
+  if (!userMessages.some((message) => message.includes("לכתוב לתא F79 רק אם ריק"))) {
+    fail(name, "Schema write decision should remain visible as a user answer", { userMessages });
+  }
+  const emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  const runEmit = emits.find((item) => item.event === "start-agent");
+  if (runEmit?.payload?.mode !== "schema-builder") fail(name, "Schema write choice should emit schema-builder directly", { emits });
+  if (runEmit.payload?.previewOnly !== false) fail(name, "Schema write choice should disable preview", { payload: runEmit.payload });
+  if (runEmit.payload?.outputCell !== "F79") fail(name, "Schema write choice should preserve the selected output cell", { payload: runEmit.payload });
+  if (runEmit.payload?.existingValuePolicy !== "skip") fail(name, "Schema safe write choice should use skip policy", { payload: runEmit.payload });
+  const afterClick = `${await chatText(page)}\n${await quickText(page)}`;
+  expectNotIncludes(name, afterClick, "כן, להריץ");
+  expectNotIncludes(name, afterClick, "Yes, run");
+  await page.close();
+}
+
+async function scenarioSchemaOverwritePolicy(browser) {
+  const name = "schema-overwrite-policy";
+  const page = await setupPage(browser);
+  await send(page, "create schema for https://docs.google.com/spreadsheets/d/1FakeSchemaOverwrite12/edit write to G12");
+  await clickReply(page, "Overwrite G12");
+  await page.waitForTimeout(160);
+  const emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  const runEmit = emits.find((item) => item.event === "start-agent");
+  if (runEmit?.payload?.existingValuePolicy !== "overwrite") fail(name, "Schema overwrite choice should use overwrite policy", { payload: runEmit?.payload, emits });
+  if (runEmit.payload?.outputCell !== "G12") fail(name, "Schema overwrite should preserve output cell", { payload: runEmit.payload });
+  await page.close();
+}
+
+async function scenarioChatScrollKeepsLongLatestVisible(browser) {
+  const name = "chat-scroll-keeps-long-latest-visible";
+  const page = await setupPage(browser);
+  await send(page, "__scroll_long_message__");
+  await page.waitForTimeout(160);
+  const metrics = await page.evaluate(() => {
+    const chat = document.querySelector("#chatLog");
+    const message = chat?.querySelector(".message:last-child");
+    if (!chat || !message) return null;
+    const chatRect = chat.getBoundingClientRect();
+    const messageRect = message.getBoundingClientRect();
+    return {
+      messageHeight: messageRect.height,
+      viewportHeight: chatRect.height,
+      topGap: messageRect.top - chatRect.top,
+      bottomGap: chatRect.bottom - messageRect.bottom,
+      chatBottom: chatRect.bottom,
+      quickRepliesTop: document.querySelector("#quickReplies")?.getBoundingClientRect().top || 0,
+      messageBottom: messageRect.bottom
+    };
+  });
+  if (!metrics) fail(name, "Expected chat metrics", {});
+  if (metrics.messageHeight <= metrics.viewportHeight) fail(name, "Expected the regression message to be taller than the chat viewport", metrics);
+  if (Math.abs(metrics.topGap) > 18) fail(name, "Tall latest message should scroll to the top of the chat viewport", metrics);
+  if (metrics.quickRepliesTop < metrics.chatBottom - 2) fail(name, "Quick replies should sit below the chat viewport instead of overlaying it", metrics);
   await page.close();
 }
 
@@ -561,7 +763,7 @@ async function scenarioSheetEditRouting(browser) {
   const text = `${await panelText(page)}\n${await chatText(page)}`;
   expectIncludes(name, text, "FAQ Editing Workspace");
   expectIncludes(name, text, "ניקוי קישורי מקור מהתשובות");
-  expectIncludes(name, text, "פלט: C");
+  expectIncludes(name, text, "עמודת יעד: C");
   await page.close();
 }
 
@@ -586,7 +788,7 @@ async function scenarioFaqThenSheetEditSwitch(browser) {
   const text = `${await panelText(page)}\n${await chatText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "FAQ Editing Workspace");
   expectIncludes(name, text, "עריכת Google Sheet");
-  expectIncludes(name, text, "פלט: C");
+  expectIncludes(name, text, "עמודת יעד: C");
   await page.close();
 }
 
@@ -598,7 +800,7 @@ async function scenarioFaqThenSchemaSwitch(browser) {
   await send(page, "בעצם תבני schema מהגיליון הזה https://docs.google.com/spreadsheets/d/1FakeSchemaSwitchFake12/edit");
   const text = `${await panelText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "Schema Builder");
-  expectIncludes(name, text, "להריץ Schema preview");
+  expectIncludes(name, text, "לבדוק בלי לכתוב");
   expectNotIncludes(name, text, "איזה סוג FAQ");
   await page.close();
 }
@@ -638,7 +840,7 @@ async function scenarioColumnTransferUnderstandsTarget(browser) {
   const text = `${await panelText(page)}\n${await chatText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "FAQ Editing Workspace");
   expectIncludes(name, text, "F → C");
-  expectIncludes(name, text, "replace_column_when_value");
+  expectIncludes(name, text, "העתקת ערכים בין עמודות");
   expectNotIncludes(name, text, "F → F");
   expectNotIncludes(name, text, "איזה סוג FAQ");
   await page.close();
@@ -650,8 +852,12 @@ async function scenarioMetaTagsSingleMode(browser) {
   await send(page, "Create meta tags for https://example.com/services");
   const text = `${await panelText(page)}\n${await chatText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "Meta Tags Studio");
-  expectIncludes(name, text, "meta");
+  expectIncludes(name, text, "Where should the page names come from?");
+  expectIncludes(name, text, "this URL as one page");
+  expectNotIncludes(name, text, "Meta tags are ready");
   expectNotIncludes(name, text, "You can choose more than one");
+  const emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  if (emits.some((item) => item.event === "start-agent")) fail(name, "Meta Tags should ask guiding questions before running", { emits });
   await page.close();
 }
 
@@ -659,6 +865,11 @@ async function scenarioMetaTemplatePreviewSkipsPreflight(browser) {
   const name = "meta-template-preview-skips-preflight";
   const page = await setupPage(browser);
   await send(page, "Create meta tags for https://example.com/services preview");
+  await clickReply(page, "this URL as one page");
+  await clickReply(page, "Meta title + description");
+  await clickReply(page, "English");
+  await clickReply(page, "Fast template, no AI");
+  await expectPrimaryReply(page, "Generate preview");
   await clickReply(page, "Generate preview");
   await page.waitForTimeout(120);
   const preflights = page.__assistantPreflightBodies || [];
@@ -668,6 +879,91 @@ async function scenarioMetaTemplatePreviewSkipsPreflight(browser) {
   if (runEmit?.payload?.mode !== "meta-tags") fail(name, "Meta preview should still emit meta-tags run", { emits });
   if (runEmit.payload?.outputMode !== "preview") fail(name, "Meta preview payload should stay in preview mode", { payload: runEmit.payload });
   if (runEmit.payload?.generationMode !== "template") fail(name, "Meta preview should stay in template mode", { payload: runEmit.payload });
+  if (runEmit.payload?.existingValuePolicy !== "skip") fail(name, "Meta default existing-value policy should be skip", { payload: runEmit.payload });
+  await page.close();
+}
+
+async function scenarioMetaTagsHebrewSheetGuidedFlow(browser) {
+  const name = "meta-tags-hebrew-sheet-guided-flow";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות תגיות לקובץ הזה https://docs.google.com/spreadsheets/d/18MTITyggOj7cv69LXxqOJ6vbdGLLJgJ-5tPhmQj2z4E4/edit?usp=sharing טייטל ודסקריפשיין");
+  let text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "מאיפה לקחת את שמות העמודים");
+  expectIncludes(name, text, "שם הקובץ כעמוד אחד");
+  expectNotIncludes(name, text, "Meta tags מוכנים להרצה");
+  let emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  if (emits.some((item) => item.event === "start-agent")) fail(name, "Meta Tags should not run immediately after receiving a Sheet URL", { emits });
+
+  await clickReply(page, "שם הקובץ כעמוד אחד");
+  text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectNotIncludes(name, text, "מה לייצר לכל עמוד");
+  expectIncludes(name, text, "באיזו שפה");
+  await clickReply(page, "אנגלית UK");
+
+  text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "איך לבנות");
+  await clickReply(page, "תבנית מהירה בלי AI");
+
+  text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "לאן להכניס");
+  expectIncludes(name, text, "לכתוב לטאב Meta Tags רק אם ריק");
+  await expectPrimaryReply(page, "לבדוק בלי לכתוב");
+  await clickReply(page, "לבדוק בלי לכתוב");
+
+  text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "Meta tags מוכנים להרצה");
+  expectIncludes(name, text, "שדות: Meta title + description");
+  expectIncludes(name, text, "שפה: אנגלית");
+  expectIncludes(name, text, "תבנית מהירה בלי AI");
+  await expectPrimaryReply(page, "לבדוק בלי לכתוב");
+  await clickReply(page, "לבדוק בלי לכתוב");
+  await page.waitForTimeout(120);
+
+  emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  const runEmit = emits.find((item) => item.event === "start-agent");
+  if (runEmit?.payload?.mode !== "meta-tags") fail(name, "Guided Meta preview should emit meta-tags", { emits });
+  if (runEmit.payload?.outputMode !== "preview") fail(name, "Guided Meta preview should not write", { payload: runEmit.payload });
+  if (runEmit.payload?.sourceType !== "sheet") fail(name, "Guided Meta should preserve Sheet source", { payload: runEmit.payload });
+  if (!Array.isArray(runEmit.payload?.activeRules) || runEmit.payload.activeRules.includes("includeH1") || runEmit.payload.activeRules.includes("openGraph")) {
+    fail(name, "Title/description request should not silently include H1 or Open Graph", { payload: runEmit.payload });
+  }
+  await page.close();
+}
+
+async function scenarioMetaTagsManualFirstTabCellStaysMeta(browser) {
+  const name = "meta-tags-manual-first-tab-cell-stays-meta";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות תגיות מטה ללינק הזה https://docs.google.com/spreadsheets/d/18MTITyggOj7cv69LXxqOJ6vbdGLLJgJ-5tPhmQj2z4E4/edit?usp=sharing תא f79");
+  let text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "Meta Tags Studio");
+  expectIncludes(name, text, "מאיפה לקחת את שמות העמודים");
+  expectNotIncludes(name, text, "FAQ Editing Workspace");
+
+  await clickReply(page, "שם הקובץ כעמוד אחד");
+  await clickReply(page, "Meta title + description");
+  await clickReply(page, "אנגלית UK");
+  await clickReply(page, "תבנית מהירה בלי AI");
+  text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "לאן להכניס");
+  expectIncludes(name, text, "הטאב הראשון מתא F79");
+  expectIncludes(name, text, "לבחור תא בטאב הראשון");
+
+  await send(page, "לכתוב לטאב הראשון בתא 70e");
+  text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "Meta tags מוכנים להרצה");
+  expectIncludes(name, text, "הטאב הראשון!E70");
+  expectIncludes(name, text, "לכתוב רק לתאים ריקים");
+  expectNotIncludes(name, text, "FAQ Editing Workspace");
+  expectNotIncludes(name, text, "העתקת ערכים בין עמודות");
+
+  await clickReply(page, "לכתוב רק לתאים ריקים");
+  await page.waitForTimeout(120);
+  const emits = await page.evaluate(() => window.__assistantSocketEmits || []);
+  const runEmit = emits.find((item) => item.event === "start-agent");
+  if (runEmit?.payload?.mode !== "meta-tags") fail(name, "Manual first-tab cell should keep the Meta Tags tool active", { emits });
+  if (runEmit.payload?.outputMode !== "firstTabRange") fail(name, "Manual first-tab cell should write to the first tab range", { payload: runEmit.payload });
+  if (runEmit.payload?.outputStartCell !== "E70") fail(name, "Manual reversed cell 70e should normalize to E70", { payload: runEmit.payload });
+  if (runEmit.payload?.existingValuePolicy !== "skip") fail(name, "Manual first-tab write should default to skip", { payload: runEmit.payload });
   await page.close();
 }
 
@@ -677,7 +973,7 @@ async function scenarioFaqAuditRoute(browser) {
   await send(page, "בדיקת FAQ לאתר https://example.com");
   const text = `${await panelText(page)}\n${await chatText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "AI FAQ Audit");
-  expectIncludes(name, text, "Site mapping needed");
+  expectIncludes(name, text, "צריך למפות את האתר");
   expectIncludes(name, text, "למפות אתר");
   expectNotIncludes(name, text, "Payload ready");
   await expectPrimaryReply(page, "למפות אתר");
@@ -984,7 +1280,7 @@ async function scenarioFaqAuditDiscoveryCanSwitchToSiteAudit(browser) {
   const text = `${await panelText(page)}\n${await chatText(page)}\n${await quickText(page)}`;
   expectIncludes(name, text, "AI Site Audit Crawler");
   expectIncludes(name, text, "מחליפה");
-  expectNotIncludes(name, text, "Site mapping needed");
+  expectNotIncludes(name, text, "צריך למפות את האתר");
   await page.close();
 }
 
@@ -1080,12 +1376,17 @@ async function main() {
     scenarioFaqWordsToAvoidStayGlobal,
     scenarioFaqSourceUrlBack,
     scenarioEnglishLocaleStableAfterGuidance,
+    scenarioFaqSubjectValidationBeforeRun,
+    scenarioFaqSubjectValidationBlocksUnnormalizedEnglishSubject,
     scenarioTranslateTargetLangsMulti,
     scenarioSiteAuditChecksMulti,
     scenarioSiteAuditAllChecksSend,
     scenarioSiteAuditChecksRecommendedClearBack,
     scenarioSchemaRemainsSingleChoice,
     scenarioSchemaPreviewSkipsPreflight,
+    scenarioSchemaWriteChoiceAndNoDoubleConfirmation,
+    scenarioSchemaOverwritePolicy,
+    scenarioChatScrollKeepsLongLatestVisible,
     scenarioSheetEditRouting,
     scenarioSheetEditResultQuestion,
     scenarioFaqThenSheetEditSwitch,
@@ -1095,6 +1396,8 @@ async function main() {
     scenarioColumnTransferUnderstandsTarget,
     scenarioMetaTagsSingleMode,
     scenarioMetaTemplatePreviewSkipsPreflight,
+    scenarioMetaTagsHebrewSheetGuidedFlow,
+    scenarioMetaTagsManualFirstTabCellStaysMeta,
     scenarioFaqAuditRoute,
     scenarioFaqAuditResultCreatesClickableReport,
     scenarioFaqAuditGroupsCanClearAndGoBack,

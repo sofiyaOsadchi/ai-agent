@@ -82,7 +82,7 @@ const HOTELS = [
   // ← התרגום
 const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
-    { spreadsheet: "https://docs.google.com/spreadsheets/d/1iE811ZiaxkAe7INLwh0d8IX_IZn_O0l5JzxhqXi0nVk/edit?usp=sharing" },
+    { spreadsheet: "https://docs.google.com/spreadsheets/d/1dQGx36gABASUkox4DbL5seBFdCXHCxxGWCadXtFa_9o/edit?usp=sharing" },
 
 
 ];
@@ -119,9 +119,9 @@ const FILTER_CONFIG = {
   hotelColIndex: 0
 };
 const INJECT_LANG_CONFIG: InjectLangToMasterConfig = {
-  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/14C3Zc35-cuyQQSUjvs9jxQRiLvTD3CD8WjRBcXOgaL4/edit?usp=sharing",
+  masterSpreadsheetId: "https://docs.google.com/spreadsheets/d/1OlvQ66WVeva9BZLE3pW1vzz6zRHhpvGIBxsccegyUsU/edit?usp=sharing",
   masterTabName: "Sheet1",
-  hotelsFolderId: "https://drive.google.com/drive/folders/1N79sYiEFk3EvhYfqQc6ykq8CHAyiwkfh?usp=drive_link",
+  hotelsFolderId: "https://drive.google.com/drive/folders/1IZlE5BF9ZhuiAgqrIQf3dwUZChdxixJ0?usp=sharing",
 
   // חדש
   targetLang: "es", // למשל
@@ -266,27 +266,27 @@ const META_SCHEMA_SHEETS: Array<{
 
 // ← מטא+סכימה (תיקייה בגוגל דרייב – ירוץ על כל הגיליונות בתיקייה)
 const META_SCHEMA_FOLDER: string =
-  "https://drive.google.com/drive/folders/13FYczbgqxrQp6lrWCJLEi2ujh_IaUSRS?usp=sharing";
+  "https://drive.google.com/drive/folders/1gm8IQdX_tmkSRYx8Tuf3sN2N2KwmiO3x?usp=sharing";
 
 const META_SCHEMA_FOLDER_DEFAULTS: Partial<(typeof META_SCHEMA_SHEETS)[number]> = {
-  tab: "Sheet1",
+  tab: "Sheet1 – ES",
   metaRow: 70,
   metaStartCol: "A",
   schemaCol: "E",
-  lang: "en",
-  // אין hotelNameMap כאן בכלל, כי זה לא עברית
+  lang: "es",
+ 
 };
 
 const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
-  masterSpreadsheetId: "1pp4JKZ6dXV2_Vk4sOtTBR1u_ioDmaA87zUn3fTYxaI8",
+  masterSpreadsheetId: "1JarWkRW05JQUgPKFuMqMo1sHb_vflPpfXlYkYVecf9Y",
   masterTabName: "Sheet1",
 
-  hotelsFolderId: "https://drive.google.com/drive/folders/1A_lHBYgS5Y0PMH7Fbx6oyLQW7CuP9mue?usp=sharing",
+  hotelsFolderId: "https://drive.google.com/drive/folders/1v5IRqVvjtC0qKYp3bipRtXKTCG4EyGY3?usp=sharing",
 
-  targetLocale: "it",
-  sourceTabName: "Sheet1 – IT",
+  targetLocale: "es",
+  sourceTabName: "Sheet1 – ES",
 
-  overwriteExisting: true,
+  overwriteExisting: false,
   dryRun: false,
 };
 
@@ -294,7 +294,7 @@ const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
 
 // Wrap-P (only column F) - single sheet (no folder)
 const WRAP_P_SHEET: string =
-  "https://docs.google.com/spreadsheets/d/1huRVxOJNaT5Dwwq97u6ZZmocny8B0Php44inM4e78xk/edit?usp=sharing";
+  "https://docs.google.com/spreadsheets/d/1OlvQ66WVeva9BZLE3pW1vzz6zRHhpvGIBxsccegyUsU/edit?usp=sharing";
 
 
 const FAQ_AUDIT_STRUCTURE_COUNTRY_URL =

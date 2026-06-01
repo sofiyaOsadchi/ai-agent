@@ -232,6 +232,10 @@
       border-color: rgba(217, 119, 6, 0.22);
       background: linear-gradient(180deg, rgba(217,119,6,0.06), rgba(255,255,255,0.96) 110px);
     }
+    .stage-card.final-polish-stage {
+      border-color: rgba(5, 150, 105, 0.2);
+      background: linear-gradient(180deg, rgba(5,150,105,0.05), rgba(255,255,255,0.96) 110px);
+    }
     .stage-head {
       padding: 18px 18px 14px;
       border-bottom: 1px solid var(--border);
@@ -259,6 +263,11 @@
       background: var(--amber-dim);
       border: 1px solid rgba(217, 119, 6, 0.18);
     }
+    .final-polish-stage .stage-kicker {
+      color: var(--green);
+      background: var(--green-dim);
+      border: 1px solid rgba(5, 150, 105, 0.18);
+    }
     .stage-title {
       margin-bottom: 6px;
       font-size: 1.05rem;
@@ -284,6 +293,7 @@
     }
     .tool-block.soft-draft { border-color: rgba(0, 179, 164, 0.18); }
     .tool-block.soft-polish { border-color: rgba(217, 119, 6, 0.18); }
+    .tool-block.soft-final { border-color: rgba(5, 150, 105, 0.18); }
     .tool-head {
       padding: 13px 14px;
       border-bottom: 1px solid var(--border);
@@ -974,6 +984,767 @@
       font: 450 0.72rem/1.35 var(--vx-font);
     }
 
+    .resource-source-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(111, 147, 85, 0.28);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(111, 147, 85, 0.09), var(--vx-surface-warm));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .resource-source-row.glossary-source-row {
+      border-color: rgba(74, 127, 199, 0.28);
+      background: linear-gradient(180deg, rgba(74, 127, 199, 0.08), var(--vx-surface-warm));
+    }
+
+    .resource-source-row.terminology-source-row {
+      border-color: rgba(217, 122, 60, 0.28);
+      background: linear-gradient(180deg, rgba(217, 122, 60, 0.08), var(--vx-surface-warm));
+    }
+
+    .resource-source-row .small-btn {
+      background: var(--vx-surface) !important;
+      border-color: rgba(111, 147, 85, 0.3) !important;
+      color: var(--vx-green) !important;
+      font-weight: 650;
+    }
+
+    .resource-source-row.glossary-source-row .small-btn {
+      border-color: rgba(74, 127, 199, 0.28) !important;
+      color: var(--vx-blue) !important;
+    }
+
+    .resource-source-row.terminology-source-row .small-btn {
+      border-color: rgba(217, 122, 60, 0.28) !important;
+      color: var(--vx-orange) !important;
+    }
+
+    .resource-source-row .small-btn.is-loaded {
+      background: var(--vx-green-soft) !important;
+      border-color: rgba(111, 147, 85, 0.34) !important;
+      color: var(--vx-green) !important;
+    }
+
+    .resource-source-status {
+      color: var(--vx-dim);
+      font: 600 0.76rem/1.35 var(--vx-font);
+    }
+
+    .resource-language-status {
+      display: grid;
+      gap: 8px;
+      margin: -4px 0 16px;
+      padding: 11px 12px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 12px;
+      background: var(--vx-surface);
+    }
+
+    .resource-status-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--vx-dim);
+      font: 600 0.74rem/1.25 var(--vx-font);
+    }
+
+    .resource-status-count {
+      color: var(--vx-muted);
+      font: 500 0.66rem/1.2 var(--vx-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .resource-language-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .resource-language-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 6px 9px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      color: var(--vx-muted);
+      font: 600 0.7rem/1.1 var(--vx-font);
+      cursor: pointer;
+    }
+
+    .resource-language-chip .chip-code {
+      color: var(--vx-ink);
+      font: 600 0.66rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+    }
+
+    .resource-language-chip .chip-state {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      color: inherit;
+      font: 650 0.58rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .resource-language-chip.has-data {
+      border-color: rgba(111, 147, 85, 0.28);
+      background: var(--vx-green-soft);
+      color: var(--vx-green);
+    }
+
+    .resource-language-chip.is-disabled {
+      border-color: var(--vx-border-soft);
+      background: var(--vx-surface-warm);
+      color: var(--vx-muted);
+      opacity: 0.82;
+    }
+
+    .resource-language-chip.missing {
+      border-color: rgba(217, 122, 60, 0.2);
+      background: rgba(248, 234, 220, 0.58);
+      color: #9a5705;
+      cursor: default;
+    }
+
+    .resource-language-status.glossary-coverage .resource-language-chip.has-data {
+      border-color: rgba(74, 127, 199, 0.24);
+      background: var(--vx-blue-soft);
+      color: var(--vx-blue);
+    }
+
+    .resource-status-note {
+      color: var(--vx-muted);
+      font: 450 0.7rem/1.35 var(--vx-font);
+    }
+
+    .resource-preset-row {
+      display: grid;
+      gap: 9px;
+      margin: 0 0 16px;
+      padding: 12px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 12px;
+      background: var(--vx-surface-warm);
+    }
+
+    .resource-preset-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--vx-ink);
+      font: 650 0.78rem/1.25 var(--vx-font);
+    }
+
+    .resource-preset-hint {
+      color: var(--vx-muted);
+      font: 450 0.68rem/1.25 var(--vx-font);
+    }
+
+    .resource-preset-controls {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) auto minmax(170px, 0.8fr) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .resource-preset-status {
+      min-height: 15px;
+      color: var(--vx-muted);
+      font: 450 0.7rem/1.35 var(--vx-font);
+    }
+
+    .resource-builder-card .card-body {
+      display: grid;
+      gap: 18px;
+    }
+
+    .builder-mode-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .builder-mode-card {
+      min-height: 118px;
+      padding: 13px;
+      border: 1px solid var(--vx-border);
+      border-radius: 14px;
+      background: var(--vx-surface);
+      color: var(--vx-dim);
+      text-align: left;
+      font-family: var(--vx-font);
+      cursor: pointer;
+    }
+
+    .builder-mode-card:hover {
+      border-color: var(--vx-border-strong);
+      background: var(--vx-surface-warm);
+    }
+
+    .builder-mode-card.active {
+      border-color: rgba(110, 87, 196, 0.24);
+      background: var(--vx-violet-soft);
+      color: var(--vx-violet);
+    }
+
+    .builder-mode-title {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--vx-ink);
+      font: 700 0.84rem/1.2 var(--vx-font);
+    }
+
+    .builder-mode-copy {
+      display: block;
+      color: var(--vx-muted);
+      font: 450 0.72rem/1.4 var(--vx-font);
+    }
+
+    .resource-builder-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .builder-upload-box,
+    .builder-output-box {
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 14px;
+      background: var(--vx-surface-warm);
+      padding: 14px;
+    }
+
+    .builder-upload-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .builder-file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+
+    .builder-file-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 9px 12px;
+      border: 1px solid var(--vx-border);
+      border-radius: 10px;
+      background: var(--vx-surface);
+      color: var(--vx-ink);
+      font: 650 0.78rem/1.2 var(--vx-font);
+      cursor: pointer;
+    }
+
+    .builder-file-pill:hover {
+      border-color: var(--vx-border-strong);
+      background: var(--vx-surface-warm);
+    }
+
+    .builder-simple-top {
+      display: grid;
+      grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .builder-main-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .builder-main-actions .primary {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
+    }
+
+    .builder-advanced-options {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--vx-border-soft);
+    }
+
+    .builder-advanced-options.hidden {
+      display: none !important;
+    }
+
+    .builder-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .builder-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 12px;
+      background: var(--vx-surface);
+      color: var(--vx-dim);
+      font: 500 0.72rem/1.35 var(--vx-font);
+    }
+
+    .builder-option input {
+      margin-top: 2px;
+    }
+
+    .resource-builder-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .resource-builder-actions .primary {
+      background: var(--vx-ink) !important;
+      border-color: var(--vx-ink) !important;
+      color: #fff !important;
+    }
+
+    .builder-status {
+      min-height: 18px;
+      margin-top: 10px;
+      color: var(--vx-muted);
+      font: 450 0.72rem/1.4 var(--vx-font);
+    }
+
+    .builder-result-summary {
+      margin-bottom: 10px;
+      color: var(--vx-dim);
+      font: 500 0.76rem/1.45 var(--vx-font);
+    }
+
+    .builder-result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .builder-result-panel {
+      min-height: 120px;
+      padding: 12px;
+      border: 1px solid var(--vx-border-soft);
+      border-radius: 12px;
+      background: var(--vx-surface);
+    }
+
+    .builder-result-panel h4 {
+      margin-bottom: 8px;
+      color: var(--vx-ink);
+      font: 700 0.78rem/1.2 var(--vx-font);
+    }
+
+    .builder-result-list {
+      display: grid;
+      gap: 6px;
+      color: var(--vx-dim);
+      font: 450 0.7rem/1.4 var(--vx-font);
+    }
+
+    .builder-result-list div {
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--vx-border-soft);
+    }
+
+    .builder-result-list div:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .tool-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tool-kind-badge,
+    .source-loaded-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font: 650 0.64rem/1 var(--vx-font);
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .tool-kind-badge.glossary {
+      background: var(--vx-blue-soft);
+      border: 1px solid rgba(74, 127, 199, 0.2);
+      color: var(--vx-blue);
+    }
+
+    .tool-kind-badge.terminology {
+      background: var(--vx-orange-soft);
+      border: 1px solid rgba(217, 122, 60, 0.2);
+      color: var(--vx-orange);
+    }
+
+    .source-loaded-badge {
+      background: var(--vx-green-soft);
+      border: 1px solid rgba(111, 147, 85, 0.24);
+      color: var(--vx-green);
+    }
+
+    .tool-block.glossary-block {
+      border-left: 4px solid rgba(74, 127, 199, 0.55) !important;
+    }
+
+    .tool-block.terminology-block {
+      border-left: 4px solid rgba(217, 122, 60, 0.58) !important;
+    }
+
+    .final-polish-model-row {
+      grid-template-columns: minmax(240px, 1fr);
+      margin-bottom: 14px;
+    }
+
+    .model-native-select {
+      display: none !important;
+    }
+
+    select.pretty-native-select {
+      display: none !important;
+    }
+
+    .pretty-select {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .pretty-select-trigger {
+      width: 100%;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid var(--vx-border);
+      border-radius: 12px;
+      background: var(--vx-surface);
+      color: var(--vx-ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+      font-family: var(--vx-font);
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .pretty-select-trigger:hover,
+    .pretty-select.is-open .pretty-select-trigger {
+      border-color: var(--vx-border-strong);
+      background: var(--vx-surface-warm);
+    }
+
+    .pretty-select-copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .pretty-select-title {
+      color: var(--vx-ink);
+      font: 650 0.84rem/1.2 var(--vx-font);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pretty-select-subtitle {
+      color: var(--vx-muted);
+      font: 450 0.68rem/1.25 var(--vx-font);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pretty-select-arrow {
+      flex: 0 0 auto;
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      border: 1px solid var(--vx-border-soft);
+      color: var(--vx-muted);
+      font-size: 0.72rem;
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+
+    .pretty-select.is-open .pretty-select-arrow {
+      transform: rotate(180deg);
+      background: var(--vx-surface);
+    }
+
+    .pretty-select-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 90;
+      display: none;
+      max-height: 290px;
+      overflow: auto;
+      padding: 6px;
+      border: 1px solid var(--vx-border);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 18px 42px rgba(26, 20, 16, 0.14);
+      backdrop-filter: blur(12px);
+    }
+
+    .pretty-select.is-open .pretty-select-menu {
+      display: grid;
+      gap: 4px;
+    }
+
+    .pretty-select-option {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--vx-dim);
+      display: grid;
+      grid-template-columns: 14px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      text-align: left;
+      font-family: var(--vx-font);
+      cursor: pointer;
+    }
+
+    .pretty-select-option:hover {
+      background: var(--vx-surface-warm);
+      border-color: var(--vx-border-soft);
+    }
+
+    .pretty-select-option.is-selected {
+      background: var(--vx-violet-soft);
+      border-color: rgba(110, 87, 196, 0.2);
+      color: var(--vx-violet);
+    }
+
+    .pretty-select-option-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: transparent;
+      box-shadow: inset 0 0 0 1px var(--vx-border-strong);
+    }
+
+    .pretty-select-option.is-selected .pretty-select-option-dot {
+      background: var(--vx-violet);
+      box-shadow: 0 0 0 4px rgba(110, 87, 196, 0.12);
+    }
+
+    .pretty-option-title {
+      color: var(--vx-ink);
+      font: 650 0.78rem/1.2 var(--vx-font);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pretty-select-option.is-selected .pretty-option-title {
+      color: var(--vx-violet);
+    }
+
+    .pretty-option-meta {
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      border: 1px solid var(--vx-border-soft);
+      color: var(--vx-muted);
+      font: 600 0.58rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .pretty-select-option.is-selected .pretty-option-meta {
+      background: var(--vx-surface);
+      color: var(--vx-violet);
+      border-color: rgba(110, 87, 196, 0.18);
+    }
+
+    .model-picker {
+      position: relative;
+      width: 100%;
+    }
+
+    .model-picker-trigger {
+      width: 100%;
+      min-height: 58px;
+      padding: 10px 12px;
+      border: 1px solid var(--vx-border);
+      border-radius: 12px;
+      background: var(--vx-surface);
+      color: var(--vx-ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+      font-family: var(--vx-font);
+      cursor: pointer;
+      transition: border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .model-picker-trigger:hover,
+    .model-picker.is-open .model-picker-trigger {
+      border-color: var(--vx-border-strong);
+      background: var(--vx-surface-warm);
+    }
+
+    .model-picker-copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .model-picker-name {
+      color: var(--vx-ink);
+      font: 650 0.88rem/1.2 var(--vx-font);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .model-picker-desc {
+      color: var(--vx-muted);
+      font: 450 0.72rem/1.25 var(--vx-font);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .model-picker-arrow {
+      flex: 0 0 auto;
+      color: var(--vx-muted);
+      font-size: 0.76rem;
+      transition: transform 0.16s ease;
+    }
+
+    .model-picker.is-open .model-picker-arrow {
+      transform: rotate(180deg);
+    }
+
+    .model-picker-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 70;
+      display: none;
+      padding: 6px;
+      border: 1px solid var(--vx-border);
+      border-radius: 14px;
+      background: var(--vx-surface);
+      box-shadow: 0 18px 40px rgba(26, 20, 16, 0.12);
+    }
+
+    .model-picker.is-open .model-picker-menu {
+      display: grid;
+      gap: 4px;
+    }
+
+    .model-option {
+      width: 100%;
+      min-height: 46px;
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      font-family: var(--vx-font);
+      cursor: pointer;
+    }
+
+    .model-option:hover {
+      background: var(--vx-surface-warm);
+      border-color: var(--vx-border-soft);
+    }
+
+    .model-option.is-selected {
+      background: var(--vx-violet-soft);
+      border-color: rgba(110, 87, 196, 0.2);
+    }
+
+    .model-option.is-selected .model-option-name {
+      color: var(--vx-violet);
+    }
+
+    .model-option-name {
+      color: var(--vx-ink);
+      font: 650 0.8rem/1.2 var(--vx-font);
+    }
+
+    .model-option-desc {
+      margin-top: 2px;
+      color: var(--vx-muted);
+      font: 450 0.68rem/1.25 var(--vx-font);
+    }
+
+    .model-option-badge {
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: var(--vx-surface-warm);
+      border: 1px solid var(--vx-border-soft);
+      color: var(--vx-muted);
+      font: 600 0.58rem/1 var(--vx-mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .model-option.is-selected .model-option-badge {
+      background: var(--vx-surface);
+      color: var(--vx-violet);
+      border-color: rgba(110, 87, 196, 0.18);
+    }
+
     .pipeline-step.active,
     .pipeline-step.done {
       background: var(--vx-green-soft) !important;
@@ -988,7 +1759,8 @@
 
     .stage-card,
     .stage-card.draft-stage,
-    .stage-card.polish-stage {
+    .stage-card.polish-stage,
+    .stage-card.final-polish-stage {
       background: var(--vx-surface) !important;
       border-color: var(--vx-border) !important;
     }
@@ -1017,6 +1789,13 @@
       box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.06);
     }
 
+    .final-polish-stage .stage-kicker {
+      background: var(--vx-green-soft) !important;
+      border-color: rgba(111, 147, 85, 0.22) !important;
+      color: var(--vx-green) !important;
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.07);
+    }
+
     .stage-title {
       display: inline-flex;
       align-items: center;
@@ -1033,6 +1812,11 @@
     .polish-stage .stage-title::before {
       background: var(--vx-orange);
       box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
+    }
+
+    .final-polish-stage .stage-title::before {
+      background: var(--vx-green);
+      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
     }
 
     .small-btn.primary,
@@ -1228,6 +2012,17 @@
       .main-grid {
         padding: 24px 18px 60px !important;
       }
+
+      .resource-preset-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .builder-mode-grid,
+      .resource-builder-grid,
+      .builder-options,
+      .builder-result-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
   <link rel="stylesheet" href="/mobile-responsive.css" media="(max-width: 760px)" />
@@ -1298,8 +2093,8 @@
 
       <div class="setup-panel manual-setup" id="manualSetupPanel">
       <div class="card wide manual-plan-card">
-        <div class="card-head static"><h3>Saved Translation Plans</h3></div>
-        <div class="card-body">
+        <div class="card-head collapsed" onclick="toggleCard(this)"><h3>Saved Translation Plans</h3><span class="chevron">▼</span></div>
+        <div class="card-body hidden">
           <div>
             <label class="field-label">Plan name</label>
             <input type="text" id="manualPlanName" placeholder="Example: German FAQ translation" />
@@ -1341,23 +2136,41 @@
               <input type="text" id="sourceTab" placeholder="Auto-detect first tab" />
             </div>
             <div>
-              <label class="field-label">AI Model</label>
-              <select id="modelSelect" onchange="toggleCustomModel()">
+              <label class="field-label">Translation Range</label>
+              <input type="text" id="sourceRange" placeholder="A1:Z68" value="A1:Z68" />
+              <p class="field-hint">A1 notation inside the selected tab. The first row in the range is treated as the header.</p>
+            </div>
+          </div>
+          <div class="input-row">
+            <div>
+              <label class="field-label">Draft AI Model</label>
+              <select id="modelSelect" class="model-native-select" onchange="toggleCustomModel()" aria-hidden="true" tabindex="-1">
                 <option value="o3">o3 - Strong reasoning</option>
                 <option value="o4-mini">o4-mini - Fast reasoning</option>
+                <option value="gpt-5.5">gpt-5.5 - Deep translation quality</option>
                 <option value="gpt-4.1">gpt-4.1 - Strong text model</option>
                 <option value="gpt-4.1-mini">gpt-4.1-mini - Fast text model</option>
                 <option value="gpt-4o">gpt-4o - Balanced</option>
                 <option value="gpt-4o-mini">gpt-4o-mini - Low cost</option>
+                <option value="anthropic:claude-sonnet-4-6">Claude Sonnet 4.6 - Strong writing</option>
                 <option value="custom">Custom model name</option>
               </select>
-              <input type="text" id="customModel" class="hidden" style="margin-top:8px" placeholder="Example: gpt-5-mini" />
-              <p class="field-hint">Use a model that your backend allowlist and OpenAI account support.</p>
+              <div class="model-picker" id="modelPicker" data-select-id="modelSelect"></div>
+              <input type="text" id="customModel" class="hidden" style="margin-top:8px" placeholder="Example: anthropic:claude-sonnet-4-6" />
+              <p class="field-hint">Used for the draft and terminology polish. The final polish model is controlled in Step 3.</p>
             </div>
           </div>
           <div class="toggle-row source-options-row">
             <div><span class="toggle-label">Split into 2 parts</span><p class="field-hint">for large sheets</p></div>
             <div class="toggle on" id="splitIntoTwo" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="input-group" style="margin-top:12px;">
+            <label class="field-label">If this language tab already exists</label>
+            <div class="tabs" style="margin-bottom:0">
+              <button type="button" class="tab active" id="existingTabSkipBtn" onclick="setTargetTabExistsMode('skip')">Skip existing</button>
+              <button type="button" class="tab" id="existingTabNumberedBtn" onclick="setTargetTabExistsMode('numbered')">Create numbered copy</button>
+            </div>
+            <p class="field-hint">Example: if <strong>Sheet1 – HE</strong> already exists, skip it or create <strong>Sheet1 – HE 2</strong>.</p>
           </div>
         </div>
       </div>
@@ -1411,18 +2224,41 @@
             </div>
           </div>
 
-          <div class="tool-block soft-draft is-collapsed">
+          <div class="tool-block soft-draft glossary-block is-collapsed">
             <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
-                <div class="tool-title">Glossary - exact translations before Draft</div>
+                <div class="tool-title-row">
+                  <div class="tool-title">Glossary - exact translation map</div>
+                  <span class="tool-kind-badge glossary">Before draft</span>
+                  <span class="source-loaded-badge hidden" id="glossaryLoadedBadge">Master loaded</span>
+                </div>
                 <p class="tool-copy">
-                  Define exact translations for terms that must stay consistent. Example: whenever "Aparthotel" appears, translate it the same way.
+                  Source term on the left, required translation on the right. Use it for words that must stay consistent from the first draft.
                 </p>
               </div>
             </div>
             <div class="tool-body">
               <div class="info-box purple">
                 Use this for terms that must have one consistent translation. This is connected to the Draft step through <span class="var-tag">{{glossaryRules}}</span>.
+              </div>
+              <div class="resource-source-row glossary-source-row">
+                <button type="button" class="small-btn" id="glossaryLoadBtn" onclick="loadOriginalGlossarySource()">Load Master glossary</button>
+                <span class="resource-source-status" id="glossarySourceStatus">Optional Master source: translation-glossary.ts</span>
+              </div>
+              <div class="resource-language-status glossary-coverage" id="glossaryLangStatus" aria-live="polite"></div>
+              <div class="resource-preset-row glossary-preset-row">
+                <div class="resource-preset-head">
+                  <span>Save edited glossary</span>
+                  <span class="resource-preset-hint">Browser only</span>
+                </div>
+                <div class="resource-preset-controls">
+                  <input type="text" id="glossaryPresetName" placeholder="Example: Master St Paul glossary" />
+                  <button type="button" class="small-btn" onclick="saveResourcePreset('glossary')">Save as</button>
+                  <select id="glossaryPresetSelect"></select>
+                  <button type="button" class="small-btn" onclick="loadResourcePreset('glossary')">Load</button>
+                  <button type="button" class="small-btn" onclick="deleteResourcePreset('glossary')">Delete</button>
+                </div>
+                <div class="resource-preset-status" id="glossaryPresetStatus">Saved glossary sets stay in this browser.</div>
               </div>
               <div class="input-row">
                 <div>
@@ -1512,16 +2348,39 @@
             </div>
           </div>
 
-          <div class="tool-block soft-polish is-collapsed">
+          <div class="tool-block soft-polish terminology-block is-collapsed">
             <div class="tool-head" onclick="toggleToolBlock(this)">
               <div>
-                <div class="tool-title">Terminology - wording to avoid after Draft</div>
-                <p class="tool-copy">Define wording to avoid and what to use instead. Example: do not use "Haus"; use "Hotel".</p>
+                <div class="tool-title-row">
+                  <div class="tool-title">Terminology - avoid and replace rules</div>
+                  <span class="tool-kind-badge terminology">After draft</span>
+                  <span class="source-loaded-badge hidden" id="terminologyLoadedBadge">Master loaded</span>
+                </div>
+                <p class="tool-copy">Forbidden wording, preferred wording, and reason. Use it when the draft needs cleanup rules, such as do not use "Haus"; use "Hotel".</p>
               </div>
             </div>
             <div class="tool-body">
               <div class="info-box amber">
                 Use this when the AI writes wording you do not want. This is connected to the Polish step through <span class="var-tag">{{strictTerminology}}</span>.
+              </div>
+              <div class="resource-source-row terminology-source-row">
+                <button type="button" class="small-btn" id="terminologyLoadBtn" onclick="loadOriginalTerminologySource()">Load Master terminology</button>
+                <span class="resource-source-status" id="terminologySourceStatus">Optional Master source: terminology-management.ts</span>
+              </div>
+              <div class="resource-language-status terminology-coverage" id="terminologyLangStatus" aria-live="polite"></div>
+              <div class="resource-preset-row terminology-preset-row">
+                <div class="resource-preset-head">
+                  <span>Save edited terminology</span>
+                  <span class="resource-preset-hint">Browser only</span>
+                </div>
+                <div class="resource-preset-controls">
+                  <input type="text" id="terminologyPresetName" placeholder="Example: Master St Paul terminology" />
+                  <button type="button" class="small-btn" onclick="saveResourcePreset('terminology')">Save as</button>
+                  <select id="terminologyPresetSelect"></select>
+                  <button type="button" class="small-btn" onclick="loadResourcePreset('terminology')">Load</button>
+                  <button type="button" class="small-btn" onclick="deleteResourcePreset('terminology')">Delete</button>
+                </div>
+                <div class="resource-preset-status" id="terminologyPresetStatus">Saved terminology sets stay in this browser.</div>
               </div>
               <div class="input-row">
                 <div>
@@ -1551,6 +2410,80 @@
         </div>
       </div>
 
+      <div class="card wide stage-card final-polish-stage">
+        <div class="stage-head">
+          <div class="stage-kicker">Step 3 · Optional</div>
+          <div class="stage-title">Final polish - natural voice only</div>
+          <p class="stage-desc">
+            Add a final pass after draft and terminology polish. This pass does not receive glossary, terminology, or language-note rules; it only smooths the finished sheet so it feels native, friendly, and less translated.
+          </p>
+        </div>
+
+        <div class="stage-body">
+          <div class="toggle-row">
+            <div>
+              <span class="toggle-label">Run final natural polish</span>
+              <p class="field-hint">One extra model pass on the full finished sheet after Step 2, even when the run is split.</p>
+            </div>
+            <div class="toggle" id="finalPolishEnabled" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="input-row final-polish-model-row">
+            <div>
+              <label class="field-label">Final polish AI Model</label>
+              <select id="finalPolishModelSelect" class="model-native-select" onchange="toggleFinalPolishCustomModel()" aria-hidden="true" tabindex="-1">
+                <option value="">Same as Draft model</option>
+                <option value="o3">o3 - Strong reasoning</option>
+                <option value="o4-mini">o4-mini - Fast reasoning</option>
+                <option value="gpt-5.5">gpt-5.5 - Deep translation quality</option>
+                <option value="gpt-4.1">gpt-4.1 - Strong text model</option>
+                <option value="gpt-4.1-mini">gpt-4.1-mini - Fast text model</option>
+                <option value="gpt-4o">gpt-4o - Balanced</option>
+                <option value="gpt-4o-mini">gpt-4o-mini - Low cost</option>
+                <option value="anthropic:claude-sonnet-4-6">Claude Sonnet 4.6 - Strong writing</option>
+                <option value="custom">Custom model name</option>
+              </select>
+              <div class="model-picker" id="finalPolishModelPicker" data-select-id="finalPolishModelSelect"></div>
+              <input type="text" id="finalPolishCustomModel" class="hidden" style="margin-top:8px" placeholder="Example: anthropic:claude-sonnet-4-6" />
+              <p class="field-hint">Used only for this final pass when it is enabled.</p>
+            </div>
+          </div>
+
+          <div class="tool-block soft-final is-collapsed">
+            <div class="tool-head" onclick="toggleToolBlock(this)">
+              <div>
+                <div class="tool-title">Final polish instructions</div>
+                <p class="tool-copy">Optional advanced prompt for the clean final pass. Keep it about naturalness, warmth, and readability, not terminology rules.</p>
+              </div>
+            </div>
+            <div class="tool-body">
+              <label class="field-label">Final polish - User Prompt</label>
+              <textarea id="finalPolishUser" rows="10"></textarea>
+              <p class="field-hint">
+                Important variables:
+                <span class="var-tag">{{lang}}</span>
+                <span class="var-tag">{{hotelName}}</span>
+                <span class="var-tag">{{sourceRows}}</span>
+                <span class="var-tag">{{polishedJson}}</span>
+              </p>
+
+              <button type="button" class="sub-toggle" onclick="toggleSubsection(this)">
+                <span>Advanced - Final polish system prompt</span>
+                <span class="chevron">▼</span>
+              </button>
+              <div class="sub-body hidden">
+                <label class="field-label">Final polish - System Prompt</label>
+                <textarea id="finalPolishSystem" rows="7"></textarea>
+                <p class="field-hint">
+                  Usually hidden. This pass intentionally has no glossary or terminology injection.
+                  Vars: <span class="var-tag">{{lang}}</span><span class="var-tag">{{hotelName}}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button class="run-btn" id="runBtn" onclick="runTranslation()">Run Translation</button>
 
       <div class="card wide">
@@ -1563,7 +2496,81 @@
             <div class="help-card"><h4>Polish stage</h4><p>This improves the draft without changing facts.</p><ul><li>Ask for natural, professional hotel wording.</li><li>Keep facts identical to the source.</li><li>Use <span class="var-tag">{{sourceRows}}</span> and <span class="var-tag">{{draftJson}}</span>.</li></ul></div>
             <div class="help-card"><h4>Terminology inside Polish</h4><p>Use this when the AI writes wording you do not want.</p><ul><li>Write what to avoid.</li><li>Write what to use instead.</li><li>Add a short reason so the model understands the rule.</li></ul></div>
             <div class="help-card"><h4>Language Notes inside Polish</h4><p>Use this for style and tone.</p><ul><li>Explain how the language should sound.</li><li>Example: formal German, natural Hebrew, concise Italian.</li><li>Do not use this for exact replacements. Use Glossary or Terminology instead.</li></ul></div>
+            <div class="help-card"><h4>Final natural polish</h4><p>Use this only when the result is accurate but still sounds translated.</p><ul><li>Runs once on the complete translated sheet.</li><li>Does not inject glossary, terminology or language notes.</li><li>Best for friendlier, smoother, more native wording.</li></ul></div>
             <div class="help-card"><h4>Advanced prompts</h4><p>System prompts are hidden by default because most users should not edit them.</p><ul><li>Open them only when you want to change the AI role.</li><li>Keep the user prompts as the main area for normal instructions.</li><li>Advanced JSON is available for users who understand the internal structure.</li></ul></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card wide resource-builder-card">
+        <div class="card-head collapsed" onclick="toggleCard(this)"><h3>Glossary & Terminology Builder</h3><span class="chevron">▼</span></div>
+        <div class="card-body hidden">
+          <div class="info-box">
+            Step 1 creates and saves a local glossary and terminology set. Step 2 loads that set into the translation setup, so the next run can apply it to the sheet.
+          </div>
+
+          <div class="builder-mode-grid" id="builderModeGrid">
+            <button type="button" class="builder-mode-card active" data-mode="raw-source" onclick="setResourceBuilderMode('raw-source')">
+              <span class="builder-mode-title">1. Raw source sheet</span>
+              <span class="builder-mode-copy">Use one source-language file. The AI infers likely glossary terms and terminology rules.</span>
+            </button>
+            <button type="button" class="builder-mode-card" data-mode="translated" onclick="setResourceBuilderMode('translated')">
+              <span class="builder-mode-title">2. Translated file</span>
+              <span class="builder-mode-copy">Use a translated sheet to extract good wording and catch stiff translated phrasing.</span>
+            </button>
+            <button type="button" class="builder-mode-card" data-mode="client-comments" onclick="setResourceBuilderMode('client-comments')">
+              <span class="builder-mode-title">3. Client comments</span>
+              <span class="builder-mode-copy">Use a commented file or pasted notes to turn feedback into avoid/prefer rules.</span>
+            </button>
+          </div>
+
+          <div class="resource-builder-grid">
+            <div class="builder-upload-box">
+              <div class="builder-simple-top">
+                <div>
+                  <label class="field-label">Language to build</label>
+                  <select id="resourceBuilderLang"></select>
+                </div>
+                <input type="text" id="resourceBuilderName" class="hidden" placeholder="Example: Master St Paul friendly ES" />
+              </div>
+
+              <div class="builder-upload-row">
+                <label class="builder-file-pill" for="resourceBuilderFile">Upload CSV / TSV / TXT</label>
+                <input class="builder-file-input" type="file" id="resourceBuilderFile" accept=".csv,.tsv,.txt,.json" onchange="readResourceBuilderFile()" />
+                <button type="button" class="small-btn" onclick="useCurrentSourceForBuilder()">Pull current sheet range</button>
+              </div>
+
+              <label class="field-label">Sheet rows, file text, or Google Sheet link</label>
+              <textarea id="resourceBuilderInput" rows="12" placeholder="Paste copied rows, CSV/TSV text, translated output, client comments, or a Google Sheet link..."></textarea>
+
+              <div class="builder-advanced-options hidden">
+              <div class="builder-options">
+                <label class="builder-option"><input type="checkbox" id="builderUseExistingGlossary" checked /> Use current glossary as context</label>
+                <label class="builder-option"><input type="checkbox" id="builderUseExistingTerminology" checked /> Use current terminology as context</label>
+                <label class="builder-option"><input type="checkbox" id="builderApplyAfterGenerate" checked /> Apply after generation</label>
+              </div>
+              </div>
+
+              <div class="builder-main-actions">
+                <button type="button" class="small-btn primary" id="resourceBuilderGenerateBtn" onclick="generateResourceSuggestions()">1. Generate glossary & terminology</button>
+                <button type="button" class="small-btn" id="resourceBuilderUseBtn" onclick="useGeneratedResourcesForTranslation()" disabled>2. Use for this sheet translation</button>
+              </div>
+              <div class="builder-status" id="resourceBuilderStatus">Step 1 creates a local resource set. Step 2 loads it into the translation setup before running the sheet.</div>
+            </div>
+
+            <div class="builder-output-box">
+              <div class="builder-result-summary" id="resourceBuilderSummary">No generated resources yet.</div>
+              <div class="builder-result-grid">
+                <div class="builder-result-panel">
+                  <h4>Glossary preview</h4>
+                  <div class="builder-result-list" id="resourceBuilderGlossaryPreview"><div>Generated terms will appear here.</div></div>
+                </div>
+                <div class="builder-result-panel">
+                  <h4>Terminology preview</h4>
+                  <div class="builder-result-list" id="resourceBuilderTermsPreview"><div>Generated avoid/prefer rules will appear here.</div></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1600,12 +2607,19 @@
     let currentPart = 1;
     let setupMode = "manual";
     let sourceMode = "sheet";
+    let targetTabExistsMode = "skip";
     let timerInterval = null;
     let startTime = 0;
     let glossaryMode = "simple";
     let termsMode = "simple";
     let activeGlossaryLang = "de";
     let activeTermsLang = "de";
+    let resourceBuilderMode = "raw-source";
+    let generatedResourceSet = null;
+    let glossarySourceLoaded = false;
+    let terminologySourceLoaded = false;
+    let glossaryEnabledByLang = {};
+    let terminologyEnabledByLang = {};
 
     const LANGUAGES = [
       { code: "en", label: "English", flag: "🇬🇧" }, { code: "de", label: "German", flag: "🇩🇪" },
@@ -1654,6 +2668,8 @@
     };
 
     const MANUAL_PLAN_STORAGE_KEY = "translate-demo-manual-plans-v1";
+    const GLOSSARY_PRESET_STORAGE_KEY = "translate-demo-glossary-presets-v1";
+    const TERMINOLOGY_PRESET_STORAGE_KEY = "translate-demo-terminology-presets-v1";
     const DEFAULT_GLOSSARY_STATE = clone(glossaryState);
     const DEFAULT_TERMS_STATE = clone(termsState);
 
@@ -1712,7 +2728,54 @@ DRAFT JSON:
 
 OUTPUT: return ONLY {"rows":[...]}`;
 
+    const DEFAULT_FINAL_POLISH_SYSTEM = `ROLE: Native hospitality editor for {{lang}}.
+GOAL: Make an already-correct translation sound natural, warm, friendly, and human.
+NO RULE PACKS: Do not apply glossary, terminology, or language-note rules in this pass.
+SAFETY: Preserve facts, numbers, prices, times, URLs, hotel names, placeholders, HTML, row count, and column count.
+OUTPUT: JSON only.`;
+
+    const DEFAULT_FINAL_POLISH_USER = `TASK: Final naturalness pass on the already polished translation.
+
+The translation has already passed glossary and terminology checks. Do NOT add new rules and do NOT force terminology replacements here.
+Only smooth wording that still sounds translated, stiff, blunt, or robotic.
+Make it feel native, pleasant, clear, and guest-friendly in {{lang}}.
+
+Guardrails:
+- Keep the same meaning and facts.
+- Keep every row and column in the same position.
+- Preserve empty cells as empty.
+- Preserve numbers, prices, times, URLs, emails, codes, placeholders, HTML tags and entities.
+- Keep official hotel names unchanged.
+
+SOURCE ROWS, for meaning check only:
+{{sourceRows}}
+
+POLISHED JSON TO SMOOTH:
+{{polishedJson}}
+
+OUTPUT: return ONLY {"rows":[...]}`;
+
+    let defaultPromptTemplates = {
+      draftSystem: DEFAULT_DRAFT_SYSTEM,
+      draftUser: DEFAULT_DRAFT_USER,
+      polishSystem: DEFAULT_POLISH_SYSTEM,
+      polishUser: DEFAULT_POLISH_USER,
+      finalPolishSystem: DEFAULT_FINAL_POLISH_SYSTEM,
+      finalPolishUser: DEFAULT_FINAL_POLISH_USER
+    };
+    let defaultLanguageNotes = { ...DEFAULT_NOTES };
+    let originalGlossarySource = null;
+    let originalTerminologySource = null;
+
     function clone(value) { return JSON.parse(JSON.stringify(value)); }
+
+    function getDefaultPrompts() {
+      return defaultPromptTemplates;
+    }
+
+    function getDefaultLanguageNotes() {
+      return defaultLanguageNotes;
+    }
 
     function setSourceMode(mode) {
       sourceMode = mode;
@@ -1723,14 +2786,254 @@ OUTPUT: return ONLY {"rows":[...]}`;
       updateDetectedSource();
     }
 
+    function setTargetTabExistsMode(mode) {
+      targetTabExistsMode = mode === "numbered" ? "numbered" : "skip";
+      document.getElementById("existingTabSkipBtn")?.classList.toggle("active", targetTabExistsMode === "skip");
+      document.getElementById("existingTabNumberedBtn")?.classList.toggle("active", targetTabExistsMode === "numbered");
+    }
+
     function toggleCustomModel() {
       const isCustom = document.getElementById("modelSelect").value === "custom";
       document.getElementById("customModel").classList.toggle("hidden", !isCustom);
+      renderModelPicker("modelSelect");
     }
+
+    function toggleFinalPolishCustomModel() {
+      const isCustom = document.getElementById("finalPolishModelSelect").value === "custom";
+      document.getElementById("finalPolishCustomModel").classList.toggle("hidden", !isCustom);
+      renderModelPicker("finalPolishModelSelect");
+    }
+
+    function getModelPicker(selectId) {
+      return document.querySelector(`.model-picker[data-select-id="${selectId}"]`);
+    }
+
+    function parseModelLabel(option) {
+      const raw = option?.textContent?.trim() || "";
+      const value = option?.value || "";
+      if (!value) return { name: raw || "Same as Draft model", desc: "Use the draft model for this pass", badge: "same" };
+      if (value === "custom") return { name: "Custom model", desc: "Type a model name manually", badge: "custom" };
+
+      const parts = raw.split(/\s+-\s+/);
+      const name = parts.shift() || raw;
+      const desc = parts.join(" - ") || "Translation model";
+      const badge = value.startsWith("anthropic:") ? "Claude" : "OpenAI";
+      return { name, desc, badge };
+    }
+
+    function renderModelPicker(selectId) {
+      const select = document.getElementById(selectId);
+      const picker = getModelPicker(selectId);
+      if (!select || !picker) return;
+
+      const selectedOption = select.options[select.selectedIndex] || select.options[0];
+      const selected = parseModelLabel(selectedOption);
+      const options = Array.from(select.options).map((option) => {
+        const item = parseModelLabel(option);
+        const active = option.value === select.value;
+        return `
+          <button type="button" class="model-option ${active ? "is-selected" : ""}" onclick="selectModelOption('${selectId}', '${escapeHtml(option.value)}', event)">
+            <span>
+              <span class="model-option-name">${escapeHtml(item.name)}</span>
+              <span class="model-option-desc">${escapeHtml(item.desc)}</span>
+            </span>
+            <span class="model-option-badge">${escapeHtml(item.badge)}</span>
+          </button>
+        `;
+      }).join("");
+
+      picker.innerHTML = `
+        <button type="button" class="model-picker-trigger" onclick="toggleModelPicker('${selectId}', event)" aria-haspopup="listbox" aria-expanded="${picker.classList.contains("is-open") ? "true" : "false"}">
+          <span class="model-picker-copy">
+            <span class="model-picker-name">${escapeHtml(selected.name)}</span>
+            <span class="model-picker-desc">${escapeHtml(selected.desc)}</span>
+          </span>
+          <span class="model-picker-arrow">▼</span>
+        </button>
+        <div class="model-picker-menu" role="listbox">${options}</div>
+      `;
+    }
+
+    function renderModelPickers() {
+      renderModelPicker("modelSelect");
+      renderModelPicker("finalPolishModelSelect");
+    }
+
+    const PRETTY_SELECT_IDS = [
+      "manualSavedPlans",
+      "glossaryPresetSelect",
+      "glossaryLang",
+      "terminologyPresetSelect",
+      "termsLang",
+      "resourceBuilderLang"
+    ];
+
+    function prettySelectContext(selectId) {
+      const contexts = {
+        manualSavedPlans: { emptyMeta: "plans", filledMeta: "saved", subtitle: "Saved translation plan" },
+        glossaryPresetSelect: { emptyMeta: "sets", filledMeta: "saved", subtitle: "Saved glossary set" },
+        terminologyPresetSelect: { emptyMeta: "sets", filledMeta: "saved", subtitle: "Saved terminology set" },
+        glossaryLang: { emptyMeta: "lang", filledMeta: "lang", subtitle: "Glossary editor language", language: true },
+        termsLang: { emptyMeta: "lang", filledMeta: "lang", subtitle: "Terminology editor language", language: true },
+        resourceBuilderLang: { emptyMeta: "lang", filledMeta: "lang", subtitle: "Builder output language", language: true }
+      };
+      return contexts[selectId] || { emptyMeta: "select", filledMeta: "select", subtitle: "Select one" };
+    }
+
+    function prettyOptionParts(selectId, option) {
+      const context = prettySelectContext(selectId);
+      const text = option?.textContent?.trim() || "Choose";
+      const value = option?.value || "";
+      if (context.language) {
+        const match = text.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+        return {
+          title: match ? match[1] : text,
+          meta: match ? match[2].toUpperCase() : context.filledMeta,
+          subtitle: context.subtitle
+        };
+      }
+      return {
+        title: text,
+        meta: value ? context.filledMeta : context.emptyMeta,
+        subtitle: value ? context.subtitle : "Choose a saved item"
+      };
+    }
+
+    function getPrettySelect(selectId) {
+      return document.querySelector(`.pretty-select[data-select-id="${selectId}"]`);
+    }
+
+    function ensurePrettySelect(selectId) {
+      const select = document.getElementById(selectId);
+      if (!select || select.classList.contains("model-native-select")) return null;
+      select.classList.add("pretty-native-select");
+      select.setAttribute("aria-hidden", "true");
+      select.tabIndex = -1;
+
+      let picker = getPrettySelect(selectId);
+      if (!picker) {
+        picker = document.createElement("div");
+        picker.className = "pretty-select";
+        picker.dataset.selectId = selectId;
+        select.insertAdjacentElement("afterend", picker);
+      }
+      return picker;
+    }
+
+    function renderPrettySelect(selectId) {
+      const select = document.getElementById(selectId);
+      const picker = ensurePrettySelect(selectId);
+      if (!select || !picker) return;
+
+      const selectedOption = select.options[select.selectedIndex] || select.options[0];
+      const selected = prettyOptionParts(selectId, selectedOption);
+      const isOpen = picker.classList.contains("is-open");
+      const optionButtons = Array.from(select.options).map((option) => {
+        const item = prettyOptionParts(selectId, option);
+        const active = option.value === select.value;
+        return `
+          <button type="button" class="pretty-select-option ${active ? "is-selected" : ""}" data-value="${escapeHtml(option.value)}" onclick="selectPrettyOption('${selectId}', this.dataset.value, event)">
+            <span class="pretty-select-option-dot"></span>
+            <span class="pretty-option-title">${escapeHtml(item.title)}</span>
+            <span class="pretty-option-meta">${escapeHtml(item.meta)}</span>
+          </button>
+        `;
+      }).join("");
+
+      picker.classList.toggle("is-open", isOpen);
+      picker.innerHTML = `
+        <button type="button" class="pretty-select-trigger" onclick="togglePrettySelect('${selectId}', event)" aria-haspopup="listbox" aria-expanded="${isOpen ? "true" : "false"}">
+          <span class="pretty-select-copy">
+            <span class="pretty-select-title">${escapeHtml(selected.title)}</span>
+            <span class="pretty-select-subtitle">${escapeHtml(selected.subtitle)}</span>
+          </span>
+          <span class="pretty-select-arrow">▼</span>
+        </button>
+        <div class="pretty-select-menu" role="listbox">${optionButtons}</div>
+      `;
+    }
+
+    function renderPrettySelects() {
+      PRETTY_SELECT_IDS.forEach(renderPrettySelect);
+    }
+
+    function closeModelPickers(exceptSelectId = "") {
+      document.querySelectorAll(".model-picker").forEach((picker) => {
+        if (picker.dataset.selectId !== exceptSelectId) picker.classList.remove("is-open");
+      });
+      renderModelPickers();
+    }
+
+    function closePrettySelects(exceptSelectId = "") {
+      document.querySelectorAll(".pretty-select").forEach((picker) => {
+        if (picker.dataset.selectId !== exceptSelectId) picker.classList.remove("is-open");
+      });
+      renderPrettySelects();
+    }
+
+    function toggleModelPicker(selectId, event) {
+      event?.stopPropagation?.();
+      const picker = getModelPicker(selectId);
+      if (!picker) return;
+      const shouldOpen = !picker.classList.contains("is-open");
+      closeModelPickers(selectId);
+      closePrettySelects();
+      picker.classList.toggle("is-open", shouldOpen);
+      renderModelPicker(selectId);
+    }
+
+    function selectModelOption(selectId, value, event) {
+      event?.stopPropagation?.();
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      select.value = value;
+      if (selectId === "modelSelect") toggleCustomModel();
+      else toggleFinalPolishCustomModel();
+      closeModelPickers();
+    }
+
+    function togglePrettySelect(selectId, event) {
+      event?.stopPropagation?.();
+      const picker = getPrettySelect(selectId);
+      if (!picker) return;
+      const shouldOpen = !picker.classList.contains("is-open");
+      closePrettySelects(selectId);
+      closeModelPickers();
+      picker.classList.toggle("is-open", shouldOpen);
+      renderPrettySelect(selectId);
+    }
+
+    function selectPrettyOption(selectId, value, event) {
+      event?.stopPropagation?.();
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      select.value = value;
+      closePrettySelects();
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      renderPrettySelect(selectId);
+    }
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest?.(".model-picker")) closeModelPickers();
+      if (!event.target.closest?.(".pretty-select")) closePrettySelects();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeModelPickers();
+        closePrettySelects();
+      }
+    });
 
     function getSelectedModel() {
       const selected = document.getElementById("modelSelect").value;
       if (selected === "custom") return document.getElementById("customModel").value.trim() || "o3";
+      return selected;
+    }
+
+    function getSelectedFinalPolishModel() {
+      const selected = document.getElementById("finalPolishModelSelect").value;
+      if (selected === "custom") return document.getElementById("finalPolishCustomModel").value.trim();
       return selected;
     }
 
@@ -1745,11 +3048,165 @@ OUTPUT: return ONLY {"rows":[...]}`;
     function renderLangGrid() {
       const grid = document.getElementById("langGrid");
       grid.innerHTML = LANGUAGES.map((lang) => `<div class="lang-chip ${selectedLangs.has(lang.code) ? "active" : ""}" onclick="toggleLang('${lang.code}', this)"><span class="lang-flag">${lang.flag}</span><span class="lang-code">${lang.code.toUpperCase()}</span><span>${lang.label}</span></div>`).join("");
+      renderResourceLanguageStatuses();
     }
 
     function toggleLang(code, el) {
       if (selectedLangs.has(code)) { selectedLangs.delete(code); el.classList.remove("active"); }
       else { selectedLangs.add(code); el.classList.add("active"); }
+      renderResourceLanguageStatuses();
+    }
+
+    function selectedLanguageCodes() {
+      return LANGUAGES.filter((lang) => selectedLangs.has(lang.code)).map((lang) => lang.code);
+    }
+
+    function languageLabel(code) {
+      return LANGUAGES.find((lang) => lang.code === code)?.label || code.toUpperCase();
+    }
+
+    function meaningfulText(value) {
+      return String(value ?? "").trim().length > 0;
+    }
+
+    function glossaryEntryCount(code) {
+      const glossary = glossaryState[code];
+      if (!glossary || typeof glossary !== "object" || Array.isArray(glossary)) return 0;
+      return Object.entries(glossary).filter(([source, target]) => meaningfulText(source) && meaningfulText(target)).length;
+    }
+
+    function terminologyEntryCounts(code) {
+      const profile = termsState[code] || {};
+      const mappings = Array.isArray(profile.mappings)
+        ? profile.mappings.filter((item) => meaningfulText(item?.forbidden) && meaningfulText(item?.preferred)).length
+        : 0;
+      const examples = Array.isArray(profile.examples)
+        ? profile.examples.filter((item) => meaningfulText(item?.draft) && meaningfulText(item?.polish)).length
+        : 0;
+      return { mappings, examples, total: mappings + examples };
+    }
+
+    function resourceCoverageForLang(kind, code) {
+      if (kind === "glossary") {
+        const count = glossaryEntryCount(code);
+        return {
+          count,
+          detail: count > 0 ? `${count} terms` : "No glossary"
+        };
+      }
+
+      const counts = terminologyEntryCounts(code);
+      const parts = [];
+      if (counts.mappings > 0) parts.push(`${counts.mappings} rules`);
+      if (counts.examples > 0) parts.push(`${counts.examples} examples`);
+      return {
+        count: counts.total,
+        detail: counts.total > 0 ? parts.join(" + ") : "No terminology"
+      };
+    }
+
+    function resourceEnabledMap(kind) {
+      return kind === "glossary" ? glossaryEnabledByLang : terminologyEnabledByLang;
+    }
+
+    function hasResourceData(kind, code) {
+      return resourceCoverageForLang(kind, code).count > 0;
+    }
+
+    function isResourceLangEnabled(kind, code) {
+      return hasResourceData(kind, code) && resourceEnabledMap(kind)[code] !== false;
+    }
+
+    function toggleResourceLang(kind, code) {
+      if (!hasResourceData(kind, code)) return;
+      resourceEnabledMap(kind)[code] = !isResourceLangEnabled(kind, code);
+      renderResourceLanguageStatuses();
+    }
+
+    function enableResourceLanguagesWithData(kind) {
+      const map = resourceEnabledMap(kind);
+      LANGUAGES.forEach((lang) => {
+        map[lang.code] = hasResourceData(kind, lang.code);
+      });
+    }
+
+    function collectResourceEnabledByLang(kind) {
+      const out = {};
+      LANGUAGES.forEach((lang) => {
+        out[lang.code] = isResourceLangEnabled(kind, lang.code);
+      });
+      return out;
+    }
+
+    function restoreResourceEnabledByLang(kind, nextState) {
+      const map = resourceEnabledMap(kind);
+      Object.keys(map).forEach((key) => delete map[key]);
+      if (nextState && typeof nextState === "object") {
+        Object.assign(map, nextState);
+      }
+    }
+
+    function resourceCoverageText(kind, codes) {
+      return codes.map((code) => {
+        const coverage = resourceCoverageForLang(kind, code);
+        if (coverage.count === 0) return `${code.toUpperCase()}: ${coverage.detail}`;
+        return `${code.toUpperCase()}: ${isResourceLangEnabled(kind, code) ? "On" : "Off"} (${coverage.detail})`;
+      }).join(" | ");
+    }
+
+    function renderResourceLanguageStatus(kind) {
+      const isGlossary = kind === "glossary";
+      const container = document.getElementById(isGlossary ? "glossaryLangStatus" : "terminologyLangStatus");
+      if (!container) return;
+
+      const codes = selectedLanguageCodes();
+      const loaded = isGlossary ? glossarySourceLoaded : terminologySourceLoaded;
+      const resourceName = isGlossary ? "glossary" : "terminology";
+      const title = `${loaded ? "Master" : "Current"} ${resourceName} coverage`;
+
+      if (codes.length === 0) {
+        container.innerHTML = `
+          <div class="resource-status-head">
+            <span>${title}</span>
+            <span class="resource-status-count">No target languages</span>
+          </div>
+          <p class="resource-status-note">Choose target languages to see which ones will receive this resource.</p>
+        `;
+        return;
+      }
+
+      const chips = codes.map((code) => {
+        const coverage = resourceCoverageForLang(kind, code);
+        const enabled = isResourceLangEnabled(kind, code);
+        const stateClass = coverage.count > 0 ? (enabled ? "has-data" : "is-disabled") : "missing";
+        const stateLabel = coverage.count > 0 ? (enabled ? "On" : "Off") : "Missing";
+        const clickHint = coverage.count > 0 ? `Click to turn ${enabled ? "off" : "on"}` : `No ${resourceName} data for ${languageLabel(code)}`;
+        return `
+          <button type="button" class="resource-language-chip ${stateClass}" ${coverage.count > 0 ? `onclick="toggleResourceLang('${kind}', '${code}')"` : "disabled"} title="${escapeHtml(languageLabel(code))}: ${escapeHtml(coverage.detail)}. ${escapeHtml(clickHint)}">
+            <span class="chip-code">${code.toUpperCase()}</span>
+            <span>${escapeHtml(coverage.detail)}</span>
+            <span class="chip-state">${stateLabel}</span>
+          </button>
+        `;
+      }).join("");
+      const enabledCount = codes.filter((code) => isResourceLangEnabled(kind, code)).length;
+      const note = enabledCount === codes.length
+        ? `All selected languages will receive ${resourceName} data. Click a language to exclude it.`
+        : `Only languages marked “On” will receive this ${resourceName}; “Off” and missing languages will run without it.`;
+
+      container.innerHTML = `
+        <div class="resource-status-head">
+          <span>${title}</span>
+          <span class="resource-status-count">${enabledCount}/${codes.length} active</span>
+        </div>
+        <div class="resource-language-chips">${chips}</div>
+        <p class="resource-status-note">${note}</p>
+      `;
+    }
+
+    function renderResourceLanguageStatuses() {
+      renderResourceLanguageStatus("glossary");
+      renderResourceLanguageStatus("terminology");
     }
 
     function renderLangNotes() {
@@ -1762,7 +3219,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
                 <span class="language-note-code">${lang.code}</span>
               </button>
               <div class="language-note-body">
-                <textarea id="langNote-${lang.code}" rows="3">${DEFAULT_NOTES[lang.code] || ""}</textarea>
+                <textarea id="langNote-${lang.code}" rows="3">${defaultLanguageNotes[lang.code] || ""}</textarea>
               </div>
             </div>
           `).join("")}
@@ -1774,8 +3231,17 @@ OUTPUT: return ONLY {"rows":[...]}`;
       const options = LANGUAGES.map((lang) => `<option value="${lang.code}">${lang.label} (${lang.code})</option>`).join("");
       document.getElementById("glossaryLang").innerHTML = options;
       document.getElementById("termsLang").innerHTML = options;
+      const builderLang = document.getElementById("resourceBuilderLang");
+      if (builderLang) {
+        const previousBuilderLang = builderLang.value || activeGlossaryLang || "de";
+        builderLang.innerHTML = options;
+        builderLang.value = previousBuilderLang;
+      }
       document.getElementById("glossaryLang").value = activeGlossaryLang;
       document.getElementById("termsLang").value = activeTermsLang;
+      renderPrettySelect("glossaryLang");
+      renderPrettySelect("termsLang");
+      renderPrettySelect("resourceBuilderLang");
     }
 
     function switchGlossaryLang() { saveGlossaryFromUi(); activeGlossaryLang = document.getElementById("glossaryLang").value; renderGlossaryEditor(); }
@@ -1802,10 +3268,12 @@ OUTPUT: return ONLY {"rows":[...]}`;
     function renderGlossaryEditor() {
       if (glossaryMode === "advanced") {
         document.getElementById("glossaryJson").value = JSON.stringify(glossaryState[activeGlossaryLang] || {}, null, 2);
+        renderResourceLanguageStatuses();
         return;
       }
       const entries = Object.entries(glossaryState[activeGlossaryLang] || {});
       document.getElementById("glossaryRows").innerHTML = entries.map(([source, target]) => glossaryRowHtml(source, target)).join("") || glossaryRowHtml("", "");
+      renderResourceLanguageStatuses();
     }
 
     function glossaryRowHtml(source, target) {
@@ -1819,6 +3287,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       if (glossaryMode === "advanced") {
         const raw = document.getElementById("glossaryJson").value.trim() || "{}";
         glossaryState[activeGlossaryLang] = JSON.parse(raw);
+        renderResourceLanguageStatuses();
         return;
       }
       const out = {};
@@ -1828,16 +3297,19 @@ OUTPUT: return ONLY {"rows":[...]}`;
         if (source && target) out[source] = target;
       });
       glossaryState[activeGlossaryLang] = out;
+      renderResourceLanguageStatuses();
     }
 
     function renderTermsEditor() {
       const profile = termsState[activeTermsLang] || { mappings: [], examples: [] };
       if (termsMode === "advanced") {
         document.getElementById("termsJson").value = JSON.stringify(profile, null, 2);
+        renderResourceLanguageStatuses();
         return;
       }
       const mappings = profile.mappings || [];
       document.getElementById("termsRows").innerHTML = mappings.map((item) => termRowHtml(item.forbidden || "", item.preferred || "", item.reason || "")).join("") || termRowHtml("", "", "");
+      renderResourceLanguageStatuses();
     }
 
     function termRowHtml(forbidden, preferred, reason) {
@@ -1851,6 +3323,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       if (termsMode === "advanced") {
         const raw = document.getElementById("termsJson").value.trim() || "{}";
         termsState[activeTermsLang] = JSON.parse(raw);
+        renderResourceLanguageStatuses();
         return;
       }
       const mappings = [];
@@ -1862,6 +3335,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       });
       const prev = termsState[activeTermsLang] || { mappings: [], examples: [] };
       termsState[activeTermsLang] = { mappings, examples: prev.examples || [] };
+      renderResourceLanguageStatuses();
     }
 
     function escapeHtml(value) {
@@ -1942,6 +3416,18 @@ OUTPUT: return ONLY {"rows":[...]}`;
       };
     }
 
+    function getSourceRangeInput() {
+      const input = document.getElementById("sourceRange");
+      const raw = String(input?.value || "").trim();
+      const rangeOnly = raw.includes("!") ? raw.split("!").pop() || "" : raw;
+      const normalized = (rangeOnly || "A1:Z68").replace(/\$/g, "").replace(/\s+/g, "").toUpperCase();
+      if (!/^[A-Z]{1,3}[1-9]\d*(?::[A-Z]{1,3}[1-9]\d*)?$/.test(normalized)) {
+        throw new Error("Translation range must use A1 notation, for example A1:Z68.");
+      }
+      if (input) input.value = normalized;
+      return normalized;
+    }
+
     function updateDetectedSource() {
       const note = document.getElementById("sourceDetectNote");
       if (!note) return;
@@ -1967,6 +3453,637 @@ OUTPUT: return ONLY {"rows":[...]}`;
       if (el) el.textContent = text || "Saved plans stay in this browser.";
     }
 
+    function resourcePresetStorageKey(kind) {
+      return kind === "glossary" ? GLOSSARY_PRESET_STORAGE_KEY : TERMINOLOGY_PRESET_STORAGE_KEY;
+    }
+
+    function resourcePresetLabel(kind) {
+      return kind === "glossary" ? "glossary" : "terminology";
+    }
+
+    function resourcePresetRefs(kind) {
+      const isGlossary = kind === "glossary";
+      return {
+        nameInput: document.getElementById(isGlossary ? "glossaryPresetName" : "terminologyPresetName"),
+        select: document.getElementById(isGlossary ? "glossaryPresetSelect" : "terminologyPresetSelect"),
+        status: document.getElementById(isGlossary ? "glossaryPresetStatus" : "terminologyPresetStatus")
+      };
+    }
+
+    function resourcePresetId(name) {
+      return String(name || "")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9_-]/g, "")
+        .slice(0, 72) || `set-${Date.now()}`;
+    }
+
+    function listResourcePresets(kind) {
+      try {
+        const items = JSON.parse(localStorage.getItem(resourcePresetStorageKey(kind)) || "[]");
+        return Array.isArray(items)
+          ? items.sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+          : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeResourcePresets(kind, items) {
+      localStorage.setItem(resourcePresetStorageKey(kind), JSON.stringify(items));
+    }
+
+    function setResourcePresetStatus(kind, text) {
+      const { status } = resourcePresetRefs(kind);
+      if (status) status.textContent = text || `Saved ${resourcePresetLabel(kind)} sets stay in this browser.`;
+    }
+
+    function renderResourcePresetOptions(kind, selectedId = "") {
+      const { select } = resourcePresetRefs(kind);
+      if (!select) return;
+      const label = resourcePresetLabel(kind);
+      const presets = listResourcePresets(kind);
+      select.innerHTML = `<option value="">Saved ${label} sets</option>${presets.map((preset) => `<option value="${escapeHtml(preset.id)}"${preset.id === selectedId ? " selected" : ""}>${escapeHtml(preset.name)}</option>`).join("")}`;
+      renderPrettySelect(select.id);
+    }
+
+    function renderAllResourcePresetOptions() {
+      renderResourcePresetOptions("glossary");
+      renderResourcePresetOptions("terminology");
+    }
+
+    function resourcePresetSnapshot(kind) {
+      if (kind === "glossary") {
+        saveGlossaryFromUi();
+        return {
+          mode: glossaryMode,
+          activeLang: activeGlossaryLang,
+          state: collectGlossaryByLang(),
+          enabledByLang: collectResourceEnabledByLang("glossary")
+        };
+      }
+
+      saveTermsFromUi();
+      return {
+        mode: termsMode,
+        activeLang: activeTermsLang,
+        state: collectTerminologyByLang(),
+        enabledByLang: collectResourceEnabledByLang("terminology")
+      };
+    }
+
+    function saveResourcePreset(kind) {
+      const label = resourcePresetLabel(kind);
+      const { nameInput } = resourcePresetRefs(kind);
+      const name = String(nameInput?.value || "").trim() || `${label[0].toUpperCase()}${label.slice(1)} set ${new Date().toLocaleString("en-US")}`;
+      const id = resourcePresetId(name);
+      const presets = listResourcePresets(kind).filter((preset) => preset.id !== id);
+      let snapshot = null;
+      try {
+        snapshot = resourcePresetSnapshot(kind);
+      } catch (error) {
+        setResourcePresetStatus(kind, `Could not save: ${error.message}`);
+        return;
+      }
+      presets.unshift({
+        id,
+        name,
+        data: snapshot,
+        updatedAt: new Date().toISOString()
+      });
+      writeResourcePresets(kind, presets.slice(0, 50));
+      if (nameInput) nameInput.value = name;
+      renderResourcePresetOptions(kind, id);
+      setResourcePresetStatus(kind, `Saved "${name}".`);
+    }
+
+    function applyResourcePreset(kind, data, name = "") {
+      const next = data || {};
+      if (kind === "glossary") {
+        Object.keys(glossaryState).forEach((key) => delete glossaryState[key]);
+        Object.assign(glossaryState, clone(next.state || DEFAULT_GLOSSARY_STATE));
+        glossaryMode = next.mode || "advanced";
+        activeGlossaryLang = next.activeLang || activeGlossaryLang || "de";
+        restoreResourceEnabledByLang("glossary", next.enabledByLang || {});
+        renderLangSelects();
+        syncGlossaryModeUi();
+        renderGlossaryEditor();
+        setResourceLoadState("glossary", false, name ? `Loaded saved glossary: ${name}` : "Loaded saved glossary.");
+        return;
+      }
+
+      Object.keys(termsState).forEach((key) => delete termsState[key]);
+      Object.assign(termsState, clone(next.state || DEFAULT_TERMS_STATE));
+      termsMode = next.mode || "advanced";
+      activeTermsLang = next.activeLang || activeTermsLang || "de";
+      restoreResourceEnabledByLang("terminology", next.enabledByLang || {});
+      renderLangSelects();
+      syncTermsModeUi();
+      renderTermsEditor();
+      setResourceLoadState("terminology", false, name ? `Loaded saved terminology: ${name}` : "Loaded saved terminology.");
+    }
+
+    function loadResourcePreset(kind) {
+      const label = resourcePresetLabel(kind);
+      const { select, nameInput } = resourcePresetRefs(kind);
+      const id = select?.value || "";
+      const preset = listResourcePresets(kind).find((item) => item.id === id);
+      if (!preset?.data) {
+        setResourcePresetStatus(kind, `Choose a saved ${label} set to load.`);
+        return;
+      }
+
+      applyResourcePreset(kind, preset.data, preset.name);
+      if (nameInput) nameInput.value = preset.name || "";
+      setResourcePresetStatus(kind, `Loaded "${preset.name}".`);
+    }
+
+    function deleteResourcePreset(kind) {
+      const label = resourcePresetLabel(kind);
+      const { select, nameInput } = resourcePresetRefs(kind);
+      const id = select?.value || "";
+      if (!id) {
+        setResourcePresetStatus(kind, `Choose a saved ${label} set to delete.`);
+        return;
+      }
+
+      const presets = listResourcePresets(kind);
+      const target = presets.find((item) => item.id === id);
+      writeResourcePresets(kind, presets.filter((item) => item.id !== id));
+      if (nameInput && target?.name === nameInput.value) nameInput.value = "";
+      renderResourcePresetOptions(kind);
+      setResourcePresetStatus(kind, target ? `Deleted "${target.name}".` : `Deleted saved ${label} set.`);
+    }
+
+    function setResourceBuilderStatus(text) {
+      const el = document.getElementById("resourceBuilderStatus");
+      if (el) el.textContent = text || "Ready.";
+    }
+
+    function logResourceBuilder(text, cls = "dim") {
+      if (typeof addLog === "function") addLog(`[Resources] ${text}`, cls);
+    }
+
+    function setResourceBuilderUseReady(isReady) {
+      const button = document.getElementById("resourceBuilderUseBtn");
+      if (button) button.disabled = !isReady;
+    }
+
+    function setResourceBuilderMode(mode) {
+      resourceBuilderMode = ["raw-source", "translated", "client-comments"].includes(mode) ? mode : "raw-source";
+      document.querySelectorAll(".builder-mode-card").forEach((card) => {
+        card.classList.toggle("active", card.dataset.mode === resourceBuilderMode);
+      });
+    }
+
+    async function readResourceBuilderFile() {
+      const input = document.getElementById("resourceBuilderFile");
+      const file = input?.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        document.getElementById("resourceBuilderInput").value = text;
+        const nameInput = document.getElementById("resourceBuilderName");
+        if (nameInput && !nameInput.value.trim()) {
+          nameInput.value = file.name.replace(/\.[^.]+$/, "");
+        }
+        setResourceBuilderStatus(`Loaded "${file.name}" (${Math.round(text.length / 1000)}k chars).`);
+        logResourceBuilder(`Loaded file "${file.name}" for resource generation.`);
+      } catch (error) {
+        setResourceBuilderStatus(`Could not read file: ${error.message}`);
+        logResourceBuilder(`File load failed: ${error.message}`, "error");
+      }
+    }
+
+    async function useCurrentSourceForBuilder() {
+      const detected = detectSourceInput(document.getElementById("spreadsheetId").value);
+      if (detected.sourceType !== "sheet" || !detected.sourceId) {
+        setResourceBuilderStatus("Enter a Google Sheet URL or ID first.");
+        return;
+      }
+
+      try {
+        setResourceBuilderStatus("Reading current sheet range...");
+        logResourceBuilder("Reading the current sheet range for glossary and terminology generation.", "info");
+        const response = await fetch("/api/translate-demo/source-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            spreadsheetId: detected.sourceId,
+            sourceTab: document.getElementById("sourceTab").value.trim(),
+            sourceRange: getSourceRangeInput()
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Could not read source sheet.");
+
+        document.getElementById("resourceBuilderInput").value = data.text || "";
+        setResourceBuilderStatus(`Loaded ${data.rows || 0} rows from ${data.sourceTab}!${data.sourceRange}.`);
+        logResourceBuilder(`Loaded ${data.rows || 0} rows from ${data.sourceTab}!${data.sourceRange}.`, "success");
+      } catch (error) {
+        setResourceBuilderStatus(`Could not load current source: ${error.message}`);
+        logResourceBuilder(`Could not read current sheet range: ${error.message}`, "error");
+      }
+    }
+
+    function looksLikeSheetReference(value) {
+      const text = String(value || "").trim();
+      if (!text || text.includes("\n") || text.includes("\t")) return false;
+      return Boolean(extractSpreadsheetId(text)) || /docs\.google\.com\/spreadsheets/i.test(text);
+    }
+
+    async function fetchBuilderSheetText(spreadsheetId) {
+      const response = await fetch("/api/translate-demo/source-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spreadsheetId,
+          sourceTab: document.getElementById("sourceTab").value.trim(),
+          sourceRange: getSourceRangeInput()
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not read source sheet.");
+      return data;
+    }
+
+    async function resolveResourceBuilderInputText() {
+      const inputEl = document.getElementById("resourceBuilderInput");
+      const raw = inputEl.value.trim();
+
+      if (looksLikeSheetReference(raw)) {
+        const spreadsheetId = extractSpreadsheetId(raw);
+        if (!spreadsheetId) throw new Error("Could not detect the Google Sheet ID from the pasted link.");
+        setResourceBuilderStatus("Detected a Google Sheet link. Reading its rows first...");
+        logResourceBuilder("Detected a pasted Google Sheet link. Reading rows before generation.", "info");
+        const data = await fetchBuilderSheetText(spreadsheetId);
+        inputEl.value = data.text || "";
+        setResourceBuilderStatus(`Loaded ${data.rows || 0} rows from ${data.sourceTab}!${data.sourceRange}.`);
+        logResourceBuilder(`Loaded ${data.rows || 0} rows from pasted sheet link (${data.sourceTab}!${data.sourceRange}).`, "success");
+        return inputEl.value.trim();
+      }
+
+      if (raw.length >= 20) return raw;
+
+      const detected = detectSourceInput(document.getElementById("spreadsheetId").value);
+      if (detected.sourceType === "sheet" && detected.sourceId) {
+        setResourceBuilderStatus("No pasted rows found. Reading the current sheet range...");
+        logResourceBuilder("No pasted rows found. Reading the configured source sheet range.", "info");
+        const data = await fetchBuilderSheetText(detected.sourceId);
+        inputEl.value = data.text || "";
+        setResourceBuilderStatus(`Loaded ${data.rows || 0} rows from ${data.sourceTab}!${data.sourceRange}.`);
+        logResourceBuilder(`Loaded ${data.rows || 0} rows from configured sheet (${data.sourceTab}!${data.sourceRange}).`, "success");
+        return inputEl.value.trim();
+      }
+
+      throw new Error("Paste rows, upload a file, or paste a Google Sheet link first.");
+    }
+
+    function renderGeneratedResourcePreview() {
+      const summary = document.getElementById("resourceBuilderSummary");
+      const glossaryEl = document.getElementById("resourceBuilderGlossaryPreview");
+      const termsEl = document.getElementById("resourceBuilderTermsPreview");
+      const generated = generatedResourceSet || {};
+      const glossaryEntries = Object.entries(generated.glossary || {});
+      const mappings = generated.terminology?.mappings || [];
+      const examples = generated.terminology?.examples || [];
+
+      if (summary) {
+        summary.textContent = generatedResourceSet
+          ? `${generated.title || "Generated resource set"} · ${glossaryEntries.length} glossary terms · ${mappings.length} rules · ${examples.length} examples`
+          : "No generated resources yet.";
+      }
+
+      if (glossaryEl) {
+        glossaryEl.innerHTML = glossaryEntries.length
+          ? glossaryEntries.slice(0, 10).map(([source, target]) => `<div><strong>${escapeHtml(source)}</strong> → ${escapeHtml(target)}</div>`).join("")
+          : "<div>No glossary terms generated.</div>";
+      }
+
+      if (termsEl) {
+        const ruleHtml = mappings.slice(0, 8).map((item) => `<div><strong>${escapeHtml(item.forbidden)}</strong> → ${escapeHtml(item.preferred)}<br><span>${escapeHtml(item.reason || "")}</span></div>`);
+        const exampleHtml = examples.slice(0, 2).map((item) => `<div><strong>Example</strong><br>${escapeHtml(item.draft)} → ${escapeHtml(item.polish)}</div>`);
+        termsEl.innerHTML = [...ruleHtml, ...exampleHtml].join("") || "<div>No terminology rules generated.</div>";
+      }
+    }
+
+    async function generateResourceSuggestions() {
+      const targetLang = document.getElementById("resourceBuilderLang").value || "de";
+      const button = document.getElementById("resourceBuilderGenerateBtn");
+      const previousLabel = button?.textContent || "1. Generate glossary & terminology";
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Generating...";
+      }
+      setResourceBuilderUseReady(false);
+
+      try {
+        logResourceBuilder(`Starting resource generation for ${languageLabel(targetLang)} (${resourceBuilderMode}).`, "info");
+        const sourceText = await resolveResourceBuilderInputText();
+        if (sourceText.length < 20) throw new Error("Add more sheet text before generating.");
+
+        setResourceBuilderStatus("Generating glossary and terminology...");
+        logResourceBuilder(`Sending ${sourceText.length.toLocaleString("en-US")} characters to the resource generator.`, "dim");
+        const response = await fetch("/api/translate-demo/generate-resources", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mode: resourceBuilderMode,
+            targetLang,
+            sourceText,
+            existingGlossary: document.getElementById("builderUseExistingGlossary").checked ? (glossaryState[targetLang] || {}) : {},
+            existingTerminology: document.getElementById("builderUseExistingTerminology").checked ? (termsState[targetLang] || {}) : {}
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Generation failed.");
+
+        generatedResourceSet = data;
+        if (!document.getElementById("resourceBuilderName").value.trim()) {
+          document.getElementById("resourceBuilderName").value = data.title || `Generated ${targetLang.toUpperCase()} resources`;
+        }
+        renderGeneratedResourcePreview();
+        saveGeneratedResourcesAsPresets({ silent: true });
+        setResourceBuilderUseReady(true);
+        logResourceBuilder(
+          `Generated ${Object.keys(data.glossary || {}).length} glossary terms and ${(data.terminology?.mappings || []).length} terminology rules with ${data.modelUsed || "AI"}.`,
+          "success"
+        );
+        logResourceBuilder("Saved generated glossary and terminology as local browser presets.", "success");
+        setResourceBuilderStatus(`Generated with ${data.modelUsed || "AI"} and saved locally. Review it, then use it in the translation setup.`);
+      } catch (error) {
+        setResourceBuilderStatus(`Could not generate: ${error.message}`);
+        logResourceBuilder(`Generation failed: ${error.message}`, "error");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = previousLabel;
+        }
+      }
+    }
+
+    function applyGeneratedResources(options = {}) {
+      if (!generatedResourceSet) {
+        setResourceBuilderStatus("Generate resources first.");
+        return;
+      }
+
+      const targetLang = document.getElementById("resourceBuilderLang").value || "de";
+      saveGlossaryFromUi();
+      saveTermsFromUi();
+
+      glossaryState[targetLang] = {
+        ...(glossaryState[targetLang] || {}),
+        ...(generatedResourceSet.glossary || {})
+      };
+
+      const existingTerms = termsState[targetLang] || { mappings: [], examples: [] };
+      const uniqueBy = (items, keyFn) => {
+        const seen = new Set();
+        return items.filter((item) => {
+          const key = keyFn(item);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+
+      termsState[targetLang] = {
+        mappings: uniqueBy([
+          ...(existingTerms.mappings || []),
+          ...((generatedResourceSet.terminology?.mappings || []))
+        ], (item) => `${item.forbidden || ""}→${item.preferred || ""}→${item.reason || ""}`),
+        examples: uniqueBy([
+          ...(existingTerms.examples || []),
+          ...((generatedResourceSet.terminology?.examples || []))
+        ], (item) => `${item.draft || ""}→${item.polish || ""}`)
+      };
+
+      glossaryEnabledByLang[targetLang] = Object.keys(generatedResourceSet.glossary || {}).length > 0;
+      terminologyEnabledByLang[targetLang] = (generatedResourceSet.terminology?.mappings || []).length + (generatedResourceSet.terminology?.examples || []).length > 0;
+      activeGlossaryLang = targetLang;
+      activeTermsLang = targetLang;
+      renderLangSelects();
+      renderGlossaryEditor();
+      renderTermsEditor();
+      renderResourceLanguageStatuses();
+
+      if (!options.silent) setResourceBuilderStatus(`Loaded generated resources into the ${languageLabel(targetLang)} translation setup.`);
+    }
+
+    function saveGeneratedResourcesAsPresets(options = {}) {
+      if (!generatedResourceSet) {
+        setResourceBuilderStatus("Generate resources first.");
+        return;
+      }
+
+      const targetLang = document.getElementById("resourceBuilderLang").value || "de";
+      const baseName = document.getElementById("resourceBuilderName").value.trim() || generatedResourceSet.title || "Generated resources";
+      const glossaryPresetId = resourcePresetId(`${baseName} glossary`);
+      const terminologyPresetId = resourcePresetId(`${baseName} terminology`);
+      const glossaryStateOnly = Object.keys(generatedResourceSet.glossary || {}).length
+        ? { [targetLang]: generatedResourceSet.glossary || {} }
+        : {};
+      const terminologyStateOnly = (generatedResourceSet.terminology?.mappings || []).length || (generatedResourceSet.terminology?.examples || []).length
+        ? { [targetLang]: generatedResourceSet.terminology || { mappings: [], examples: [] } }
+        : {};
+
+      writeResourcePresets("glossary", [
+        {
+          id: glossaryPresetId,
+          name: `${baseName} · glossary`,
+          data: {
+            mode: "simple",
+            activeLang: targetLang,
+            state: glossaryStateOnly,
+            enabledByLang: { [targetLang]: Object.keys(glossaryStateOnly).length > 0 }
+          },
+          updatedAt: new Date().toISOString()
+        },
+        ...listResourcePresets("glossary").filter((item) => item.id !== glossaryPresetId)
+      ].slice(0, 50));
+
+      writeResourcePresets("terminology", [
+        {
+          id: terminologyPresetId,
+          name: `${baseName} · terminology`,
+          data: {
+            mode: "simple",
+            activeLang: targetLang,
+            state: terminologyStateOnly,
+            enabledByLang: { [targetLang]: Object.keys(terminologyStateOnly).length > 0 }
+          },
+          updatedAt: new Date().toISOString()
+        },
+        ...listResourcePresets("terminology").filter((item) => item.id !== terminologyPresetId)
+      ].slice(0, 50));
+
+      renderResourcePresetOptions("glossary", glossaryPresetId);
+      renderResourcePresetOptions("terminology", terminologyPresetId);
+      document.getElementById("glossaryPresetName").value = `${baseName} · glossary`;
+      document.getElementById("terminologyPresetName").value = `${baseName} · terminology`;
+      if (!options.silent) setResourceBuilderStatus(`Saved "${baseName}" as glossary and terminology sets.`);
+    }
+
+    function useGeneratedResourcesForTranslation() {
+      if (!generatedResourceSet) {
+        setResourceBuilderStatus("Generate a glossary and terminology set first.");
+        return;
+      }
+      applyGeneratedResources({ silent: true });
+      setResourceBuilderStatus("Loaded into Draft glossary and Polish terminology. Now run the translation to apply it to the sheet.");
+      const targetLang = document.getElementById("resourceBuilderLang").value || "de";
+      logResourceBuilder(`Loaded generated resources into the ${languageLabel(targetLang)} translation setup.`, "success");
+    }
+
+    function setResourceSourceStatus(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    function setResourceLoadState(kind, loaded, statusText) {
+      const isGlossary = kind === "glossary";
+      const button = document.getElementById(isGlossary ? "glossaryLoadBtn" : "terminologyLoadBtn");
+      const badge = document.getElementById(isGlossary ? "glossaryLoadedBadge" : "terminologyLoadedBadge");
+      const statusId = isGlossary ? "glossarySourceStatus" : "terminologySourceStatus";
+      const defaultLabel = isGlossary ? "Load Master glossary" : "Load Master terminology";
+      const loadedLabel = isGlossary ? "Master glossary loaded" : "Master terminology loaded";
+
+      if (isGlossary) glossarySourceLoaded = loaded;
+      else terminologySourceLoaded = loaded;
+
+      if (button) {
+        button.classList.toggle("is-loaded", loaded);
+        button.textContent = loaded ? loadedLabel : defaultLabel;
+      }
+      if (badge) {
+        badge.classList.toggle("hidden", !loaded);
+        badge.textContent = loaded ? "Master loaded" : "";
+      }
+      if (statusText) setResourceSourceStatus(statusId, statusText);
+      renderResourceLanguageStatuses();
+    }
+
+    function syncGlossaryModeUi() {
+      document.getElementById("glossarySimpleTab").classList.toggle("active", glossaryMode === "simple");
+      document.getElementById("glossaryAdvancedTab").classList.toggle("active", glossaryMode === "advanced");
+      document.getElementById("glossarySimple").classList.toggle("hidden", glossaryMode !== "simple");
+      document.getElementById("glossaryAdvanced").classList.toggle("hidden", glossaryMode !== "advanced");
+    }
+
+    function syncTermsModeUi() {
+      document.getElementById("termsSimpleTab").classList.toggle("active", termsMode === "simple");
+      document.getElementById("termsAdvancedTab").classList.toggle("active", termsMode === "advanced");
+      document.getElementById("termsSimple").classList.toggle("hidden", termsMode !== "simple");
+      document.getElementById("termsAdvanced").classList.toggle("hidden", termsMode !== "advanced");
+    }
+
+    async function loadTranslateDemoDefaults(options = {}) {
+      const applyToUi = options.applyToUi !== false;
+
+      if (window.location.protocol === "file:") {
+        setResourceLoadState("glossary", false, "Open via the demo server to load the Master glossary.");
+        setResourceLoadState("terminology", false, "Open via the demo server to load the Master terminology.");
+        return false;
+      }
+
+      const previousPrompts = { ...defaultPromptTemplates };
+      const previousNotes = { ...defaultLanguageNotes };
+
+      try {
+        const response = await fetch("/api/translate-demo/defaults", { cache: "no-store" });
+        if (!response.ok) throw new Error(`Defaults request failed (${response.status})`);
+
+        const data = await response.json();
+        if (data.prompts && typeof data.prompts === "object") {
+          defaultPromptTemplates = { ...defaultPromptTemplates, ...data.prompts };
+        }
+        if (data.languageNotes && typeof data.languageNotes === "object") {
+          defaultLanguageNotes = { ...defaultLanguageNotes, ...data.languageNotes };
+        }
+
+        originalGlossarySource = Array.isArray(data.glossarySources) ? data.glossarySources[0] || null : null;
+        originalTerminologySource = Array.isArray(data.terminologySources) ? data.terminologySources[0] || null : null;
+
+        if (applyToUi) {
+          [
+            ["draftSystem", "draftSystem"],
+            ["draftUser", "draftUser"],
+            ["polishSystem", "polishSystem"],
+            ["polishUser", "polishUser"],
+            ["finalPolishSystem", "finalPolishSystem"],
+            ["finalPolishUser", "finalPolishUser"]
+          ].forEach(([key, id]) => {
+            const el = document.getElementById(id);
+            if (el && el.value === previousPrompts[key]) {
+              el.value = defaultPromptTemplates[key] || "";
+            }
+          });
+
+          LANGUAGES.forEach((lang) => {
+            const el = document.getElementById(`langNote-${lang.code}`);
+            if (el && el.value === (previousNotes[lang.code] || "")) {
+              el.value = defaultLanguageNotes[lang.code] || "";
+            }
+          });
+        }
+
+        setResourceLoadState(
+          "glossary",
+          false,
+          originalGlossarySource ? `Master source ready: ${originalGlossarySource.label}` : "Master glossary source unavailable."
+        );
+        setResourceLoadState(
+          "terminology",
+          false,
+          originalTerminologySource ? `Master source ready: ${originalTerminologySource.label}` : "Master terminology source unavailable."
+        );
+        return true;
+      } catch (error) {
+        setResourceLoadState("glossary", false, `Could not load original file sources: ${error.message}`);
+        setResourceLoadState("terminology", false, `Could not load original file sources: ${error.message}`);
+        return false;
+      }
+    }
+
+    async function ensureTranslateDemoDefaultsLoaded() {
+      if (originalGlossarySource || originalTerminologySource) return true;
+      return loadTranslateDemoDefaults({ applyToUi: false });
+    }
+
+    async function loadOriginalGlossarySource() {
+      const ok = await ensureTranslateDemoDefaultsLoaded();
+      if (!ok || !originalGlossarySource?.glossaryByLang) {
+        setResourceLoadState("glossary", false, "Master glossary source is not available.");
+        return;
+      }
+
+      Object.keys(glossaryState).forEach((key) => delete glossaryState[key]);
+      Object.assign(glossaryState, clone(originalGlossarySource.glossaryByLang));
+      enableResourceLanguagesWithData("glossary");
+      glossaryMode = "advanced";
+      syncGlossaryModeUi();
+      renderGlossaryEditor();
+      setResourceLoadState("glossary", true, `Loaded: ${originalGlossarySource.label}`);
+    }
+
+    async function loadOriginalTerminologySource() {
+      const ok = await ensureTranslateDemoDefaultsLoaded();
+      if (!ok || !originalTerminologySource?.terminologyByLang) {
+        setResourceLoadState("terminology", false, "Master terminology source is not available.");
+        return;
+      }
+
+      Object.keys(termsState).forEach((key) => delete termsState[key]);
+      Object.assign(termsState, clone(originalTerminologySource.terminologyByLang));
+      enableResourceLanguagesWithData("terminology");
+      termsMode = "advanced";
+      syncTermsModeUi();
+      renderTermsEditor();
+      setResourceLoadState("terminology", true, `Loaded: ${originalTerminologySource.label}`);
+    }
+
     function listManualPlans() {
       try {
         const items = JSON.parse(localStorage.getItem(MANUAL_PLAN_STORAGE_KEY) || "[]");
@@ -1987,6 +4104,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       if (!select) return;
       const plans = listManualPlans();
       select.innerHTML = `<option value="">Saved browser plans</option>${plans.map((plan) => `<option value="${escapeHtml(plan.id)}"${plan.id === selectedId ? " selected" : ""}>${escapeHtml(plan.name)}</option>`).join("")}`;
+      renderPrettySelect("manualSavedPlans");
     }
 
     function manualPlanSnapshot() {
@@ -1994,21 +4112,32 @@ OUTPUT: return ONLY {"rows":[...]}`;
         sourceValue: document.getElementById("spreadsheetId").value.trim(),
         sourceType: sourceMode,
         sourceTab: document.getElementById("sourceTab").value.trim(),
+        sourceRange: getSourceRangeInput(),
         model: document.getElementById("modelSelect").value,
         customModel: document.getElementById("customModel").value.trim(),
+        finalPolishModel: document.getElementById("finalPolishModelSelect").value,
+        finalPolishCustomModel: document.getElementById("finalPolishCustomModel").value.trim(),
         targetLangs: Array.from(selectedLangs),
         splitIntoTwo: document.getElementById("splitIntoTwo").classList.contains("on"),
+        targetTabExistsMode,
+        finalPolishEnabled: document.getElementById("finalPolishEnabled").classList.contains("on"),
         prompts: {
           draftSystem: document.getElementById("draftSystem").value,
           draftUser: document.getElementById("draftUser").value,
           polishSystem: document.getElementById("polishSystem").value,
-          polishUser: document.getElementById("polishUser").value
+          polishUser: document.getElementById("polishUser").value,
+          finalPolishSystem: document.getElementById("finalPolishSystem").value,
+          finalPolishUser: document.getElementById("finalPolishUser").value
         },
         languageNotes: collectNotes(),
         glossaryMode,
         termsMode,
         activeGlossaryLang,
         activeTermsLang,
+        glossarySourceLoaded,
+        terminologySourceLoaded,
+        glossaryEnabledByLang: collectResourceEnabledByLang("glossary"),
+        terminologyEnabledByLang: collectResourceEnabledByLang("terminology"),
         glossaryByLang: collectGlossaryByLang(),
         terminologyByLang: collectTerminologyByLang()
       };
@@ -2035,6 +4164,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       document.getElementById("spreadsheetId").value = next.sourceValue || "";
       updateDetectedSource();
       document.getElementById("sourceTab").value = next.sourceTab || "";
+      document.getElementById("sourceRange").value = next.sourceRange || "A1:Z68";
 
       const knownModels = Array.from(document.getElementById("modelSelect").options).map((option) => option.value);
       const model = next.model || "o3";
@@ -2042,19 +4172,30 @@ OUTPUT: return ONLY {"rows":[...]}`;
       document.getElementById("customModel").value = next.customModel || (!knownModels.includes(model) ? model : "");
       toggleCustomModel();
 
+      const knownFinalPolishModels = Array.from(document.getElementById("finalPolishModelSelect").options).map((option) => option.value);
+      const finalPolishModel = next.finalPolishModel || next.polishModel || "";
+      document.getElementById("finalPolishModelSelect").value = !finalPolishModel ? "" : knownFinalPolishModels.includes(finalPolishModel) ? finalPolishModel : "custom";
+      document.getElementById("finalPolishCustomModel").value = next.finalPolishCustomModel || next.polishCustomModel || (finalPolishModel && !knownFinalPolishModels.includes(finalPolishModel) ? finalPolishModel : "");
+      toggleFinalPolishCustomModel();
+
       selectedLangs.clear();
       (next.targetLangs || ["de"]).forEach((code) => selectedLangs.add(code));
       renderLangGrid();
 
       document.getElementById("splitIntoTwo").classList.toggle("on", next.splitIntoTwo !== false);
+      setTargetTabExistsMode(next.targetTabExistsMode || "skip");
 
       const prompts = next.prompts || {};
-      document.getElementById("draftSystem").value = typeof prompts.draftSystem === "string" ? prompts.draftSystem : DEFAULT_DRAFT_SYSTEM;
-      document.getElementById("draftUser").value = typeof prompts.draftUser === "string" ? prompts.draftUser : DEFAULT_DRAFT_USER;
-      document.getElementById("polishSystem").value = typeof prompts.polishSystem === "string" ? prompts.polishSystem : DEFAULT_POLISH_SYSTEM;
-      document.getElementById("polishUser").value = typeof prompts.polishUser === "string" ? prompts.polishUser : DEFAULT_POLISH_USER;
+      const defaultPrompts = getDefaultPrompts();
+      document.getElementById("draftSystem").value = typeof prompts.draftSystem === "string" ? prompts.draftSystem : defaultPrompts.draftSystem;
+      document.getElementById("draftUser").value = typeof prompts.draftUser === "string" ? prompts.draftUser : defaultPrompts.draftUser;
+      document.getElementById("polishSystem").value = typeof prompts.polishSystem === "string" ? prompts.polishSystem : defaultPrompts.polishSystem;
+      document.getElementById("polishUser").value = typeof prompts.polishUser === "string" ? prompts.polishUser : defaultPrompts.polishUser;
+      document.getElementById("finalPolishSystem").value = typeof prompts.finalPolishSystem === "string" ? prompts.finalPolishSystem : defaultPrompts.finalPolishSystem;
+      document.getElementById("finalPolishUser").value = typeof prompts.finalPolishUser === "string" ? prompts.finalPolishUser : defaultPrompts.finalPolishUser;
+      document.getElementById("finalPolishEnabled").classList.toggle("on", next.finalPolishEnabled === true);
 
-      Object.entries(next.languageNotes || DEFAULT_NOTES).forEach(([lang, note]) => {
+      Object.entries(next.languageNotes || getDefaultLanguageNotes()).forEach(([lang, note]) => {
         const el = document.getElementById(`langNote-${lang}`);
         if (el) el.value = note || "";
       });
@@ -2067,17 +4208,23 @@ OUTPUT: return ONLY {"rows":[...]}`;
       Object.assign(glossaryState, clone(next.glossaryByLang || DEFAULT_GLOSSARY_STATE));
       Object.keys(termsState).forEach((key) => delete termsState[key]);
       Object.assign(termsState, clone(next.terminologyByLang || DEFAULT_TERMS_STATE));
+      restoreResourceEnabledByLang("glossary", next.glossaryEnabledByLang || {});
+      restoreResourceEnabledByLang("terminology", next.terminologyEnabledByLang || {});
       renderLangSelects();
-      document.getElementById("glossarySimpleTab").classList.toggle("active", glossaryMode === "simple");
-      document.getElementById("glossaryAdvancedTab").classList.toggle("active", glossaryMode === "advanced");
-      document.getElementById("glossarySimple").classList.toggle("hidden", glossaryMode !== "simple");
-      document.getElementById("glossaryAdvanced").classList.toggle("hidden", glossaryMode !== "advanced");
-      document.getElementById("termsSimpleTab").classList.toggle("active", termsMode === "simple");
-      document.getElementById("termsAdvancedTab").classList.toggle("active", termsMode === "advanced");
-      document.getElementById("termsSimple").classList.toggle("hidden", termsMode !== "simple");
-      document.getElementById("termsAdvanced").classList.toggle("hidden", termsMode !== "advanced");
+      syncGlossaryModeUi();
+      syncTermsModeUi();
       renderGlossaryEditor();
       renderTermsEditor();
+      setResourceLoadState(
+        "glossary",
+        next.glossarySourceLoaded === true,
+        next.glossarySourceLoaded === true ? "Loaded from saved plan: Master glossary" : "Optional Master source: translation-glossary.ts"
+      );
+      setResourceLoadState(
+        "terminology",
+        next.terminologySourceLoaded === true,
+        next.terminologySourceLoaded === true ? "Loaded from saved plan: Master terminology" : "Optional Master source: terminology-management.ts"
+      );
     }
 
     function loadManualPlan() {
@@ -2097,25 +4244,38 @@ OUTPUT: return ONLY {"rows":[...]}`;
     }
 
     function resetManualPlanForm() {
+      const defaultPrompts = getDefaultPrompts();
       applyManualPlan({
         sourceValue: "",
         sourceTab: "",
+        sourceRange: "A1:Z68",
         model: "o3",
         customModel: "",
+        finalPolishModel: "",
+        finalPolishCustomModel: "",
         targetLangs: ["de"],
         splitIntoTwo: true,
+        targetTabExistsMode: "skip",
+        finalPolishEnabled: false,
         prompts: {
-          draftSystem: DEFAULT_DRAFT_SYSTEM,
-          draftUser: DEFAULT_DRAFT_USER,
-          polishSystem: DEFAULT_POLISH_SYSTEM,
-          polishUser: DEFAULT_POLISH_USER
+          draftSystem: defaultPrompts.draftSystem,
+          draftUser: defaultPrompts.draftUser,
+          polishSystem: defaultPrompts.polishSystem,
+          polishUser: defaultPrompts.polishUser,
+          finalPolishSystem: defaultPrompts.finalPolishSystem,
+          finalPolishUser: defaultPrompts.finalPolishUser
         },
-        languageNotes: DEFAULT_NOTES,
+        languageNotes: getDefaultLanguageNotes(),
+        glossarySourceLoaded: false,
+        terminologySourceLoaded: false,
+        glossaryEnabledByLang: {},
+        terminologyEnabledByLang: {},
         glossaryByLang: DEFAULT_GLOSSARY_STATE,
         terminologyByLang: DEFAULT_TERMS_STATE
       });
       document.getElementById("manualPlanName").value = "";
       document.getElementById("manualSavedPlans").value = "";
+      renderPrettySelect("manualSavedPlans");
       setManualPlanStatus("Manual setup reset to defaults.");
     }
 
@@ -2154,6 +4314,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
         draft: "Creating draft",
         terms: "Applying terminology",
         polish: "Polishing copy",
+        finalPolish: "Final natural polish",
         write: "Writing results",
       };
       summaryCurrentStepEl.textContent = labels[step] || "Waiting for run";
@@ -2169,12 +4330,12 @@ OUTPUT: return ONLY {"rows":[...]}`;
       summaryPillEl.textContent = "Idle";
       summaryMainEl.textContent = "Enter a Spreadsheet ID, choose languages, then click \"Run Translation\".";
       summaryCurrentStepEl.textContent = "Waiting for run";
-      ["step-read", "step-glossary", "step-draft", "step-terms", "step-polish", "step-write"].forEach((id) => document.getElementById(id)?.classList.remove("active", "done"));
+      ["step-read", "step-glossary", "step-draft", "step-terms", "step-polish", "step-final-polish", "step-write"].forEach((id) => document.getElementById(id)?.classList.remove("active", "done"));
       summaryLangEl.textContent = "-"; summaryPartEl.textContent = "-"; summaryTimeEl.textContent = "0s";
     }
 
     function setPipelineStep(stepId) {
-      const steps = ["step-read", "step-glossary", "step-draft", "step-terms", "step-polish", "step-write"];
+      const steps = ["step-read", "step-glossary", "step-draft", "step-terms", "step-polish", "step-final-polish", "step-write"];
       const idx = steps.indexOf(stepId);
       steps.forEach((id, index) => {
         const el = document.getElementById(id); if (!el) return;
@@ -2211,6 +4372,9 @@ OUTPUT: return ONLY {"rows":[...]}`;
       let glossaryByLang = null; let terminologyByLang = null;
       try { glossaryByLang = collectGlossaryByLang(); terminologyByLang = collectTerminologyByLang(); }
       catch (error) { addLog("❌ " + error.message, "error"); return; }
+      let sourceRange = "A1:Z68";
+      try { sourceRange = getSourceRangeInput(); }
+      catch (error) { addLog("❌ " + error.message, "error"); return; }
 
       const payload = {
         mode: "translate-demo",
@@ -2218,18 +4382,28 @@ OUTPUT: return ONLY {"rows":[...]}`;
         spreadsheetId: sourceMode === "sheet" ? spreadsheetId : "",
         sourceFolderId: sourceMode === "folder" ? sourceFolderId : "",
         sourceTab: document.getElementById("sourceTab").value.trim(),
+        sourceRange,
         model: getSelectedModel(),
+        finalPolishModel: getSelectedFinalPolishModel(),
         targetLangs: Array.from(selectedLangs),
         translateHeader: true,
         splitIntoTwo: document.getElementById("splitIntoTwo").classList.contains("on"),
+        targetTabExistsMode,
         prompts: {
           draftSystem: document.getElementById("draftSystem").value,
           draftUser: document.getElementById("draftUser").value,
           polishSystem: document.getElementById("polishSystem").value,
-          polishUser: document.getElementById("polishUser").value
+          polishUser: document.getElementById("polishUser").value,
+          finalPolishSystem: document.getElementById("finalPolishSystem").value,
+          finalPolishUser: document.getElementById("finalPolishUser").value
         },
-        languageNotes: collectNotes(), glossaryByLang, terminologyByLang
+        languageNotes: collectNotes(),
+        glossaryByLang,
+        glossaryEnabledByLang: collectResourceEnabledByLang("glossary"),
+        terminologyByLang,
+        terminologyEnabledByLang: collectResourceEnabledByLang("terminology")
       };
+      payload.finalPolishEnabled = document.getElementById("finalPolishEnabled").classList.contains("on");
 
       const runBtn = document.getElementById("runBtn");
       runBtn.disabled = true; runBtn.textContent = "Translation Running...";
@@ -2237,9 +4411,15 @@ OUTPUT: return ONLY {"rows":[...]}`;
       runHadError = false;
       addLog(`🚀 Starting translation: ${payload.targetLangs.join(", ").toUpperCase()}`, "info");
       addLog(sourceMode === "sheet" ? `📄 Spreadsheet: ${spreadsheetId}` : `📁 Drive folder: ${sourceFolderId}`, "dim");
+      addLog(`📐 Range: ${payload.sourceRange}`, "dim");
       addLog(`🤖 Model: ${payload.model}`, "dim");
-      addLog(`📚 Glossary languages loaded: ${Object.keys(payload.glossaryByLang).join(", ")}`, "dim");
-      addLog(`📖 Terminology languages loaded: ${Object.keys(payload.terminologyByLang).join(", ")}`, "dim");
+      addLog(`📑 Existing tabs: ${payload.targetTabExistsMode === "numbered" ? "create numbered copy" : "skip existing"}`, "dim");
+      if (payload.finalPolishEnabled) {
+        addLog(`✨ Final polish model: ${payload.finalPolishModel || payload.model}`, "dim");
+      }
+      addLog(`📚 Glossary coverage: ${resourceCoverageText("glossary", payload.targetLangs)}`, "dim");
+      addLog(`📖 Terminology coverage: ${resourceCoverageText("terminology", payload.targetLangs)}`, "dim");
+      addLog(payload.finalPolishEnabled ? "🌿 Final natural polish enabled" : "🌿 Final natural polish skipped", "dim");
 
       document.getElementById("statusDot").classList.add("live");
       document.getElementById("statusText").textContent = "Running";
@@ -2261,6 +4441,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
       if (text.includes("Processing Part")) { setPipelineStep("step-draft"); setSummary("draft", "Creating a first draft translation...", "Running"); }
       if (text.includes("[TERMS]")) { setPipelineStep("step-terms"); setSummary("terms", "Applying terminology rules...", "Running"); }
       if (text.toLowerCase().includes("polishing")) { setPipelineStep("step-polish"); setSummary("polish", withPart("Improving the language to sound natural and professional..."), "Running"); }
+      if (text.includes("[FINAL POLISH]") || text.toLowerCase().includes("final natural polish")) { setPipelineStep("step-final-polish"); setSummary("finalPolish", "Running one clean naturalness pass on the full sheet...", "Running"); }
       if (text.includes("created with") || text.toLowerCase().includes("writing") || text.toLowerCase().includes("write")) { setPipelineStep("step-write"); setSummary("write", "Writing the results back to the spreadsheet...", "Running"); }
       if (text.includes("❌") || text.toLowerCase().includes("failed") || text.toLowerCase().includes("error")) setSummaryError("Translation failed. Please verify the source ID, permissions and configuration.");
       const langMatch = text.match(/translation chain for (\w+)/i);
@@ -2281,15 +4462,28 @@ OUTPUT: return ONLY {"rows":[...]}`;
       addLog("✅ All translations complete!", "success");
     });
 
-    document.getElementById("draftSystem").value = DEFAULT_DRAFT_SYSTEM;
-    document.getElementById("draftUser").value = DEFAULT_DRAFT_USER;
-    document.getElementById("polishSystem").value = DEFAULT_POLISH_SYSTEM;
-    document.getElementById("polishUser").value = DEFAULT_POLISH_USER;
+    {
+      const defaultPrompts = getDefaultPrompts();
+      document.getElementById("draftSystem").value = defaultPrompts.draftSystem;
+      document.getElementById("draftUser").value = defaultPrompts.draftUser;
+      document.getElementById("polishSystem").value = defaultPrompts.polishSystem;
+      document.getElementById("polishUser").value = defaultPrompts.polishUser;
+      document.getElementById("finalPolishSystem").value = defaultPrompts.finalPolishSystem;
+      document.getElementById("finalPolishUser").value = defaultPrompts.finalPolishUser;
+    }
 
-    renderLangGrid(); renderLangNotes(); renderLangSelects(); renderGlossaryEditor(); renderTermsEditor(); renderManualPlanOptions();
+    renderLangGrid(); renderLangNotes(); renderLangSelects(); renderGlossaryEditor(); renderTermsEditor(); renderManualPlanOptions(); renderAllResourcePresetOptions(); renderModelPickers(); renderPrettySelects();
     document.getElementById("manualSavedPlans")?.addEventListener("change", (event) => {
       const plan = listManualPlans().find((item) => item.id === event.target.value);
       if (plan) document.getElementById("manualPlanName").value = plan.name || "";
+    });
+    document.getElementById("glossaryPresetSelect")?.addEventListener("change", (event) => {
+      const preset = listResourcePresets("glossary").find((item) => item.id === event.target.value);
+      if (preset) document.getElementById("glossaryPresetName").value = preset.name || "";
+    });
+    document.getElementById("terminologyPresetSelect")?.addEventListener("change", (event) => {
+      const preset = listResourcePresets("terminology").find((item) => item.id === event.target.value);
+      if (preset) document.getElementById("terminologyPresetName").value = preset.name || "";
     });
 
     window.translateDemoBridge = {
@@ -2303,6 +4497,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
         document.getElementById("sourceFolderId").value = next.sourceType === "folder" ? (next.sourceId || "") : "";
         updateDetectedSource();
         document.getElementById("sourceTab").value = next.sourceTab || "";
+        document.getElementById("sourceRange").value = next.sourceRange || "A1:Z68";
 
         const knownModels = Array.from(document.getElementById("modelSelect").options).map((option) => option.value);
         const model = next.model || "o3";
@@ -2315,18 +4510,37 @@ OUTPUT: return ONLY {"rows":[...]}`;
         }
         toggleCustomModel();
 
+        const knownFinalPolishModels = Array.from(document.getElementById("finalPolishModelSelect").options).map((option) => option.value);
+        const finalPolishModel = next.finalPolishModel || next.polishModel || "";
+        if (!finalPolishModel) {
+          document.getElementById("finalPolishModelSelect").value = "";
+          document.getElementById("finalPolishCustomModel").value = "";
+        } else if (knownFinalPolishModels.includes(finalPolishModel)) {
+          document.getElementById("finalPolishModelSelect").value = finalPolishModel;
+          document.getElementById("finalPolishCustomModel").value = "";
+        } else {
+          document.getElementById("finalPolishModelSelect").value = "custom";
+          document.getElementById("finalPolishCustomModel").value = finalPolishModel;
+        }
+        toggleFinalPolishCustomModel();
+
         selectedLangs.clear();
         (next.targetLangs || ["de"]).forEach((code) => selectedLangs.add(code));
         renderLangGrid();
 
         document.getElementById("splitIntoTwo").classList.toggle("on", next.splitIntoTwo !== false);
+        setTargetTabExistsMode(next.targetTabExistsMode || "skip");
 
         if (next.prompts) {
           if (typeof next.prompts.draftSystem === "string") document.getElementById("draftSystem").value = next.prompts.draftSystem;
           if (typeof next.prompts.draftUser === "string") document.getElementById("draftUser").value = next.prompts.draftUser;
           if (typeof next.prompts.polishSystem === "string") document.getElementById("polishSystem").value = next.prompts.polishSystem;
           if (typeof next.prompts.polishUser === "string") document.getElementById("polishUser").value = next.prompts.polishUser;
+          if (typeof next.prompts.finalPolishSystem === "string") document.getElementById("finalPolishSystem").value = next.prompts.finalPolishSystem;
+          if (typeof next.prompts.finalPolishUser === "string") document.getElementById("finalPolishUser").value = next.prompts.finalPolishUser;
         }
+
+        document.getElementById("finalPolishEnabled").classList.toggle("on", next.finalPolishEnabled === true);
 
         if (next.languageNotesByLang) {
           Object.entries(next.languageNotesByLang).forEach(([lang, note]) => {
@@ -2366,6 +4580,14 @@ OUTPUT: return ONLY {"rows":[...]}`;
           renderTermsEditor();
         }
 
+        if (next.glossaryEnabledByLang) {
+          restoreResourceEnabledByLang("glossary", next.glossaryEnabledByLang);
+        }
+        if (next.terminologyEnabledByLang) {
+          restoreResourceEnabledByLang("terminology", next.terminologyEnabledByLang);
+        }
+        renderResourceLanguageStatuses();
+
         if (typeof addLog === "function") {
           addLog("ℹ️ Guided chat filled the translation setup.", "info");
         }
@@ -2401,14 +4623,20 @@ OUTPUT: return ONLY {"rows":[...]}`;
         sourceType,
         sourceId,
         sourceTab: values.sourceTab === "__auto__" ? "" : (values.sourceTab || payload.sourceTab || ""),
+        sourceRange: payload.sourceRange || values.sourceRange || "A1:Z68",
         targetLangs: payload.targetLangs || values.targetLangs || ["de"],
         model: payload.model || values.model || "o3",
+        finalPolishModel: payload.finalPolishModel || values.finalPolishModel || payload.polishModel || values.polishModel || "",
         translateHeader: payload.translateHeader !== false,
         splitIntoTwo: payload.splitIntoTwo !== false,
+        targetTabExistsMode: payload.targetTabExistsMode || values.targetTabExistsMode || "skip",
+        finalPolishEnabled: payload.finalPolishEnabled === true,
         prompts: payload.prompts || {},
         languageNotesByLang: payload.languageNotes || {},
         glossaryByLang: payload.glossaryByLang || {},
-        terminologyByLang: payload.terminologyByLang || {}
+        glossaryEnabledByLang: payload.glossaryEnabledByLang || {},
+        terminologyByLang: payload.terminologyByLang || {},
+        terminologyEnabledByLang: payload.terminologyEnabledByLang || {}
       });
 
       setSetupMode("manual");
@@ -2417,6 +4645,7 @@ OUTPUT: return ONLY {"rows":[...]}`;
     }
 
     consumeAssistantWorkspaceHandoff();
+    loadTranslateDemoDefaults();
   </script>
   <script src="/translate-chatbot.js"></script>
 </body>

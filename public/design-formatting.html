@@ -138,6 +138,18 @@
       background: var(--accent-dim);
     }
 
+    .small-btn.danger {
+      color: var(--red);
+      border-color: rgba(220, 38, 38, 0.18);
+      background: var(--red-dim);
+    }
+
+    .small-btn.danger:hover {
+      color: #991b1b;
+      border-color: rgba(220, 38, 38, 0.34);
+      background: rgba(220, 38, 38, 0.12);
+    }
+
     .main-grid {
       display: grid;
       grid-template-columns: minmax(720px, 1.34fr) minmax(420px, 0.66fr);
@@ -211,9 +223,23 @@
 
     .source-grid {
       display: grid;
-      grid-template-columns: 190px minmax(260px, 1fr) 160px;
+      grid-template-columns: 190px minmax(260px, 1fr) 240px;
       gap: 12px;
       align-items: start;
+    }
+
+    .tab-picker-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tab-picker-row .small-btn {
+      min-height: 42px;
+      padding-left: 12px;
+      padding-right: 12px;
+      white-space: nowrap;
     }
 
     .source-options {
@@ -247,6 +273,40 @@
       grid-template-columns: 1fr 1fr 1fr 1fr;
       gap: 10px;
       align-items: end;
+    }
+
+    .inline-range-panel {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-2);
+    }
+
+    .inline-range-head,
+    .write-default-head,
+    .selected-action-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .inline-range-title,
+    .write-default-title {
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .inline-range-hint,
+    .write-default-hint {
+      margin: 0;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: right;
+      line-height: 1.35;
     }
 
     .range-compact-row input,
@@ -356,6 +416,27 @@
 
     .category-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 
+    .operation-search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 10px;
+      margin: 2px 0 12px;
+    }
+
+    .operation-search-field .field-label {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .operation-search-field input {
+      width: 100%;
+    }
+
+    .operation-search-meta {
+      margin: -4px 0 12px;
+    }
+
     .category-tab {
       padding: 8px 12px;
       border-radius: 999px;
@@ -370,9 +451,15 @@
 
     .category-tab:hover { color: var(--text); border-color: var(--border-active); }
     .category-tab.active { color: var(--accent); border-color: rgba(124, 58, 237, 0.28); background: var(--accent-dim); }
+    .category-tab.muted { opacity: 0.55; }
+    .category-tab .match-count { color: inherit; opacity: 0.7; margin-left: 4px; }
 
     .operation-category { display: none; }
     .operation-category.active { display: block; }
+    .operation-category.search-active {
+      display: block;
+      margin-bottom: 14px;
+    }
 
     .category-title {
       display: flex;
@@ -705,6 +792,155 @@
       line-height: 1.5;
     }
 
+    .empty-operation-results {
+      border: 1px dashed rgba(118, 80, 168, 0.22);
+      background: #ffffff;
+      border-radius: 12px;
+      color: var(--text-muted);
+      padding: 14px;
+      font-size: 0.74rem;
+      line-height: 1.5;
+    }
+
+    .write-behavior-panel {
+      border: 1px solid rgba(118, 80, 168, 0.14);
+      background: #fbfaff;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .write-behavior-panel.compact {
+      margin-top: -2px;
+    }
+
+    .write-behavior-panel.disabled {
+      opacity: 0.62;
+    }
+
+    .write-behavior-panel.info-only {
+      background: #fffefa;
+      border-style: dashed;
+    }
+
+    .write-behavior-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .write-behavior-title strong {
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .write-behavior-title span {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-align: right;
+      line-height: 1.35;
+    }
+
+    .write-behavior-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      line-height: 1.4;
+    }
+
+    .write-behavior-badge {
+      border: 1px solid rgba(107, 114, 128, 0.18);
+      border-radius: 999px;
+      background: rgba(107, 114, 128, 0.08);
+      color: var(--text-dim);
+      font-size: 0.62rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      padding: 5px 9px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .write-behavior-badge.default {
+      border-color: rgba(111, 147, 85, 0.22);
+      background: rgba(111, 147, 85, 0.12);
+      color: #557642;
+    }
+
+    .write-behavior-badge.custom {
+      border-color: rgba(74, 127, 199, 0.24);
+      background: rgba(74, 127, 199, 0.11);
+      color: #3f6fac;
+    }
+
+    .write-behavior-badge.off {
+      border-color: rgba(145, 135, 121, 0.2);
+      background: rgba(145, 135, 121, 0.08);
+      color: var(--text-muted);
+    }
+
+    .write-behavior-summary {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      font-weight: 700;
+      line-height: 1.4;
+      padding: 10px 11px;
+    }
+
+    .write-behavior-custom-grid.hidden,
+    .write-behavior-controls.hidden,
+    .write-behavior-search-wrap.hidden {
+      display: none;
+    }
+
+    .write-behavior-panel .input-row {
+      margin-bottom: 8px;
+    }
+
+    .write-default-row {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.85fr) minmax(230px, 1.1fr) 120px;
+      gap: 10px;
+      align-items: end;
+      padding: 10px 0 2px;
+      border-top: 1px solid var(--border);
+      margin: 10px 0 14px;
+    }
+
+    .write-default-row .toggle-row {
+      min-height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #ffffff;
+    }
+
+    .selected-action-box {
+      display: grid;
+      gap: 8px;
+    }
+
+    .selected-action-top {
+      margin-bottom: 0;
+    }
+
+    .selected-action-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .faq-common-settings {
       display: none;
       border: 1px solid rgba(124, 58, 237, 0.14);
@@ -966,6 +1202,7 @@
     .operation-chip span,
     .workflow-step-desc,
     .empty-workflow,
+    .empty-operation-results,
     .operation-note {
       color: var(--vx-dim) !important;
       font-weight: 450;
@@ -1033,6 +1270,18 @@
       color: var(--vx-ink) !important;
       box-shadow: none !important;
       transform: none !important;
+    }
+
+    .small-btn.danger {
+      border-color: rgba(220, 38, 38, 0.18) !important;
+      background: rgba(220, 38, 38, 0.06) !important;
+      color: #b91c1c !important;
+    }
+
+    .small-btn.danger:hover {
+      border-color: rgba(220, 38, 38, 0.34) !important;
+      background: rgba(220, 38, 38, 0.1) !important;
+      color: #7f1d1d !important;
     }
 
     .run-btn,
@@ -1105,15 +1354,75 @@
     }
 
     .compact-option,
+    .inline-range-panel,
     .workflow-panel,
     .faq-common-settings,
     .operation-note,
     .selected-action-box,
     .payload-preview,
-    .empty-workflow {
+    .empty-workflow,
+    .empty-operation-results {
       border-color: var(--vx-border) !important;
       background: var(--vx-surface-warm) !important;
       box-shadow: none !important;
+    }
+
+    .write-behavior-panel {
+      border-color: var(--vx-border) !important;
+      background: var(--vx-surface) !important;
+      box-shadow: none !important;
+    }
+
+    .write-behavior-panel.info-only,
+    .write-behavior-summary {
+      border-color: var(--vx-border) !important;
+      background: var(--vx-surface-warm) !important;
+      color: var(--vx-dim) !important;
+    }
+
+    .write-behavior-status,
+    .write-behavior-title span {
+      color: var(--vx-muted) !important;
+    }
+
+    .write-behavior-badge.default {
+      border-color: rgba(111, 147, 85, 0.24) !important;
+      background: var(--vx-green-soft) !important;
+      color: var(--vx-green) !important;
+    }
+
+    .write-behavior-badge.custom {
+      border-color: rgba(74, 127, 199, 0.24) !important;
+      background: var(--vx-blue-soft) !important;
+      color: var(--vx-blue) !important;
+    }
+
+    .write-behavior-badge.off {
+      border-color: var(--vx-border) !important;
+      background: var(--vx-surface-warm) !important;
+      color: var(--vx-muted) !important;
+    }
+
+    .inline-range-title,
+    .write-default-title {
+      color: var(--vx-ink) !important;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .inline-range-hint,
+    .write-default-hint {
+      color: var(--vx-muted) !important;
+      font-weight: 450;
+    }
+
+    .write-default-row {
+      border-color: var(--vx-border) !important;
+    }
+
+    .write-default-row .toggle-row {
+      border-color: var(--vx-border) !important;
+      background: var(--vx-surface) !important;
     }
 
     .category-tabs {
@@ -1307,7 +1616,7 @@
       .main-grid { grid-template-columns: 1fr; height: auto; }
       .config-panel { border-right: 0; }
       .terminal-panel { min-height: 620px; }
-      .source-grid, .source-options, .input-row, .range-compact-row, .operation-grid, .button-row, .cell-detail-body { grid-template-columns: 1fr; }
+      .source-grid, .source-options, .input-row, .range-compact-row, .write-default-row, .operation-search-row, .operation-grid, .button-row, .cell-detail-body { grid-template-columns: 1fr; }
       .source-grid .tab-field { grid-column: auto; }
     }
   </style>
@@ -1344,18 +1653,57 @@
           <div class="source-grid">
             <div>
               <label class="field-label">Source type</label>
-              <select id="sourceType">
+              <select id="sourceType" onchange="handleSourceTypeChange()">
                 <option value="sheet">Single Google Sheet</option>
                 <option value="folder">Google Drive folder</option>
               </select>
             </div>
             <div>
               <label class="field-label">Sheet or folder URL / ID</label>
-              <input type="text" id="targetId" placeholder="Paste a Google Sheet URL, Sheet ID, or Drive folder URL" />
+              <input type="text" id="targetId" placeholder="Paste a Google Sheet URL, Sheet ID, or Drive folder URL" oninput="handleTargetIdInput()" />
             </div>
             <div class="tab-field">
               <label class="field-label">Tab name</label>
-              <input type="text" id="tabName" value="Sheet1" />
+              <div class="tab-picker-row">
+                <input type="text" id="tabName" list="tabNameOptions" value="Sheet1" placeholder="Type tab name or load tabs" />
+                <datalist id="tabNameOptions">
+                  <option value="Sheet1"></option>
+                </datalist>
+                <button type="button" class="small-btn" id="loadTabsBtn" onclick="loadSheetTabs()">Load tabs</button>
+              </div>
+              <p class="field-hint" id="tabNameHint">Type an exact tab name, or load tabs after pasting a Sheet URL.</p>
+            </div>
+          </div>
+
+          <div class="inline-range-panel">
+            <div class="inline-range-head">
+              <div class="inline-range-title">Target range</div>
+              <p class="inline-range-hint">Keep broad for full-sheet cleanup; narrow it for column or row-specific edits.</p>
+            </div>
+            <div class="range-compact-row">
+              <div>
+                <label class="field-label">Columns</label>
+                <select id="columnScope" onchange="syncRangeControls()">
+                  <option value="sheet" selected>All columns</option>
+                  <option value="columns">Column range</option>
+                  <option value="column">Single column</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Column range</label>
+                <input type="text" id="columnsInput" value="A:ZZ" title="Examples: C, B:D, A:F" />
+              </div>
+              <div>
+                <label class="field-label">Rows</label>
+                <select id="rowScope" onchange="syncRangeControls()">
+                  <option value="all" selected>All rows</option>
+                  <option value="range">Row range</option>
+                </select>
+              </div>
+              <div>
+                <label class="field-label">Row range</label>
+                <input type="text" id="rowsInput" value="1:" title="Examples: 2:, 1:70, 5:20" />
+              </div>
             </div>
           </div>
 
@@ -1364,45 +1712,12 @@
             <div class="compact-option">
               <div class="toggle-row">
                 <span class="toggle-label" title="Create a backup copy before writing">Backup</span>
-                <div class="toggle" id="createBackup" onclick="toggleAndPreview(this)"></div>
+                <div class="toggle on" id="createBackup" onclick="toggleAndPreview(this)"></div>
               </div>
             </div>
+            <button type="button" class="small-btn danger" id="restoreBackupBtn" onclick="restoreLatestBackup()">Restore latest backup</button>
           </div>
           <input type="hidden" id="maxFiles" value="30" />
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head" onclick="toggleCard(this)">
-          <h3>Target Range</h3>
-          <span class="chevron">▼</span>
-        </div>
-        <div class="card-body">
-          <div class="range-compact-row">
-            <div>
-              <label class="field-label">Columns</label>
-              <select id="columnScope" onchange="syncRangeControls()">
-                <option value="sheet" selected>All columns</option>
-                <option value="columns">Column range</option>
-                <option value="column">Single column</option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label">Column range</label>
-              <input type="text" id="columnsInput" value="A:ZZ" title="Examples: C, B:D, A:F" />
-            </div>
-            <div>
-              <label class="field-label">Rows</label>
-              <select id="rowScope" onchange="syncRangeControls()">
-                <option value="all" selected>All rows</option>
-                <option value="range">Row range</option>
-              </select>
-            </div>
-            <div>
-              <label class="field-label">Row range</label>
-              <input type="text" id="rowsInput" value="1:" title="Examples: 2:, 1:70, 5:20" />
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1416,15 +1731,48 @@
             <div class="workflow-head">
               <div>
                 <div class="workflow-title">Run sequence</div>
-                <p class="field-hint">Choose an operation below and add it to the sequence. If the sequence is empty, only the selected operation will run.</p>
+                <p class="field-hint">Pick an operation below, set it up in Action Settings, then add it to this sequence.</p>
               </div>
               <div class="workflow-actions">
-                <button type="button" class="small-btn" onclick="addCurrentOperationToPipeline()">Add operation</button>
                 <button type="button" class="small-btn" onclick="clearPipeline()">Clear sequence</button>
               </div>
             </div>
             <div class="workflow-list" id="workflowList"></div>
           </div>
+          <div class="write-default-head">
+            <div class="write-default-title">Default write behavior</div>
+            <p class="write-default-hint">Applies to writeback operations unless an action overrides it.</p>
+          </div>
+          <div class="write-default-row">
+            <div class="toggle-row">
+              <span class="toggle-label">Overwrite</span>
+              <div class="toggle" id="globalOverwriteExisting" onclick="toggleAndPreview(this); syncWriteBehaviorControls();"></div>
+            </div>
+            <div>
+              <label class="field-label">Conflict mode</label>
+              <select id="globalExistingValueMode" onchange="syncWriteBehaviorControls(); updatePayloadPreview();">
+                <option value="skip_existing">Skip cells that already have values</option>
+                <option value="first_empty">Find the first empty cell to the right</option>
+              </select>
+            </div>
+            <div>
+              <label class="field-label">Search width</label>
+              <input type="number" id="globalWriteSearchColumns" value="6" min="1" max="25" />
+            </div>
+          </div>
+          <div class="operation-search-row">
+            <div class="operation-search-field">
+              <label class="field-label" for="operationSearchInput">Search operations</label>
+              <input
+                type="text"
+                id="operationSearchInput"
+                placeholder="Search by operation, tag, category, or description"
+                oninput="handleOperationSearchInput(this.value)"
+              />
+            </div>
+            <button type="button" class="small-btn" id="operationSearchClear" onclick="clearOperationSearch()">Clear</button>
+          </div>
+          <p class="field-hint operation-search-meta" id="operationSearchMeta"></p>
           <div class="category-tabs" id="categoryTabs"></div>
           <div id="operationCategories"></div>
           <p class="field-hint" style="margin-top: 12px;">Run one operation, or build a sequence that runs automatically in order.</p>
@@ -1438,8 +1786,52 @@
         </div>
         <div class="card-body">
           <div class="selected-action-box">
-            <div class="selected-title" id="selectedActionTitle">Text Replace</div>
+            <div class="selected-action-top">
+              <div class="selected-title" id="selectedActionTitle">Text Replace</div>
+              <div class="selected-action-actions">
+                <button type="button" class="small-btn" onclick="addCurrentOperationToPipeline()">Add to sequence</button>
+              </div>
+            </div>
             <div class="selected-desc" id="selectedActionDesc">Find and replace text in selected cells.</div>
+          </div>
+          <div class="write-behavior-panel compact" id="operationWriteBehaviorPanel">
+            <div class="write-behavior-title">
+              <strong>Writeback conflict handling</strong>
+              <span id="operationWriteBehaviorHint">Uses the workflow default unless you override it here.</span>
+            </div>
+            <div class="write-behavior-status">
+              <span class="write-behavior-badge default" id="operationWriteBehaviorBadge">Default</span>
+              <span id="operationWriteBehaviorSummary">Using workflow default.</span>
+            </div>
+            <div class="write-behavior-controls" id="operationWriteBehaviorControls">
+              <div class="input-row">
+                <div>
+                  <label class="field-label">For this action</label>
+                  <select id="operationWriteBehaviorSource" onchange="syncWriteBehaviorControls(); updatePayloadPreview();">
+                    <option value="global">Use workflow default</option>
+                    <option value="custom">Customize this action</option>
+                  </select>
+                </div>
+                <div class="write-behavior-summary" id="operationWriteBehaviorDefaultSummary">
+                  Default: skip existing values.
+                </div>
+              </div>
+            </div>
+            <div class="input-row write-behavior-custom-grid hidden" id="operationWriteBehaviorCustomGrid">
+              <div>
+                <label class="field-label">This operation</label>
+                <select id="operationWriteBehaviorMode" onchange="syncWriteBehaviorControls(); updatePayloadPreview();">
+                  <option value="skip_existing">Skip cells that already have values</option>
+                  <option value="overwrite">Overwrite existing target cells</option>
+                  <option value="first_empty">Find first empty cell to the right</option>
+                </select>
+              </div>
+              <div class="write-behavior-search-wrap" id="operationWriteSearchWrap">
+                <label class="field-label">Empty-cell search width</label>
+                <input type="number" id="operationWriteSearchColumns" value="6" min="1" max="25" />
+                <p class="field-hint">Only used by the empty-cell mode.</p>
+              </div>
+            </div>
           </div>
 
           <div id="fields-text_replace" class="operation-fields">
@@ -1596,18 +1988,18 @@
           <div id="fields-extract_comments" class="operation-fields">
             <div class="mini-note">
               <strong>Google Sheet comments:</strong>
-              extracts Google Sheets comments from one column and writes only the comment text into another column.
+              extracts Google Sheets comments from one column and writes only the comment text into the matching row.
             </div>
             <div class="input-row">
               <div>
                 <label class="field-label">Comments Source Column</label>
-                <input type="text" id="commentsSourceColumn" value="B" />
-                <p class="field-hint">The column where the comments are attached. Example: B.</p>
+                <input type="text" id="commentsSourceColumn" value="D" />
+                <p class="field-hint">Column or range where comments are attached. Examples: D, C-D, C:D.</p>
               </div>
               <div>
                 <label class="field-label">Output Column</label>
-                <input type="text" id="commentsOutputColumn" value="C" />
-                <p class="field-hint">Where the extracted comment text should be written. Example: C.</p>
+                <input type="text" id="commentsOutputColumn" value="" placeholder="Auto next range" />
+                <p class="field-hint">Optional matching range. Examples: E, E-F. Blank writes after the source block.</p>
               </div>
             </div>
             <div class="input-row">
@@ -1689,6 +2081,14 @@
               <div><label class="field-label">New Tab Name</label><input type="text" id="newTabName" value="New formatted tab" /></div>
             </div>
             <p class="field-hint">Duplicates an existing template tab in every selected spreadsheet.</p>
+          </div>
+
+          <div id="fields-restore_backup" class="operation-fields">
+            <div class="operation-note">
+              Restores the selected tab from the newest backup tab created before an Apply run. This replaces the current tab with the backup copy.
+            </div>
+            <label class="field-label">Specific backup tab (optional)</label>
+            <input type="text" id="restoreBackupName" value="" placeholder="Blank = use newest backup for the selected tab" />
           </div>
 
           <div id="faqCommonSettings" class="faq-common-settings active">
@@ -1986,13 +2386,15 @@
           { id: "add_column", title: "Add column header", desc: "Writes a new header in an existing column without shifting columns.", tag: "Columns" },
           { id: "rename_column", title: "Rename column", desc: "Changes only the first-row header.", tag: "Columns" },
           { id: "reorder_columns", title: "Reorder columns", desc: "Creates a safe new tab with columns in the chosen order.", tag: "Safe copy" },
-          { id: "duplicate_tab_template", title: "Duplicate template tab", desc: "Duplicates a template tab for every selected spreadsheet.", tag: "Tabs" }
+          { id: "duplicate_tab_template", title: "Duplicate template tab", desc: "Duplicates a template tab for every selected spreadsheet.", tag: "Tabs" },
+          { id: "restore_backup", title: "Restore latest backup", desc: "Restores the selected tab from its newest backup tab.", tag: "Undo" }
         ]
       }
     ];
 
     let selectedCategory = "edit";
     let selectedOperation = "faq_apply_client_comments";
+    let operationSearchQuery = "";
     let pipelineOperations = [];
     let activeRunKind = "format";
     let timerInterval = null;
@@ -2001,18 +2403,78 @@
     function getAllOperations() { return OPERATION_CATEGORIES.flatMap((category) => category.operations); }
     function getSelectedOperationMeta() { return getAllOperations().find((operation) => operation.id === selectedOperation); }
 
+    function normalizeOperationSearch(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function operationMatchesSearch(operation, category, terms) {
+      if (!terms.length) return true;
+      const searchable = [
+        operation.id,
+        operation.title,
+        operation.desc,
+        operation.tag,
+        category.id,
+        category.label,
+        category.title,
+        category.description
+      ].join(" ").toLowerCase();
+      return terms.every((term) => searchable.includes(term));
+    }
+
+    function getOperationSearchTerms() {
+      return normalizeOperationSearch(operationSearchQuery).split(/\s+/).filter(Boolean);
+    }
+
+    function getOperationCategoryMatches(category, terms = getOperationSearchTerms()) {
+      return category.operations.filter((operation) => operationMatchesSearch(operation, category, terms));
+    }
+
+    function getFilteredOperationCategories() {
+      const terms = getOperationSearchTerms();
+      if (!terms.length) {
+        return OPERATION_CATEGORIES.map((category) => ({
+          ...category,
+          operations: category.operations
+        }));
+      }
+
+      return OPERATION_CATEGORIES
+        .map((category) => ({
+          ...category,
+          operations: getOperationCategoryMatches(category, terms)
+        }))
+        .filter((category) => category.operations.length > 0);
+    }
+
     function renderCategoryTabs() {
       const tabs = document.getElementById("categoryTabs");
+      const terms = getOperationSearchTerms();
+      const isSearching = terms.length > 0;
       tabs.innerHTML = OPERATION_CATEGORIES.map((category) => {
-        const activeClass = category.id === selectedCategory ? "active" : "";
-        return `<button type="button" class="category-tab ${activeClass}" onclick="selectCategory('${category.id}')">${category.label}</button>`;
+        const matchCount = getOperationCategoryMatches(category, terms).length;
+        const activeClass = !isSearching && category.id === selectedCategory ? "active" : "";
+        const mutedClass = isSearching && matchCount === 0 ? "muted" : "";
+        const countHtml = isSearching ? `<span class="match-count">${matchCount}</span>` : "";
+        return `<button type="button" class="category-tab ${activeClass} ${mutedClass}" onclick="selectCategory('${category.id}', ${isSearching})">${category.label}${countHtml}</button>`;
       }).join("");
     }
 
     function renderOperationCategories() {
       const wrapper = document.getElementById("operationCategories");
-      wrapper.innerHTML = OPERATION_CATEGORIES.map((category) => {
-        const activeClass = category.id === selectedCategory ? "active" : "";
+      const terms = getOperationSearchTerms();
+      const isSearching = terms.length > 0;
+      const categories = getFilteredOperationCategories();
+
+      updateOperationSearchMeta(categories, isSearching);
+
+      if (isSearching && categories.length === 0) {
+        wrapper.innerHTML = `<div class="empty-operation-results">No matching operations found. Try a different word, tag, or category.</div>`;
+        return;
+      }
+
+      wrapper.innerHTML = categories.map((category) => {
+        const activeClass = isSearching ? "search-active" : category.id === selectedCategory ? "active" : "";
         const operationsHtml = category.operations.map((operation) => {
           const operationActiveClass = operation.id === selectedOperation ? "active" : "";
           return `
@@ -2035,8 +2497,42 @@
       }).join("");
     }
 
-    function selectCategory(categoryId) {
+    function updateOperationSearchMeta(categories = getFilteredOperationCategories(), isSearching = getOperationSearchTerms().length > 0) {
+      const meta = document.getElementById("operationSearchMeta");
+      if (!meta) return;
+
+      if (!isSearching) {
+        const totalOperations = getAllOperations().length;
+        meta.textContent = `${totalOperations} operations available across ${OPERATION_CATEGORIES.length} categories.`;
+        return;
+      }
+
+      const totalMatches = categories.reduce((total, category) => total + category.operations.length, 0);
+      const categoryCount = categories.length;
+      meta.textContent = `${totalMatches} matching operation${totalMatches === 1 ? "" : "s"} across ${categoryCount} categor${categoryCount === 1 ? "y" : "ies"}.`;
+    }
+
+    function handleOperationSearchInput(value) {
+      operationSearchQuery = value;
+      renderCategoryTabs();
+      renderOperationCategories();
+    }
+
+    function clearOperationSearch() {
+      operationSearchQuery = "";
+      const input = document.getElementById("operationSearchInput");
+      if (input) input.value = "";
+      renderCategoryTabs();
+      renderOperationCategories();
+    }
+
+    function selectCategory(categoryId, clearSearch = false) {
       selectedCategory = categoryId;
+      if (clearSearch) {
+        operationSearchQuery = "";
+        const input = document.getElementById("operationSearchInput");
+        if (input) input.value = "";
+      }
       renderCategoryTabs();
       renderOperationCategories();
     }
@@ -2052,6 +2548,7 @@
       if (target) target.classList.add("active");
       const faqCommon = document.getElementById("faqCommonSettings");
       if (faqCommon) faqCommon.classList.toggle("active", id.startsWith("faq_"));
+      syncWriteBehaviorControls();
       updateSelectedActionInfo();
       updatePayloadPreview();
     }
@@ -2079,9 +2576,67 @@
       if (operation.type === "text_replace") return `Finds "${operation.find}" and replaces it with "${operation.replaceWith}"`;
       if (operation.type === "format_table") return `Table formatting with the ${operation.preset} preset`;
       if (operation.type?.startsWith("faq_")) return `FAQ editing with ${operation.model || "o3"}`;
-      if (operation.type === "extract_comments") return `Comments from ${operation.sourceColumn} to ${operation.outputColumn}`;
+      if (operation.type === "extract_comments") return `Comments from ${operation.sourceColumn} to ${operation.outputColumn || nextColumnLetter(operation.sourceColumn)}`;
       if (operation.type === "replace_column_when_value") return `${operation.sourceColumn} replaces ${operation.targetColumn} when a value exists`;
+      if (operation.type === "restore_backup") return operation.backupTabName ? `Restore from ${operation.backupTabName}` : "Restore from newest backup";
       return getAllOperations().find((item) => item.id === operation.type)?.desc || "Workflow operation";
+    }
+
+    function columnLetterToIndexUi(columnLetter) {
+      const letters = String(columnLetter || "D").trim().toUpperCase();
+      let index = 0;
+      for (const char of letters) index = index * 26 + (char.charCodeAt(0) - 64);
+      return index - 1;
+    }
+
+    function columnIndexToLetterUi(index) {
+      let next = index + 1;
+      let output = "";
+      while (next > 0) {
+        const remainder = (next - 1) % 26;
+        output = String.fromCharCode(65 + remainder) + output;
+        next = Math.floor((next - 1) / 26);
+      }
+      return output;
+    }
+
+    function normalizeColumnSelectionUi(value, fallback = "D") {
+      const raw = String(value || fallback).trim().toUpperCase().replace(/\s+/g, "");
+      const parts = raw.includes(",") ? raw.split(",").filter(Boolean) : [raw];
+      const columns = [];
+
+      parts.forEach((part) => {
+        const rangeMatch = part.match(/^([A-Z]+)[:\-–—]([A-Z]+)$/);
+        if (rangeMatch) {
+          const start = columnLetterToIndexUi(rangeMatch[1]);
+          const end = columnLetterToIndexUi(rangeMatch[2]);
+          if (end >= start) {
+            for (let index = start; index <= end; index += 1) columns.push(columnIndexToLetterUi(index));
+          }
+          return;
+        }
+
+        if (/^[A-Z]+$/.test(part)) columns.push(part);
+      });
+
+      return Array.from(new Set(columns.length ? columns : [fallback]));
+    }
+
+    function formatColumnSelectionUi(columns) {
+      if (!Array.isArray(columns) || columns.length === 0) return "";
+      if (columns.length === 1) return columns[0];
+      return `${columns[0]}:${columns[columns.length - 1]}`;
+    }
+
+    function defaultOutputColumnSelection(sourceSelection) {
+      const sourceColumns = normalizeColumnSelectionUi(sourceSelection, "D");
+      const lastSourceIndex = Math.max(...sourceColumns.map(columnLetterToIndexUi));
+      const outputColumns = sourceColumns.map((_, offset) => columnIndexToLetterUi(lastSourceIndex + offset + 1));
+      return formatColumnSelectionUi(outputColumns);
+    }
+
+    function nextColumnLetter(columnLetter) {
+      return defaultOutputColumnSelection(columnLetter);
     }
 
     function renderPipeline() {
@@ -2089,7 +2644,7 @@
       if (!wrapper) return;
 
       if (pipelineOperations.length === 0) {
-        wrapper.innerHTML = `<div class="empty-workflow">No sequence yet. If you run now, only the selected operation above will run.</div>`;
+        wrapper.innerHTML = `<div class="empty-workflow">No sequence yet. If you run now, only the currently selected operation will run.</div>`;
         return;
       }
 
@@ -2182,6 +2737,131 @@
       };
     }
 
+    const WRITE_BEHAVIOR_OPERATIONS = new Set([
+      "extract_comments",
+      "replace_column_when_value",
+      "add_column",
+      "rename_column",
+      "faq_ai_edit",
+      "faq_apply_client_comments",
+      "faq_language_review",
+      "faq_question_review",
+      "faq_name_injection",
+      "faq_answer_research",
+      "faq_missing_questions"
+    ]);
+
+    function operationSupportsWriteBehavior(operationId = selectedOperation) {
+      return WRITE_BEHAVIOR_OPERATIONS.has(operationId);
+    }
+
+    function clampWriteSearchColumns(value) {
+      return Math.max(1, Math.min(Number(value || 6), 25));
+    }
+
+    function getGlobalWriteBehavior() {
+      const mode = isToggleOn("globalOverwriteExisting")
+        ? "overwrite"
+        : getValue("globalExistingValueMode") || "skip_existing";
+
+      return {
+        mode,
+        maxSearchColumns: clampWriteSearchColumns(getNumber("globalWriteSearchColumns"))
+      };
+    }
+
+    function getOperationWriteBehaviorOverride() {
+      if (!operationSupportsWriteBehavior() || getValue("operationWriteBehaviorSource") !== "custom") {
+        return {};
+      }
+
+      return {
+        writeBehavior: {
+          mode: getValue("operationWriteBehaviorMode") || "skip_existing",
+          maxSearchColumns: clampWriteSearchColumns(getNumber("operationWriteSearchColumns"))
+        }
+      };
+    }
+
+    function withOperationWriteBehavior(operation) {
+      return {
+        ...operation,
+        ...getOperationWriteBehaviorOverride()
+      };
+    }
+
+    function syncWriteBehaviorControls() {
+      const globalMode = getGlobalWriteBehavior().mode;
+      const globalModeSelect = document.getElementById("globalExistingValueMode");
+      const globalSearchInput = document.getElementById("globalWriteSearchColumns");
+      const panel = document.getElementById("operationWriteBehaviorPanel");
+      const hint = document.getElementById("operationWriteBehaviorHint");
+      const badge = document.getElementById("operationWriteBehaviorBadge");
+      const summary = document.getElementById("operationWriteBehaviorSummary");
+      const controls = document.getElementById("operationWriteBehaviorControls");
+      const sourceSelect = document.getElementById("operationWriteBehaviorSource");
+      const defaultSummary = document.getElementById("operationWriteBehaviorDefaultSummary");
+      const customGrid = document.getElementById("operationWriteBehaviorCustomGrid");
+      const searchWrap = document.getElementById("operationWriteSearchWrap");
+      const operationModeSelect = document.getElementById("operationWriteBehaviorMode");
+      const operationSearchInput = document.getElementById("operationWriteSearchColumns");
+      const supports = operationSupportsWriteBehavior();
+      const usesGlobal = getValue("operationWriteBehaviorSource") !== "custom";
+      const operationMode = getValue("operationWriteBehaviorMode") || "skip_existing";
+      const globalLabel = writeBehaviorLabel(getGlobalWriteBehavior());
+      const operationLabel = writeBehaviorLabel({
+        mode: operationMode,
+        maxSearchColumns: clampWriteSearchColumns(getNumber("operationWriteSearchColumns"))
+      });
+
+      if (globalModeSelect) globalModeSelect.disabled = isToggleOn("globalOverwriteExisting");
+      if (globalSearchInput) globalSearchInput.disabled = globalMode !== "first_empty";
+
+      if (panel) {
+        panel.classList.toggle("disabled", false);
+        panel.classList.toggle("info-only", !supports);
+      }
+      if (controls) controls.classList.toggle("hidden", !supports);
+      if (sourceSelect) sourceSelect.disabled = !supports;
+      if (customGrid) customGrid.classList.toggle("hidden", !supports || usesGlobal);
+      if (searchWrap) searchWrap.classList.toggle("hidden", operationMode !== "first_empty");
+      if (defaultSummary) {
+        defaultSummary.textContent = usesGlobal
+          ? `Default: ${globalLabel}.`
+          : `Custom: ${operationLabel}.`;
+      }
+      if (badge) {
+        badge.classList.remove("default", "custom", "off");
+        badge.classList.add(!supports ? "off" : usesGlobal ? "default" : "custom");
+        badge.textContent = !supports ? "Not used" : usesGlobal ? "Default" : "Custom";
+      }
+      if (summary) {
+        summary.textContent = !supports
+          ? "This action changes the selected cells directly, so there is no separate output-cell conflict to resolve."
+          : usesGlobal
+            ? `Using workflow default: ${globalLabel}.`
+            : `This action will use: ${operationLabel}.`;
+      }
+      if (hint) {
+        hint.textContent = supports
+          ? usesGlobal
+            ? "Change this only when one action needs different writeback behavior."
+            : "Custom behavior applies only to this action."
+          : "This setting is only shown for actions that write generated values into target/output cells.";
+      }
+
+      if (operationModeSelect) operationModeSelect.disabled = !supports || usesGlobal;
+      if (operationSearchInput) {
+        operationSearchInput.disabled = !supports || usesGlobal || operationMode !== "first_empty";
+      }
+    }
+
+    function writeBehaviorLabel(behavior) {
+      if (behavior?.mode === "overwrite") return "overwrite existing values";
+      if (behavior?.mode === "first_empty") return `find first empty cell to the right (${behavior.maxSearchColumns || 6} columns)`;
+      return "skip existing values";
+    }
+
     function getFaqCommonConfig() {
       const sourceColumns = getValue("faqEditSourceColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
       const outputColumns = getValue("faqEditOutputColumns").split(",").map((item) => item.trim().toUpperCase()).filter(Boolean);
@@ -2225,23 +2905,25 @@
       if (selectedOperation === "set_column_widths") return { type: "set_column_widths", widthPx: getNumber("widthPx") || 240 };
       if (selectedOperation === "set_row_heights") return { type: "set_row_heights", heightPx: getNumber("heightPx") || 44 };
       if (selectedOperation === "extract_comments") {
-        return {
+        const sourceColumn = getValue("commentsSourceColumn") || "D";
+        const outputColumn = getValue("commentsOutputColumn").trim();
+        return withOperationWriteBehavior({
           type: "extract_comments",
-          sourceColumn: getValue("commentsSourceColumn") || "B",
-          outputColumn: getValue("commentsOutputColumn") || "C",
+          sourceColumn,
+          ...(outputColumn ? { outputColumn } : {}),
           startRow: getNumber("commentsStartRow") || 2,
           outputHeader: getValue("commentsOutputHeader") || "Comment",
           includeReplies: isToggleOn("commentsIncludeReplies")
-        };
+        });
       }
       if (selectedOperation === "replace_column_when_value") {
-        return {
+        return withOperationWriteBehavior({
           type: "replace_column_when_value",
           sourceColumn: getValue("replaceColumnSource") || "F",
           targetColumn: getValue("replaceColumnTarget") || "C",
           startRow: getNumber("replaceColumnStartRow") || 2,
           targetHeader: getValue("replaceColumnTargetHeader")
-        };
+        });
       }
       if (selectedOperation.startsWith("faq_")) {
         const common = getFaqCommonConfig();
@@ -2268,25 +2950,28 @@
             : (sourceColumns[2] || "C");
           operation.targetHeader = operation.targetCol === (sourceColumns[2] || "C") ? "Answer" : "Agent Researched Answer";
         }
-        return operation;
+        return withOperationWriteBehavior(operation);
       }
-      if (selectedOperation === "add_column") return { type: "add_column", columnLetter: getValue("addColumnLetter") || "H", header: getValue("addColumnHeader") || "New Column" };
-      if (selectedOperation === "rename_column") return { type: "rename_column", columnLetter: getValue("renameColumnLetter") || "H", header: getValue("renameColumnHeader") || "New Header" };
+      if (selectedOperation === "add_column") return withOperationWriteBehavior({ type: "add_column", columnLetter: getValue("addColumnLetter") || "H", header: getValue("addColumnHeader") || "New Column" });
+      if (selectedOperation === "rename_column") return withOperationWriteBehavior({ type: "rename_column", columnLetter: getValue("renameColumnLetter") || "H", header: getValue("renameColumnHeader") || "New Header" });
       if (selectedOperation === "reorder_columns") return { type: "reorder_columns", columns: getValue("reorderColumns").split(",").map((item) => item.trim()).filter(Boolean), outputTabName: getValue("reorderOutputTab") || "Reordered" };
+      if (selectedOperation === "restore_backup") return { type: "restore_backup", backupTabName: getValue("restoreBackupName") };
       return { type: "duplicate_tab_template", templateTabName: getValue("templateTabName") || "TEMPLATE", newTabName: getValue("newTabName") || "New formatted tab" };
     }
 
     function getPayload(forceDryRun = null) {
       const operations = getEffectiveOperations();
+      const sourceType = detectSourceTypeFromTargetId(getValue("targetId")) || getValue("sourceType");
       return {
         mode: "design-formatting",
-        sourceType: getValue("sourceType"),
+        sourceType,
         targetId: getValue("targetId"),
         tabName: getValue("tabName") || "Sheet1",
         maxFiles: getNumber("maxFiles") || 30,
         dryRun: forceDryRun === null ? isToggleOn("dryRun") : forceDryRun,
         createBackup: isToggleOn("createBackup"),
         range: getRangeConfig(),
+        writeBehavior: getGlobalWriteBehavior(),
         operation: operations[0],
         operations
       };
@@ -2301,7 +2986,30 @@
       if (value === undefined || value === null || value === "") return;
       const element = document.getElementById(id);
       if (!element) return;
+      if (element.tagName === "SELECT" && !Array.from(element.options).some((option) => option.value === String(value))) {
+        element.add(new Option(String(value), String(value)));
+      }
       element.value = String(value);
+    }
+
+    function setTabOptions(tabs, selectedTabName = "") {
+      const tabInput = document.getElementById("tabName");
+      const tabOptions = document.getElementById("tabNameOptions");
+      const hint = document.getElementById("tabNameHint");
+      const cleanTabs = Array.from(new Set((tabs || []).map((tab) => String(tab || "").trim()).filter(Boolean)));
+
+      if (!tabInput || cleanTabs.length === 0) return;
+
+      if (tabOptions) {
+        tabOptions.innerHTML = cleanTabs
+          .map((tab) => `<option value="${escapeHtml(tab)}"></option>`)
+          .join("");
+      }
+
+      const selected = cleanTabs.includes(selectedTabName) ? selectedTabName : cleanTabs[0];
+      tabInput.value = selected;
+      if (hint) hint.textContent = `${cleanTabs.length} tab${cleanTabs.length === 1 ? "" : "s"} loaded. You can also type a tab name manually.`;
+      updatePayloadPreview();
     }
 
     function setToggleValue(id, enabled) {
@@ -2310,8 +3018,66 @@
       element.classList.toggle("on", Boolean(enabled));
     }
 
+    function applyWriteBehaviorControls(writeBehavior, scope = "global") {
+      const behavior = writeBehavior || {};
+      const mode = behavior.mode || "skip_existing";
+      const maxSearchColumns = behavior.maxSearchColumns || 6;
+
+      if (scope === "global") {
+        setToggleValue("globalOverwriteExisting", mode === "overwrite");
+        setFieldValue("globalExistingValueMode", mode === "first_empty" ? "first_empty" : "skip_existing");
+        setFieldValue("globalWriteSearchColumns", maxSearchColumns);
+        return;
+      }
+
+      const hasOperationOverride = Boolean(writeBehavior?.mode);
+      setFieldValue("operationWriteBehaviorSource", hasOperationOverride ? "custom" : "global");
+      if (hasOperationOverride) {
+        setFieldValue("operationWriteBehaviorMode", mode);
+        setFieldValue("operationWriteSearchColumns", maxSearchColumns);
+      }
+      syncWriteBehaviorControls();
+    }
+
     function normalizeSourceType(value) {
       return value === "folder" ? "folder" : "sheet";
+    }
+
+    function detectSourceTypeFromTargetId(value) {
+      const raw = String(value || "").trim().toLowerCase();
+      if (!raw) return "";
+      if (raw.includes("/folders/") || raw.includes("drive.google.com/drive/folders")) return "folder";
+      if (raw.includes("/spreadsheets/d/") || raw.includes("docs.google.com/spreadsheets")) return "sheet";
+      return "";
+    }
+
+    function updateDataSourceHints() {
+      const sourceType = getValue("sourceType");
+      const hint = document.getElementById("tabNameHint");
+      const loadTabsBtn = document.getElementById("loadTabsBtn");
+      if (hint) {
+        hint.textContent = sourceType === "folder"
+          ? "Folder mode: type the exact tab name to use across files. Load tabs samples the first spreadsheet in the folder."
+          : "Type an exact tab name, or load tabs after pasting a Sheet URL.";
+      }
+      if (loadTabsBtn) {
+        loadTabsBtn.textContent = sourceType === "folder" ? "Sample tabs" : "Load tabs";
+      }
+    }
+
+    function handleSourceTypeChange() {
+      updateDataSourceHints();
+      updatePayloadPreview();
+    }
+
+    function handleTargetIdInput() {
+      const detected = detectSourceTypeFromTargetId(getValue("targetId"));
+      const sourceTypeEl = document.getElementById("sourceType");
+      if (detected && sourceTypeEl && sourceTypeEl.value !== detected) {
+        sourceTypeEl.value = detected;
+      }
+      updateDataSourceHints();
+      updatePayloadPreview();
     }
 
     function applyFaqOperationHandoff(operation) {
@@ -2344,6 +3110,7 @@
       setFieldValue("faqMissingRequirements", operation.missingRequirements);
       setFieldValue("faqAnswerResearchPolicy", operation.sourcePolicy || operation.missingRequirements);
       setFieldValue("faqAnswerPlaceholder", operation.answerPlaceholder);
+      applyWriteBehaviorControls(operation.writeBehavior, "operation");
       if (operation.type === "faq_answer_research") {
         const answerCol = operation.answerCol || "C";
         setFieldValue("faqAnswerResearchWriteback", operation.targetCol === answerCol || operation.replaceOriginal ? "answer" : "target");
@@ -2357,6 +3124,7 @@
         setFieldValue("replaceColumnTarget", operation.targetColumn);
         setFieldValue("replaceColumnStartRow", operation.startRow);
         setFieldValue("replaceColumnTargetHeader", operation.targetHeader);
+        applyWriteBehaviorControls(operation.writeBehavior, "operation");
       }
       if (operation.type === "extract_comments") {
         setFieldValue("commentsSourceColumn", operation.sourceColumn);
@@ -2364,6 +3132,13 @@
         setFieldValue("commentsStartRow", operation.startRow);
         setFieldValue("commentsOutputHeader", operation.outputHeader);
         setToggleValue("commentsIncludeReplies", operation.includeReplies !== false);
+        applyWriteBehaviorControls(operation.writeBehavior, "operation");
+      }
+      if (operation.type === "restore_backup") {
+        setFieldValue("restoreBackupName", operation.backupTabName);
+      }
+      if (operation.writeBehavior) {
+        applyWriteBehaviorControls(operation.writeBehavior, "operation");
       }
     }
 
@@ -2377,7 +3152,8 @@
       setFieldValue("tabName", payload.tabName || values.tabName || "Sheet1");
       setFieldValue("maxFiles", payload.maxFiles || values.maxFiles);
       setToggleValue("dryRun", payload.dryRun !== false && values.dryRun !== false);
-      setToggleValue("createBackup", Boolean(payload.createBackup || values.createBackup));
+      setToggleValue("createBackup", payload.createBackup !== false && values.createBackup !== false);
+      applyWriteBehaviorControls(payload.writeBehavior || values.writeBehavior, "global");
 
       const range = payload.range || {};
       setFieldValue("columnScope", range.columnScope);
@@ -2398,6 +3174,8 @@
       }
 
       renderPipeline();
+      updateDataSourceHints();
+      syncWriteBehaviorControls();
       const setupSummary = operation?.type === "faq_answer_research"
         ? "Loaded AI answer research setup from AI Workspace Assistant."
         : "Loaded setup from AI Workspace Assistant.";
@@ -2604,10 +3382,34 @@
     function stopTimer() { clearInterval(timerInterval); }
 
     function setRunButtonsDisabled(disabled) {
-      ["loadSheetBtn", "previewBtn", "runBtn"].forEach((id) => {
+      ["loadTabsBtn", "loadSheetBtn", "previewBtn", "runBtn", "restoreBackupBtn"].forEach((id) => {
         const button = document.getElementById(id);
         if (button) button.disabled = disabled;
       });
+    }
+
+    function loadSheetTabs() {
+      const payload = {
+        ...getPayload(true),
+        listTabsOnly: true,
+        dryRun: true,
+      };
+
+      if (!payload.targetId) {
+        addLog("Missing Sheet or folder URL / ID.", "error");
+        return;
+      }
+
+      activeRunKind = "tabs";
+      logsEl.innerHTML = "";
+      addLog(payload.sourceType === "folder" ? "Loading tabs from the first spreadsheet in the folder..." : "Loading tabs from the selected sheet...", "info");
+      document.getElementById("statusDot").classList.add("live");
+      document.getElementById("statusText").textContent = "Loading";
+      summaryActionEl.textContent = "Load tabs";
+      setSummary("read", "Reading available tabs...", "Loading");
+      setRunButtonsDisabled(true);
+      startTimer();
+      socket.emit("start-agent", payload);
     }
 
     function runSheetPreview() {
@@ -2638,6 +3440,43 @@
       socket.emit("start-agent", payload);
     }
 
+    function restoreLatestBackup() {
+      const payload = {
+        ...getPayload(false),
+        dryRun: false,
+        createBackup: false,
+        operation: {
+          type: "restore_backup",
+          backupTabName: getValue("restoreBackupName")
+        },
+        operations: [{
+          type: "restore_backup",
+          backupTabName: getValue("restoreBackupName")
+        }]
+      };
+
+      if (!payload.targetId) {
+        addLog("Missing Sheet or folder URL / ID.", "error");
+        return;
+      }
+
+      const confirmed = window.confirm(`Restore "${payload.tabName}" from its latest backup tab? This will replace the current tab.`);
+      if (!confirmed) return;
+
+      activeRunKind = "restore";
+      logsEl.innerHTML = "";
+      clearPreview();
+      addLog(`Restoring latest backup for tab: ${payload.tabName}`, "info");
+      addLog(`Target: ${payload.targetId}`, "dim");
+      setRunButtonsDisabled(true);
+      document.getElementById("statusDot").classList.add("live");
+      document.getElementById("statusText").textContent = "Restoring";
+      summaryActionEl.textContent = "Restore backup";
+      setSummary("read", "Finding the newest backup tab and preparing restore...", "Running");
+      startTimer();
+      socket.emit("start-agent", payload);
+    }
+
     function runFormatting(forceDryRun) {
       const payload = getPayload(forceDryRun);
       const operations = Array.isArray(payload.operations) && payload.operations.length ? payload.operations : [payload.operation];
@@ -2661,7 +3500,7 @@
       if (isCommentsExtraction) {
         const commentsOperation = operations.find((operation) => operation.type === "extract_comments");
         addLog(`Comments source column: ${commentsOperation.sourceColumn}`, "dim");
-        addLog(`Output column: ${commentsOperation.outputColumn}`, "dim");
+        addLog(`Output column: ${commentsOperation.outputColumn || nextColumnLetter(commentsOperation.sourceColumn)}`, "dim");
       }
 
       setRunButtonsDisabled(true);
@@ -2694,6 +3533,13 @@
     });
 
     socket.on("preview-event", (event) => {
+      if (event?.kind === "sheet_tabs") {
+        setTabOptions(event.tabs, event.selectedTabName);
+        addLog(`Loaded tabs: ${(event.tabs || []).join(", ")}`, "success");
+        setSummary("plan", "Choose a tab, then load preview or run the operation.", "Loaded");
+        return;
+      }
+
       addPreviewEvent(event);
       switchOutputView("preview");
     });
@@ -2703,9 +3549,13 @@
       document.getElementById("statusDot").classList.remove("live");
       document.getElementById("statusText").textContent = "Finished";
       stopTimer();
-      const finishMessage = activeRunKind === "sheet-preview"
-        ? "Sheet preview loaded. Choose an operation and continue editing."
-        : "Done. Check the logs and sheet preview for changed files and cells.";
+      const finishMessage = activeRunKind === "tabs"
+        ? "Tabs loaded. Choose the tab you want to edit."
+        : activeRunKind === "sheet-preview"
+          ? "Sheet preview loaded. Choose an operation and continue editing."
+          : activeRunKind === "restore"
+            ? "Restore finished. Check the sheet tab before continuing."
+            : "Done. Check the logs and sheet preview for changed files and cells.";
       setSummary("report", finishMessage, "Finished");
       ["read", "plan", "apply", "report"].forEach((item) => {
         const element = document.getElementById(`s-${item}`);
@@ -2716,9 +3566,13 @@
       });
       const latestPayload = getPayload();
       const latestOperations = Array.isArray(latestPayload.operations) && latestPayload.operations.length ? latestPayload.operations : [latestPayload.operation];
-      const doneLabel = activeRunKind === "sheet-preview"
-        ? "Sheet preview loaded"
-        : latestOperations.length > 1 ? "Workflow complete" : latestOperations[0].type === "extract_comments" ? "Comments extraction complete" : "Formatting complete";
+      const doneLabel = activeRunKind === "tabs"
+        ? "Tabs loaded"
+        : activeRunKind === "sheet-preview"
+          ? "Sheet preview loaded"
+          : activeRunKind === "restore"
+            ? "Restore complete"
+            : latestOperations.length > 1 ? "Workflow complete" : latestOperations[0].type === "extract_comments" ? "Comments extraction complete" : "Formatting complete";
       addLog(`\n${doneLabel}.`, "success");
     });
 
@@ -2732,6 +3586,8 @@
     consumeAssistantWorkspaceHandoff();
     updateSelectedActionInfo();
     syncRangeControls();
+    syncWriteBehaviorControls();
+    updateDataSourceHints();
     renderPipeline();
     updatePayloadPreview();
   </script>

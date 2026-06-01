@@ -17,6 +17,17 @@ type RangeConfig = {
   rows?: string;
 };
 
+type WriteBehaviorMode = "overwrite" | "skip_existing" | "first_empty";
+
+type WriteBehaviorConfig = {
+  mode?: WriteBehaviorMode;
+  maxSearchColumns?: number;
+};
+
+type OperationWriteBehavior = {
+  writeBehavior?: WriteBehaviorConfig;
+};
+
 type DesignFormattingPayload = {
   sourceType: SourceType;
   targetId: string;
@@ -25,9 +36,11 @@ type DesignFormattingPayload = {
   dryRun?: boolean;
   createBackup?: boolean;
   previewOnly?: boolean;
+  listTabsOnly?: boolean;
   previewRows?: number;
   previewColumns?: number;
   range?: RangeConfig;
+  writeBehavior?: WriteBehaviorConfig;
   operations?: DesignFormattingOperation[];
   operation: DesignFormattingOperation;
   assistantInstruction?: string;
@@ -35,7 +48,7 @@ type DesignFormattingPayload = {
   selectedOperation?: string;
 };
 
-type DesignFormattingOperation =
+type DesignFormattingOperation = OperationWriteBehavior & (
   | TextReplaceOperation
   | WrapHtmlOperation
   | NormalizeSpacesOperation
@@ -54,7 +67,9 @@ type DesignFormattingOperation =
   | RenameColumnOperation
   | ReorderColumnsOperation
   | DuplicateTabTemplateOperation
-  | FaqAiEditOperation;
+  | RestoreBackupOperation
+  | FaqAiEditOperation
+);
 
 type TextReplaceOperation = {
   type: "text_replace";
@@ -169,6 +184,11 @@ type DuplicateTabTemplateOperation = {
   newTabName: string;
 };
 
+type RestoreBackupOperation = {
+  type: "restore_backup";
+  backupTabName?: string;
+};
+
 type FaqAiEditOperationType =
   | "faq_ai_edit"
   | "faq_apply_client_comments"
@@ -241,6 +261,7 @@ type ApplyOperationArgs = {
   tabName: string;
   range: RangeConfig;
   operation: DesignFormattingOperation;
+  writeBehavior: WriteBehaviorConfig;
   dryRun: boolean;
 };
 
@@ -273,10 +294,28 @@ export class DesignFormattingJob {
     };
 
     console.log(chalk.blue("🎨 Design Formatting Job started"));
-    console.log(chalk.gray(`Source type: ${payload.sourceType}`));
+    console.log(chalk.gray(`Source type: ${this.resolveSourceType(payload)}`));
     console.log(chalk.gray(`Tab: ${tabName}`));
     console.log(chalk.gray(`Dry run: ${dryRun ? "YES" : "NO"}`));
     console.log(chalk.gray(`Targets found: ${targets.length}`));
+
+    if (payload.listTabsOnly) {
+      console.log(chalk.blue("📑 Loading sheet tabs"));
+
+      for (const target of targets.slice(0, 1)) {
+        await this.emitSheetTabs({
+          spreadsheetId: target.id,
+          fileName: target.name,
+          selectedTabName: tabName,
+        });
+
+        stats.filesProcessed += 1;
+      }
+
+      console.log(chalk.green("✅ Sheet tabs loaded"));
+      this.printStats(stats);
+      return stats;
+    }
 
     if (payload.previewOnly) {
       console.log(chalk.blue("📄 Loading live sheet preview"));
@@ -300,13 +339,15 @@ export class DesignFormattingJob {
     }
 
     const operations = this.getOperations(payload);
+    const writeBehavior = this.normalizeWriteBehavior(payload.writeBehavior);
     console.log(chalk.gray(`Operations: ${operations.map((operation) => operation.type).join(" → ")}`));
+    console.log(chalk.gray(`Write behavior: ${this.describeWriteBehavior(writeBehavior)}`));
 
     for (const target of targets) {
       try {
         console.log(chalk.cyan(`\n➡ Processing: ${target.name}`));
 
-        if (payload.createBackup && !dryRun && operations.some((operation) => this.operationUsesSourceTab(operation))) {
+        if (payload.createBackup && !dryRun && operations.some((operation) => this.shouldCreateBackupBeforeOperation(operation))) {
           await this.createBackupTab(target.id, tabName);
         }
 
@@ -323,6 +364,7 @@ export class DesignFormattingJob {
             tabName,
             range: payload.range ?? {},
             operation,
+            writeBehavior,
             dryRun,
           });
         }
@@ -351,7 +393,7 @@ export class DesignFormattingJob {
       throw new Error("Missing targetId");
     }
 
-    if (payload.previewOnly) {
+    if (payload.previewOnly || payload.listTabsOnly) {
       return;
     }
 
@@ -377,8 +419,20 @@ export class DesignFormattingJob {
           throw new Error("Extract comments requires a source column");
         }
 
-        if (!operation.outputColumn?.trim()) {
-          throw new Error("Extract comments requires an output column");
+        const sourceColumns = this.normalizeColumnSelection(operation.sourceColumn);
+
+        if (operation.outputColumn?.trim()) {
+          const outputColumns = this.normalizeColumnSelection(operation.outputColumn);
+
+          if (sourceColumns.length !== outputColumns.length) {
+            throw new Error("Extract comments source and output ranges must have the same width");
+          }
+
+          const overlappingColumns = sourceColumns.filter((column) => outputColumns.includes(column));
+
+          if (overlappingColumns.length > 0) {
+            throw new Error(`Extract comments source and output columns must not overlap: ${overlappingColumns.join(", ")}`);
+          }
         }
       }
 
@@ -447,6 +501,7 @@ export class DesignFormattingJob {
       "rename_column",
       "reorder_columns",
       "duplicate_tab_template",
+      "restore_backup",
       "faq_ai_edit",
       "faq_apply_client_comments",
       "faq_language_review",
@@ -478,10 +533,62 @@ export class DesignFormattingJob {
     }
   }
 
+  private normalizeWriteBehavior(
+    config?: WriteBehaviorConfig,
+    defaultMode: WriteBehaviorMode = "overwrite"
+  ): Required<WriteBehaviorConfig> {
+    const requestedMode = config?.mode || defaultMode;
+    const mode: WriteBehaviorMode = ["overwrite", "skip_existing", "first_empty"].includes(requestedMode)
+      ? requestedMode
+      : defaultMode;
+    const maxSearchColumns = Math.max(1, Math.min(Number(config?.maxSearchColumns || 6), 25));
+
+    return { mode, maxSearchColumns };
+  }
+
+  private getEffectiveWriteBehavior(
+    operation: DesignFormattingOperation,
+    fallback: WriteBehaviorConfig
+  ): Required<WriteBehaviorConfig> {
+    const fallbackBehavior = this.normalizeWriteBehavior(fallback);
+    const operationBehavior = operation.writeBehavior;
+
+    if (!operationBehavior?.mode) {
+      return fallbackBehavior;
+    }
+
+    return this.normalizeWriteBehavior(
+      {
+        mode: operationBehavior.mode,
+        maxSearchColumns: operationBehavior.maxSearchColumns ?? fallbackBehavior.maxSearchColumns,
+      },
+      fallbackBehavior.mode
+    );
+  }
+
+  private describeWriteBehavior(behavior: WriteBehaviorConfig): string {
+    const normalized = this.normalizeWriteBehavior(behavior);
+
+    if (normalized.mode === "overwrite") {
+      return "overwrite existing target values";
+    }
+
+    if (normalized.mode === "first_empty") {
+      return `find first empty cell to the right (up to ${normalized.maxSearchColumns} columns)`;
+    }
+
+    return "skip target cells that already have values";
+  }
+
+  private isBlankCellValue(value: unknown): boolean {
+    return String(value ?? "").trim() === "";
+  }
+
   private async resolveTargets(payload: DesignFormattingPayload): Promise<TargetSheet[]> {
     const maxFiles = Math.max(1, Math.min(Number(payload.maxFiles || 30), 200));
+    const sourceType = this.resolveSourceType(payload);
 
-    if (payload.sourceType === "sheet") {
+    if (sourceType === "sheet") {
       const id = this.extractSpreadsheetId(payload.targetId);
 
       return [
@@ -501,12 +608,28 @@ export class DesignFormattingJob {
     }));
   }
 
+  private resolveSourceType(payload: DesignFormattingPayload): SourceType {
+    return payload.sourceType === "folder" || this.looksLikeFolderInput(payload.targetId)
+      ? "folder"
+      : "sheet";
+  }
+
+  private looksLikeFolderInput(input: string): boolean {
+    const raw = String(input || "").toLowerCase();
+    return raw.includes("/folders/") || raw.includes("drive.google.com/drive/folders");
+  }
+
   private async applyOperation(args: ApplyOperationArgs): Promise<number> {
     const { spreadsheetId, fileName, tabName, range, operation, dryRun } = args;
+    const writeBehavior = this.getEffectiveWriteBehavior(operation, args.writeBehavior);
 
     if (operation.type === "extract_comments") {
-      const sourceColumn = this.normalizeColumnLetter(operation.sourceColumn || "B");
-      const outputColumn = this.normalizeColumnLetter(operation.outputColumn || "C");
+      const sourceColumns = this.normalizeColumnSelection(operation.sourceColumn || "D");
+      const outputColumns = operation.outputColumn?.trim()
+        ? this.normalizeColumnSelection(operation.outputColumn)
+        : this.getDefaultOutputColumns(sourceColumns);
+      const sourceColumn = this.formatColumnSelection(sourceColumns);
+      const outputColumn = this.formatColumnSelection(outputColumns);
       const startRow = Number(operation.startRow || 2);
       const outputHeader = operation.outputHeader || "Comment";
 
@@ -515,21 +638,12 @@ export class DesignFormattingJob {
         `Comment text will be written to column ${outputColumn}`,
         `Starting from row ${startRow}`,
         operation.includeReplies === false ? "Replies will be skipped" : "Replies will be included",
+        `Write behavior: ${this.describeWriteBehavior(writeBehavior)}`,
       ]);
-
-      if (dryRun) {
-        console.log(
-          chalk.yellow(
-            `[DRY RUN] Would extract comments from ${tabName}!${sourceColumn} and write them to ${outputColumn}`
-          )
-        );
-
-        return 1;
-      }
 
       const commentsJob = new ExtractSheetCommentsJob(this.sheets);
 
-      await commentsJob.run({
+      const result = await commentsJob.run({
         spreadsheetId,
         sourceTabName: tabName,
         sourceColumn,
@@ -537,13 +651,15 @@ export class DesignFormattingJob {
         startRow,
         outputHeader,
         includeReplies: operation.includeReplies !== false,
+        writeBehavior,
+        dryRun,
       });
 
-      return 1;
+      return result.cellsChanged;
     }
 
     if (operation.type === "replace_column_when_value") {
-      return this.replaceColumnWhenValue(spreadsheetId, fileName, tabName, range, operation, dryRun);
+      return this.replaceColumnWhenValue(spreadsheetId, fileName, tabName, range, operation, writeBehavior, dryRun);
     }
 
     if (this.isTextValueOperation(operation)) {
@@ -611,7 +727,7 @@ export class DesignFormattingJob {
         "Existing columns will not be shifted",
       ]);
 
-      return this.addColumn(spreadsheetId, tabName, operation, dryRun);
+      return this.addColumn(spreadsheetId, tabName, operation, writeBehavior, dryRun);
     }
 
     if (operation.type === "rename_column") {
@@ -620,7 +736,7 @@ export class DesignFormattingJob {
         "Only the first row will be changed",
       ]);
 
-      return this.renameColumn(spreadsheetId, tabName, operation, dryRun);
+      return this.renameColumn(spreadsheetId, tabName, operation, writeBehavior, dryRun);
     }
 
     if (operation.type === "reorder_columns") {
@@ -642,8 +758,12 @@ export class DesignFormattingJob {
       return this.duplicateTabTemplate(spreadsheetId, operation, dryRun);
     }
 
+    if (operation.type === "restore_backup") {
+      return this.restoreLatestBackup(spreadsheetId, fileName, tabName, operation, dryRun);
+    }
+
     if (this.isFaqEditOperation(operation)) {
-      return this.editFaqWithAi(spreadsheetId, fileName, tabName, operation, dryRun);
+      return this.editFaqWithAi(spreadsheetId, fileName, tabName, operation, writeBehavior, dryRun);
     }
 
     throw new Error(`Unsupported design-formatting operation: ${String((operation as { type?: string }).type || "unknown")}`);
@@ -756,13 +876,17 @@ export class DesignFormattingJob {
     tabName: string,
     rangeConfig: RangeConfig,
     operation: ReplaceColumnWhenValueOperation,
+    writeBehavior: Required<WriteBehaviorConfig>,
     dryRun: boolean
   ): Promise<number> {
     const sourceColumn = this.normalizeColumnLetter(operation.sourceColumn);
     const targetColumn = this.normalizeColumnLetter(operation.targetColumn);
     const sourceIndex = this.columnLetterToIndex(sourceColumn);
     const targetIndex = this.columnLetterToIndex(targetColumn);
-    const readEndColumn = this.columnIndexToLetter(Math.max(sourceIndex, targetIndex));
+    const searchEndIndex = writeBehavior.mode === "first_empty"
+      ? targetIndex + writeBehavior.maxSearchColumns - 1
+      : targetIndex;
+    const readEndColumn = this.columnIndexToLetter(Math.max(sourceIndex, searchEndIndex));
     const allRows = await this.sheets.readValues(spreadsheetId, `${this.quoteSheet(tabName)}!A:${readEndColumn}`);
     const rowBounds = this.resolveRowBounds(rangeConfig);
     const operationStartRow = Math.max(1, Number(operation.startRow || 2));
@@ -771,57 +895,109 @@ export class DesignFormattingJob {
     const targetHeader = String(operation.targetHeader || "").trim();
 
     let changed = 0;
+    let skippedExisting = 0;
+    let skippedNoEmptyCell = 0;
     const changedCells = new Map<string, ChangedCellInfo>();
-    const targetValues: string[][] = [];
-    const changedTargetValues: Array<{ rowNumber: number; value: string }> = [];
+    const previewStartIndex = targetIndex;
+    const previewEndIndex = Math.max(targetIndex, searchEndIndex);
+    const previewWidth = previewEndIndex - previewStartIndex + 1;
+    const originalPreviewRows: string[][] = [];
+    const nextPreviewRows: string[][] = [];
+    const cellWrites: Array<{ rowNumber: number; columnLetter: string; value: string }> = [];
 
     for (let rowNumber = startRow; rowNumber <= endRow; rowNumber += 1) {
       const row = allRows[rowNumber - 1] || [];
       const sourceRaw = String(row[sourceIndex] ?? "");
-      const targetRaw = String(row[targetIndex] ?? "");
-      const nextValue = sourceRaw.trim() ? sourceRaw : targetRaw;
+      const originalPreviewRow = Array.from({ length: previewWidth }, (_, offset) => {
+        return String(row[previewStartIndex + offset] ?? "");
+      });
+      const nextPreviewRow = [...originalPreviewRow];
 
-      targetValues.push([nextValue]);
-
-      if (sourceRaw.trim() && nextValue !== targetRaw) {
-        changed += 1;
-        changedTargetValues.push({
-          rowNumber,
-          value: nextValue,
-        });
-        changedCells.set(`${rowNumber}:${targetColumn}`, {
-          before: targetRaw,
-          after: nextValue,
-        });
+      if (!sourceRaw.trim()) {
+        originalPreviewRows.push(originalPreviewRow);
+        nextPreviewRows.push(nextPreviewRow);
+        continue;
       }
+
+      let destinationIndex = targetIndex;
+
+      if (writeBehavior.mode === "skip_existing" && !this.isBlankCellValue(row[targetIndex])) {
+        skippedExisting += 1;
+        originalPreviewRows.push(originalPreviewRow);
+        nextPreviewRows.push(nextPreviewRow);
+        continue;
+      }
+
+      if (writeBehavior.mode === "first_empty") {
+        destinationIndex = -1;
+
+        for (let index = targetIndex; index <= searchEndIndex; index += 1) {
+          if (this.isBlankCellValue(row[index])) {
+            destinationIndex = index;
+            break;
+          }
+        }
+
+        if (destinationIndex < 0) {
+          skippedNoEmptyCell += 1;
+          originalPreviewRows.push(originalPreviewRow);
+          nextPreviewRows.push(nextPreviewRow);
+          continue;
+        }
+      }
+
+      const destinationRaw = String(row[destinationIndex] ?? "");
+
+      if (sourceRaw !== destinationRaw) {
+        changed += 1;
+        const destinationColumn = this.columnIndexToLetter(destinationIndex);
+
+        cellWrites.push({
+          rowNumber,
+          columnLetter: destinationColumn,
+          value: sourceRaw,
+        });
+        changedCells.set(`${rowNumber}:${destinationColumn}`, {
+          before: destinationRaw,
+          after: sourceRaw,
+        });
+        nextPreviewRow[destinationIndex - previewStartIndex] = sourceRaw;
+      }
+
+      originalPreviewRows.push(originalPreviewRow);
+      nextPreviewRows.push(nextPreviewRow);
     }
 
     const headerBefore = String(allRows[0]?.[targetIndex] ?? "");
-    const headerChanged = Boolean(targetHeader) && targetHeader !== headerBefore;
-    const changedTotal = changed + (headerChanged ? 1 : 0);
+    const shouldWriteHeader = Boolean(targetHeader) &&
+      targetHeader !== headerBefore &&
+      (writeBehavior.mode === "overwrite" || this.isBlankCellValue(headerBefore));
+    const changedTotal = changed + (shouldWriteHeader ? 1 : 0);
 
     if (endRow < startRow) {
       this.emitPreviewPlanIfNeeded(spreadsheetId, fileName, tabName, "Replace target column from source column", [
         `No data rows were found from row ${startRow}`,
-        headerChanged
+        shouldWriteHeader
           ? `Target header will be set to "${targetHeader}"`
           : "No target cells need replacement in the selected range",
+        `Write behavior: ${this.describeWriteBehavior(writeBehavior)}`,
       ]);
 
       if (dryRun) {
-        return headerChanged ? 1 : 0;
+        return shouldWriteHeader ? 1 : 0;
       }
 
-      if (headerChanged) {
+      if (shouldWriteHeader) {
         await this.sheets.writeValues(spreadsheetId, `${this.quoteSheet(tabName)}!${targetColumn}1:${targetColumn}1`, [
           [targetHeader],
         ]);
       }
 
-      return headerChanged ? 1 : 0;
+      return shouldWriteHeader ? 1 : 0;
     }
 
-    const rangeA1 = `${this.quoteSheet(tabName)}!${targetColumn}${startRow}:${targetColumn}${endRow}`;
+    const previewEndColumn = this.columnIndexToLetter(previewEndIndex);
+    const rangeA1 = `${this.quoteSheet(tabName)}!${targetColumn}${startRow}:${previewEndColumn}${endRow}`;
 
     if (changed > 0) {
       this.emitSheetPreviewIfNeeded({
@@ -831,12 +1007,12 @@ export class DesignFormattingJob {
         rangeA1,
         valueRange: {
           startCol: targetColumn,
-          endCol: targetColumn,
+          endCol: previewEndColumn,
           startRow,
           endRow,
         },
-        originalRows: allRows.slice(startRow - 1, endRow).map((row) => [String(row?.[targetIndex] ?? "")]),
-        nextRows: targetValues,
+        originalRows: originalPreviewRows,
+        nextRows: nextPreviewRows,
         changedCells,
         changedCellsCount: changedTotal,
       });
@@ -844,61 +1020,42 @@ export class DesignFormattingJob {
       this.emitPreviewPlanIfNeeded(spreadsheetId, fileName, tabName, "Replace target column from source column", [
         `Checked rows ${startRow}-${endRow || startRow}`,
         `Column ${targetColumn} will update only where column ${sourceColumn} has a value`,
-        headerChanged
+        shouldWriteHeader
           ? `Target header will be set to "${targetHeader}"`
           : "No target cells need replacement in the selected range",
+        `Write behavior: ${this.describeWriteBehavior(writeBehavior)}`,
       ]);
     }
 
     if (dryRun) {
       console.log(
         chalk.yellow(
-          `[DRY RUN] Would replace ${changed} value(s) in ${targetColumn} from non-empty ${sourceColumn} cells`
+          `[DRY RUN] Would write ${changed} value(s) from non-empty ${sourceColumn} cells`
         )
       );
 
-      if (headerChanged) {
+      if (skippedExisting > 0) {
+        console.log(chalk.yellow(`[DRY RUN] Would skip ${skippedExisting} row(s) because target cells already have values`));
+      }
+
+      if (skippedNoEmptyCell > 0) {
+        console.log(chalk.yellow(`[DRY RUN] Would skip ${skippedNoEmptyCell} row(s) because no empty cell was found to the right`));
+      }
+
+      if (shouldWriteHeader) {
         console.log(chalk.yellow(`[DRY RUN] Would set ${targetColumn} header to "${targetHeader}"`));
       }
 
       return changedTotal;
     }
 
-    if (headerChanged) {
+    if (shouldWriteHeader) {
       await this.sheets.writeValues(spreadsheetId, `${this.quoteSheet(tabName)}!${targetColumn}1:${targetColumn}1`, [
         [targetHeader],
       ]);
     }
 
-    if (changedTargetValues.length > 0) {
-      let batchStart = changedTargetValues[0].rowNumber;
-      let previousRow = batchStart;
-      let batchValues: string[][] = [[changedTargetValues[0].value]];
-
-      for (const item of changedTargetValues.slice(1)) {
-        if (item.rowNumber === previousRow + 1) {
-          batchValues.push([item.value]);
-          previousRow = item.rowNumber;
-          continue;
-        }
-
-        await this.sheets.writeValues(
-          spreadsheetId,
-          `${this.quoteSheet(tabName)}!${targetColumn}${batchStart}:${targetColumn}${previousRow}`,
-          batchValues
-        );
-
-        batchStart = item.rowNumber;
-        previousRow = item.rowNumber;
-        batchValues = [[item.value]];
-      }
-
-      await this.sheets.writeValues(
-        spreadsheetId,
-        `${this.quoteSheet(tabName)}!${targetColumn}${batchStart}:${targetColumn}${previousRow}`,
-        batchValues
-      );
-    }
+    await this.writeSparseCellValues(spreadsheetId, tabName, cellWrites);
 
     return changedTotal;
   }
@@ -1357,9 +1514,42 @@ export class DesignFormattingJob {
     spreadsheetId: string,
     tabName: string,
     operation: AddColumnOperation,
+    writeBehavior: Required<WriteBehaviorConfig>,
     dryRun: boolean
   ): Promise<number> {
-    const col = this.normalizeColumnLetter(operation.columnLetter);
+    let col = this.normalizeColumnLetter(operation.columnLetter);
+    const startIndex = this.columnLetterToIndex(col);
+    const searchEndIndex = writeBehavior.mode === "first_empty"
+      ? startIndex + writeBehavior.maxSearchColumns - 1
+      : startIndex;
+    const searchEndColumn = this.columnIndexToLetter(searchEndIndex);
+    const headerRows = await this.sheets.readValues(spreadsheetId, `${this.quoteSheet(tabName)}!${col}1:${searchEndColumn}1`);
+    const headerRow = headerRows[0] || [];
+    const headerBefore = String(headerRow[0] ?? "");
+
+    if (writeBehavior.mode === "skip_existing" && !this.isBlankCellValue(headerBefore)) {
+      console.log(chalk.yellow(`Skipped ${col} header because it already has a value.`));
+      return 0;
+    }
+
+    if (writeBehavior.mode === "first_empty") {
+      let destinationOffset = -1;
+
+      for (let offset = 0; offset < writeBehavior.maxSearchColumns; offset += 1) {
+        if (this.isBlankCellValue(headerRow[offset])) {
+          destinationOffset = offset;
+          break;
+        }
+      }
+
+      if (destinationOffset < 0) {
+        console.log(chalk.yellow(`Skipped header write because no empty header cell was found from ${col} to ${searchEndColumn}.`));
+        return 0;
+      }
+
+      col = this.columnIndexToLetter(startIndex + destinationOffset);
+    }
+
     const range = `${this.quoteSheet(tabName)}!${col}1:${col}1`;
 
     if (dryRun) {
@@ -1375,10 +1565,18 @@ export class DesignFormattingJob {
     spreadsheetId: string,
     tabName: string,
     operation: RenameColumnOperation,
+    writeBehavior: Required<WriteBehaviorConfig>,
     dryRun: boolean
   ): Promise<number> {
     const col = this.normalizeColumnLetter(operation.columnLetter);
     const range = `${this.quoteSheet(tabName)}!${col}1:${col}1`;
+    const headerRows = await this.sheets.readValues(spreadsheetId, range);
+    const headerBefore = String(headerRows[0]?.[0] ?? "");
+
+    if (writeBehavior.mode !== "overwrite" && !this.isBlankCellValue(headerBefore)) {
+      console.log(chalk.yellow(`Skipped ${col} rename because the header already has a value.`));
+      return 0;
+    }
 
     if (dryRun) {
       console.log(chalk.yellow(`[DRY RUN] Would rename column ${col} header to "${operation.header}"`));
@@ -1443,6 +1641,7 @@ export class DesignFormattingJob {
     fileName: string,
     tabName: string,
     operation: FaqAiEditOperation,
+    writeBehavior: Required<WriteBehaviorConfig>,
     dryRun: boolean
   ): Promise<number> {
     const categoryCol = this.normalizeColumnLetter(operation.categoryCol || "A");
@@ -1458,7 +1657,7 @@ export class DesignFormattingJob {
     const qaNoteHeader = operation.qaNoteHeader || "QA Note";
     const hotelNameHeader = operation.hotelNameHeader || "Hotel Name Status";
 
-    const rows = await this.sheets.readValues(spreadsheetId, `${this.quoteSheet(tabName)}!A:Z`);
+    const rows = await this.sheets.readValues(spreadsheetId, `${this.quoteSheet(tabName)}!A:ZZ`);
     const dataRowCount = Math.max(0, rows.length - 1);
 
     const catIdx = this.columnLetterToIndex(categoryCol);
@@ -1531,6 +1730,7 @@ export class DesignFormattingJob {
       `Rows available: ${dataRowCount}`,
       `Rows selected for this operation: ${estimatedInputRows}`,
       `Output columns: ${targetCol}, ${questionFixCol}, ${qaNoteCol}, ${hotelNameCol}`,
+      `Write behavior: ${this.describeWriteBehavior(writeBehavior)}`,
       operation.type === "faq_answer_research" && operation.useWebSearch ? "Live run will use AI web search for missing/VERIFY answers" : "",
       dryRun ? "Dry run will not call AI or write cells" : "Real run will call AI and write output columns",
     ].filter(Boolean));
@@ -1576,24 +1776,152 @@ export class DesignFormattingJob {
     });
 
     let changed = 0;
+    let skippedExisting = 0;
+    let skippedNoEmptyCell = 0;
+    const sparseWrites: Array<{ rowNumber: number; columnLetter: string; value: string }> = [];
+    const plannedCellsByRow = new Map<number, Set<number>>();
 
     const getExisting = (sheetRow: number, columnIndex: number): string => {
       return String(rows[sheetRow - 1]?.[columnIndex] ?? "");
     };
 
-    const buildColumnValues = (columnIndex: number, valueForRow: (sheetRow: number) => string): string[] => {
-      return Array.from({ length: dataRowCount }, (_, offset) => {
+    const isPlannedCell = (sheetRow: number, columnIndex: number): boolean => {
+      return plannedCellsByRow.get(sheetRow)?.has(columnIndex) === true;
+    };
+
+    const markPlannedCell = (sheetRow: number, columnIndex: number): void => {
+      const planned = plannedCellsByRow.get(sheetRow) || new Set<number>();
+      planned.add(columnIndex);
+      plannedCellsByRow.set(sheetRow, planned);
+    };
+
+    const findFirstWritableColumn = (sheetRow: number, startIndex: number): number | null => {
+      if (writeBehavior.mode === "overwrite") {
+        return startIndex;
+      }
+
+      if (writeBehavior.mode === "skip_existing") {
+        return this.isBlankCellValue(getExisting(sheetRow, startIndex)) ? startIndex : null;
+      }
+
+      const endIndex = startIndex + writeBehavior.maxSearchColumns - 1;
+
+      for (let columnIndex = startIndex; columnIndex <= endIndex; columnIndex += 1) {
+        if (this.isBlankCellValue(getExisting(sheetRow, columnIndex)) && !isPlannedCell(sheetRow, columnIndex)) {
+          return columnIndex;
+        }
+      }
+
+      return null;
+    };
+
+    const writeHeaderIfAllowed = async (columnIndex: number, header: string): Promise<number> => {
+      const cleanHeader = String(header || "").trim();
+      if (!cleanHeader) return 0;
+
+      const headerBefore = getExisting(1, columnIndex);
+
+      if (cleanHeader === headerBefore) {
+        return 0;
+      }
+
+      if (writeBehavior.mode !== "overwrite" && !this.isBlankCellValue(headerBefore)) {
+        return 0;
+      }
+
+      const columnLetter = this.columnIndexToLetter(columnIndex);
+      await this.sheets.writeValues(spreadsheetId, `${this.quoteSheet(tabName)}!${columnLetter}1:${columnLetter}1`, [[cleanHeader]]);
+      return 1;
+    };
+
+    const writeGeneratedColumn = async (
+      columnIndex: number,
+      columnLetter: string,
+      header: string,
+      valueForRow: (sheetRow: number) => string
+    ): Promise<void> => {
+      const usedColumns = new Set<number>();
+      const columnValues: string[] = [];
+      let columnChanged = false;
+
+      for (let offset = 0; offset < dataRowCount; offset += 1) {
         const sheetRow = offset + 2;
         const existing = getExisting(sheetRow, columnIndex);
-        const nextValue = valueForRow(sheetRow);
+        const nextValue = String(valueForRow(sheetRow) || "");
 
-        if (nextValue && nextValue !== existing) {
-          changed += 1;
-          return nextValue;
+        if (!nextValue) {
+          columnValues.push(existing);
+          continue;
         }
 
-        return existing;
-      });
+        if (writeBehavior.mode === "first_empty") {
+          const destinationIndex = findFirstWritableColumn(sheetRow, columnIndex);
+
+          if (destinationIndex === null) {
+            skippedNoEmptyCell += 1;
+            columnValues.push(existing);
+            continue;
+          }
+
+          const destinationExisting = getExisting(sheetRow, destinationIndex);
+          const destinationColumn = this.columnIndexToLetter(destinationIndex);
+
+          if (nextValue !== destinationExisting) {
+            changed += 1;
+            sparseWrites.push({
+              rowNumber: sheetRow,
+              columnLetter: destinationColumn,
+              value: nextValue,
+            });
+            markPlannedCell(sheetRow, destinationIndex);
+            usedColumns.add(destinationIndex);
+          }
+
+          columnValues.push(existing);
+          continue;
+        }
+
+        if (writeBehavior.mode === "skip_existing" && !this.isBlankCellValue(existing)) {
+          skippedExisting += 1;
+          columnValues.push(existing);
+          continue;
+        }
+
+        if (nextValue !== existing) {
+          changed += 1;
+          columnChanged = true;
+          columnValues.push(nextValue);
+          continue;
+        }
+
+        columnValues.push(existing);
+      }
+
+      if (writeBehavior.mode === "first_empty") {
+        for (const usedColumnIndex of usedColumns) {
+          changed += await writeHeaderIfAllowed(usedColumnIndex, header);
+        }
+        return;
+      }
+
+      const headerBefore = getExisting(1, columnIndex);
+      const cleanHeader = String(header || "").trim();
+      const canWriteHeader = Boolean(cleanHeader) &&
+        cleanHeader !== headerBefore &&
+        (writeBehavior.mode === "overwrite" || this.isBlankCellValue(headerBefore));
+      const headerChanged = canWriteHeader ? await writeHeaderIfAllowed(columnIndex, header) : 0;
+      changed += headerChanged;
+
+      if (columnChanged || headerChanged) {
+        const headerForFullWrite = canWriteHeader ? cleanHeader : headerBefore;
+        await this.writeColumnInTab(
+          spreadsheetId,
+          tabName,
+          columnLetter,
+          headerForFullWrite || cleanHeader || String(rows[0]?.[columnIndex] || ""),
+          columnValues
+        );
+      }
     };
 
     const shouldWriteFinalAnswer = [
@@ -1617,38 +1945,43 @@ export class DesignFormattingJob {
     const shouldWriteNameStatus = operation.type === "faq_ai_edit" || operation.type === "faq_name_injection";
 
     if (shouldWriteFinalAnswer) {
-      const finalAnswerValues = buildColumnValues(targetIdx, (sheetRow) => {
+      await writeGeneratedColumn(targetIdx, targetCol, targetHeader, (sheetRow) => {
         if (operation.type === "faq_name_injection" && operation.nameOutputMode === "original_answer") {
           return "";
         }
 
         return rewriteMap.get(sheetRow) || qaMap.get(sheetRow) || nameAnswerMap.get(sheetRow) || "";
       });
-      await this.writeColumnInTab(spreadsheetId, tabName, targetCol, targetHeader, finalAnswerValues);
     }
 
     if (operation.type === "faq_name_injection" && operation.nameOutputMode === "original_answer") {
-      const answerValues = buildColumnValues(answerIdx, (sheetRow) => nameAnswerMap.get(sheetRow) || "");
-      await this.writeColumnInTab(spreadsheetId, tabName, answerCol, String(rows[0]?.[answerIdx] || "Answer"), answerValues);
+      await writeGeneratedColumn(answerIdx, answerCol, String(rows[0]?.[answerIdx] || "Answer"), (sheetRow) => nameAnswerMap.get(sheetRow) || "");
     }
 
     if (shouldWriteQuestionFix) {
-      const questionFixValues = buildColumnValues(questionFixIdx, (sheetRow) => {
+      await writeGeneratedColumn(questionFixIdx, questionFixCol, questionFixHeader, (sheetRow) => {
         return questionFixMap.get(sheetRow) || nameQuestionMap.get(sheetRow) || "";
       });
-      await this.writeColumnInTab(spreadsheetId, tabName, questionFixCol, questionFixHeader, questionFixValues);
     }
 
     if (shouldWriteQaNote) {
-      const qaNoteValues = buildColumnValues(qaNoteIdx, (sheetRow) => qaNoteMap.get(sheetRow) || "");
-      await this.writeColumnInTab(spreadsheetId, tabName, qaNoteCol, qaNoteHeader, qaNoteValues);
+      await writeGeneratedColumn(qaNoteIdx, qaNoteCol, qaNoteHeader, (sheetRow) => qaNoteMap.get(sheetRow) || "");
     }
 
     if (shouldWriteNameStatus) {
-      const hotelNameStatusValues = buildColumnValues(hotelNameIdx, (sheetRow) => {
+      await writeGeneratedColumn(hotelNameIdx, hotelNameCol, hotelNameHeader, (sheetRow) => {
         return nameStatusMap.get(sheetRow) || (operation.type === "faq_ai_edit" && hotelName ? `Checked for ${hotelName}` : "");
       });
-      await this.writeColumnInTab(spreadsheetId, tabName, hotelNameCol, hotelNameHeader, hotelNameStatusValues);
+    }
+
+    await this.writeSparseCellValues(spreadsheetId, tabName, sparseWrites);
+
+    if (skippedExisting > 0) {
+      console.log(chalk.yellow(`Skipped ${skippedExisting} generated FAQ value(s) because target cells already had values.`));
+    }
+
+    if (skippedNoEmptyCell > 0) {
+      console.log(chalk.yellow(`Skipped ${skippedNoEmptyCell} generated FAQ value(s) because no empty cell was found to the right.`));
     }
 
     if (parsed.missing_faq_to_add.length > 0) {
@@ -1873,16 +2206,181 @@ ${JSON.stringify(
     await this.sheets.writeValues(spreadsheetId, range, [[header], ...values.map((value) => [value])]);
   }
 
+  private async writeSparseCellValues(
+    spreadsheetId: string,
+    tabName: string,
+    writes: Array<{ rowNumber: number; columnLetter: string; value: string }>
+  ): Promise<void> {
+    if (!writes.length) {
+      return;
+    }
+
+    const writesByColumn = new Map<string, Array<{ rowNumber: number; value: string }>>();
+
+    for (const write of writes) {
+      const columnLetter = this.normalizeColumnLetter(write.columnLetter);
+      const rows = writesByColumn.get(columnLetter) || [];
+      rows.push({
+        rowNumber: write.rowNumber,
+        value: write.value,
+      });
+      writesByColumn.set(columnLetter, rows);
+    }
+
+    for (const [columnLetter, columnWrites] of writesByColumn.entries()) {
+      const sorted = columnWrites.sort((a, b) => a.rowNumber - b.rowNumber);
+      let batchStart = sorted[0].rowNumber;
+      let previousRow = batchStart;
+      let batchValues: string[][] = [[sorted[0].value]];
+
+      for (const item of sorted.slice(1)) {
+        if (item.rowNumber === previousRow + 1) {
+          batchValues.push([item.value]);
+          previousRow = item.rowNumber;
+          continue;
+        }
+
+        await this.sheets.writeValues(
+          spreadsheetId,
+          `${this.quoteSheet(tabName)}!${columnLetter}${batchStart}:${columnLetter}${previousRow}`,
+          batchValues
+        );
+
+        batchStart = item.rowNumber;
+        previousRow = item.rowNumber;
+        batchValues = [[item.value]];
+      }
+
+      await this.sheets.writeValues(
+        spreadsheetId,
+        `${this.quoteSheet(tabName)}!${columnLetter}${batchStart}:${columnLetter}${previousRow}`,
+        batchValues
+      );
+    }
+  }
+
   private async createBackupTab(spreadsheetId: string, tabName: string): Promise<void> {
     const sourceSheetId = await this.sheets.getSheetIdByTitle(spreadsheetId, tabName);
-    const backupName = `${tabName} Backup ${new Date().toISOString().slice(0, 10)}`;
+    const backupName = await this.makeUniqueBackupTabName(spreadsheetId, tabName);
 
     console.log(chalk.gray(`Creating backup tab: ${backupName}`));
     await this.sheets.duplicateSheet(spreadsheetId, sourceSheetId, backupName);
   }
 
-  private operationUsesSourceTab(operation: DesignFormattingOperation): boolean {
-    return operation.type !== "duplicate_tab_template";
+  private shouldCreateBackupBeforeOperation(operation: DesignFormattingOperation): boolean {
+    return operation.type !== "duplicate_tab_template" && operation.type !== "restore_backup";
+  }
+
+  private async makeUniqueBackupTabName(spreadsheetId: string, tabName: string): Promise<string> {
+    const stamp = new Date().toISOString().replace("T", " ").slice(0, 19).replace(/:/g, "-");
+    const titles = await this.sheets.getSheetTitles(spreadsheetId);
+    return this.getAvailableSheetTitle(titles, `${tabName} Backup ${stamp}`);
+  }
+
+  private getAvailableSheetTitle(existingTitles: string[], desiredTitle: string): string {
+    const existing = new Set(existingTitles.map((title) => this.normalizeSheetTitle(title)));
+    const safeDesired = String(desiredTitle || "Backup").trim().slice(0, 100);
+
+    if (!existing.has(this.normalizeSheetTitle(safeDesired))) {
+      return safeDesired;
+    }
+
+    for (let index = 2; index <= 99; index++) {
+      const suffix = ` ${index}`;
+      const candidate = `${safeDesired.slice(0, 100 - suffix.length)}${suffix}`;
+      if (!existing.has(this.normalizeSheetTitle(candidate))) {
+        return candidate;
+      }
+    }
+
+    throw new Error(`Could not create a unique backup tab name for "${desiredTitle}".`);
+  }
+
+  private async restoreLatestBackup(
+    spreadsheetId: string,
+    fileName: string,
+    tabName: string,
+    operation: RestoreBackupOperation,
+    dryRun: boolean
+  ): Promise<number> {
+    const tabs = await this.sheets.getSheetTitles(spreadsheetId);
+    const backupName = this.findBackupTabName(tabs, tabName, operation.backupTabName);
+    const currentExists = tabs.some((title) => this.sameSheetTitle(title, tabName));
+
+    this.emitPreviewPlanIfNeeded(spreadsheetId, fileName, tabName, "Restore latest backup", [
+      `Backup tab "${backupName}" will become "${tabName}"`,
+      currentExists
+        ? `Current tab "${tabName}" will be removed before restore`
+        : `Current tab "${tabName}" does not exist and will be recreated from backup`,
+      "Use this only when you want to roll back the last applied edit.",
+    ]);
+
+    if (dryRun) {
+      console.log(chalk.yellow(`[DRY RUN] Would restore "${tabName}" from backup "${backupName}"`));
+      return 0;
+    }
+
+    console.log(chalk.yellow(`Restoring "${tabName}" from backup tab "${backupName}"`));
+    if (currentExists) {
+      await this.sheets.deleteSheetByTitle(spreadsheetId, tabName);
+    }
+    await this.sheets.renameSheet(spreadsheetId, backupName, tabName);
+    return 1;
+  }
+
+  private findBackupTabName(
+    tabs: string[],
+    tabName: string,
+    requestedBackupName?: string
+  ): string {
+    const requested = String(requestedBackupName || "").trim();
+    if (requested) {
+      const match = tabs.find((title) => this.sameSheetTitle(title, requested));
+      if (!match) throw new Error(`Backup tab "${requested}" was not found.`);
+      return match;
+    }
+
+    const prefix = `${tabName} Backup`;
+    const backups = tabs.filter((title) =>
+      this.normalizeSheetTitle(title).startsWith(this.normalizeSheetTitle(prefix))
+    );
+    if (backups.length === 0) {
+      throw new Error(`No backup tab was found for "${tabName}".`);
+    }
+
+    return backups.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).at(-1)!;
+  }
+
+  private sameSheetTitle(a: string, b: string): boolean {
+    return this.normalizeSheetTitle(a) === this.normalizeSheetTitle(b);
+  }
+
+  private normalizeSheetTitle(value: string): string {
+    return String(value || "")
+      .normalize("NFKC")
+      .replace(/\u00A0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  private async emitSheetTabs(args: {
+    spreadsheetId: string;
+    fileName: string;
+    selectedTabName?: string;
+  }): Promise<void> {
+    const tabs = await this.sheets.getSheetTitles(args.spreadsheetId);
+    const selectedTabName = tabs.includes(String(args.selectedTabName || ""))
+      ? args.selectedTabName
+      : tabs[0];
+
+    printPreviewEvent({
+      kind: "sheet_tabs",
+      fileName: args.fileName,
+      spreadsheetId: args.spreadsheetId,
+      tabs,
+      selectedTabName,
+    });
   }
 
   private async emitLiveSheetPreview(args: {
@@ -2174,6 +2672,56 @@ ${JSON.stringify(
     const match = input.match(/\/spreadsheets\/d\/([A-Za-z0-9_-]+)/);
 
     return (match?.[1] || input).trim();
+  }
+
+  private normalizeColumnSelection(input: string): string[] {
+    const raw = String(input || "").trim().toUpperCase().replace(/\s+/g, "");
+
+    if (!raw) {
+      throw new Error("Missing column selection");
+    }
+
+    const parts = raw.includes(",")
+      ? raw.split(",").filter(Boolean)
+      : [raw];
+    const columns: string[] = [];
+
+    for (const part of parts) {
+      const rangeMatch = part.match(/^([A-Z]+)[:\-–—]([A-Z]+)$/);
+
+      if (rangeMatch?.[1] && rangeMatch?.[2]) {
+        columns.push(...this.expandColumnRange(rangeMatch[1], rangeMatch[2]));
+        continue;
+      }
+
+      columns.push(this.normalizeColumnLetter(part));
+    }
+
+    return Array.from(new Set(columns));
+  }
+
+  private expandColumnRange(startColumn: string, endColumn: string): string[] {
+    const start = this.columnLetterToIndex(this.normalizeColumnLetter(startColumn));
+    const end = this.columnLetterToIndex(this.normalizeColumnLetter(endColumn));
+
+    if (end < start) {
+      throw new Error(`Invalid column range: ${startColumn}-${endColumn}`);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, offset) => this.columnIndexToLetter(start + offset));
+  }
+
+  private getDefaultOutputColumns(sourceColumns: string[]): string[] {
+    const lastSourceIndex = Math.max(...sourceColumns.map((column) => this.columnLetterToIndex(column)));
+    return sourceColumns.map((_, offset) => this.columnIndexToLetter(lastSourceIndex + offset + 1));
+  }
+
+  private formatColumnSelection(columns: string[]): string {
+    if (columns.length === 1) {
+      return columns[0];
+    }
+
+    return `${columns[0]}:${columns[columns.length - 1]}`;
   }
 
   private normalizeColumnLetter(input: string): string {

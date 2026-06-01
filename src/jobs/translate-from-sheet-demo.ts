@@ -21,15 +21,19 @@ import { getGlossaryPrompt } from "./subjobs/translation-glossary.js";
 
 type UiGlossaryByLang = Partial<Record<LangKey, Record<string, string>>>;
 
-type DemoPromptOverrides = {
+export type DemoPromptOverrides = {
   draftSystem?: string; // system prompt for draft step
   draftUser?: string; // user prompt for draft step
   polishSystem?: string; // system prompt for polish step
   polishUser?: string; // user prompt for polish step
+  finalPolishSystem?: string; // system prompt for optional clean final polish step
+  finalPolishUser?: string; // user prompt for optional clean final polish step
 };
 
 type TranslateDemoOverrides = {
   splitIntoTwo?: boolean;
+  finalPolishEnabled?: boolean;
+  targetTabExistsMode?: "skip" | "numbered";
 
   // prompts editable from UI
   prompts?: DemoPromptOverrides;
@@ -39,12 +43,15 @@ type TranslateDemoOverrides = {
 
   // glossary per language from UI (simple source -> required translation map)
   glossaryByLang?: UiGlossaryByLang;
+  glossaryEnabledByLang?: Partial<Record<LangKey, boolean>>;
 
   // terminology profile per language (override)
   terminologyByLang?: Partial<Record<LangKey, TerminologyProfile>>;
+  terminologyEnabledByLang?: Partial<Record<LangKey, boolean>>;
 
   // model selected from UI
   model?: string;
+  finalPolishModel?: string;
 
   // optional extra rules per language (mostly for DE polish)
   polishRulesByLang?: Partial<Record<LangKey, string>>;
@@ -53,9 +60,16 @@ type TranslateDemoOverrides = {
 type TranslateSheetDemoConfig = {
   spreadsheetId: string;
   sourceTab?: string;
+  sourceRange?: string;
   targetLangs: string[];
   translateHeader?: boolean;
   demoOverrides?: TranslateDemoOverrides;
+};
+
+type DemoModelSelection = {
+  provider: "openai" | "anthropic";
+  model: string;
+  label: string;
 };
 
 // === Default Language Notes (fallback if UI doesn't override) ===
@@ -164,6 +178,114 @@ const DEFAULT_POLISH_RULES: Partial<Record<LangKey, string>> = {
   ].join("\n"),
 };
 
+export const TRANSLATE_DEMO_DEFAULT_PROMPTS: Required<DemoPromptOverrides> = {
+  draftSystem: `ROLE: You are an expert Hospitality Copywriter & Localization Specialist translating to {{lang}}.
+GOAL: Create natural, flowing content that sounds like it was originally written in {{lang}}, NOT translated.
+TONE: Warm, professional, helpful, and upscale (3rd person).
+
+=== CRITICAL RULES (ZERO TOLERANCE) ===
+1. HOTEL NAME INTEGRITY: You must NEVER remove the hotel name from a question or answer if it appears in the source.
+2. OFFICIAL NAME: The official English name of the hotel is: "{{hotelName}}".
+3. TECH SAFETY: Do NOT translate URLs, emails, codes, or tokens (e.g., %s, {name}).
+4. STRUCTURE: Preserve the exact JSON matrix shape.
+5. ACCURACY: Keep prices, times, and facts exactly as they are.`,
+
+  draftUser: `TASK: Translate EVERY cell in the provided matrix to {{lang}}.
+CONTEXT:
+ - Domain: Hotel FAQ.
+ - Official Hotel Name: "{{hotelName}}".
+
+MANDATORY GLOSSARY RULES:
+{{glossaryRules}}
+
+INSTRUCTIONS:
+- Translate ALL text content in the rows.
+- Look at each row as a connected context unit (Category + Question + Answer).
+- If the source is brief (e.g., "Yes"/"No"), you may expand it slightly ONLY by restating the proposition of the question.
+- Translate header row: {{translateHeader}}.
+- PRESERVE the exact 2D matrix structure (same number of rows and columns).
+- If the source mentions the hotel name, ensure the translated text also includes "{{hotelName}}". Do not shorten it to "the hotel".
+- Apply the mandatory glossary rules exactly when relevant.
+
+INPUT DATA (JSON):
+{{rows}}`,
+
+  polishSystem: `ROLE: Senior Editor for a Luxury Hotel Brand ({{lang}}).
+GOAL: Polish the translation to sound fully native and premium, with MINIMAL edits, WITHOUT changing meaning.
+OUTPUT: JSON only.
+OFFICIAL HOTEL NAME: "{{hotelName}}".`,
+
+  polishUser: `TASK: Polish the DRAFT translation to sound fully native and premium, with MINIMAL edits, WITHOUT changing meaning.
+WEB: Do NOT use web search. Do NOT cite sources. Output JSON only.
+
+{{strictTerminology}}
+
+HARD CONSTRAINTS (ZERO TOLERANCE):
+1) CELL-BY-CELL MAPPING: For every cell at position (row r, col c), output EXACTLY one polished cell at the same position (r,c).
+2) DIMENSIONS: Output must have EXACTLY the same number of rows and columns as SOURCE.
+3) EMPTY CELLS: If a SOURCE cell is empty/blank, the output cell MUST be empty.
+4) NO NEW FACTS: Do not add any facts, services, conditions, qualifiers, or availability notes not present in SOURCE.
+5) PRESERVE DATA: Keep numbers, times, prices, addresses, distances exactly as in SOURCE.
+6) PRESERVE TOKENS: Keep placeholders/tokens unchanged: %s, {name}, {{x}}, URLs, emails, codes.
+7) HOTEL NAME RULE: If the SOURCE cell contains the official hotel name OR a hotel reference, the output cell MUST include exactly "{{hotelName}}" (do not replace with "the hotel").
+8) QUESTION INTEGRITY: If SOURCE cell is a question, keep it as a natural question in {{lang}}. Do not turn questions into statements.
+9) MINIMAL EDITS: Only fix unnatural phrasing, literal translation artifacts, grammar, and hospitality vocabulary. Do not rewrite aggressively.
+10) JSON ONLY: Return ONLY valid JSON in the schema: {"rows":[...]} and nothing else.
+
+LANGUAGE NOTES FOR {{lang}}:
+{{languageNotes}}
+
+INPUT (JSON):
+{
+  "meta": {
+    "language": "{{lang}}",
+    "officialHotelName": "{{hotelName}}",
+    "translateHeader": "{{translateHeader}}"
+  },
+  "source": {{sourceRows}},
+  "draft": { "json": {{draftJson}} }
+}
+
+OUTPUT: Return ONLY {"rows":[...]}`,
+
+  finalPolishSystem: `ROLE: Native hospitality editor for {{lang}}.
+GOAL: Make an already-correct translation sound natural, warm, friendly, and human.
+NO RULE PACKS: Do not apply glossary, terminology, or language-note rules in this pass.
+SAFETY: Preserve facts, numbers, prices, times, URLs, hotel names, placeholders, HTML, row count, and column count.
+OFFICIAL HOTEL NAME: "{{hotelName}}".
+OUTPUT: JSON only.`,
+
+  finalPolishUser: `TASK: Final naturalness pass on the already polished translation.
+
+The translation has already passed glossary and terminology checks. Do NOT add new rules and do NOT force terminology replacements here.
+Only smooth wording that still sounds translated, stiff, blunt, or robotic.
+Make it feel native, pleasant, clear, and guest-friendly in {{lang}}.
+
+Guardrails:
+- Keep the same meaning and facts.
+- Keep every row and column in the same position.
+- Preserve empty cells as empty.
+- Preserve numbers, prices, times, URLs, emails, codes, placeholders, HTML tags and entities.
+- Keep official hotel names unchanged, especially "{{hotelName}}".
+- Translate header row: {{translateHeader}}.
+
+SOURCE ROWS, for meaning check only:
+{{sourceRows}}
+
+POLISHED JSON TO SMOOTH:
+{{polishedJson}}
+
+OUTPUT: return ONLY {"rows":[...]}`
+};
+
+export function getTranslateDemoDefaultPrompts(): Required<DemoPromptOverrides> {
+  return { ...TRANSLATE_DEMO_DEFAULT_PROMPTS };
+}
+
+export function getTranslateDemoDefaultLanguageNotes(): Record<LangKey, string> {
+  return { ...DEFAULT_LANGUAGE_NOTES };
+}
+
 export class TranslateFromSheetDemoJob {
   constructor(private agent: AIAgent, private sheets: SheetsService) {}
 
@@ -234,11 +356,22 @@ export class TranslateFromSheetDemoJob {
       payload = {};
     }
 
-    const spreadsheetId =
-      String(payload.spreadsheetId || process.env.DYNAMIC_TARGET_ID || "").trim();
-    if (!spreadsheetId) {
+    const sourceType =
+      payload.sourceType === "folder" || process.env.DYNAMIC_INPUT_TYPE === "folder"
+        ? "folder"
+        : "sheet";
+    const spreadsheetId = String(
+      payload.spreadsheetId || (sourceType === "sheet" ? process.env.DYNAMIC_TARGET_ID : "") || ""
+    ).trim();
+    const sourceFolderId = String(
+      payload.sourceFolderId || (sourceType === "folder" ? process.env.DYNAMIC_TARGET_ID : "") || ""
+    ).trim();
+    const sourceId = sourceType === "folder" ? sourceFolderId : spreadsheetId;
+    if (!sourceId) {
       throw new Error(
-        "translate-demo: Missing spreadsheetId (provide in DYNAMIC_PAYLOAD.spreadsheetId or DYNAMIC_TARGET_ID)"
+        sourceType === "folder"
+          ? "translate-demo: Missing sourceFolderId (provide in DYNAMIC_PAYLOAD.sourceFolderId or DYNAMIC_TARGET_ID)"
+          : "translate-demo: Missing spreadsheetId (provide in DYNAMIC_PAYLOAD.spreadsheetId or DYNAMIC_TARGET_ID)"
       );
     }
 
@@ -250,9 +383,10 @@ export class TranslateFromSheetDemoJob {
       .map((x: any) => String(x).trim())
       .filter(Boolean);
 
-    const cfg: TranslateSheetDemoConfig = {
-      spreadsheetId,
+    const buildConfig = (targetSpreadsheetId: string): TranslateSheetDemoConfig => ({
+      spreadsheetId: targetSpreadsheetId,
       sourceTab: payload.sourceTab ? String(payload.sourceTab) : undefined,
+      sourceRange: payload.sourceRange ? String(payload.sourceRange) : undefined,
       targetLangs,
       translateHeader:
         typeof payload.translateHeader === "boolean" ? payload.translateHeader : true,
@@ -262,13 +396,64 @@ export class TranslateFromSheetDemoJob {
         prompts: payload.prompts ?? undefined,
         languageNotes: payload.languageNotes ?? undefined,
         glossaryByLang: payload.glossaryByLang ?? undefined,
+        glossaryEnabledByLang: payload.glossaryEnabledByLang ?? undefined,
         terminologyByLang: payload.terminologyByLang ?? undefined,
+        terminologyEnabledByLang: payload.terminologyEnabledByLang ?? undefined,
         polishRulesByLang: payload.polishRulesByLang ?? undefined,
+        finalPolishEnabled:
+          typeof payload.finalPolishEnabled === "boolean" ? payload.finalPolishEnabled : false,
+        targetTabExistsMode:
+          payload.targetTabExistsMode === "numbered" ? "numbered" : "skip",
         model: payload.model ? String(payload.model) : undefined,
+        finalPolishModel: payload.finalPolishModel
+          ? String(payload.finalPolishModel)
+          : payload.polishModel
+            ? String(payload.polishModel)
+            : undefined,
       },
-    };
+    });
 
-    await this.run(cfg);
+    if (sourceType === "folder") {
+      const folderId = this.extractFolderId(sourceFolderId);
+      console.log(chalk.cyan(`📂 Loading spreadsheets from folder: ${folderId}`));
+      const spreadsheetIds = await this.sheets.listSpreadsheetIdsInFolderRecursive(folderId);
+      if (spreadsheetIds.length === 0) {
+        throw new Error(`translate-demo: No Google Sheets files found in folder ${folderId}`);
+      }
+      console.log(chalk.cyan(`📂 Found ${spreadsheetIds.length} spreadsheet(s) in folder.`));
+
+      const failedSheets: string[] = [];
+      for (let index = 0; index < spreadsheetIds.length; index++) {
+        const targetSpreadsheetId = spreadsheetIds[index];
+        const title = await this.sheets
+          .getSpreadsheetTitle(targetSpreadsheetId)
+          .catch(() => targetSpreadsheetId);
+        console.log(
+          chalk.cyan(
+            `📄 Folder item ${index + 1}/${spreadsheetIds.length}: ${title} (${targetSpreadsheetId})`
+          )
+        );
+
+        try {
+          await this.run(buildConfig(targetSpreadsheetId));
+        } catch (error) {
+          console.error(
+            chalk.red(`⚠️ Failed folder item ${index + 1}/${spreadsheetIds.length}: ${title}`),
+            error
+          );
+          failedSheets.push(title);
+        }
+      }
+
+      if (failedSheets.length) {
+        throw new Error(
+          `translate-demo folder run failed for ${failedSheets.length}/${spreadsheetIds.length} spreadsheet(s): ${failedSheets.join(", ")}`
+        );
+      }
+      return;
+    }
+
+    await this.run(buildConfig(spreadsheetId));
   }
 
   // ---- Helpers ----
@@ -318,6 +503,73 @@ export class TranslateFromSheetDemoJob {
     return aliases[key] ?? (key as LangKey);
   }
 
+  private normalizeSourceRange(input?: string): string {
+    const defaultRange = "A1:Z68";
+    const raw = String(input || "").trim();
+    if (!raw) return defaultRange;
+
+    const rangeOnly = raw.includes("!") ? raw.split("!").pop() || "" : raw;
+    const normalized = rangeOnly.replace(/\$/g, "").replace(/\s+/g, "").toUpperCase();
+    if (!/^[A-Z]{1,3}[1-9]\d*(?::[A-Z]{1,3}[1-9]\d*)?$/.test(normalized)) {
+      throw new Error(
+        `translate-demo: Invalid sourceRange "${input}". Use A1 notation such as A1:Z68.`
+      );
+    }
+
+    return normalized;
+  }
+
+  private getRangeStartCell(range: string): string {
+    return range.split(":")[0] || "A1";
+  }
+
+  private extractFolderId(input: string): string {
+    const raw = String(input || "").trim();
+    const match = raw.match(/\/folders\/([A-Za-z0-9_-]+)/) || raw.match(/[?&]id=([A-Za-z0-9_-]+)/);
+    return match?.[1] ?? raw;
+  }
+
+  private normalizeTabTitle(title: string): string {
+    return String(title ?? "")
+      .normalize("NFKC")
+      .replace(/\u00A0/g, " ")
+      .replace(/[–—−]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  private trimSheetTitle(title: string): string {
+    return String(title || "Translation").trim().slice(0, 96).trim() || "Translation";
+  }
+
+  private resolveTargetTabTitle(
+    existingTitles: string[],
+    baseTitle: string,
+    mode: "skip" | "numbered"
+  ): string | null {
+    const normalizedExisting = new Set(existingTitles.map((title) => this.normalizeTabTitle(title)));
+    const safeBaseTitle = this.trimSheetTitle(baseTitle);
+
+    if (!normalizedExisting.has(this.normalizeTabTitle(safeBaseTitle))) {
+      return safeBaseTitle;
+    }
+
+    if (mode === "skip") {
+      return null;
+    }
+
+    for (let index = 2; index <= 99; index++) {
+      const suffix = ` ${index}`;
+      const candidate = `${this.trimSheetTitle(safeBaseTitle).slice(0, 100 - suffix.length)}${suffix}`;
+      if (!normalizedExisting.has(this.normalizeTabTitle(candidate))) {
+        return candidate;
+      }
+    }
+
+    throw new Error(`Could not find an available numbered tab name for "${baseTitle}".`);
+  }
+
   private buildPrompt(template: string, vars: Record<string, string>): string {
     let out = template || "";
     for (const [k, v] of Object.entries(vars)) {
@@ -336,6 +588,14 @@ export class TranslateFromSheetDemoJob {
     return overrides?.[k] ?? DEFAULT_POLISH_RULES[k] ?? "";
   }
 
+  private isResourceEnabled(
+    lang: string,
+    overrides?: Partial<Record<LangKey, boolean>>
+  ): boolean {
+    const k = this.normalizeLang(lang);
+    return overrides?.[k] !== false;
+  }
+
   private getTerminologyProfileWithOverride(
     lang: string,
     overrides?: Partial<Record<LangKey, TerminologyProfile>>
@@ -344,10 +604,11 @@ export class TranslateFromSheetDemoJob {
     return overrides?.[k] ?? TERMINOLOGY_MANAGEMENT[k] ?? {};
   }
 
-  private resolveModel(model?: string): string {
+  private resolveModel(model?: string): DemoModelSelection {
     const allowed = new Set([
       "o3",
       "o4-mini",
+      "gpt-5.5",
       "gpt-5.2",
       "gpt-5",
       "gpt-5-mini",
@@ -359,7 +620,42 @@ export class TranslateFromSheetDemoJob {
     ]);
 
     const value = String(model || "").trim();
-    return allowed.has(value) ? value : "o3";
+    const providerModel = value.match(/^(openai|anthropic):(.+)$/i);
+    if (providerModel) {
+      const provider = providerModel[1].toLowerCase() as "openai" | "anthropic";
+      const providerSpecificModel = providerModel[2].trim();
+      if (provider === "anthropic" && providerSpecificModel === "claude-sonnet-4-6") {
+        return {
+          provider,
+          model: providerSpecificModel,
+          label: `anthropic:${providerSpecificModel}`,
+        };
+      }
+      if (provider === "openai" && allowed.has(providerSpecificModel)) {
+        return {
+          provider,
+          model: providerSpecificModel,
+          label: providerSpecificModel,
+        };
+      }
+    }
+
+    if (/^claude/i.test(value)) {
+      const claudeModel = value === "claude" ? "claude-sonnet-4-6" : value;
+      if (claudeModel === "claude-sonnet-4-6") {
+        return {
+          provider: "anthropic",
+          model: claudeModel,
+          label: `anthropic:${claudeModel}`,
+        };
+      }
+    }
+
+    return {
+      provider: "openai",
+      model: allowed.has(value) ? value : "o3",
+      label: allowed.has(value) ? value : "o3",
+    };
   }
 
   private normalizeGlossaryText(text: string): string {
@@ -470,19 +766,10 @@ export class TranslateFromSheetDemoJob {
 
   // ---- Default prompt templates (used if UI does not override) ----
   private defaultDraftSystem(lang: string, hotelName: string): string {
-    const label = this.langLabel(lang);
-    return [
-      `ROLE: You are an expert Hospitality Copywriter & Localization Specialist translating to ${label}.`,
-      `GOAL: Create natural, flowing content that sounds like it was originally written in ${label}, NOT translated.`,
-      `TONE: Warm, professional, helpful, and upscale (3rd person).`,
-      ``,
-      `=== CRITICAL RULES (ZERO TOLERANCE) ===`,
-      `1. HOTEL NAME INTEGRITY: You must NEVER remove the hotel name from a question or answer if it appears in the source.`,
-      `2. OFFICIAL NAME: The official English name of the hotel is: "${hotelName}".`,
-      `3. TECH SAFETY: Do NOT translate URLs, emails, codes, or tokens (e.g., %s, {name}).`,
-      `4. STRUCTURE: Preserve the exact JSON matrix shape.`,
-      `5. ACCURACY: Keep prices, times, and facts exactly as they are.`,
-    ].join("\n");
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.draftSystem, {
+      lang: this.langLabel(lang),
+      hotelName,
+    });
   }
 
   private defaultDraftUser(
@@ -492,39 +779,20 @@ export class TranslateFromSheetDemoJob {
     hotelName: string,
     glossaryRules: string
   ): string {
-    return [
-      `TASK: Translate EVERY cell in the provided matrix to ${this.langLabel(lang)}.`,
-      `CONTEXT:`,
-      ` - Domain: Hotel FAQ.`,
-      ` - Official Hotel Name: "${hotelName}".`,
-      ``,
-      glossaryRules
-        ? [`MANDATORY GLOSSARY RULES:`, glossaryRules, ``].join("\n")
-        : "",
-      `INSTRUCTIONS:`,
-      `- Translate ALL text content in the rows.`,
-      `- Look at each row as a connected context unit (Category + Question + Answer).`,
-      `- If the source is brief (e.g., "Yes"/"No"), you may expand it slightly ONLY by restating the proposition of the question.`,
-      `- Translate header row: ${translateHeader ? "YES" : "NO"}.`,
-      `- PRESERVE the exact 2D matrix structure (same number of rows and columns).`,
-      `- If the source mentions the hotel name, ensure the translated text also includes "${hotelName}". Do not shorten it to "the hotel".`,
-      `- Apply the mandatory glossary rules exactly when relevant.`,
-      ``,
-      `INPUT DATA (JSON):`,
-      JSON.stringify({ rows }),
-    ]
-      .filter(Boolean)
-      .join("\n");
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.draftUser, {
+      lang: this.langLabel(lang),
+      hotelName,
+      glossaryRules: glossaryRules || "",
+      rows: JSON.stringify({ rows }),
+      translateHeader: translateHeader ? "YES" : "NO",
+    });
   }
 
   private defaultPolishSystem(lang: string, hotelName: string): string {
-    const label = this.langLabel(lang);
-    return [
-      `ROLE: Senior Editor for a Luxury Hotel Brand (${label}).`,
-      `GOAL: Polish the translation to sound fully native and premium, with MINIMAL edits, WITHOUT changing meaning.`,
-      `OUTPUT: JSON only.`,
-      `OFFICIAL HOTEL NAME: "${hotelName}".`,
-    ].join("\n");
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.polishSystem, {
+      lang: this.langLabel(lang),
+      hotelName,
+    });
   }
 
   private defaultPolishUser(params: {
@@ -536,42 +804,38 @@ export class TranslateFromSheetDemoJob {
     strictTerminology: string;
     languageNotes: string;
   }): string {
-    const label = this.langLabel(params.lang);
-    return [
-      `TASK: Polish the DRAFT translation to sound fully native and premium, with MINIMAL edits, WITHOUT changing meaning.`,
-      `WEB: Do NOT use web search. Do NOT cite sources. Output JSON only.`,
-      ``,
-      params.strictTerminology || "",
-      `HARD CONSTRAINTS (ZERO TOLERANCE):`,
-      `1) CELL-BY-CELL MAPPING: For every cell at position (row r, col c), output EXACTLY one polished cell at the same position (r,c).`,
-      `2) DIMENSIONS: Output must have EXACTLY the same number of rows and columns as SOURCE.`,
-      `3) EMPTY CELLS: If a SOURCE cell is empty/blank, the output cell MUST be empty.`,
-      `4) NO NEW FACTS: Do not add any facts, services, conditions, qualifiers, or availability notes not present in SOURCE.`,
-      `5) PRESERVE DATA: Keep numbers, times, prices, addresses, distances exactly as in SOURCE.`,
-      `6) PRESERVE TOKENS: Keep placeholders/tokens unchanged: %s, {name}, {{x}}, URLs, emails, codes.`,
-      `7) HOTEL NAME RULE: If the SOURCE cell contains the official hotel name OR a hotel reference, the output cell MUST include exactly "${params.hotelName}" (do not replace with "the hotel").`,
-      `8) QUESTION INTEGRITY: If SOURCE cell is a question, keep it as a natural question in ${label}. Do not turn questions into statements.`,
-      `9) MINIMAL EDITS: Only fix unnatural phrasing, literal translation artifacts, grammar, and hospitality vocabulary. Do not rewrite aggressively.`,
-      `10) JSON ONLY: Return ONLY valid JSON in the schema: {"rows":[...]} and nothing else.`,
-      ``,
-      `LANGUAGE NOTES FOR ${label.toUpperCase()}:`,
-      params.languageNotes || "",
-      ``,
-      `INPUT (JSON):`,
-      JSON.stringify({
-        meta: {
-          language: label,
-          officialHotelName: params.hotelName,
-          translateHeader: params.translateHeader,
-        },
-        source: { rows: params.sourceRows },
-        draft: { json: params.draftJson },
-      }),
-      ``,
-      `OUTPUT: Return ONLY {"rows":[...]}`
-    ]
-      .filter(Boolean)
-      .join("\n");
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.polishUser, {
+      lang: this.langLabel(params.lang),
+      hotelName: params.hotelName,
+      translateHeader: params.translateHeader ? "YES" : "NO",
+      strictTerminology: params.strictTerminology || "",
+      languageNotes: params.languageNotes || "",
+      sourceRows: JSON.stringify({ rows: params.sourceRows }),
+      draftJson: params.draftJson,
+    });
+  }
+
+  private defaultFinalPolishSystem(lang: string, hotelName: string): string {
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.finalPolishSystem, {
+      lang: this.langLabel(lang),
+      hotelName,
+    });
+  }
+
+  private defaultFinalPolishUser(params: {
+    lang: string;
+    sourceRows: string[][];
+    polishedJson: string;
+    hotelName: string;
+    translateHeader: boolean;
+  }): string {
+    return this.buildPrompt(TRANSLATE_DEMO_DEFAULT_PROMPTS.finalPolishUser, {
+      lang: this.langLabel(params.lang),
+      hotelName: params.hotelName,
+      translateHeader: params.translateHeader ? "YES" : "NO",
+      sourceRows: JSON.stringify({ rows: params.sourceRows }),
+      polishedJson: params.polishedJson,
+    });
   }
 
   // ---- Main execution ----
@@ -592,24 +856,20 @@ export class TranslateFromSheetDemoJob {
     }
 
     // 2) Read Source Data & Metadata
-    
-
     const sourceId = await this.sheets.getSheetIdByTitle(cfg.spreadsheetId, sourceTab);
+    const sourceRange = this.normalizeSourceRange(cfg.sourceRange);
+    const writeStartCell = this.getRangeStartCell(sourceRange);
 
-const MAX_TRANSLATE_ROW = 68; // כולל כותרת - לא מתרגמים מעבר
-const rawRows = await this.sheets.readValues(
-  cfg.spreadsheetId,
-  `${sourceTab}!A1:Z${MAX_TRANSLATE_ROW}`
-);
+    console.log(chalk.gray(`ℹ️ Translation range: ${sourceTab}!${sourceRange}`));
+    const rawRows = await this.sheets.readValues(cfg.spreadsheetId, `${sourceTab}!${sourceRange}`);
 
-if (rawRows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
+    if (rawRows.length === 0) throw new Error(`Source tab "${sourceTab}" is empty`);
 
-// Determine a stable width and make the matrix rectangular.
-// This is CRITICAL so blank rows are not represented as [] and get "dropped" by the model.
-const headerRowRaw = rawRows[0] ?? [];
-const width = Math.max(1, headerRowRaw.length, ...rawRows.map((r) => (r ?? []).length));
-const rows = this.toRectMatrix(rawRows, width);
-
+    // Determine a stable width and make the matrix rectangular.
+    // This is critical so blank rows are not represented as [] and get dropped by the model.
+    const headerRowRaw = rawRows[0] ?? [];
+    const width = Math.max(1, headerRowRaw.length, ...rawRows.map((r) => (r ?? []).length));
+    const rows = this.toRectMatrix(rawRows, width);
 
     const docTitle = await this.sheets.getSpreadsheetTitle(cfg.spreadsheetId);
     console.log(chalk.cyan(`🏨 Official Hotel Name detected from file: "${docTitle}"`));
@@ -644,23 +904,45 @@ const rows = this.toRectMatrix(rawRows, width);
 
     const prompts = cfg.demoOverrides?.prompts;
     const selectedModel = this.resolveModel(cfg.demoOverrides?.model);
-    console.log(chalk.gray(`🤖 translate-demo model: ${selectedModel}`));
+    const selectedFinalPolishModel = this.resolveModel(
+      cfg.demoOverrides?.finalPolishModel || cfg.demoOverrides?.model
+    );
+    console.log(chalk.gray(`🤖 translate-demo model: ${selectedModel.label}`));
+    if (cfg.demoOverrides?.finalPolishEnabled) {
+      console.log(
+        chalk.gray(`🤖 translate-demo final polish model: ${selectedFinalPolishModel.label}`)
+      );
+    }
 
     const processChunk = async (chunkRows: string[][], lang: string, partNum: number) => {
-      console.log(chalk.yellow(`   ⏳ Processing Part ${partNum}/2 (${chunkRows.length} rows)...`));
+      console.log(
+        chalk.yellow(`   ⏳ Processing Part ${partNum}/2 (${chunkRows.length} rows)...`)
+      );
 
       const normalizedLang = this.normalizeLang(lang);
-      const staticGlossaryRules = getGlossaryPrompt(normalizedLang, chunkRows);
-      const uiGlossaryRules = this.formatUiGlossaryPrompt(
+      const glossaryEnabled = this.isResourceEnabled(
         normalizedLang,
-        chunkRows,
-        cfg.demoOverrides?.glossaryByLang
+        cfg.demoOverrides?.glossaryEnabledByLang
       );
+      const terminologyEnabled = this.isResourceEnabled(
+        normalizedLang,
+        cfg.demoOverrides?.terminologyEnabledByLang
+      );
+      const staticGlossaryRules = glossaryEnabled
+        ? getGlossaryPrompt(normalizedLang, chunkRows)
+        : "";
+      const uiGlossaryRules = glossaryEnabled
+        ? this.formatUiGlossaryPrompt(
+            normalizedLang,
+            chunkRows,
+            cfg.demoOverrides?.glossaryByLang
+          )
+        : "";
       const glossaryRules = [staticGlossaryRules, uiGlossaryRules].filter(Boolean).join("\n\n");
 
       console.log(
         chalk.gray(
-          `[GLOSSARY] lang=${normalizedLang} static=${staticGlossaryRules ? "yes" : "no"} ui=${uiGlossaryRules ? "yes" : "no"}`
+          `[GLOSSARY] lang=${normalizedLang} enabled=${glossaryEnabled ? "yes" : "no"} static=${staticGlossaryRules ? "yes" : "no"} ui=${uiGlossaryRules ? "yes" : "no"}`
         )
       );
 
@@ -682,26 +964,29 @@ const rows = this.toRectMatrix(rawRows, width);
           })
         : this.defaultDraftUser(lang, chunkRows, translateHeader, docTitle, glossaryRules);
 
-     const draftResult = await this.agent.runWithSystem(draftUser, draftSystem, selectedModel, {
-       useWebSearch: false,
-     });
+      const draftResult = await this.agent.runWithSystem(
+        draftUser,
+        draftSystem,
+        selectedModel.model,
+        selectedModel.provider,
+        { useWebSearch: false }
+      );
 
-let draftRows = this.parseJsonMatrixOrThrow(draftResult);
-draftRows = this.enforceSameShape(chunkRows, draftRows);
-// אם את רוצה לעצור מיד כשיש בעיה בזמן דיבוג:
-// this.assertSameShapeOrThrow(chunkRows, draftRows, `DRAFT ${lang} part${partNum}`);
-
-const draftJsonClean = JSON.stringify({ rows: draftRows });
+      let draftRows = this.parseJsonMatrixOrThrow(draftResult);
+      draftRows = this.enforceSameShape(chunkRows, draftRows);
+      const draftJsonClean = JSON.stringify({ rows: draftRows });
 
       // Step B: Terminology selection (filtered)
-      const profile = this.getTerminologyProfileWithOverride(
-        lang,
-        cfg.demoOverrides?.terminologyByLang
-      );
+      const profile = terminologyEnabled
+        ? this.getTerminologyProfileWithOverride(
+            lang,
+            cfg.demoOverrides?.terminologyByLang
+          )
+        : {};
 
       console.log(
         chalk.gray(
-          `[TERMS] lang=${lang} mappings=${profile.mappings?.length ?? 0} examples=${
+          `[TERMS] lang=${lang} enabled=${terminologyEnabled ? "yes" : "no"} mappings=${profile.mappings?.length ?? 0} examples=${
             profile.examples?.length ?? 0
           }`
         )
@@ -735,7 +1020,9 @@ const draftJsonClean = JSON.stringify({ rows: draftRows });
         : this.defaultPolishSystem(lang, docTitle);
 
       // If we have language polish rules, append to system (keeps user prompt clean)
-      const polishSystem = polishRules ? [polishSystemBase, "", polishRules].join("\n") : polishSystemBase;
+      const polishSystem = polishRules
+        ? [polishSystemBase, "", polishRules].join("\n")
+        : polishSystemBase;
 
       const polishUser = prompts?.polishUser?.trim()
         ? this.buildPrompt(prompts.polishUser, {
@@ -757,24 +1044,100 @@ const draftJsonClean = JSON.stringify({ rows: draftRows });
             languageNotes,
           });
 
-      const finalJson = await this.agent.runWithSystem(polishUser, polishSystem, selectedModel, {
-        useWebSearch: false,
-      });
+      const finalJson = await this.agent.runWithSystem(
+        polishUser,
+        polishSystem,
+        selectedModel.model,
+        selectedModel.provider,
+        { useWebSearch: false }
+      );
 
-let finalRows = this.parseJsonMatrixOrThrow(finalJson);
-finalRows = this.enforceSameShape(chunkRows, finalRows);
-// אם את רוצה לעצור מיד כשיש בעיה בזמן דיבוג:
-// this.assertSameShapeOrThrow(chunkRows, finalRows, `FINAL ${lang} part${partNum}`);
+      let finalRows = this.parseJsonMatrixOrThrow(finalJson);
+      finalRows = this.enforceSameShape(chunkRows, finalRows);
 
-return finalRows;
+      return finalRows;
     };
 
+    const normalizeOutputMatrix = (matrix: string[][]): string[][] => {
+      if (matrix.length === 0) return matrix;
+      const h = matrix.length;
+      const w = Math.max(...matrix.map((r) => r.length));
+
+      for (let r = 0; r < h; r++) {
+        matrix[r] = matrix[r] ?? [];
+        for (let c = 0; c < w; c++) {
+          if (matrix[r][c] === undefined) {
+            matrix[r][c] = "";
+          }
+        }
+      }
+
+      return matrix;
+    };
+
+    const runFinalPolish = async (polishedRows: string[][], lang: string) => {
+      console.log(
+        chalk.green(`      [FINAL POLISH] Running clean natural polish on the full sheet...`)
+      );
+
+      const polishedJsonClean = JSON.stringify({ rows: polishedRows });
+      const finalPolishSystem = prompts?.finalPolishSystem?.trim()
+        ? this.buildPrompt(prompts.finalPolishSystem, {
+            lang: this.langLabel(lang),
+            hotelName: docTitle,
+          })
+        : this.defaultFinalPolishSystem(lang, docTitle);
+
+      const finalPolishUser = prompts?.finalPolishUser?.trim()
+        ? this.buildPrompt(prompts.finalPolishUser, {
+            lang: this.langLabel(lang),
+            hotelName: docTitle,
+            translateHeader: translateHeader ? "YES" : "NO",
+            sourceRows: JSON.stringify({ rows }),
+            polishedJson: polishedJsonClean,
+          })
+        : this.defaultFinalPolishUser({
+            lang,
+            sourceRows: rows,
+            polishedJson: polishedJsonClean,
+            hotelName: docTitle,
+            translateHeader,
+          });
+
+      const finalPolishJson = await this.agent.runWithSystem(
+        finalPolishUser,
+        finalPolishSystem,
+        selectedFinalPolishModel.model,
+        selectedFinalPolishModel.provider,
+        { useWebSearch: false }
+      );
+
+      let finalRows = this.parseJsonMatrixOrThrow(finalPolishJson);
+      finalRows = this.enforceSameShape(rows, finalRows);
+      return finalRows;
+    };
 
     // 4) Process languages
     const failedLanguages: string[] = [];
+    const targetTabExistsMode = cfg.demoOverrides?.targetTabExistsMode ?? "skip";
+    const existingTabTitles = await this.sheets.getSheetTitles(cfg.spreadsheetId);
+    console.log(
+      chalk.gray(
+        `ℹ️ Existing translation tab behavior: ${
+          targetTabExistsMode === "numbered"
+            ? "create a numbered copy when target tab exists"
+            : "skip language when target tab exists"
+        }`
+      )
+    );
 
     for (const lang of cfg.targetLangs) {
-      const newTitle = `${sourceTab} – ${lang.toUpperCase()}`;
+      const baseTitle = `${sourceTab} – ${lang.toUpperCase()}`;
+      const newTitle = this.resolveTargetTabTitle(existingTabTitles, baseTitle, targetTabExistsMode);
+      if (!newTitle) {
+        console.log(chalk.yellow(`⏭️ Skipping ${lang}: target tab already exists: "${baseTitle}"`));
+        continue;
+      }
       console.log(chalk.blue(`🚀 Starting translation chain for ${lang} (${newTitle})...`));
 
       try {
@@ -785,24 +1148,25 @@ return finalRows;
           part2Result = await processChunk(part2Input, lang, 2);
         }
 
-        const finalTranslatedMatrix = [...part1Result, ...part2Result.slice(1)];
+        let finalTranslatedMatrix = normalizeOutputMatrix([
+          ...part1Result,
+          ...part2Result.slice(1),
+        ]);
 
-        // Normalize matrix shape
-        const h = finalTranslatedMatrix.length;
-        const w = Math.max(...finalTranslatedMatrix.map((r) => r.length));
-
-        for (let r = 0; r < h; r++) {
-          finalTranslatedMatrix[r] = finalTranslatedMatrix[r] ?? [];
-          for (let c = 0; c < w; c++) {
-            if (finalTranslatedMatrix[r][c] === undefined) {
-              finalTranslatedMatrix[r][c] = "";
-            }
-          }
+        if (cfg.demoOverrides?.finalPolishEnabled) {
+          finalTranslatedMatrix = normalizeOutputMatrix(
+            await runFinalPolish(finalTranslatedMatrix, lang)
+          );
         }
 
         // Duplicate sheet and write results
         await this.sheets.duplicateSheet(cfg.spreadsheetId, sourceId, newTitle);
-        await this.sheets.writeValues(cfg.spreadsheetId, `${newTitle}!A1`, finalTranslatedMatrix);
+        await this.sheets.writeValues(
+          cfg.spreadsheetId,
+          `${newTitle}!${writeStartCell}`,
+          finalTranslatedMatrix
+        );
+        existingTabTitles.push(newTitle);
 
         console.log(
           chalk.green(

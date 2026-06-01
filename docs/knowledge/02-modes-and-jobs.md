@@ -105,21 +105,28 @@ Purpose: UI-controlled translation demo. Reads `DYNAMIC_PAYLOAD`, supports:
 - source sheet,
 - selected target languages,
 - optional source tab,
+- optional source range in A1 notation,
 - prompt overrides,
 - glossary by language,
 - terminology by language,
+- optional final natural polish pass without glossary/terminology/language-note rule injection,
 - split into two parts,
-- model selection.
+- model selection, including `anthropic:claude-sonnet-4-6` when Anthropic is configured.
 
 Important behavior:
 
-- Reads only `A1:Z68`.
+- Reads `sourceRange` from the selected tab, defaulting to `A1:Z68`.
 - Preserves matrix shape.
 - Creates translated tabs while keeping blank rows aligned.
+- Optional final polish runs once on the full translated sheet after split parts are merged. In split mode this keeps the run to a maximum of five model calls per language: draft and polish for each part, plus one final natural polish pass.
+- Default prompt templates live in `src/jobs/translate-from-sheet-demo.ts` and are exposed to the UI through `GET /api/translate-demo/defaults`.
+- `model` controls the draft and terminology-polish stages. Optional `finalPolishModel` controls only the final natural polish pass when Step 3 is enabled; when omitted, the final pass uses `model`.
 
 UI note:
 
 - `public/translate-demo.html` keeps the full advanced form in a manual tab and exposes `window.translateDemoBridge`.
+- The manual UI pulls default prompts and language notes from `GET /api/translate-demo/defaults` when served by `src/server-demo.ts`.
+- The `translation-glossary.ts` Master glossary and `terminology-management.ts` Master terminology are available as optional manual loads; they are not applied by default.
 - `public/translate-chatbot.js` adds a separate chat tab that asks focused Hebrew/English questions and fills the same form.
 - The chat starts from a single Google Sheet or Drive Folder URL/ID and auto-detects `sourceType` from the link.
 - Chat choices use one primary submit button to advance; language/model chips only update the selection.

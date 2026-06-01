@@ -256,6 +256,9 @@
   }
 
   function outputStartCell(values) {
+    const explicit = compact(values.outputStartCell || values.outputCell || "");
+    const explicitCell = explicit.includes("!") ? explicit.split("!").pop() : explicit;
+    if (/^[A-Z]{1,3}\d{1,6}$/i.test(explicitCell)) return explicitCell.toUpperCase();
     const col = compact(values.outputStartColumn || values.startColumn || "A").toUpperCase() || "A";
     const row = Math.max(1, Number(values.outputStartRow || values.startRow || 1) || 1);
     return `${col}${row}`;
@@ -706,7 +709,8 @@
         { key: "questionColumn", label: "Question column", type: "text", defaultValue: "B" },
         { key: "answerColumn", label: "Answer column", type: "text", defaultValue: "C" },
         { key: "outputCell", label: "Output cell", type: "text", defaultValue: "E73" },
-        { key: "previewOnly", label: "Preview only", type: "checkbox", defaultValue: true }
+        { key: "previewOnly", label: "Preview only", type: "checkbox", defaultValue: true },
+        { key: "existingValuePolicy", label: "Existing value policy", type: "select", defaultValue: "skip", options: ["skip", "overwrite"] }
       ],
       quickReplies: [
         { label: "Preview only", value: "schema:preview" },
@@ -724,7 +728,8 @@
           questionColumn: "B",
           answerColumn: "C",
           outputCell: extractOutputCell(message),
-          previewOnly: !/\b(write|inject|save|to sheet)\b|לכתוב|להכניס|לשמור/.test(String(message || "").toLowerCase())
+          previewOnly: !/\b(write|inject|save|to sheet)\b|לכתוב|להכניס|לשמור/.test(String(message || "").toLowerCase()),
+          existingValuePolicy: /\boverwrite\b|לדרוס|דריסה/.test(String(message || "").toLowerCase()) ? "overwrite" : "skip"
         };
       },
       payloadBuilder(values) {
@@ -745,7 +750,8 @@
           outputCell: values.outputCell || "E73",
           includeScriptTag: true,
           previewOnly,
-          dryRun: previewOnly
+          dryRun: previewOnly,
+          existingValuePolicy: values.existingValuePolicy === "overwrite" ? "overwrite" : "skip"
         };
       }
     },
@@ -770,7 +776,8 @@
         { key: "languages", label: "Languages", type: "tags", defaultValue: ["en"] },
         { key: "domain", label: "Domain", type: "text", defaultValue: "example.com" },
         { key: "outputMode", label: "Output mode", type: "select", defaultValue: "preview", options: ["preview", "newTab", "firstTabRange", "existingRange"] },
-        { key: "outputTabName", label: "Output tab", type: "text", defaultValue: "Meta Tags" }
+        { key: "outputTabName", label: "Output tab", type: "text", defaultValue: "Meta Tags" },
+        { key: "existingValuePolicy", label: "Existing value policy", type: "select", defaultValue: "skip", options: ["skip", "overwrite"] }
       ],
       quickReplies: [
         { label: "Template", value: "meta:template" },
@@ -797,7 +804,8 @@
           generationMode: /\bai\b|בינה|איי/.test(String(message || "").toLowerCase()) ? "ai" : "template",
           languages: detectLanguages(message, ["en"]),
           outputMode: /\b(write|sheet|tab)\b|לכתוב|גיליון|טאב/.test(String(message || "").toLowerCase()) ? "newTab" : "preview",
-          outputTabName: "Meta Tags"
+          outputTabName: "Meta Tags",
+          existingValuePolicy: /\boverwrite\b|לדרוס|דריסה/.test(String(message || "").toLowerCase()) ? "overwrite" : "skip"
         };
       },
       payloadBuilder(values) {
@@ -830,6 +838,7 @@
           outputMode: values.outputMode || "preview",
           outputTabName: values.outputTabName || "Meta Tags",
           outputStartCell: outputStartCell(values),
+          existingValuePolicy: values.existingValuePolicy === "overwrite" ? "overwrite" : "skip",
           activeRules: Array.isArray(values.activeRules) ? values.activeRules : ["brandInTitle", "includeH1", "openGraph"]
         };
       }
@@ -1367,13 +1376,22 @@
     };
   }
 
-  const normalizedTools = tools.map((tool) => ({
-    ...tool,
-    keywords: tool.intentHints,
-    fields: [...(tool.requiredInputs || []), ...(tool.optionalInputs || [])],
-    capability: tool.capability || capabilityForTool(tool),
-    buildPayload: tool.payloadBuilder
-  }));
+  const contractRuntime = window.CarmelonAssistantToolContract;
+  const normalizeTool = typeof contractRuntime?.normalizeTool === "function"
+    ? contractRuntime.normalizeTool
+    : null;
+
+  const normalizedTools = tools.map((tool) => {
+    const normalized = {
+      ...tool,
+      keywords: tool.intentHints,
+      fields: [...(tool.requiredInputs || []), ...(tool.optionalInputs || [])],
+      capability: tool.capability || capabilityForTool(tool),
+      buildPayload: tool.payloadBuilder
+    };
+
+    return normalizeTool ? normalizeTool(normalized) : normalized;
+  });
 
   window.CarmelonAssistantTools = {
     tools: normalizedTools,

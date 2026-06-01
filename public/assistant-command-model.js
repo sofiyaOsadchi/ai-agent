@@ -172,6 +172,10 @@
       return [{ type: COMMAND_TYPES.CONFIRM_RUN, confidence: 0.93, reason: "explicit run request" }];
     }
 
+    if (activeToolId === "meta-tags" && activeStep && activeStep !== "idle") {
+      return commands;
+    }
+
     if (activeToolId === "design-formatting" && isDryRunRequest(clean)) {
       return [{ type: COMMAND_TYPES.REQUEST_DRY_RUN, confidence: 0.9, reason: "dry-run request" }];
     }

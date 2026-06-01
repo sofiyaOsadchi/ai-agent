@@ -111,11 +111,22 @@ The browser UI now runs through the existing `start-agent` Socket.IO flow. If `s
 The current result is browser-based. The UI keeps the parsed result in memory after a run and can download:
 
 - Client report as standalone HTML.
+- Client report as rendered PDF.
 - Internal report as standalone HTML.
 - Executive summary as Markdown.
 - Raw crawler result as JSON.
 
 It does not write to Google Sheets or a database yet.
+
+## Client PDF Export
+
+The UI can export the client report as PDF through `POST /api/site-ai-audit/export-pdf`. The server renders the standalone client-report HTML with Playwright Chromium and returns an `application/pdf` download. Google Cloud deployments must include the Playwright browser/runtime dependencies for this endpoint to work.
+
+## Rolled Back: Client Share Links
+
+An attempted `Client share link` implementation was removed. It added server-side report snapshot storage and public `/reports/site-ai-audit/:id` routes, but it caused a local agent/server startup concern and was rolled back at the user's request. Do not reintroduce link publishing casually.
+
+If share links are revisited later, design them as a separate deployment/storage task, preferably backed by Google Cloud Storage or another persistent archive, and verify local startup before keeping the change.
 
 ## Client Report Layer
 
@@ -140,4 +151,14 @@ The report panel has two modes:
 
 The report panel also has section toggles, so the user can decide what stays in the downloadable client report and what should be removed.
 
-Important limitation: if the browser page is refreshed after a run, the in-memory report result is lost. For persistent saved audits, add local file storage or a small server-side report archive later, with a separate approval because that affects the broader project flow.
+Repeated action items are compacted in the report layer. If the same finding and recommended fix appear across several page types, the report shows one summarized item with affected URL count, page-type coverage and a small example set instead of repeating large cards for each page type.
+
+FAQ and schema findings are intentionally evidence-based:
+
+- `help` or `support` alone should not classify a page as FAQ.
+- Numbered Q/A text such as `1. Why...?` can count as visible FAQ evidence.
+- A visible FAQ with no FAQPage JSON-LD is a direct structured-data issue.
+- A page that only looks like FAQ from the URL/title, but where no visible Q/A was extracted, is marked for schema verification instead of a critical FAQ/schema failure.
+- Generic no-JSON-LD opportunities should remain informational unless the page has direct FAQ evidence or another high-value entity reason.
+
+Important limitation: if the browser page is refreshed after a run before downloading, the in-memory report result is lost.

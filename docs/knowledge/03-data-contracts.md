@@ -168,7 +168,9 @@ Task `#2` is preferred as the base TSV. Later non-TSV task outputs become extra 
   "spreadsheetId": "...",
   "sourceFolderId": "",
   "sourceTab": "Sheet1",
+  "sourceRange": "A1:Z68",
   "model": "o3",
+  "finalPolishModel": "",
   "targetLangs": ["de", "es"],
   "translateHeader": true,
   "splitIntoTwo": true,
@@ -176,8 +178,11 @@ Task `#2` is preferred as the base TSV. Later non-TSV task outputs become extra 
     "draftSystem": "...",
     "draftUser": "...",
     "polishSystem": "...",
-    "polishUser": "..."
+    "polishUser": "...",
+    "finalPolishSystem": "...",
+    "finalPolishUser": "..."
   },
+  "finalPolishEnabled": false,
   "languageNotes": {},
   "glossaryByLang": {},
   "terminologyByLang": {}
@@ -186,10 +191,17 @@ Task `#2` is preferred as the base TSV. Later non-TSV task outputs become extra 
 
 Important job behavior:
 
-- Reads from `A1:Z68`.
+- Reads from `sourceRange` in the selected tab, defaulting to `A1:Z68`.
 - Uses first tab if `sourceTab` is missing or invalid.
 - Enforces same matrix shape on output.
+- Supports OpenAI model names such as `gpt-5.5` and `anthropic:claude-sonnet-4-6` when Anthropic is configured.
 - Defaults to `o3` if selected model is not in the allow-list.
+- `model` is used for the draft translation stage and Step 2 terminology polish.
+- `finalPolishModel` is optional; when present it is used only for the optional final natural polish pass. Empty or missing means “same as `model`”.
+- When `splitIntoTwo` and `finalPolishEnabled` are both true, the final natural polish runs once on the merged full output, not once per split part.
+- Default prompt templates and language notes are exported by `src/jobs/translate-from-sheet-demo.ts`.
+- `GET /api/translate-demo/defaults` returns those defaults plus optional source-file resources for the original glossary and terminology.
+- The `translation-glossary.ts` Master glossary and `terminology-management.ts` Master terminology can be pulled into the manual UI, but they are not default payload values.
 
 Guided chat layer:
 
@@ -250,7 +262,15 @@ Supported operations:
 - `reorder_columns`
 - `duplicate_tab_template`
 
-`extract_comments` currently supports only `sourceType: "sheet"`.
+`extract_comments` reads Google Drive comment threads attached to Google Sheets cells and writes the plain comment text to the matching row. If Drive returns internal `workbook-range` anchors without A1 cell coordinates, the job falls back to a read-only XLSX export and extracts the cell references from the workbook comment files. It can run on a single Sheet or the Sheets found in a selected Drive folder. Key operation fields:
+
+- `sourceColumn` - required; the column or column range where comments are attached, e.g. `D`, `C-D`, or `C:D`.
+- `outputColumn` - optional; a matching output column/range, e.g. `E` or `E-F`. When omitted, the job writes after the source block, so `D` maps to `E` and `C-D` maps to `E-F`.
+- `startRow` - defaults to `2`.
+- `outputHeader` - defaults to `Comment`.
+- `includeReplies` - defaults to `true`.
+
+Dry run reads the comment metadata and reports how many comment rows would be written, but does not write to the Sheet.
 
 ### `sheet-utilities`
 

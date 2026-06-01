@@ -7,6 +7,7 @@ import { printPreviewEvent } from "./subjobs/preview-events.js";
 
 type SourceType = "sheet" | "folder";
 type SchemaType = "FAQPage";
+type ExistingValuePolicy = "skip" | "overwrite";
 
 type SchemaBuilderPayload = {
   sourceType?: SourceType;
@@ -23,6 +24,7 @@ type SchemaBuilderPayload = {
   includeScriptTag?: boolean;
   previewOnly?: boolean;
   dryRun?: boolean;
+  existingValuePolicy?: ExistingValuePolicy;
 };
 
 type TargetSheet = {
@@ -147,6 +149,7 @@ export class SchemaBuilderJob {
       includeScriptTag: payload.includeScriptTag !== false,
       previewOnly: payload.previewOnly === true,
       dryRun: payload.dryRun === true,
+      existingValuePolicy: payload.existingValuePolicy === "overwrite" ? "overwrite" : "skip",
     };
   }
 
@@ -205,6 +208,7 @@ export class SchemaBuilderJob {
 
     const schemaText = this.buildSchemaText(qa, payload);
     const wroteToSheet = !payload.previewOnly && !payload.dryRun;
+    const outputRange = `${this.quoteA1Sheet(tabName)}!${payload.outputCell}`;
 
     printPreviewEvent({
       kind: "plan",
@@ -222,11 +226,27 @@ export class SchemaBuilderJob {
     });
 
     if (wroteToSheet) {
-      await this.sheets.writeValues(
-        target.id,
-        `${this.quoteA1Sheet(tabName)}!${payload.outputCell}`,
-        [[schemaText]]
-      );
+      const existing = await this.sheets.readValues(target.id, outputRange);
+      if (payload.existingValuePolicy === "skip" && this.hasAnyValue(existing)) {
+        const message = `Skipped ${tabName}!${payload.outputCell} because it already has a value.`;
+        console.log(chalk.yellow(`⚠️ ${target.name}: ${message}`));
+
+        return {
+          spreadsheetId: target.id,
+          fileName: target.name,
+          tabName,
+          outputCell: payload.outputCell,
+          qaCount: qa.length,
+          schemaType: payload.schemaType,
+          wroteToSheet: false,
+          schemaText,
+          previewQuestions: qa.slice(0, 5).map((item) => item.question),
+          status: "skipped",
+          message,
+        };
+      }
+
+      await this.sheets.writeValues(target.id, outputRange, [[schemaText]]);
     }
 
     console.log(
@@ -315,6 +335,10 @@ export class SchemaBuilderJob {
       .replace(/\r?\n+/g, " ")
       .replace(/\s{2,}/g, " ")
       .trim();
+  }
+
+  private hasAnyValue(rows: unknown[][]): boolean {
+    return rows.some((row) => row.some((value) => String(value ?? "").trim().length > 0));
   }
 
   private extractSpreadsheetId(input: string): string {

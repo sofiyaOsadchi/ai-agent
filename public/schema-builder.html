@@ -586,6 +586,33 @@
     .toggle.on { background: var(--purple); }
     .toggle.on::after { transform: translateX(14px); }
 
+    .policy-segment {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-warm);
+    }
+
+    .policy-button {
+      min-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--dim);
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .policy-button.active {
+      border-color: rgba(91, 58, 150, 0.35);
+      background: #fff;
+      color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(91, 58, 150, 0.08);
+    }
+
     .hint {
       color: var(--muted);
       font-size: 0.74rem;
@@ -2933,6 +2960,14 @@
               </div>
               <div class="toggle" id="previewOnlyToggle" role="switch" aria-label="Preview only"></div>
             </div>
+            <div class="field">
+              <span class="label-row">Existing value policy</span>
+              <div class="policy-segment" role="group" aria-label="Existing value policy">
+                <button class="policy-button active" type="button" data-existing-policy="skip">דלג על תאים מלאים</button>
+                <button class="policy-button" type="button" data-existing-policy="overwrite">דרוס תאים מלאים</button>
+              </div>
+              <div class="hint">Default is safe: do not overwrite a filled output cell.</div>
+            </div>
           </div>
         </section>
 
@@ -3014,6 +3049,20 @@
       $(id).classList.toggle("on", Boolean(value));
     }
 
+    function getExistingValuePolicy() {
+      return document.querySelector("[data-existing-policy].active")?.dataset.existingPolicy === "overwrite"
+        ? "overwrite"
+        : "skip";
+    }
+
+    function setExistingValuePolicy(policy) {
+      const normalized = policy === "overwrite" ? "overwrite" : "skip";
+      document.querySelectorAll("[data-existing-policy]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.existingPolicy === normalized);
+        button.setAttribute("aria-pressed", button.dataset.existingPolicy === normalized ? "true" : "false");
+      });
+    }
+
     function addLog(message, type = "info") {
       const logs = $("logs");
       const prefix = type === "error" ? "ERROR " : type === "dim" ? "INFO  " : "";
@@ -3038,6 +3087,7 @@
         includeScriptTag: isToggleOn("scriptToggle"),
         previewOnly: previewOnly || isToggleOn("previewOnlyToggle"),
         dryRun: previewOnly || isToggleOn("previewOnlyToggle"),
+        existingValuePolicy: getExistingValuePolicy(),
       };
     }
 
@@ -3073,6 +3123,7 @@
         setToggle("recursiveToggle", config.recursive !== false);
         setToggle("scriptToggle", config.includeScriptTag !== false);
         setToggle("previewOnlyToggle", config.previewOnly === true);
+        setExistingValuePolicy(config.existingValuePolicy);
         addLog("Settings loaded.", "dim");
       } catch {
         addLog("Could not load saved settings.", "error");
@@ -3094,6 +3145,7 @@
       setToggle("recursiveToggle", true);
       setToggle("scriptToggle", true);
       setToggle("previewOnlyToggle", false);
+      setExistingValuePolicy("skip");
       addLog("Form reset.", "dim");
     }
 
@@ -3124,6 +3176,9 @@
 
       setRunning(true);
       addLog(previewOnly ? "Building schema preview..." : "Generating schema and writing to the sheet...");
+      if (!payload.previewOnly) {
+        addLog(payload.existingValuePolicy === "overwrite" ? "Existing output cell will be overwritten." : "Filled output cells will be skipped.", "dim");
+      }
       socket.emit("start-agent", payload);
     }
 
@@ -3244,6 +3299,7 @@
       setToggle("recursiveToggle", payload.recursive !== false);
       setToggle("scriptToggle", payload.includeScriptTag !== false);
       setToggle("previewOnlyToggle", payload.previewOnly !== false);
+      setExistingValuePolicy(payload.existingValuePolicy || values.existingValuePolicy);
 
       saveConfig();
       localStorage.removeItem("carmelonAssistantToolHandoff");
@@ -3253,6 +3309,13 @@
     ["recursiveToggle", "scriptToggle", "previewOnlyToggle"].forEach((id) => {
       $(id).addEventListener("click", () => {
         $(id).classList.toggle("on");
+      });
+    });
+
+    document.querySelectorAll("[data-existing-policy]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setExistingValuePolicy(button.dataset.existingPolicy);
+        saveConfig();
       });
     });
 

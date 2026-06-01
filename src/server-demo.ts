@@ -14,10 +14,18 @@ import crypto from "crypto";
 
 import { AnalyticsService } from "./services/analytics.js";
 import { FaqDemandService } from "./services/faq-demand.js";
+import { SheetsService } from "./services/sheets.js";
 import {
   isPreviewEventLine,
   parsePreviewEventLine,
 } from "./jobs/subjobs/preview-events.js";
+import { HOTEL_NAME_HE_MAP } from "./jobs/subjobs/hotel-name-hebrew-map.js";
+import {
+  getTranslateDemoDefaultLanguageNotes,
+  getTranslateDemoDefaultPrompts,
+} from "./jobs/translate-from-sheet-demo.js";
+import { TRANSLATION_GLOSSARY } from "./jobs/subjobs/translation-glossary.js";
+import { TERMINOLOGY_MANAGEMENT } from "./jobs/subjobs/terminology-management.js";
 
 loadEnv();
 
@@ -68,6 +76,66 @@ function escapeHtml(value: string): string {
 
     return replacements[char] || char;
   });
+}
+
+function slugifyReportPart(value: string): string {
+  return String(value || "site-audit")
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "site-audit";
+}
+
+function normalizeReportHtml(value: unknown): string {
+  const html = String(value || "").trim();
+
+  if (!html) {
+    throw new Error("Missing report HTML.");
+  }
+
+  if (Buffer.byteLength(html, "utf8") > 20 * 1024 * 1024) {
+    throw new Error("Report HTML is too large.");
+  }
+
+  if (!/<!doctype html|<html[\s>]/i.test(html)) {
+    throw new Error("Report HTML must be a standalone HTML document.");
+  }
+
+  return html;
+}
+
+async function renderHtmlToPdf(html: string): Promise<Buffer> {
+  const mod: any = await (Function("return import('playwright')")() as Promise<any>);
+  const browser = await mod.chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 1280, height: 1600 },
+      deviceScaleFactor: 1,
+    });
+
+    await page.setContent(html, { waitUntil: "networkidle", timeout: 30000 });
+    await page.emulateMedia({ media: "print" });
+
+    const pdf = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "16mm",
+        right: "12mm",
+        bottom: "16mm",
+        left: "12mm",
+      },
+    });
+
+    return Buffer.from(pdf);
+  } finally {
+    await browser.close();
+  }
 }
 
 function safeCompare(a: string, b: string): boolean {
@@ -490,6 +558,27 @@ function logout(req: Request, res: Response): void {
 app.get("/logout", logout);
 app.post("/logout", logout);
 
+app.post(
+  "/api/site-ai-audit/export-pdf",
+  requireWorkspaceAuth,
+  express.json({ limit: "25mb" }),
+  async (req, res) => {
+    try {
+      const html = normalizeReportHtml(req.body?.html);
+      const host = String(req.body?.host || req.body?.title || "site-audit");
+      const filename = `${slugifyReportPart(host)}-site-ai-audit-report.pdf`;
+      const pdf = await renderHtmlToPdf(html);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Cache-Control", "no-store");
+      res.send(pdf);
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Failed to export PDF." });
+    }
+  }
+);
+
 app.use(requireWorkspaceAuth);
 app.use((req, res, next) => {
   if (req.method === "GET") {
@@ -531,6 +620,385 @@ app.get("/api/faq-demand/sources", async (_req, res) => {
     res.json(sources);
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to list FAQ demand sources." });
+  }
+});
+
+app.get("/api/translate-demo/defaults", (_req, res) => {
+  res.json({
+    prompts: getTranslateDemoDefaultPrompts(),
+    languageNotes: getTranslateDemoDefaultLanguageNotes(),
+    glossarySources: [
+      {
+        id: "original-translation-glossary",
+        label: "Master glossary - translation-glossary.ts",
+        glossaryByLang: TRANSLATION_GLOSSARY,
+      },
+    ],
+    terminologySources: [
+      {
+        id: "original-terminology-management",
+        label: "Master terminology - terminology-management.ts",
+        terminologyByLang: TERMINOLOGY_MANAGEMENT,
+      },
+    ],
+  });
+});
+
+function buildResourceGeneratorPrompt(input: {
+  mode: string;
+  targetLang: string;
+  sourceText: string;
+  existingGlossary: unknown;
+  existingTerminology: unknown;
+}): string {
+  const modeLabel =
+    input.mode === "translated"
+      ? "translated spreadsheet"
+      : input.mode === "client-comments"
+        ? "translated spreadsheet with client comments"
+        : "raw source-language spreadsheet";
+
+  return [
+    "You are a senior hospitality localization lead.",
+    "Generate practical glossary and terminology resources for a hotel/web translation workflow.",
+    "The output must help translations sound human, friendly, natural, and suitable for hotel websites.",
+    "",
+    `Mode: ${modeLabel}`,
+    `Target language code: ${input.targetLang}`,
+    "",
+    "How to reason:",
+    "- If the input is raw source only, infer likely fixed terms, property terms, amenities, booking/payment terms, accessibility terms, and phrases that should stay consistent.",
+    "- If the input is already translated, identify useful exact glossary terms and terminology rules from what works well or what sounds too translated.",
+    "- If the input includes client comments, turn the comments into clear avoid/prefer terminology rules and few-shot examples.",
+    "- Prefer short, reusable rules. Avoid overfitting to one sentence unless it reflects a repeated wording issue.",
+    "- Do not invent property facts. Preserve brand names, emails, phone numbers, URLs, room names, and product names.",
+    "- Use the existing resources as context. Add only useful new items or improved replacements.",
+    "",
+    "Return only valid JSON in this exact shape:",
+    "{",
+    "  \"title\": \"short human name for this resource set\",",
+    "  \"summary\": \"one sentence\",",
+    "  \"glossary\": { \"source term\": \"preferred target-language wording\" },",
+    "  \"terminology\": {",
+    "    \"mappings\": [",
+    "      { \"forbidden\": \"bad/stiff target-language wording\", \"preferred\": \"natural target-language wording\", \"reason\": \"short reason\", \"tags\": [\"generated\"] }",
+    "    ],",
+    "    \"examples\": [",
+    "      { \"draft\": \"stiff translated target-language sentence\", \"polish\": \"natural target-language sentence\", \"note\": \"short note\", \"tags\": [\"generated\"] }",
+    "    ]",
+    "  },",
+    "  \"notes\": [\"short implementation note\"]",
+    "}",
+    "",
+    "Limits:",
+    "- glossary: 12-45 entries.",
+    "- terminology mappings: 8-35 rules.",
+    "- examples: 0-8 examples.",
+    "- Do not include empty strings.",
+    "",
+    "Existing glossary for this language:",
+    JSON.stringify(input.existingGlossary || {}, null, 2).slice(0, 12000),
+    "",
+    "Existing terminology for this language:",
+    JSON.stringify(input.existingTerminology || {}, null, 2).slice(0, 12000),
+    "",
+    "Input spreadsheet/file text:",
+    input.sourceText.slice(0, 65000)
+  ].join("\n");
+}
+
+function sanitizeGeneratedResourceSet(parsed: any): any {
+  const glossaryInput = parsed?.glossary && typeof parsed.glossary === "object" && !Array.isArray(parsed.glossary)
+    ? parsed.glossary
+    : {};
+  const glossary: Record<string, string> = {};
+  for (const [source, target] of Object.entries(glossaryInput).slice(0, 80)) {
+    const sourceText = String(source || "").trim();
+    const targetText = String(target || "").trim();
+    if (sourceText && targetText) glossary[sourceText] = targetText;
+  }
+
+  const mappingsInput = Array.isArray(parsed?.terminology?.mappings)
+    ? parsed.terminology.mappings
+    : [];
+  const examplesInput = Array.isArray(parsed?.terminology?.examples)
+    ? parsed.terminology.examples
+    : [];
+
+  const mappings = mappingsInput.slice(0, 60).map((item: any) => ({
+    forbidden: String(item?.forbidden || "").trim(),
+    preferred: String(item?.preferred || "").trim(),
+    reason: String(item?.reason || "").trim(),
+    tags: Array.isArray(item?.tags) ? item.tags.map(String).filter(Boolean).slice(0, 6) : ["generated"]
+  })).filter((item: any) => item.forbidden && item.preferred);
+
+  const examples = examplesInput.slice(0, 20).map((item: any) => ({
+    draft: String(item?.draft || "").trim(),
+    polish: String(item?.polish || "").trim(),
+    note: String(item?.note || "").trim(),
+    tags: Array.isArray(item?.tags) ? item.tags.map(String).filter(Boolean).slice(0, 6) : ["generated"]
+  })).filter((item: any) => item.draft && item.polish);
+
+  return {
+    title: String(parsed?.title || "Generated resource set").trim().slice(0, 120),
+    summary: String(parsed?.summary || "").trim().slice(0, 400),
+    glossary,
+    terminology: { mappings, examples },
+    notes: Array.isArray(parsed?.notes) ? parsed.notes.map(String).filter(Boolean).slice(0, 8) : []
+  };
+}
+
+const RESOURCE_TERM_STOPWORDS = new Set([
+  "Question",
+  "Answer",
+  "Yes",
+  "No",
+  "What",
+  "Where",
+  "When",
+  "How",
+  "Does",
+  "Can",
+  "Is",
+  "Are",
+  "The",
+  "This",
+  "Guests",
+  "Guest",
+  "Hotel",
+  "Property",
+]);
+
+function collectLikelyResourceTerms(sourceText: string): string[] {
+  const terms = new Set<string>();
+  const text = String(sourceText || "");
+  const knownPatterns = [
+    /\bWi-?Fi\b/gi,
+    /\bWhatsApp\b/gi,
+    /\bPIN code\b/gi,
+    /\bself-check-in\b/gi,
+    /\bwasher-dryer(?:s)?\b/gi,
+    /\bserviced apartments?\b/gi,
+    /\bhousekeeping\b/gi,
+    /\blate check-out\b/gi,
+    /\bearly check-in\b/gi,
+    /\bairport transfers?\b/gi,
+    /\bcredit card\b/gi,
+    /\bsecurity deposit\b/gi,
+    /\bcongestion charge\b/gi,
+    /\bUltra Low Emission Zones?\b/gi,
+  ];
+
+  for (const pattern of knownPatterns) {
+    for (const match of text.matchAll(pattern)) {
+      if (match[0]) terms.add(match[0].trim());
+    }
+  }
+
+  for (const match of text.matchAll(/\b(?:[A-Z][A-Za-z0-9'.’&-]+)(?:\s+(?:[A-Z][A-Za-z0-9'.’&-]+|St\.?|Royal|Hotel|Apartments?)){0,5}\b/g)) {
+    const term = String(match[0] || "").replace(/\s+/g, " ").trim();
+    if (term.length < 3 || term.length > 80) continue;
+    if (RESOURCE_TERM_STOPWORDS.has(term)) continue;
+    if (/^(Question|Answer|Yes|No|The|This|What|Where|When|How|Does|Can|Is|Are)\b/.test(term)) continue;
+    terms.add(term);
+  }
+
+  for (const match of text.matchAll(/["“”']([^"“”'\n]{3,60})["“”']/g)) {
+    const term = String(match[1] || "").replace(/\s+/g, " ").trim();
+    if (term && !RESOURCE_TERM_STOPWORDS.has(term)) terms.add(term);
+  }
+
+  return Array.from(terms).slice(0, 36);
+}
+
+function extractAvoidPreferRules(sourceText: string): Array<{ forbidden: string; preferred: string; reason: string; tags: string[] }> {
+  const rules: Array<{ forbidden: string; preferred: string; reason: string; tags: string[] }> = [];
+  const text = String(sourceText || "");
+  const patterns = [
+    /(?:do not use|don't use|avoid)\s+["“”']?([^"“”'\n.;]+)["“”']?.{0,80}?(?:use|prefer|replace with)\s+["“”']?([^"“”'\n.;]+)["“”']?/gi,
+    /["“”']([^"“”'\n]{2,60})["“”']\s*(?:->|=>|instead of)\s*["“”']([^"“”'\n]{2,60})["“”']/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      const forbidden = String(match[1] || "").trim();
+      const preferred = String(match[2] || "").trim();
+      if (forbidden && preferred && forbidden !== preferred) {
+        rules.push({
+          forbidden,
+          preferred,
+          reason: "Extracted from pasted feedback or wording notes.",
+          tags: ["generated", "local"],
+        });
+      }
+    }
+  }
+
+  return rules.slice(0, 20);
+}
+
+function buildLocalResourceFallback(input: { mode: string; targetLang: string; sourceText: string }): any {
+  const glossary: Record<string, string> = {};
+  for (const term of collectLikelyResourceTerms(input.sourceText)) {
+    glossary[term] = term;
+  }
+
+  const extractedRules = extractAvoidPreferRules(input.sourceText);
+  const genericRules = [
+    {
+      forbidden: "literal word-for-word phrasing",
+      preferred: "natural guest-facing website wording",
+      reason: "Keep the translation readable and native, not mechanical.",
+      tags: ["generated", "local"],
+    },
+    {
+      forbidden: "overly formal service language",
+      preferred: "warm, clear hospitality wording",
+      reason: "Hotel website copy should feel helpful and approachable.",
+      tags: ["generated", "local"],
+    },
+    {
+      forbidden: "translated brand, property, room, URL, email or phone wording",
+      preferred: "preserve official names, product names, URLs, emails and phone numbers exactly",
+      reason: "These are factual identifiers and should stay consistent.",
+      tags: ["generated", "local"],
+    },
+  ];
+
+  return sanitizeGeneratedResourceSet({
+    title: `Local ${input.targetLang.toUpperCase()} resources`,
+    summary: "Generated locally from the pasted text. Add AI generation for richer language-specific wording.",
+    glossary,
+    terminology: {
+      mappings: [...extractedRules, ...genericRules],
+      examples: [],
+    },
+    notes: [
+      input.mode === "client-comments"
+        ? "Client comments were scanned for avoid/prefer wording."
+        : "Local fallback keeps likely fixed terms and adds broad naturalness rules.",
+    ],
+  });
+}
+
+function extractJsonCandidateText(text: string): string {
+  const clean = String(text || "")
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+  if (start >= 0 && end > start) return clean.slice(start, end + 1);
+  return clean;
+}
+
+async function parseResourceGeneratorJson(openai: any, rawText: string): Promise<{ parsed: any; repaired: boolean }> {
+  try {
+    return { parsed: extractJsonObject(rawText), repaired: false };
+  } catch (firstError: any) {
+    const brokenJson = extractJsonCandidateText(rawText).slice(0, 90000);
+    const repairResponse: any = await openai.responses.create({
+      model: "gpt-5.4-mini",
+      store: false,
+      instructions: [
+        "You repair invalid JSON.",
+        "Return only valid JSON. Do not wrap in markdown.",
+        "Preserve the same semantic data where possible.",
+        "The repaired JSON must use this top-level shape: title, summary, glossary, terminology, notes.",
+      ].join(" "),
+      input: [
+        {
+          role: "user",
+          content: [
+            "Repair this invalid JSON into valid JSON only.",
+            `Parser error: ${firstError?.message || "unknown JSON parse error"}`,
+            "",
+            brokenJson,
+          ].join("\n"),
+        },
+      ],
+    } as any);
+
+    try {
+      return { parsed: extractJsonObject(repairResponse.output_text || ""), repaired: true };
+    } catch (secondError: any) {
+      throw new Error(`AI returned invalid JSON and automatic repair failed: ${firstError?.message || secondError?.message || "invalid JSON"}`);
+    }
+  }
+}
+
+app.post("/api/translate-demo/generate-resources", async (req, res) => {
+  try {
+    const mode = String(req.body?.mode || "raw-source");
+    const targetLang = String(req.body?.targetLang || "").trim().toLowerCase();
+    const sourceText = String(req.body?.sourceText || "").trim();
+
+    if (!targetLang) {
+      res.status(400).json({ error: "Missing target language." });
+      return;
+    }
+    if (sourceText.length < 20) {
+      res.status(400).json({ error: "Add or upload enough spreadsheet text to analyze." });
+      return;
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      res.json({
+        ...buildLocalResourceFallback({ mode, targetLang, sourceText }),
+        modelUsed: "local fallback"
+      });
+      return;
+    }
+
+    const openai = new OpenAI({ apiKey });
+    const response: any = await openai.responses.create({
+      model: "gpt-5.4-mini",
+      store: false,
+      instructions: "Return only JSON. Do not wrap in markdown.",
+      input: [
+        {
+          role: "user",
+          content: buildResourceGeneratorPrompt({
+            mode,
+            targetLang,
+            sourceText,
+            existingGlossary: req.body?.existingGlossary || {},
+            existingTerminology: req.body?.existingTerminology || {}
+          })
+        }
+      ]
+    } as any);
+
+    const { parsed, repaired } = await parseResourceGeneratorJson(openai, response.output_text || "");
+    res.json({
+      ...sanitizeGeneratedResourceSet(parsed),
+      modelUsed: repaired ? "gpt-5.4-mini + JSON repair" : "gpt-5.4-mini",
+      jsonRepaired: repaired
+    });
+  } catch (error: any) {
+    console.error("Translate resource generation failed:", error?.message || error);
+    res.status(500).json({ error: error?.message || "Failed to generate glossary and terminology." });
+  }
+});
+
+app.post("/api/translate-demo/source-text", async (req, res) => {
+  try {
+    const spreadsheetId = String(req.body?.spreadsheetId || "").trim();
+    if (!spreadsheetId) {
+      res.status(400).json({ error: "Missing spreadsheet ID." });
+      return;
+    }
+
+    const sourceRange = String(req.body?.sourceRange || "A1:Z68").trim() || "A1:Z68";
+    const sheets = new SheetsService();
+    const sourceTab = String(req.body?.sourceTab || "").trim() || await sheets.getFirstSheetTitle(spreadsheetId);
+    const values = await sheets.readValues(spreadsheetId, `${sourceTab}!${sourceRange}`);
+    const text = values.map((row) => (row || []).map((cell) => String(cell || "")).join("\t")).join("\n");
+
+    res.json({ sourceTab, sourceRange, rows: values.length, text });
+  } catch (error: any) {
+    res.status(500).json({ error: error?.message || "Failed to read source sheet text." });
   }
 });
 
@@ -687,6 +1155,201 @@ function assistantPreflightSystemPrompt(): string {
   ].join("\n");
 }
 
+function assistantFaqValidationSystemPrompt(): string {
+  return [
+    "You are a fast validation router for Carmelon FAQ runs.",
+    "You do not generate FAQ content and you do not run tools.",
+    "Your only job is to verify that the FAQ subject, language, locale, and user goal are separated cleanly before a spreadsheet is created.",
+    "The user may mix Hebrew, English, transliteration, punctuation, and instructions in one sentence.",
+    "Extract the actual entity/page/product/service as normalizedSubject.",
+    "Move language and locale instructions out of the subject.",
+    "Also find the best official factual source URL for the normalized subject, such as the official hotel page. Prefer the brand/property website over OTAs, maps, review sites, or aggregators.",
+    "If a source URL is already provided by the user, keep it unless it is clearly not relevant. Otherwise use web search to find a likely official source.",
+    "If no official source can be identified with reasonable confidence, leave sourceUrlCandidate empty and set needsSourceConfirmation=true.",
+    "If the requested output language is English, the normalizedSubject should normally be an English/Latin official name, not Hebrew transliteration.",
+    "If the subject is transliterated, misspelled, or ambiguous, normalize it only when the intent is clear. Otherwise set needsConfirmation=true and needsCorrection=true.",
+    "For hotel names, prefer the official hotel/property name. Do not silently keep a Hebrew typo as the subject when an English official name is likely.",
+    "Examples:",
+    "- 'מלון לאונדרו ברלין? אנגלית uk' means normalizedSubject='Leonardo Hotel Berlin', requestedLanguage='English', requestedLocale='UK'.",
+    "- Do not include '? אנגלית uk', 'English UK', target language, count, style, audience, or workflow words inside normalizedSubject.",
+    "Write reply, warnings, and confirmationQuestion in the same language as the latest user message.",
+    "Return only valid JSON with this shape:",
+    "{",
+    "  \"normalizedSubject\": \"Leonardo Hotel Berlin\",",
+    "  \"detectedBrandOrEntity\": \"Leonardo Hotel Berlin\",",
+    "  \"requestedLanguage\": \"English\",",
+    "  \"requestedLocale\": \"UK\",",
+    "  \"contentGoal\": \"Build an FAQ question plan\",",
+    "  \"removedInstructionFragments\": [\"אנגלית uk\"],",
+    "  \"confidence\": 0.82,",
+    "  \"needsConfirmation\": true,",
+    "  \"needsCorrection\": false,",
+    "  \"officialNameVerified\": true,",
+    "  \"sourceUrlCandidate\": \"https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin\",",
+    "  \"sourceTitle\": \"Leonardo Hotel Berlin official page\",",
+    "  \"sourceType\": \"official\",",
+    "  \"sourceConfidence\": 0.9,",
+    "  \"needsSourceConfirmation\": true,",
+    "  \"riskFlags\": [\"official-name-normalized\", \"subject-contained-language-instruction\"],",
+    "  \"confirmationQuestion\": \"I understood the FAQ topic as Leonardo Hotel Berlin and the output language as UK English. Is that correct?\",",
+    "  \"warnings\": [],",
+    "  \"reply\": \"\"",
+    "}",
+    "Use empty strings or arrays where unknown."
+  ].join("\n");
+}
+
+function normalizeFaqLookupText(value: unknown): string {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0591-\u05c7]/g, "")
+    .replace(/[׳'"`´’‘]/g, "")
+    .replace(/\b(?:faq|questions?|answers?|questionnaire|builder|page)\b/gi, " ")
+    .replace(/\b(?:english|hebrew|german|french|spanish|uk|gb|us|usa|language|locale)\b/gi, " ")
+    .replace(/(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|שפה|בריטית|אמריקאית)/gi, " ")
+    .replace(/(?:לאונדרו|ליאונדרו|ליאונרדו|ליאונרדו)/gi, "לאונרדו")
+    .replace(/(?:^|\s)(?:מלון|המלון|בית מלון)(?=\s|$)/g, " ")
+    .replace(/[^a-z0-9\u0590-\u05ff]+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function collectFaqSubjectCandidates(values: any, payload: any, parsed: any): string[] {
+  const candidates = [
+    values?.subjects,
+    values?.subjectRaw,
+    parsed?.normalizedSubject,
+    parsed?.detectedBrandOrEntity,
+    parsed?.subject,
+  ];
+  if (Array.isArray(payload?.subjects)) candidates.push(...payload.subjects);
+  if (Array.isArray(values?.subjects)) candidates.push(...values.subjects);
+  return candidates
+    .flatMap((item) => Array.isArray(item) ? item : [item])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function findKnownFaqOfficialSubject(values: any, payload: any, parsed: any): string {
+  const lookupCandidates = collectFaqSubjectCandidates(values, payload, parsed)
+    .map((item) => normalizeFaqLookupText(item))
+    .filter(Boolean);
+  if (!lookupCandidates.length) return "";
+
+  let best: { official: string; score: number } | null = null;
+  for (const [official, hebrewName] of Object.entries(HOTEL_NAME_HE_MAP)) {
+    const aliases = [official, hebrewName];
+    for (const alias of aliases) {
+      const aliasLookup = normalizeFaqLookupText(alias);
+      if (!aliasLookup) continue;
+      for (const candidate of lookupCandidates) {
+        let score = 0;
+        if (candidate === aliasLookup) score = 100;
+        else if (candidate.length >= 6 && aliasLookup.includes(candidate)) score = 80;
+        else if (aliasLookup.length >= 6 && candidate.includes(aliasLookup)) score = 75;
+        if (score > (best?.score || 0)) best = { official, score };
+      }
+    }
+  }
+
+  for (const candidate of lookupCandidates) {
+    if (candidate.includes("לאונרדו") && candidate.includes("ברלין") && (!best || best.score < 70)) {
+      best = { official: "Leonardo Hotel Berlin", score: 70 };
+    }
+  }
+
+  return best && best.score >= 70 ? best.official : "";
+}
+
+function knownFaqOfficialSourceUrl(officialSubject: string): { url: string; title: string } | null {
+  if (officialSubject === "Leonardo Hotel Berlin") {
+    return {
+      url: "https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin",
+      title: "Leonardo Hotel Berlin official page"
+    };
+  }
+  return null;
+}
+
+function isEnglishFaqLanguageValue(language: unknown, locale: unknown): boolean {
+  const lang = String(language || "").trim();
+  const region = String(locale || "").trim();
+  return /^english(?:\b|\s|\()/i.test(lang) || /^en(?:[-_][a-z]+)?$/i.test(lang) || /^(uk|gb|us|usa|en-gb|en-us)$/i.test(region);
+}
+
+function enhanceFaqValidation(parsed: any, values: any, payload: any): any {
+  const next = { ...(parsed || {}) };
+  const riskFlags = new Set(Array.isArray(next.riskFlags) ? next.riskFlags.map(String).filter(Boolean) : []);
+  const officialSubject = findKnownFaqOfficialSubject(values, payload, next);
+  if (officialSubject) {
+    if (String(next.normalizedSubject || "").trim() !== officialSubject) {
+      riskFlags.add("official-name-normalized");
+      next.normalizedSubject = officialSubject;
+      next.detectedBrandOrEntity = officialSubject;
+      next.needsConfirmation = true;
+    }
+    next.officialNameVerified = true;
+    next.confidence = Math.max(Number(next.confidence) || 0, 0.92);
+    const knownSource = knownFaqOfficialSourceUrl(officialSubject);
+    if (knownSource && !next.sourceUrlCandidate && !next.officialSourceUrl) {
+      riskFlags.add("official-source-found");
+      next.sourceUrlCandidate = knownSource.url;
+      next.sourceTitle = knownSource.title;
+      next.sourceType = "official";
+      next.sourceConfidence = Math.max(Number(next.sourceConfidence) || 0, 0.9);
+      next.needsSourceConfirmation = true;
+      next.needsConfirmation = true;
+    }
+  }
+
+  const subjectText = collectFaqSubjectCandidates(values, payload, next).join(" ");
+  if (/(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|english|hebrew|german|french|spanish|\buk\b|\bus\b|language|locale)/i.test(subjectText)) {
+    riskFlags.add("subject-contained-language-instruction");
+    next.needsConfirmation = true;
+  }
+
+  const normalizedSubject = String(next.normalizedSubject || "").trim();
+  if (isEnglishFaqLanguageValue(next.requestedLanguage || values?.language, next.requestedLocale || next.locale) && /[\u0590-\u05ff]/.test(normalizedSubject) && !next.officialNameVerified) {
+    riskFlags.add("english-output-subject-not-normalized");
+    next.needsCorrection = true;
+    next.needsConfirmation = true;
+    next.confidence = Math.min(Number(next.confidence) || 0.6, 0.6);
+  }
+
+  next.riskFlags = Array.from(riskFlags);
+  return next;
+}
+
+function sanitizeFaqValidation(parsed: any): any {
+  const confidence = Number(parsed?.confidence);
+  return {
+    normalizedSubject: String(parsed?.normalizedSubject || parsed?.subject || "").trim().slice(0, 180),
+    detectedBrandOrEntity: String(parsed?.detectedBrandOrEntity || "").trim().slice(0, 180),
+    requestedLanguage: String(parsed?.requestedLanguage || parsed?.language || "").trim().slice(0, 80),
+    requestedLocale: String(parsed?.requestedLocale || parsed?.locale || "").trim().slice(0, 40),
+    contentGoal: String(parsed?.contentGoal || "").trim().slice(0, 180),
+    removedInstructionFragments: Array.isArray(parsed?.removedInstructionFragments)
+      ? parsed.removedInstructionFragments.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 10)
+      : [],
+    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(1, confidence)) : 0,
+    needsConfirmation: parsed?.needsConfirmation === true,
+    needsCorrection: parsed?.needsCorrection === true || parsed?.needsUserCorrection === true,
+    officialNameVerified: parsed?.officialNameVerified === true,
+    sourceUrlCandidate: String(parsed?.sourceUrlCandidate || parsed?.officialSourceUrl || parsed?.sourceUrl || "").trim().slice(0, 500),
+    sourceTitle: String(parsed?.sourceTitle || parsed?.officialSourceTitle || "").trim().slice(0, 180),
+    sourceType: String(parsed?.sourceType || "").trim().slice(0, 60),
+    sourceConfidence: Number.isFinite(Number(parsed?.sourceConfidence))
+      ? Math.max(0, Math.min(1, Number(parsed.sourceConfidence)))
+      : 0,
+    needsSourceConfirmation: parsed?.needsSourceConfirmation === true || parsed?.sourceNeedsConfirmation === true,
+    riskFlags: Array.isArray(parsed?.riskFlags)
+      ? parsed.riskFlags.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 12)
+      : [],
+    confirmationQuestion: String(parsed?.confirmationQuestion || "").trim().slice(0, 240),
+  };
+}
+
 function sanitizeAssistantPreflightPatch(toolId: string, payloadPatch: any, valuesPatch: any): { payloadPatch: any; valuesPatch: any } {
   const cleanPayloadPatch =
     payloadPatch && typeof payloadPatch === "object" && !Array.isArray(payloadPatch)
@@ -741,6 +1404,7 @@ function sanitizeAssistantPreflightPatch(toolId: string, payloadPatch: any, valu
 }
 
 app.post("/api/assistant-preflight", async (req, res) => {
+  const phase = String(req.body?.phase || "").trim();
   const toolId = String(req.body?.toolId || "").trim();
   const payload = req.body?.payload || {};
   const values = req.body?.values || {};
@@ -760,10 +1424,10 @@ app.post("/api/assistant-preflight", async (req, res) => {
   const openai = new OpenAI({ apiKey });
 
   try {
-    const response: any = await openai.responses.create({
+    const responseRequest: any = {
       model: "gpt-5.4-mini",
       store: false,
-      instructions: assistantPreflightSystemPrompt(),
+      instructions: phase === "faq-subject-validation" ? assistantFaqValidationSystemPrompt() : assistantPreflightSystemPrompt(),
       input: [
         {
           role: "user",
@@ -775,9 +1439,27 @@ app.post("/api/assistant-preflight", async (req, res) => {
           })
         }
       ]
-    } as any);
+    };
+
+    if (phase === "faq-subject-validation") {
+      responseRequest.tools = [{ type: "web_search" }];
+      responseRequest.tool_choice = "auto";
+    }
+
+    const response: any = await openai.responses.create(responseRequest);
 
     const parsed = extractJsonObject(response.output_text || "");
+    if (phase === "faq-subject-validation") {
+      const enhancedFaqValidation = enhanceFaqValidation(parsed, values, payload);
+      res.json({
+        reply: String(enhancedFaqValidation.reply || ""),
+        warnings: Array.isArray(enhancedFaqValidation.warnings) ? enhancedFaqValidation.warnings.map(String) : [],
+        faqValidation: sanitizeFaqValidation(enhancedFaqValidation),
+        modelUsed: "gpt-5.4-mini"
+      });
+      return;
+    }
+
     const sanitized = sanitizeAssistantPreflightPatch(toolId, parsed.payloadPatch, parsed.valuesPatch);
     res.json({
       reply: String(parsed.reply || ""),

@@ -46,7 +46,15 @@ export type SheetPreviewEvent = {
   badgeLabel?: string;
 };
 
-export type PreviewEvent = PreviewChangeEvent | PreviewPlanEvent | SheetPreviewEvent;
+export type SheetTabsEvent = {
+  kind: "sheet_tabs";
+  fileName: string;
+  spreadsheetId: string;
+  tabs: string[];
+  selectedTabName?: string;
+};
+
+export type PreviewEvent = PreviewChangeEvent | PreviewPlanEvent | SheetPreviewEvent | SheetTabsEvent;
 
 const PREVIEW_PREFIX = "CARMELON_PREVIEW_EVENT_JSON=";
 

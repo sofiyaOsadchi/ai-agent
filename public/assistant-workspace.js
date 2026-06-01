@@ -298,6 +298,9 @@
   ]);
 
   const state = createConversationState();
+  let latestChatMessageEl = null;
+  let pendingChatScrollFrame = 0;
+  let pendingChatScrollTarget = null;
 
   function createConversationState() {
     return {
@@ -325,6 +328,7 @@
       taskMemory: freshTaskMemory(),
       answers: freshAnswers(),
       fileTask: freshFileTask(),
+      faqSubjectValidation: null,
       faqAuditDiscovery: null,
       faqAuditDiscoveryPending: false,
       faqAuditGroupSelectionTouched: false,
@@ -337,6 +341,7 @@
     return {
       scope: "",
       subjects: "",
+      subjectRaw: "",
       audience: "",
       language: "English (UK)",
       count: "20-30",
@@ -497,6 +502,34 @@
     return manifest.helpers?.[name] || fallback;
   }
 
+  function scrollChatToLatest(target = latestChatMessageEl) {
+    pendingChatScrollTarget = target || latestChatMessageEl;
+    if (pendingChatScrollFrame) cancelAnimationFrame(pendingChatScrollFrame);
+    pendingChatScrollFrame = requestAnimationFrame(() => {
+      pendingChatScrollFrame = 0;
+      const chat = els.chatLog;
+      const message = pendingChatScrollTarget || latestChatMessageEl;
+      if (!chat || !message || !chat.contains(message)) {
+        if (chat) chat.scrollTop = chat.scrollHeight;
+        return;
+      }
+
+      const chatRect = chat.getBoundingClientRect();
+      const messageRect = message.getBoundingClientRect();
+      const messageTop = chat.scrollTop + messageRect.top - chatRect.top;
+      const messageHeight = message.offsetHeight;
+      const viewportHeight = chat.clientHeight;
+      const padding = 12;
+
+      if (messageHeight + padding > viewportHeight) {
+        chat.scrollTop = Math.max(0, messageTop - padding);
+        return;
+      }
+
+      chat.scrollTop = Math.max(0, messageTop + messageHeight - viewportHeight + padding);
+    });
+  }
+
   const extractUrlsFromText = helper("extractUrls", (text) => {
     return (String(text || "").match(/https?:\/\/[^\s"'<>]+/gi) || [])
       .map((url) => compact(url).replace(/[),.;\]]+$/g, ""));
@@ -536,7 +569,8 @@
     item.dir = messageDir(text);
     item.textContent = text;
     els.chatLog.appendChild(item);
-    els.chatLog.scrollTop = els.chatLog.scrollHeight;
+    latestChatMessageEl = item;
+    scrollChatToLatest(item);
   }
 
   function bot(text) {
@@ -581,10 +615,15 @@
   }
 
   function extractOutputCell(text, fallback = "E73") {
-    const matches = Array.from(String(text || "").matchAll(/\b(?:[\w -]+!)?[A-Z]{1,3}\d{1,6}\b/gi))
+    const source = withoutUrlsForDisplay(text);
+    const matches = Array.from(String(source || "").matchAll(/\b(?:[\w -]+!)?[A-Z]{1,3}\d{1,6}\b/gi))
       .map((match) => match[0].trim());
+    const reversedCell = Array.from(String(source || "").matchAll(/\b(\d{1,6})\s*([A-Z]{1,3})\b/gi))
+      .map((match) => `${match[2]}${match[1]}`)
+      .find((cell) => /^[A-Z]{1,3}\d{1,6}$/i.test(cell));
     const cell = matches.find((item) => item.includes("!")) ||
       matches.find((cell) => /^[A-Z]{1,2}\d{1,6}$/i.test(cell)) ||
+      reversedCell ||
       fallback;
     const sheetMatch = cell.match(/^(.*)!([A-Z]{1,3}\d{1,6})$/i);
     if (!sheetMatch) return cell.toUpperCase();
@@ -1070,8 +1109,8 @@
       if (operation.type === "faq_answer_research") {
         return hebrew
           ? [
-              dry ? "זו היתה הרצת dry run, אז עוד לא נכתבו תשובות חדשות בפועל." : "לפי ה־payload שאושר, התשובות החדשות נכתבות בגיליון.",
-              `מיקום: tab ${tab}, עמודה ${targetCol}.`,
+              dry ? "זו היתה בדיקה מקדימה, אז עוד לא נכתבו תשובות חדשות לגיליון." : "התשובות החדשות נכתבו לגיליון לפי האישור שלך.",
+              `מיקום: טאב ${tab}, עמודה ${targetCol}.`,
               operation.replaceOriginal ? `זה מחליף את עמודת התשובות המקורית (${sourceCol}).` : `זה משאיר את עמודת התשובות המקורית (${sourceCol}) ומוסיף תשובה מחקרית בעמודה ${targetCol}.`,
               "אם תרצי להחליף את המקור במקום להוסיף עמודה חדשה, כתבי: להחליף בעמודת התשובות המקורית."
             ].join("\n")
@@ -1086,8 +1125,8 @@
         const target = operation.targetColumn || "עמודת היעד";
         return hebrew
           ? [
-              dry ? "זו היתה הרצת dry run, אז עוד לא הוחלפו ערכים בפועל." : "לפי ה־payload שאושר, ערכים הועתקו בגיליון.",
-              `מיקום: tab ${tab}.`,
+              dry ? "זו היתה בדיקה מקדימה, אז עוד לא הוחלפו ערכים בפועל." : "הערכים הועתקו לגיליון לפי האישור שלך.",
+              `מיקום: טאב ${tab}.`,
               `פעולה: כל ערך שקיים בעמודה ${source} מחליף את הערך המקביל בעמודה ${target}.`
             ].join("\n")
           : [
@@ -1097,19 +1136,19 @@
             ].join("\n");
       }
       return hebrew
-        ? `ההרצה האחרונה היתה ${operation.type || "פעולת גיליון"}. הפלט/השינויים לפי ה־payload הם ב־tab ${tab}${targetCol ? `, עמודה ${targetCol}` : ""}.`
+        ? `הפעולה האחרונה היתה ${designOperationLabel(operation, true)}. השינויים מיועדים לטאב ${tab}${targetCol ? `, עמודה ${targetCol}` : ""}.`
         : `The last run was ${operation.type || "a sheet operation"}. Output/changes are configured for tab ${tab}${targetCol ? `, column ${targetCol}` : ""}.`;
     }
 
     if (state.outputs.length) {
       const latest = state.outputs[0];
       return hebrew
-        ? `הפלט האחרון שמור ב־Generated outputs: ${latest.title}${latest.url ? ` — ${latest.url}` : ""}.`
+        ? `הפלט האחרון שמור בצד ימין תחת הקבצים שנוצרו: ${latest.title}${latest.url ? ` — ${latest.url}` : ""}.`
         : `The latest output is in Generated outputs: ${latest.title}${latest.url ? ` — ${latest.url}` : ""}.`;
     }
 
     return hebrew
-      ? "עוד אין לי פלט שמור להרצה האחרונה. אם זו היתה הרצת dry run, היא רק הציגה תוכנית ולא כתבה לגיליון."
+      ? "עוד אין לי פלט שמור להרצה האחרונה. אם זו היתה בדיקה מקדימה, היא רק הציגה תוכנית ולא כתבה לגיליון."
       : "I do not have a saved output for the last run yet. If it was a dry run, it only previewed the plan and did not write to the Sheet.";
   }
 
@@ -1190,12 +1229,62 @@
       .replace(/(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן).*$/i, "")
       .replace(/\b(?:do\s+not\s+use|don't\s+use|avoid\s+these)\b.*$/i, "")
       .replace(/\s+\b(?:in|to)\s+(?:english|hebrew|german|french|spanish|italian|dutch|polish|russian|chinese|arabic)\b.*$/i, "")
+      .replace(/[?؟]\s*(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|english|hebrew|german|french|spanish)(?:\s+(?:uk|us|gb|usa|בריטית|אמריקאית))?\s*$/i, "")
+      .replace(/\s+(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|english|hebrew|german|french|spanish)(?:\s+(?:uk|us|gb|usa|בריטית|אמריקאית))?\s*$/i, "")
       .split(/\s+(?:לקהל|קהל|עבור קהל|for audience|for guests|for customers|for tourists)(?:\s|$)/i)[0]
       .replace(/^(hotel|property|business|product|service|מלון|עסק|מוצר|שירות)\s+/i, "")
       .replace(/[.!?]+$/g, "")
       .trim();
     if (/^(and\s+)?(?:abroad|israel|international|tourists?|guests?|source)$/i.test(cleaned)) return "";
     return cleaned;
+  }
+
+  const knownFaqSubjectAliases = [
+    {
+      official: "Leonardo Hotel Berlin",
+      sourceUrl: "https://www.leonardo-hotels.com/berlin/leonardo-hotel-berlin",
+      sourceTitle: "Leonardo Hotel Berlin official page",
+      aliases: [
+        "Leonardo Hotel Berlin",
+        "מלון לאונרדו ברלין",
+        "לאונרדו ברלין",
+        "מלון לאונדרו ברלין",
+        "לאונדרו ברלין",
+        "מלון ליאונרדו ברלין",
+        "ליאונרדו ברלין"
+      ]
+    }
+  ];
+
+  function normalizeFaqSubjectLookupText(value) {
+    return String(value || "")
+      .normalize("NFKD")
+      .replace(/[\u0591-\u05c7]/g, "")
+      .replace(/[׳'"`´’‘]/g, "")
+      .replace(/\b(?:faq|questions?|answers?|questionnaire|builder|page)\b/gi, " ")
+      .replace(/\b(?:english|hebrew|german|french|spanish|uk|gb|us|usa|language|locale)\b/gi, " ")
+      .replace(/(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|שפה|בריטית|אמריקאית)/gi, " ")
+      .replace(/(?:לאונדרו|ליאונדרו|ליאונרדו|ליאונרדו)/gi, "לאונרדו")
+      .replace(/(?:^|\s)(?:מלון|המלון|בית מלון)(?=\s|$)/g, " ")
+      .replace(/[^a-z0-9\u0590-\u05ff]+/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function knownFaqOfficialSubject(value) {
+    return knownFaqSubjectRecord(value)?.official || "";
+  }
+
+  function knownFaqSubjectRecord(value) {
+    const lookup = normalizeFaqSubjectLookupText(value);
+    if (!lookup) return null;
+    for (const entry of knownFaqSubjectAliases) {
+      const candidates = [entry.official, ...entry.aliases];
+      if (candidates.some((candidate) => normalizeFaqSubjectLookupText(candidate) === lookup)) return entry;
+    }
+    if (lookup.includes("לאונרדו") && lookup.includes("ברלין")) return knownFaqSubjectAliases[0];
+    return null;
   }
 
   function detectScope(text) {
@@ -1291,8 +1380,8 @@
     const inferred = extractSubjects(text);
     if (inferred.length) return inferred.map(cleanSubject).filter(Boolean).join("\n");
     const direct = String(text || "").match(/(?:הנושא הוא|השם הוא|שם המלון הוא|subject is|name is)\s+(.{2,120})/i)?.[1];
-    if (direct) return compact(direct).replace(/[.!?]+$/g, "").trim();
-    return subjectList(text).join("\n") || compact(text);
+    if (direct) return cleanSubject(direct);
+    return subjectList(text).map(cleanSubject).filter(Boolean).join("\n") || cleanSubject(text) || compact(text);
   }
 
   function syncConversationFromFaq() {
@@ -1301,6 +1390,7 @@
     state.activeStep = state.step;
     state.collectedInputs = {
       subjects: subjectList(),
+      subjectRaw: state.answers.subjectRaw || "",
       workflowType: state.answers.scope,
       audience: state.answers.audienceConfirmed ? audienceText() : "",
       sourceUrl: state.answers.sourceUrl,
@@ -1329,7 +1419,10 @@
     const url = extractUrl(text);
 
     if (inferredScope && !state.answers.scope) state.answers.scope = inferredScope;
-    if (inferredSubjects.length && !state.answers.subjects) state.answers.subjects = inferredSubjects.map(cleanSubject).filter(Boolean).join("\n");
+    if (inferredSubjects.length && !state.answers.subjects) {
+      state.answers.subjects = inferredSubjects.map(cleanSubject).filter(Boolean).join("\n");
+      state.answers.subjectRaw = text;
+    }
     if (inferredAudience) {
       state.answers.audience = inferredAudience;
       state.answers.audienceConfirmed = true;
@@ -1356,6 +1449,7 @@
     if (reply.primary === false) return reply.variant || "";
     if (reply.variant) return reply.variant;
     const value = String(reply.value || "");
+    if (/^(schema|meta):run:/.test(value)) return "primary";
     if (["run", "run-tool", "tool:confirm-run", "format:dry-run", "format:live-run"].includes(value)) return "primary";
     return "";
   }
@@ -1394,6 +1488,7 @@
         ${escapeHtml(reply.label)}
       </button>
     `).join("");
+    scrollChatToLatest();
   }
 
   function localizedPresetLabel(scope) {
@@ -2030,6 +2125,7 @@
     state.activeToolId = "faq-playground";
     state.activeIntent = "faq";
     state.fileTask = freshFileTask();
+    state.faqSubjectValidation = null;
     if (text) applyInference(text);
     nextStep();
   }
@@ -2357,7 +2453,7 @@
     const hebrew = hasHebrew(text) || prefersHebrew();
     const columnsReady = Boolean(state.collectedInputs.sourceColumn && state.collectedInputs.targetColumn);
     const prefix = hebrew
-      ? `הבנתי. זו פעולת גיליון: להעתיק ערכים מ־${state.collectedInputs.sourceColumn || "עמודת המקור"} אל ${state.collectedInputs.targetColumn || "עמודת היעד"} רק בשורות שבהן יש ערך. נתחיל ב־dry run ולא נכתוב בלי אישור.`
+      ? `הבנתי. זו פעולת גיליון: להעתיק ערכים מ־${state.collectedInputs.sourceColumn || "עמודת המקור"} אל ${state.collectedInputs.targetColumn || "עמודת היעד"} רק בשורות שבהן יש ערך. נתחיל בבדיקה בלי כתיבה, ולא אכתוב לגיליון בלי אישור.`
       : `Got it. This is a sheet operation: copy values from ${state.collectedInputs.sourceColumn || "the source column"} into ${state.collectedInputs.targetColumn || "the target column"} only where the source has a value. I’ll start with a dry run and won’t write without confirmation.`;
 
     if (!columnsReady) {
@@ -2397,7 +2493,7 @@
     if (targetUrl) recordSource(targetUrl, "FAQ Editing Workspace edit target", "design-formatting");
     updateToolMissingInputs();
     advanceToolFlow(hasHebrew(text)
-      ? "קלטתי. זו עריכת Google Sheet על הקובץ שנוצר, לא FAQ חדש. מתחילה ב־dry run בלי כתיבה."
+      ? "קלטתי. זו עריכת Google Sheet על הקובץ שנוצר, לא FAQ חדש. מתחילה בבדיקה בלי לכתוב לגיליון."
       : "Got it. This is a Google Sheet edit on the generated file, not a new FAQ. I’ll start with a dry run.");
     return true;
   }
@@ -2418,6 +2514,13 @@
 
   function payloadOperation(payload) {
     return payload?.operation || payload?.operations?.[0] || {};
+  }
+
+  function designOperationLabel(operation = {}, hebrew = prefersHebrew()) {
+    const type = operation.type || "";
+    if (type === "faq_answer_research") return hebrew ? "שיפור תשובות FAQ" : "FAQ answer research";
+    if (type === "replace_column_when_value") return hebrew ? "העתקת ערכים בין עמודות" : "column replacement";
+    return hebrew ? "עריכת גיליון" : "sheet edit";
   }
 
   function reconcileColumnTransferPayload(payload, announce = false) {
@@ -2476,7 +2579,7 @@
     state.liveRunConfirmed = false;
     updateToolMissingInputs();
     bot(prefersHebrew()
-      ? `עצרתי את הכתיבה החיה. ה־payload עדיין אומר להעתיק ${sourceColumn} אל ${targetColumn}, כלומר אותה עמודה. זה נראה כמו no-op מסוכן ולא כמו הבקשה שלך. שלחי שוב במפורש למשל: מ־F ל־C, או הריצי dry run.`
+      ? `עצרתי את הכתיבה לגיליון. ההגדרות עדיין אומרות להעתיק ${sourceColumn} אל ${targetColumn}, כלומר אותה עמודה. זה נראה כמו פעולה לא נכונה. שלחי שוב במפורש, למשל: מ־F ל־C, או הריצי בדיקה בלי לכתוב.`
       : `I stopped the live write. The payload still says ${sourceColumn} -> ${targetColumn}, which is the same column. That looks like a risky no-op, not the requested edit. Send it explicitly, for example: F to C, or run a dry run.`);
     setGenericReadyReplies(getTool("design-formatting"));
   }
@@ -2532,6 +2635,9 @@
         delete state.collectedInputs[item.id];
       });
     }
+    if (tool.id === "meta-tags") {
+      initializeMetaFlow(text);
+    }
     state.pendingQuestion = null;
     state.readyToRun = false;
     state.lastPayload = null;
@@ -2558,6 +2664,13 @@
       return;
     }
     if (tool.id === "site-ai-faq-audit") syncFaqAuditSelectedUrls();
+    if (tool.id === "meta-tags") {
+      state.missingInputs = metaMissingInputs();
+      state.readyToRun = state.missingInputs.length === 0;
+      state.lastPayload = state.readyToRun ? buildToolPayload(tool, state.collectedInputs) : null;
+      if (state.lastPayload) rememberToolPayload(tool.id, state.lastPayload, state.collectedInputs);
+      return;
+    }
     state.missingInputs = (tool.requiredInputs || [])
       .filter((field) => !fieldHasValue(state.collectedInputs[field.key]))
       .map((field) => field.key);
@@ -2585,6 +2698,368 @@
 
   function faqAuditNeedsDiscovery(tool = getTool(state.activeToolId)) {
     return tool?.id === "site-ai-faq-audit" && fieldHasValue(state.collectedInputs.siteUrl) && !hasFaqAuditDiscovery();
+  }
+
+  function metaSourceType() {
+    const sourceUrl = state.collectedInputs.sourceUrl || "";
+    const pageList = state.collectedInputs.pageList || "";
+    const detected = detectSourceType(sourceUrl || pageList);
+    return detected === "folder" || detected === "sheet" || detected === "website" ? detected : "manual";
+  }
+
+  function hasExplicitMetaSource() {
+    return fieldHasValue(state.collectedInputs.sourceUrl) || fieldHasValue(state.collectedInputs.pageList);
+  }
+
+  function metaFieldLabel(value = state.collectedInputs.metaFields) {
+    const labels = prefersHebrew()
+      ? {
+        titleDescription: "Meta title + description",
+        titleDescriptionH1: "Meta title + description + H1",
+        full: "Meta title + description + H1 + Open Graph"
+      }
+      : {
+        titleDescription: "Meta title + description",
+        titleDescriptionH1: "Meta title + description + H1",
+        full: "Meta title + description + H1 + Open Graph"
+      };
+    return labels[value] || "";
+  }
+
+  function setMetaFields(value) {
+    const mode = value === "full" || value === "titleDescriptionH1" ? value : "titleDescription";
+    state.collectedInputs.metaFields = mode;
+    state.collectedInputs.metaFieldsConfirmed = true;
+    if (mode === "full") {
+      state.collectedInputs.activeRules = ["brandInTitle", "includeH1", "openGraph"];
+    } else if (mode === "titleDescriptionH1") {
+      state.collectedInputs.activeRules = ["brandInTitle", "includeH1"];
+    } else {
+      state.collectedInputs.activeRules = ["brandInTitle"];
+    }
+  }
+
+  function inferMetaFields(text) {
+    const lower = String(text || "").toLowerCase();
+    const asksTitle = /title|טייטל|כותרת/.test(lower);
+    const asksDescription = /description|desc|דסקריפש|תיאור/.test(lower);
+    const asksH1 = /\bh1\b|כותרת\s*h1/.test(lower);
+    const asksOg = /open\s*graph|\bog\b|social|פייסבוק|שיתוף/.test(lower);
+    if (asksOg) return "full";
+    if (asksH1) return "titleDescriptionH1";
+    if (asksTitle || asksDescription) return "titleDescription";
+    return "";
+  }
+
+  function hasExplicitMetaLanguage(text) {
+    return detectLanguagesFromText(text, []).length > 0 || /אנגלית|עברית|גרמנית|צרפתית|ספרדית|איטלקית|פורטוגזית|הולנדית|פולנית|רוסית|ערבית/i.test(String(text || ""));
+  }
+
+  function hasExplicitMetaGenerationMode(text) {
+    return /\bai\b|בינה|איי|template|תבנית|בלי\s+ai|ללא\s+ai/i.test(String(text || ""));
+  }
+
+  function hasExplicitMetaOutput(text) {
+    const clean = withoutUrlsForDisplay(text);
+    return /\bpreview\b|dry\s*run|new\s+tab|first\s+tab|output\s+to|write(?:\s+back)?|overwrite|range|cell|בלי כתיבה|לא לכתוב|בדיקה מקדימה|לכתוב|כתיבה|טאב|לשונית|תא|דרוס|לדרוס/i.test(clean);
+  }
+
+  function metaOutputIntentFromText(text) {
+    const clean = withoutUrlsForDisplay(text);
+    const lower = clean.toLowerCase();
+    const cell = extractExplicitOutputCell(clean);
+    const wantsPreview = /\bpreview\b|dry\s*run|בלי כתיבה|לא לכתוב|בדיקה מקדימה|תצוגה/i.test(clean);
+    const wantsOverwrite = /overwrite|replace existing|דרוס|לדרוס|דריסה/i.test(clean);
+    const wantsSkip = /skip|empty only|only if empty|if empty|ריק|תאים ריקים|דלג|לא לדרוס/i.test(clean);
+    const wantsFirstTab = /first\s+tab|first\s+sheet|(?:ב|ל|ה)?טאב\s+(?:ה)?ראשון|(?:ב|ל|ה)?לשונית\s+(?:ה)?ראשונה|טאב\s+המקור/i.test(clean);
+    const wantsNewTab = /new\s+tab|new\s+sheet|meta tags\s+tab|טאב\s+חדש|לשונית\s+חדשה|טאב\s+meta|מטא\s+tags/i.test(lower);
+    const wantsWrite = /write(?:\s+back)?|output\s+to|put|place|save|לכתוב|להכניס|לשמור|כתיבה/i.test(clean);
+    const outputMode = wantsPreview
+      ? "preview"
+      : wantsFirstTab || (cell && !wantsNewTab)
+        ? "firstTabRange"
+        : wantsNewTab || wantsWrite
+          ? "newTab"
+          : "";
+    return {
+      hasIntent: Boolean(outputMode || cell || wantsOverwrite || wantsSkip),
+      outputMode,
+      cell,
+      policy: wantsOverwrite ? "overwrite" : (wantsSkip ? "skip" : "")
+    };
+  }
+
+  function applyMetaOutputIntentFromText(text, options = {}) {
+    const { confirm = false } = options;
+    const intent = metaOutputIntentFromText(text);
+    if (!intent.hasIntent) return false;
+    if (intent.outputMode) state.collectedInputs.outputMode = intent.outputMode;
+    if (intent.cell) {
+      const cell = intent.cell.includes("!") ? intent.cell.split("!").pop() : intent.cell;
+      state.collectedInputs.outputStartCell = cell.toUpperCase();
+      if (!intent.outputMode) state.collectedInputs.outputMode = "firstTabRange";
+    }
+    if (state.collectedInputs.outputMode === "newTab") {
+      state.collectedInputs.outputTabName = state.collectedInputs.outputTabName || "Meta Tags";
+    }
+    if (intent.policy) setExistingValuePolicy(intent.policy);
+    else if (state.collectedInputs.outputMode && state.collectedInputs.outputMode !== "preview") setExistingValuePolicy("skip");
+    if (confirm) state.collectedInputs.metaOutputConfirmed = true;
+    return true;
+  }
+
+  function initializeMetaFlow(text = "") {
+    const inputs = state.collectedInputs;
+    const sourceType = metaSourceType();
+    if (!Array.isArray(inputs.languages)) inputs.languages = manifestSplitList(inputs.languages);
+    if (!inputs.languages.length) inputs.languages = ["en"];
+    if (!inputs.outputTabName) inputs.outputTabName = "Meta Tags";
+    if (!inputs.outputStartCell) inputs.outputStartCell = "A1";
+    if (!inputs.existingValuePolicy) inputs.existingValuePolicy = "skip";
+    if (!inputs.generationMode) inputs.generationMode = "template";
+    if (!inputs.outputMode) inputs.outputMode = "preview";
+
+    const inferredFields = inferMetaFields(text);
+    if (inferredFields) setMetaFields(inferredFields);
+    if (hasExplicitMetaOutput(text)) applyMetaOutputIntentFromText(text, { confirm: false });
+    if (hasExplicitMetaLanguage(text)) inputs.metaLanguageConfirmed = true;
+    if (hasExplicitMetaGenerationMode(text)) inputs.metaGenerationConfirmed = true;
+    const outputIntent = metaOutputIntentFromText(text);
+    if (outputIntent.outputMode === "preview" || outputIntent.policy) inputs.metaOutputConfirmed = true;
+    if (sourceType === "manual" && hasExplicitMetaSource()) inputs.metaPageSourceConfirmed = true;
+  }
+
+  function metaMissingInputs() {
+    const missing = [];
+    const sourceType = metaSourceType();
+    if (!hasExplicitMetaSource()) missing.push("pageList");
+    else if ((sourceType === "sheet" || sourceType === "folder" || sourceType === "website") && !state.collectedInputs.metaPageSourceConfirmed) missing.push("metaPageSource");
+    if (!state.collectedInputs.metaFieldsConfirmed) missing.push("metaFields");
+    if (!state.collectedInputs.metaLanguageConfirmed) missing.push("languages");
+    if (!state.collectedInputs.metaGenerationConfirmed) missing.push("generationMode");
+    if (!state.collectedInputs.metaOutputConfirmed) missing.push("outputMode");
+    return missing;
+  }
+
+  function metaOutputLabel() {
+    const mode = state.collectedInputs.outputMode || "preview";
+    const policy = existingValuePolicy();
+    if (mode === "preview") return prefersHebrew() ? "בדיקה מקדימה בלי כתיבה" : "preview only";
+    const target = mode === "firstTabRange"
+      ? (prefersHebrew() ? "הטאב הראשון" : "first tab")
+      : (state.collectedInputs.outputTabName || "Meta Tags");
+    const start = state.collectedInputs.outputStartCell || "A1";
+    return prefersHebrew()
+      ? `${target}!${start} · ${policy === "overwrite" ? "לדרוס תאים מלאים" : "לכתוב רק אם הטווח ריק"}`
+      : `${target}!${start} · ${policy === "overwrite" ? "overwrite filled cells" : "skip filled cells"}`;
+  }
+
+  function askMetaSource(prefix = "") {
+    const hebrew = prefersHebrew();
+    ask("toolField", [
+      prefix,
+      hebrew
+        ? "מאיפה לבנות את ה־Meta tags? שלחי Google Sheet, תיקיית Drive, URL של עמוד, או רשימת עמודים."
+        : "What should I build metadata for? Send a Google Sheet, Drive folder, page URL, or a list of pages."
+    ].filter(Boolean).join("\n\n"), state.sources.slice(0, 4).map((source) => ({
+      label: source.kind === "Website"
+        ? (hebrew ? `להשתמש ב־${source.url.replace(/^https?:\/\//, "").slice(0, 34)}` : `Use ${source.url.replace(/^https?:\/\//, "").slice(0, 34)}`)
+        : (hebrew ? `להשתמש ב־${source.kind}` : `Use ${source.kind}`),
+      value: `toolfield:pageList:${source.url}`
+    })));
+    state.pendingQuestion = { toolId: state.activeToolId, key: "pageList" };
+  }
+
+  function askMetaPageSource(prefix = "") {
+    const hebrew = prefersHebrew();
+    const sourceType = metaSourceType();
+    const source = state.collectedInputs.sourceUrl || state.collectedInputs.pageList;
+    const sourceLabel = sourceType === "folder"
+      ? (hebrew ? "תיקיית Drive" : "Drive folder")
+      : sourceType === "sheet"
+        ? (hebrew ? "Google Sheet" : "Google Sheet")
+        : (hebrew ? "URL" : "URL");
+    const fileNameLabel = sourceType === "folder"
+      ? (hebrew ? "שמות הקבצים בתיקייה" : "folder file names")
+      : sourceType === "sheet"
+        ? (hebrew ? "שם הקובץ כעמוד אחד" : "the spreadsheet file name as one page")
+        : (hebrew ? "ה־URL כעמוד אחד" : "this URL as one page");
+    ask("metaPageSource", [
+      prefix,
+      hebrew
+        ? `מצאתי ${sourceLabel}:\n${source}\n\nמאיפה לקחת את שמות העמודים למטא?`
+        : `I found a ${sourceLabel}:\n${source}\n\nWhere should the page names come from?`
+    ].filter(Boolean).join("\n\n"), [
+      { label: fileNameLabel, value: "meta-pages:source", primary: true },
+      { label: hebrew ? "אכתוב רשימת עמודים ידנית" : "I’ll type a page list", value: "meta-pages:manual" },
+      { label: hebrew ? "לפתוח כלי Meta" : "Open Meta Tags Studio", value: "open-tool" }
+    ]);
+  }
+
+  function askMetaFields(prefix = "") {
+    const hebrew = prefersHebrew();
+    ask("metaFields", [
+      prefix,
+      hebrew ? "מה לייצר לכל עמוד?" : "What should I generate for each page?"
+    ].filter(Boolean).join("\n\n"), [
+      { label: "Meta title + description", value: "meta-fields:titleDescription", primary: true },
+      { label: "Title + description + H1", value: "meta-fields:titleDescriptionH1" },
+      { label: "Title + description + H1 + OG", value: "meta-fields:full" }
+    ]);
+  }
+
+  function askMetaLanguage(prefix = "") {
+    const hebrew = prefersHebrew();
+    ask("metaLanguage", [
+      prefix,
+      hebrew ? "באיזו שפה לייצר את המטא?" : "Which language should the metadata use?"
+    ].filter(Boolean).join("\n\n"), [
+      { label: hebrew ? "אנגלית UK" : "English", value: "meta-language:en", primary: true },
+      { label: hebrew ? "עברית" : "Hebrew", value: "meta-language:he" },
+      { label: hebrew ? "גרמנית" : "German", value: "meta-language:de" },
+      { label: hebrew ? "צרפתית" : "French", value: "meta-language:fr" },
+      { label: hebrew ? "כמה שפות" : "Several languages", value: "meta-language:custom" }
+    ]);
+  }
+
+  function askMetaGeneration(prefix = "") {
+    const hebrew = prefersHebrew();
+    ask("metaGeneration", [
+      prefix,
+      hebrew
+        ? "איך לבנות את הניסוחים?"
+        : "How should I generate the copy?"
+    ].filter(Boolean).join("\n\n"), [
+      { label: hebrew ? "תבנית מהירה בלי AI" : "Fast template, no AI", value: "meta-build:template", primary: true },
+      { label: hebrew ? "AI לניסוח מותאם" : "AI-written copy", value: "meta-build:ai" },
+      { label: hebrew ? "לפתוח כלי Meta" : "Open Meta Tags Studio", value: "open-tool" }
+    ]);
+  }
+
+  function askMetaOutput(prefix = "") {
+    const hebrew = prefersHebrew();
+    const canWrite = metaSourceType() === "sheet" || metaSourceType() === "folder";
+    const startCell = state.collectedInputs.outputStartCell || "A1";
+    const currentTarget = state.collectedInputs.outputMode === "firstTabRange"
+      ? (hebrew ? `כרגע היעד שסימנת הוא הטאב הראשון מתא ${startCell}.` : `Current target: first tab from ${startCell}.`)
+      : "";
+    const replies = [
+      { label: hebrew ? "לבדוק בלי לכתוב" : "Generate preview only", value: "meta-output:preview", primary: true },
+      canWrite ? { label: hebrew ? "לכתוב לטאב Meta Tags רק אם ריק" : "Write to Meta Tags tab if empty", value: "meta-output:newTab:skip" } : null,
+      canWrite ? { label: hebrew ? "לדרוס את טאב Meta Tags" : "Overwrite Meta Tags tab", value: "meta-output:newTab:overwrite" } : null,
+      canWrite ? { label: hebrew ? `לכתוב בטאב הראשון מ־${startCell} רק אם ריק` : `Write to first tab from ${startCell} if empty`, value: "meta-output:firstTabRange:skip" } : null,
+      canWrite ? { label: hebrew ? `לדרוס בטאב הראשון מ־${startCell}` : `Overwrite first tab from ${startCell}`, value: "meta-output:firstTabRange:overwrite" } : null,
+      canWrite ? { label: hebrew ? "לבחור תא בטאב הראשון" : "Choose first-tab cell", value: "meta-output:firstTabCell" } : null,
+      { label: hebrew ? "לפתוח כלי Meta" : "Open Meta Tags Studio", value: "open-tool" }
+    ].filter(Boolean);
+    ask("metaOutput", [
+      prefix,
+      currentTarget,
+      canWrite
+        ? (hebrew
+          ? "לאן להכניס את התוצאות? בדיקה מקדימה לא כותבת לגיליון. כתיבה לגיליון דורשת בחירה אם לדלג או לדרוס תאים מלאים."
+          : "Where should the output go? Preview does not write to the Sheet. Sheet writeback needs a skip/overwrite choice.")
+        : (hebrew
+          ? "המקור אינו Google Sheet או תיקיית Drive, לכן אפשר להריץ בדיקה מקדימה או לפתוח את הכלי."
+          : "This source is not a Google Sheet or Drive folder, so I can generate a preview or open the tool.")
+    ].filter(Boolean).join("\n\n"), replies);
+  }
+
+  function advanceMetaToolFlow(prefix = "") {
+    updateToolMissingInputs();
+    renderWorkspace();
+    const next = state.missingInputs[0];
+    if (!next) {
+      finishToolSetup(prefix);
+      return;
+    }
+    if (next === "pageList") return askMetaSource(prefix);
+    if (next === "metaPageSource") return askMetaPageSource(prefix);
+    if (next === "metaFields") {
+      const latestUserText = [...state.messages].reverse().find((message) => message.role === "user")?.text || "";
+      const inferredFields = inferMetaFields(latestUserText);
+      if (inferredFields) {
+        setMetaFields(inferredFields);
+        advanceMetaToolFlow(prefix);
+        return;
+      }
+      return askMetaFields(prefix);
+    }
+    if (next === "languages") return askMetaLanguage(prefix);
+    if (next === "generationMode") return askMetaGeneration(prefix);
+    if (next === "outputMode") return askMetaOutput(prefix);
+    finishToolSetup(prefix);
+  }
+
+  function handleMetaStepText(text) {
+    if (state.activeToolId !== "meta-tags" || state.mode !== "tool") return false;
+    const clean = compact(text);
+    if (!clean) return false;
+    if (state.step === "metaPageSource") {
+      if (/ידני|manual|רשימה/i.test(clean)) {
+        state.pendingQuestion = { toolId: state.activeToolId, key: "metaManualPages" };
+        ask("toolField", prefersHebrew() ? "כתבי כל עמוד בשורה נפרדת." : "Send each page on a separate line.", []);
+        return true;
+      }
+      state.collectedInputs.metaPageSourceConfirmed = true;
+      advanceToolFlow(prefersHebrew() ? "אשתמש בשם הקובץ/המקור כשם העמוד." : "I’ll use the source/file name as the page topic.");
+      return true;
+    }
+    if (state.step === "metaFields") {
+      const fields = inferMetaFields(clean) || (/h1/i.test(clean) ? "titleDescriptionH1" : "titleDescription");
+      setMetaFields(fields);
+      advanceToolFlow(prefersHebrew() ? `אבנה: ${metaFieldLabel()}.` : `I’ll generate: ${metaFieldLabel()}.`);
+      return true;
+    }
+    if (state.step === "metaLanguage") {
+      const langs = detectLanguagesFromText(clean, []);
+      if (!langs.length) return false;
+      state.collectedInputs.languages = langs;
+      state.collectedInputs.metaLanguageConfirmed = true;
+      advanceToolFlow(prefersHebrew() ? `השפה תהיה ${localizedLanguageCodes(langs)}.` : `Language set to ${localizedLanguageCodes(langs)}.`);
+      return true;
+    }
+    if (state.step === "metaGeneration") {
+      if (/\bai\b|בינה|איי/i.test(clean)) {
+        state.collectedInputs.generationMode = "ai";
+      } else {
+        state.collectedInputs.generationMode = "template";
+      }
+      state.collectedInputs.metaGenerationConfirmed = true;
+      advanceToolFlow(state.collectedInputs.generationMode === "ai"
+        ? (prefersHebrew() ? "אבנה ניסוחים עם AI." : "I’ll use AI-written copy.")
+        : (prefersHebrew() ? "אבנה מתבנית מהירה בלי AI." : "I’ll use a fast template without AI."));
+      return true;
+    }
+    if (state.step === "metaFirstTabCell") {
+      const cell = extractExplicitOutputCell(clean) || extractOutputCell(clean, "");
+      if (!cell) {
+        ask("metaFirstTabCell", prefersHebrew() ? "לאיזה תא בטאב הראשון לכתוב? למשל E70." : "Which first-tab cell should I start at? For example E70.", [
+          { label: "E70", value: "toolfield:metaFirstTabCell:E70", primary: true },
+          { label: "A1", value: "toolfield:metaFirstTabCell:A1" }
+        ]);
+        return true;
+      }
+      state.collectedInputs.outputMode = "firstTabRange";
+      state.collectedInputs.outputStartCell = cell.includes("!") ? cell.split("!").pop().toUpperCase() : cell.toUpperCase();
+      state.collectedInputs.metaOutputConfirmed = true;
+      setExistingValuePolicy("skip");
+      advanceToolFlow(prefersHebrew()
+        ? `יעד הפלט: הטאב הראשון מתא ${state.collectedInputs.outputStartCell}, רק אם התאים ריקים.`
+        : `Output destination: first tab from ${state.collectedInputs.outputStartCell}, only if cells are empty.`);
+      return true;
+    }
+    if (state.step === "metaOutput") {
+      if (applyMetaOutputIntentFromText(clean, { confirm: true })) {
+        advanceToolFlow(prefersHebrew() ? `יעד הפלט: ${metaOutputLabel()}.` : `Output destination: ${metaOutputLabel()}.`);
+        return true;
+      }
+      askMetaOutput(prefersHebrew()
+        ? "לא הצלחתי להבין יעד פלט. אפשר לבחור בדיקה מקדימה, טאב Meta Tags, או תא בטאב הראשון."
+        : "I could not read the output target. Choose preview, the Meta Tags tab, or a first-tab cell.");
+      return true;
+    }
+    return false;
   }
 
   function faqAuditDiscoveryPayload() {
@@ -2759,7 +3234,7 @@
     ask("toolDiscovery", [
       prefix,
       hebrew
-        ? `קודם נמפה את האתר, כמו ב־workspace המקורי. זה יבדוק robots.txt, sitemaps וקבוצות URL פנימיות לפני בחירת העמודים לאודיט.\n\nאתר: ${url}\nמיפוי: עד ${maxUrls} URLs · עומק ${depth}`
+        ? `קודם נמפה את האתר, כדי לבחור את העמודים הנכונים לאודיט ה־FAQ.\n\nאתר: ${url}\nמיפוי: עד ${maxUrls} כתובות · עומק ${depth}`
         : `First we need to map the site, matching the original workspace flow. This checks robots.txt, sitemaps and internal URL groups before choosing pages for the FAQ audit.\n\nSite: ${url}\nMapping: up to ${maxUrls} URLs · depth ${depth}`
     ].filter(Boolean).join("\n\n"), [
       { label: hebrew ? "למפות אתר" : "Map site", value: "faqaudit:map-site", primary: true },
@@ -2767,7 +3242,7 @@
       { label: hebrew ? "1000 URLs" : "1000 URLs", value: "faqaudit:maxurls:1000" },
       { label: hebrew ? "עומק 2" : "Depth 2", value: "faqaudit:depth:2" },
       { label: hebrew ? "עומק 3" : "Depth 3", value: "faqaudit:depth:3" },
-      { label: hebrew ? "לפתוח workspace" : "Open workspace", value: "open-tool" }
+      { label: hebrew ? "לפתוח כלי אודיט" : "Open workspace", value: "open-tool" }
     ]);
   }
 
@@ -2778,7 +3253,7 @@
       return;
     }
     if (!socket?.connected) {
-      bot(prefersHebrew() ? "החיבור לשרת הדמו לא פעיל כרגע. פתחי את השרת ורענני, ואז אוכל למפות את האתר." : "The demo backend socket is not connected. Start the server and refresh, then I can map the site.");
+      bot(prefersHebrew() ? "החיבור לשרת המקומי לא פעיל כרגע. פתחי את השרת ורענני, ואז אוכל למפות את האתר." : "The demo backend socket is not connected. Start the server and refresh, then I can map the site.");
       logLine("Backend socket is not connected.", "warn");
       return;
     }
@@ -2789,10 +3264,10 @@
     state.lastPayload = payload;
     state.faqAuditDiscoveryPending = true;
     renderWorkspace();
-    bot(prefersHebrew() ? "ממפה את האתר עכשיו. אחרי המיפוי נבחר קבוצות URL ואז נריץ FAQ audit." : "Mapping the site now. After discovery, we’ll choose URL groups and then run the FAQ audit.");
+    bot(prefersHebrew() ? "ממפה את האתר עכשיו. אחרי המיפוי נבחר קבוצות עמודים ואז נריץ את אודיט ה־FAQ." : "Mapping the site now. After discovery, we’ll choose URL groups and then run the FAQ audit.");
     setQuickReplies([
-      { label: prefersHebrew() ? "להציג payload" : "Show payload", value: "review" },
-      { label: prefersHebrew() ? "לפתוח workspace" : "Open workspace", value: "open-tool" }
+      { label: prefersHebrew() ? "פרטים טכניים" : "Show payload", value: "review" },
+      { label: prefersHebrew() ? "לפתוח כלי" : "Open workspace", value: "open-tool" }
     ]);
     logLine("Starting AI FAQ Audit site discovery...");
     logLine(`Mode: ${payload.mode}`);
@@ -2893,13 +3368,13 @@
       "toolfield:terminologyLines:none": "בלי terminology",
       "toolfield:languageNotes:Natural native wording, clear FAQ style, faithful to the source.": "טבעי, מקומי, FAQ ברור",
       "toolfield:languageNotes:Formal, polished hospitality wording. Keep facts exact and avoid over-promising.": "פורמלי ומלוטש למלונאות",
-      "schema:preview": "Preview בלבד",
+      "schema:preview": "בדיקה מקדימה בלבד",
       "schema:write": "לכתוב לגיליון",
       "schema:output": "לשנות תא פלט",
       "schema:columns:B:C": "עמודות B / C",
       "meta:template": "Template",
       "meta:ai": "AI mode",
-      "meta:preview": "Preview בלבד",
+      "meta:preview": "בדיקה מקדימה בלבד",
       "auditprofile:general-fast": "מהיר כללי",
       "auditprofile:full-ai": "מלא + AI summary",
       "auditprofile:faq-schema": "FAQ / Schema",
@@ -2908,9 +3383,9 @@
       "faqaudit:static": "סריקה סטטית",
       "faqaudit:rendered": "סריקה מרונדרת",
       "faqaudit:source": "להשוות ל־Sheet מקור",
-      "format:dry-run": "להריץ dry run כאן",
-      "format:preview": "Preview mode",
-      "open-tool": "לפתוח workspace"
+      "format:dry-run": "לבדוק בלי לכתוב",
+      "format:preview": "בדיקה מקדימה",
+      "open-tool": "לפתוח כלי"
     };
     if (exact[value]) return { ...reply, label: exact[value] };
     if (value.startsWith("lang:")) {
@@ -2936,6 +3411,11 @@
 
     if (faqAuditNeedsDiscovery(tool)) {
       askFaqAuditDiscovery(prefix);
+      return;
+    }
+
+    if (tool.id === "meta-tags") {
+      advanceMetaToolFlow(prefix);
       return;
     }
 
@@ -2995,9 +3475,32 @@
       if (type === "sheet" || type === "folder") {
         state.collectedInputs.sourceUrl = url || clean;
         state.collectedInputs.pageList = type === "folder" ? "Use spreadsheet file names in the Drive folder as page topics." : "Use the spreadsheet file name as the page topic.";
+        state.collectedInputs.metaPageSourceConfirmed = false;
         recordSource(state.collectedInputs.sourceUrl, "Meta Tags source", "meta-tags");
         return;
       }
+      state.collectedInputs.sourceUrl = type === "website" ? "" : state.collectedInputs.sourceUrl || "";
+      state.collectedInputs.pageList = clean;
+      state.collectedInputs.metaPageSourceConfirmed = true;
+      if (type === "website") recordSource(url || clean, "Meta Tags page", "meta-tags");
+      return;
+    }
+    if (state.activeToolId === "meta-tags" && key === "metaManualPages") {
+      state.collectedInputs.sourceUrl = "";
+      state.collectedInputs.pageList = clean;
+      state.collectedInputs.outputMode = "preview";
+      state.collectedInputs.metaPageSourceConfirmed = true;
+      return;
+    }
+    if (state.activeToolId === "meta-tags" && key === "metaFirstTabCell") {
+      const cell = extractExplicitOutputCell(clean) || extractOutputCell(clean, "");
+      state.collectedInputs.outputMode = "firstTabRange";
+      state.collectedInputs.outputStartCell = (cell || "A1").includes("!")
+        ? (cell || "A1").split("!").pop().toUpperCase()
+        : (cell || "A1").toUpperCase();
+      state.collectedInputs.metaOutputConfirmed = true;
+      setExistingValuePolicy("skip");
+      return;
     }
     if (key === "sourceTab" && clean === "__auto__") {
       state.collectedInputs[key] = "__auto__";
@@ -3014,6 +3517,7 @@
     if (["targetLangs", "languages"].includes(key)) {
       const langs = detectLanguagesFromText(clean, manifestSplitList(clean));
       state.collectedInputs[key] = langs.length ? langs : manifestSplitList(clean);
+      if (state.activeToolId === "meta-tags" && key === "languages") state.collectedInputs.metaLanguageConfirmed = true;
       return;
     }
     if (key === "groups" && state.activeToolId === "site-ai-faq-audit") {
@@ -3186,6 +3690,9 @@
     state.activeToolId = tool.id;
     state.activeStep = "collecting";
     state.collectedInputs = mergeSmartToolValues(tool, text, values);
+    if (tool.id === "meta-tags") {
+      initializeMetaFlow(text);
+    }
     if (tool.id === "site-ai-faq-audit") {
       state.faqAuditDiscovery = null;
       state.faqAuditDiscoveryPending = false;
@@ -3282,6 +3789,7 @@
     state.activeToolId = "faq-playground";
     state.activeIntent = "faq";
     state.fileTask = freshFileTask();
+    state.faqSubjectValidation = null;
     state.answers = {
       ...freshAnswers(),
       scope: values.workflowType || values.scope || "",
@@ -3355,6 +3863,9 @@
     state.activeToolId = tool.id;
     state.activeStep = "collecting";
     state.collectedInputs = mergeSmartToolValues(tool, text, values);
+    if (tool.id === "meta-tags") {
+      initializeMetaFlow(text);
+    }
     state.pendingQuestion = null;
     state.readyToRun = false;
     state.lastPayload = null;
@@ -3486,7 +3997,7 @@
     const locked = new Set([
       "mode", "sourceType", "sourceUrl", "spreadsheetId", "sourceFolderId", "folderId", "targetId",
       "targetUrl", "targetLangs", "languages", "outputCell", "previewOnly", "dryRun", "model",
-      "subjects", "sourceTab", "questionColumn", "answerColumn", "operation", "operations", "selectedOperation"
+      "subjects", "sourceTab", "questionColumn", "answerColumn", "existingValuePolicy", "operation", "operations", "selectedOperation"
     ]);
     const next = JSON.parse(JSON.stringify(payload || {}));
 
@@ -3510,6 +4021,7 @@
 
   function shouldSkipSmartPreflight(tool, payload) {
     if (!tool || !payload) return false;
+    if (tool.id === "faq-playground" && state.faqSubjectValidation?.confirmed) return true;
     if (tool.id === "schema-builder" && payload.previewOnly !== false) return true;
     if (tool.id === "meta-tags" && payload.outputMode === "preview" && payload.generationMode !== "ai") return true;
     if (tool.id === "site-ai-faq-audit") return true;
@@ -3519,7 +4031,7 @@
   async function runSmartPreflight(tool, payload) {
     if (!tool || !payload || tool.id === "file-draft") return payload;
     if (shouldSkipSmartPreflight(tool, payload)) {
-      const reason = tool.id === "site-ai-faq-audit" ? "run" : "preview";
+      const reason = tool.id === "site-ai-faq-audit" ? "run" : (tool.id === "faq-playground" ? "validated run" : "preview");
       logLine(`Smart preflight skipped for deterministic ${tool.title} ${reason}.`);
       return payload;
     }
@@ -3550,17 +4062,317 @@
       const warnings = Array.isArray(result.warnings) ? result.warnings.filter(Boolean) : [];
       if (result.reply) logLine(`Smart preflight note: ${result.reply}`, "ok");
       warnings.forEach((warning) => logLine(`Preflight warning: ${warning}`, "warn"));
-      if (warnings.length) {
-        bot(prefersHebrew()
-          ? "בדקתי לפני הרצה. יש אזהרה בלוג, והמקורות/יעדים נשארו כמו שאישרת."
-          : "Preflight checked. Warning added to the log; sources and destinations stayed unchanged.");
-      }
       logLine(`Smart preflight model: ${result.modelUsed || "assistant-preflight"}`, "ok");
       return enhanced;
     } catch (error) {
       logLine(`Smart preflight skipped: ${error.message || error}`, "warn");
       return payload;
     }
+  }
+
+  function formatValidatedFaqLanguage(language = "", locale = "") {
+    const lang = compact(language);
+    const region = compact(locale).toUpperCase();
+    if (!lang) return "";
+    if (/^english$/i.test(lang) && /^(UK|GB|EN-GB|BRITISH)$/i.test(region)) return "English (UK)";
+    if (/^english$/i.test(lang) && /^(US|USA|EN-US|AMERICAN)$/i.test(region)) return "English (US)";
+    return region && !lang.toLowerCase().includes(region.toLowerCase()) ? `${lang} (${region})` : lang;
+  }
+
+  function faqValidationSignature() {
+    return JSON.stringify({
+      subjects: subjectList().join("\n"),
+      subjectRaw: compact(state.answers.subjectRaw),
+      language: compact(state.answers.language),
+      scope: compact(state.answers.scope),
+      count: compact(state.answers.count)
+    });
+  }
+
+  function isEnglishFaqLanguage(language) {
+    const value = compact(language);
+    return /^english(?:\b|\s|\()/i.test(value) || /^en(?:[-_][a-z]+)?$/i.test(value);
+  }
+
+  function strengthenFaqValidationQuality(validation = {}, source = {}) {
+    const currentSubject = subjectList().join(", ");
+    const originalSubject = [
+      currentSubject,
+      state.answers.subjectRaw,
+      source.originalSubject,
+      source.detectedBrandOrEntity,
+      source.normalizedSubject,
+      source.subject
+    ].map(compact).filter(Boolean).join(" ");
+    const riskFlags = new Set(Array.isArray(source.riskFlags) ? source.riskFlags.map(compact).filter(Boolean) : []);
+    const next = { ...validation };
+    const officialRecord = knownFaqSubjectRecord(originalSubject);
+    const officialSubject = officialRecord?.official || "";
+
+    if (officialSubject) {
+      if (next.normalizedSubject !== officialSubject) {
+        riskFlags.add("official-name-normalized");
+        next.normalizedSubject = officialSubject;
+        next.detectedBrandOrEntity = officialSubject;
+        next.subjectChanged = true;
+        next.needsConfirmation = true;
+      }
+      next.officialNameVerified = true;
+      next.confidence = Math.max(Number(next.confidence) || 0, 0.92);
+    }
+
+    if (officialRecord?.sourceUrl && !next.sourceUrlCandidate) {
+      riskFlags.add("official-source-found");
+      next.sourceUrlCandidate = officialRecord.sourceUrl;
+      next.sourceTitle = officialRecord.sourceTitle || officialRecord.official;
+      next.sourceType = "official";
+      next.sourceConfidence = Math.max(Number(next.sourceConfidence) || 0, 0.9);
+      next.sourceNeedsConfirmation = true;
+      next.needsConfirmation = true;
+    }
+
+    if (faqSubjectLooksMixed()) {
+      riskFlags.add("subject-contained-language-instruction");
+      next.needsConfirmation = true;
+    }
+
+    const targetLanguage = next.language || state.answers.language;
+    if (isEnglishFaqLanguage(targetLanguage) && hasHebrew(next.normalizedSubject || currentSubject) && !next.officialNameVerified) {
+      riskFlags.add("english-output-subject-not-normalized");
+      next.needsCorrection = true;
+      next.needsConfirmation = true;
+      next.confidence = Math.min(Number(next.confidence) || 0.6, 0.6);
+    }
+
+    next.riskFlags = Array.from(riskFlags);
+    return next;
+  }
+
+  function normalizeFaqValidationResult(result = {}) {
+    const source = result.faqValidation || result.validation || result;
+    if (!source || typeof source !== "object") return null;
+    const normalizedSubject = cleanSubject(source.normalizedSubject || source.subject || source.detectedBrandOrEntity || "");
+    const requestedLanguage = compact(source.requestedLanguage || source.language || "");
+    const requestedLocale = compact(source.requestedLocale || source.locale || "");
+    const language = formatValidatedFaqLanguage(requestedLanguage, requestedLocale);
+    const confidence = Number(source.confidence);
+    const currentSubject = subjectList().join(", ");
+    const currentLanguage = compact(state.answers.language);
+    const subjectChanged = Boolean(normalizedSubject && currentSubject && normalizedSubject.toLowerCase() !== currentSubject.toLowerCase());
+    const languageChanged = Boolean(language && currentLanguage && language.toLowerCase() !== currentLanguage.toLowerCase());
+    const needsConfirmation = source.needsConfirmation === true ||
+      subjectChanged ||
+      languageChanged ||
+      (Number.isFinite(confidence) && confidence < 0.9);
+
+    if (!normalizedSubject && !language && !Number.isFinite(confidence)) return null;
+
+    const validation = {
+      normalizedSubject,
+      detectedBrandOrEntity: compact(source.detectedBrandOrEntity || ""),
+      requestedLanguage,
+      requestedLocale,
+      language,
+      contentGoal: compact(source.contentGoal || ""),
+      removedInstructionFragments: Array.isArray(source.removedInstructionFragments) ? source.removedInstructionFragments.map(compact).filter(Boolean) : [],
+      confidence: Number.isFinite(confidence) ? confidence : 0,
+      needsConfirmation,
+      subjectChanged,
+      languageChanged,
+      confirmationQuestion: compact(source.confirmationQuestion || ""),
+      reply: compact(result.reply || source.reply || ""),
+      warnings: Array.isArray(result.warnings || source.warnings) ? (result.warnings || source.warnings).map(compact).filter(Boolean) : [],
+      officialNameVerified: source.officialNameVerified === true,
+      needsCorrection: source.needsCorrection === true || source.needsUserCorrection === true,
+      sourceUrlCandidate: compact(source.sourceUrlCandidate || source.officialSourceUrl || source.sourceUrl || ""),
+      sourceTitle: compact(source.sourceTitle || source.officialSourceTitle || ""),
+      sourceType: compact(source.sourceType || ""),
+      sourceConfidence: Number.isFinite(Number(source.sourceConfidence)) ? Number(source.sourceConfidence) : 0,
+      sourceNeedsConfirmation: source.sourceNeedsConfirmation === true || source.needsSourceConfirmation === true,
+      riskFlags: Array.isArray(source.riskFlags) ? source.riskFlags.map(compact).filter(Boolean) : []
+    };
+    return strengthenFaqValidationQuality(validation, source);
+  }
+
+  function faqSubjectLooksMixed() {
+    const current = [subjectList().join(" "), state.answers.subjectRaw].filter(Boolean).join(" ");
+    return /(?:אנגלית|עברית|גרמנית|צרפתית|ספרדית|english|hebrew|german|french|spanish|\buk\b|\bus\b|language|locale)/i.test(current);
+  }
+
+  function fallbackFaqValidationResult() {
+    if (!faqSubjectLooksMixed()) return null;
+    const current = [subjectList().join(", "), state.answers.subjectRaw].filter(Boolean).join(" ");
+    const officialRecord = knownFaqSubjectRecord(current);
+    const officialSubject = officialRecord?.official || "";
+    const normalizedSubject = officialSubject || cleanSubject(current);
+    const detectedLanguage = detectLanguage(current);
+    if (!normalizedSubject || normalizedSubject.toLowerCase() === current.toLowerCase()) return null;
+    return {
+      normalizedSubject,
+      detectedBrandOrEntity: officialSubject || "",
+      requestedLanguage: detectedLanguage || state.answers.language || "",
+      requestedLocale: /(\buk\b|בריטית)/i.test(current) ? "UK" : "",
+      language: detectedLanguage || state.answers.language || "",
+      contentGoal: "",
+      removedInstructionFragments: [],
+      confidence: officialSubject ? 0.92 : 0.65,
+      needsConfirmation: true,
+      subjectChanged: true,
+      languageChanged: false,
+      confirmationQuestion: "",
+      reply: "",
+      warnings: [],
+      officialNameVerified: Boolean(officialSubject),
+      sourceUrlCandidate: officialRecord?.sourceUrl || "",
+      sourceTitle: officialRecord?.sourceTitle || "",
+      sourceType: officialRecord?.sourceUrl ? "official" : "",
+      sourceConfidence: officialRecord?.sourceUrl ? 0.9 : 0,
+      sourceNeedsConfirmation: Boolean(officialRecord?.sourceUrl),
+      riskFlags: officialSubject ? ["official-name-normalized", "official-source-found"] : ["subject-contained-language-instruction"]
+    };
+  }
+
+  function applyFaqValidation(validation = {}) {
+    if (validation.normalizedSubject) state.answers.subjects = validation.normalizedSubject;
+    if (validation.language) {
+      state.answers.language = validation.language;
+      state.answers.languageConfirmed = true;
+    }
+    if (validation.sourceUrlCandidate && (!state.answers.sourceUrl || state.answers.sourceMode === "none" || state.answers.sourceMode === "official")) {
+      state.answers.sourceUrl = validation.sourceUrlCandidate;
+      state.answers.sourceMode = "url";
+      state.answers.sourceInstructions = `Use this official source as the primary factual source: ${validation.sourceUrlCandidate}. Use other public sources only to understand question demand. Mark missing facts as Needs source confirmation.`;
+      state.answers.sourceConfirmed = true;
+      recordSource(validation.sourceUrlCandidate, validation.sourceTitle || "FAQ validation source", "faq-playground");
+    }
+    state.faqSubjectValidation = {
+      ...validation,
+      signature: faqValidationSignature(),
+      confirmed: true,
+      confirmedAt: new Date().toISOString()
+    };
+    syncConversationFromFaq();
+  }
+
+  function faqValidationConfirmationText(validation = {}) {
+    const hebrew = prefersHebrew();
+    const subject = validation.normalizedSubject || subjectList().join(", ") || (hebrew ? "הנושא הנוכחי" : "the current subject");
+    const language = validation.language || state.answers.language || (hebrew ? "השפה הנוכחית" : "the current language");
+    const sourceUrl = validation.sourceUrlCandidate || state.answers.sourceUrl || "";
+    const sourceTitle = validation.sourceTitle || (hebrew ? "העמוד הרשמי" : "official page");
+    const riskFlags = new Set(validation.riskFlags || []);
+    if (hebrew) {
+      return [
+        "בדקתי רגע לפני יצירת הגיליון כדי לוודא שהבקשה נקייה והגיונית.",
+        validation.officialNameVerified
+          ? "זיהיתי שהשם נכתב בעברית או עם כתיב לא מדויק, ותיקנתי לשם אנגלי מוכר."
+          : "",
+        validation.needsCorrection
+          ? "עדיין לא הצלחתי להפוך את שם הנושא לשם אנגלי נקי, ולכן לא אריץ על הטקסט המקורי."
+          : "",
+        riskFlags.has("subject-contained-language-instruction")
+          ? "הוצאתי מהנושא הוראות כמו שפה/לוקאל כדי שלא ייכנסו לשם הגיליון."
+          : "",
+        `השם שיעבור ליצירה: ${subject}`,
+        `שפת הפלט: ${localizedLanguageLabel(language)}`,
+        sourceUrl ? `מקור עובדתי מוצע: ${sourceTitle}\n${sourceUrl}` : "לא מצאתי מקור רשמי מספיק בטוח בשלב הבדיקה.",
+        "",
+        validation.needsCorrection ? "כתבי את השם הרשמי או בחרי מה לשנות." : "להמשיך עם זה?"
+      ].filter(Boolean).join("\n");
+    }
+    return [
+      "I checked the setup before creating the Sheet.",
+      validation.officialNameVerified ? "I corrected the typed/transliterated subject to a known English name." : "",
+      validation.needsCorrection ? "I still could not turn the subject into a clean English name, so I will not run on the original text." : "",
+      riskFlags.has("subject-contained-language-instruction") ? "I removed language/locale instructions from the subject." : "",
+      `Subject to create: ${subject}`,
+      `Output language: ${localizedLanguageLabel(language)}`,
+      sourceUrl ? `Proposed factual source: ${sourceTitle}\n${sourceUrl}` : "I did not find a sufficiently reliable official source during validation.",
+      "",
+      validation.needsCorrection ? "Send the official name or choose what to edit." : "Should I continue with this?"
+    ].filter(Boolean).join("\n");
+  }
+
+  function askFaqValidationConfirmation(validation) {
+    state.faqSubjectValidation = {
+      ...validation,
+      signature: faqValidationSignature(),
+      confirmed: false
+    };
+    const hebrew = prefersHebrew();
+    const riskFlags = new Set(validation.riskFlags || []);
+    const canRun = !validation.needsCorrection && Boolean(validation.normalizedSubject);
+    const canKeepOriginal = canRun &&
+      !validation.officialNameVerified &&
+      !riskFlags.has("subject-contained-language-instruction") &&
+      !riskFlags.has("english-output-subject-not-normalized");
+    const replies = [
+      canRun ? { label: validation.sourceUrlCandidate ? (hebrew ? "כן, להשתמש בשם ובמקור" : "Yes, use name and source") : (hebrew ? "כן, להשתמש בשם הזה" : "Yes, use this name"), value: "faq-validation:accept", primary: true } : null,
+      { label: hebrew ? "לשנות נושא" : "Edit subject", value: "faq-validation:edit-subject", primary: !canRun },
+      { label: hebrew ? "לשנות שפה" : "Edit language", value: "faq-validation:edit-language" },
+      canKeepOriginal ? { label: hebrew ? "להשאיר כמו שכתבתי" : "Keep my original text", value: "faq-validation:keep-original" } : null
+    ].filter(Boolean);
+    ask("faqSubjectValidation", faqValidationConfirmationText(validation), replies);
+  }
+
+  async function validateFaqBeforeRun(payload) {
+    const signature = faqValidationSignature();
+    if (state.faqSubjectValidation?.confirmed && state.faqSubjectValidation.signature === signature) return true;
+    logLine("FAQ validation: checking subject and language before creating the sheet...");
+    bot(prefersHebrew()
+      ? "בודקת רגע שהנושא והשפה הגיוניים לפני יצירת הגיליון."
+      : "Checking the subject and language before creating the Sheet.");
+
+    try {
+      const response = await fetch("/api/assistant-preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phase: "faq-subject-validation",
+          toolId: "faq-playground",
+          values: buildFaqHandoffValues(),
+          payload,
+          messages: state.messages.slice(-10),
+          locale: state.chatLocale,
+          responseLanguage: prefersHebrew() ? "Hebrew" : "English"
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const validation = normalizeFaqValidationResult(result);
+        if (validation?.warnings?.length) validation.warnings.forEach((warning) => logLine(`FAQ validation warning: ${warning}`, "warn"));
+        if (validation?.needsConfirmation) {
+          logLine(`FAQ validation needs confirmation (${result.modelUsed || "assistant-preflight"}).`, "warn");
+          askFaqValidationConfirmation(validation);
+          return false;
+        }
+        if (validation) {
+          applyFaqValidation(validation);
+          logLine(`FAQ validation passed (${result.modelUsed || "assistant-preflight"}).`, "ok");
+          return true;
+        }
+      } else {
+        const errorText = await response.text();
+        logLine(`FAQ validation skipped: ${response.status} ${errorText.slice(0, 120)}`, "warn");
+      }
+    } catch (error) {
+      logLine(`FAQ validation skipped: ${error.message || error}`, "warn");
+    }
+
+    const fallback = fallbackFaqValidationResult();
+    if (fallback?.needsConfirmation) {
+      askFaqValidationConfirmation(fallback);
+      return false;
+    }
+
+    state.faqSubjectValidation = {
+      signature,
+      confirmed: true,
+      confirmedAt: new Date().toISOString(),
+      fallback: true
+    };
+    return true;
   }
 
   function finishToolSetup(prefix = "") {
@@ -3586,24 +4398,83 @@
         : state.collectedInputs.sourceTab;
       const split = state.collectedInputs.splitIntoTwo === false ? "One pass" : "Split into 2 parts";
       return [
-        hebrew ? "תרגום מוכן:" : "Translation ready:",
-        `${langs} · ${sourceTab} · ${split}`,
+        hebrew ? "התרגום מוכן להרצה:" : "Translation ready:",
+        hebrew ? `שפות יעד: ${langs}` : `${langs} · ${sourceTab} · ${split}`,
         `${hebrew ? "מקור" : "Source"}: ${source}`,
         state.collectedInputs.preserveTerms && state.collectedInputs.preserveTerms !== "none" ? `${hebrew ? "לשמר" : "Preserve"}: ${state.collectedInputs.preserveTerms}` : "",
-        hebrew ? "אפשר לפתוח workspace לפני הרצה." : "You can open the workspace before running."
+        hebrew ? "אפשר לפתוח את הכלי לפני הרצה." : "You can open the workspace before running."
       ].filter(Boolean).join("\n");
     }
 
     if (tool.id === "schema-builder") {
-      const source = state.collectedInputs.sourceUrl || "missing source";
       const previewOnly = state.collectedInputs.previewOnly !== false;
+      const tab = state.collectedInputs.tabName || "Sheet1";
+      const questionColumn = state.collectedInputs.questionColumn || "B";
+      const answerColumn = state.collectedInputs.answerColumn || "C";
+      const outputCell = schemaOutputCell();
+      if (hebrew) {
+        return [
+          "מצאתי את נתוני השאלות והתשובות.",
+          `אקרא שאלות מעמודה ${questionColumn} ותשובות מעמודה ${answerColumn} בטאב ${tab}.`,
+          previewOnly
+            ? "כרגע זו בדיקה מקדימה בלבד, בלי כתיבה לגיליון."
+            : `הסכמה מיועדת לתא ${outputCell}.`,
+          `אם נכתוב לתא ${outputCell} ויש שם כבר ערך, מה לעשות?`
+        ].join("\n");
+      }
       return [
-        hebrew ? "Schema מוכן:" : "Schema ready:",
-        `${hebrew ? "מקור" : "Source"}: ${source}`,
-        `${hebrew ? "טאב/עמודות" : "Tab/columns"}: ${state.collectedInputs.tabName || "Sheet1"} · ${state.collectedInputs.questionColumn || "B"}:${state.collectedInputs.answerColumn || "C"}`,
-        `${hebrew ? "מיקום פלט" : "Output location"}: ${schemaOutputCell()}`,
-        `${hebrew ? "מצב" : "Mode"}: ${previewOnly ? (hebrew ? "Preview בלבד" : "preview only") : (hebrew ? "כתיבה לגיליון" : "write to Sheet")}`
+        "I found the FAQ question and answer data.",
+        `I’ll read questions from column ${questionColumn} and answers from column ${answerColumn} in ${tab}.`,
+        previewOnly
+          ? "This is preview only, so nothing will be written to the Sheet."
+          : `The schema target is ${outputCell}.`,
+        `If ${outputCell} already has a value, what should I do?`
       ].join("\n");
+    }
+
+    if (tool.id === "meta-tags") {
+      const outputMode = state.collectedInputs.outputMode || "preview";
+      const target = outputMode === "firstTabRange"
+        ? (hebrew ? "הטאב הראשון" : "the first tab")
+        : (outputMode === "existingRange"
+          ? (state.collectedInputs.outputTabName || "Meta Tags")
+          : (state.collectedInputs.outputTabName || "Meta Tags"));
+      const startCell = state.collectedInputs.outputStartCell || "A1";
+      const sourceType = metaSourceType();
+      const pages = sourceType === "sheet"
+        ? (hebrew ? "שם קובץ ה־Sheet כעמוד אחד" : "spreadsheet file name as one page")
+        : sourceType === "folder"
+          ? (hebrew ? "שמות הקבצים בתיקיית Drive" : "Drive folder file names")
+          : (state.collectedInputs.pageList || (hebrew ? "עמודים ידניים" : "manual pages"));
+      const method = state.collectedInputs.generationMode === "ai"
+        ? (hebrew ? "AI לניסוח מותאם" : "AI-written copy")
+        : (hebrew ? "תבנית מהירה בלי AI" : "fast template, no AI");
+      if (hebrew) {
+        return [
+          "Meta tags מוכנים להרצה:",
+          `מקור: ${state.collectedInputs.sourceUrl || state.collectedInputs.pageList || "עמודים ידניים"}.`,
+          `שמות עמודים: ${pages}.`,
+          `שדות: ${metaFieldLabel() || "Meta title + description"}.`,
+          `שפה: ${localizedLanguageCodes(state.collectedInputs.languages) || "אנגלית UK"}.`,
+          `אופן בנייה: ${method}.`,
+          outputMode === "preview"
+            ? "כרגע זו בדיקה מקדימה בלבד, בלי כתיבה לגיליון."
+            : `אם נכתוב לגיליון, הפלט יתחיל ב־${target}!${startCell}.`,
+          outputMode === "preview" ? "" : "אם יש תאים מלאים בטווח הפלט, מה לעשות?"
+        ].filter(Boolean).join("\n");
+      }
+      return [
+        "Meta tags are ready:",
+        `Source: ${state.collectedInputs.sourceUrl || state.collectedInputs.pageList || "manual pages"}.`,
+        `Page names: ${pages}.`,
+        `Fields: ${metaFieldLabel() || "Meta title + description"}.`,
+        `Language: ${localizedLanguageCodes(state.collectedInputs.languages) || "English"}.`,
+        `Build method: ${method}.`,
+        outputMode === "preview"
+          ? "This is preview only, so nothing will be written to the Sheet."
+          : `If written, output starts at ${target}!${startCell}.`,
+        outputMode === "preview" ? "" : "If the output range already has values, what should I do?"
+      ].filter(Boolean).join("\n");
     }
 
     if (tool.id === "site-ai-audit") {
@@ -3614,11 +4485,11 @@
         .map((item) => item.label)
         .join(", ");
       return [
-        hebrew ? "אודיט מוכן:" : "Audit ready:",
-        `${localizedSiteAuditProfileLabel(profile.auditProfile)} · ${payload.maxPages || profile.maxPages} ${hebrew ? "עמודים" : "pages"} · ${payload.renderMode || profile.renderMode}`,
+        hebrew ? "אודיט האתר מוכן להרצה:" : "Audit ready:",
+        `${localizedSiteAuditProfileLabel(profile.auditProfile)} · עד ${payload.maxPages || profile.maxPages} ${hebrew ? "עמודים" : "pages"}`,
         `${hebrew ? "אתר" : "Website"}: ${payload.startUrl || state.collectedInputs.siteUrl || (hebrew ? "חסר אתר" : "missing site")}`,
         `${hebrew ? "בדיקות" : "Checks"}: ${checks || (hebrew ? "לא נבחרו" : "none selected")}`,
-        `${hebrew ? "AI summary" : "AI summary"}: ${payload.includeAiAnalysis ? (hebrew ? "כן" : "yes") : (hebrew ? "לא" : "no")}`
+        `${hebrew ? "סיכום AI" : "AI summary"}: ${payload.includeAiAnalysis ? (hebrew ? "כן" : "yes") : (hebrew ? "לא" : "no")}`
       ].join("\n");
     }
 
@@ -3627,11 +4498,11 @@
       const selectedUrls = selectedFaqAuditUrlCount();
       const mappedUrls = Array.isArray(result.urls) ? result.urls.length : 0;
       return [
-        hebrew ? "אודיט FAQ מוכן:" : "FAQ audit ready:",
+        hebrew ? "אודיט FAQ מוכן להרצה:" : "FAQ audit ready:",
         `${hebrew ? "אתר" : "Website"}: ${state.collectedInputs.siteUrl || (hebrew ? "חסר אתר" : "missing site")}`,
         `${hebrew ? "URLs לאודיט" : "URLs to audit"}: ${selectedUrls || 0}${mappedUrls ? ` ${hebrew ? "מתוך" : "of"} ${mappedUrls} ${hebrew ? "שמופו" : "mapped"}` : ""}`,
         `${hebrew ? "קבוצות לאודיט" : "Groups to audit"}: ${selectedFaqAuditGroupLabel()}`,
-        `${hebrew ? "מצב אודיט" : "Audit mode"}: ${state.collectedInputs.maxPages || 50} ${hebrew ? "עמודים" : "pages"} · ${state.collectedInputs.renderMode || "rendered"}`
+        `${hebrew ? "היקף" : "Audit mode"}: עד ${state.collectedInputs.maxPages || 50} ${hebrew ? "עמודים" : "pages"}`
       ].join("\n");
     }
 
@@ -3661,20 +4532,20 @@
           replace_column_when_value: `Copy ${operation.sourceColumn || "source column"} into ${operation.targetColumn || "target column"}`,
           format_table: "Format table"
         };
-      const operationLabel = operationLabels[operation.type] || operation.type || (hebrew ? "עריכת workspace" : "Workspace edit");
+      const operationLabel = operationLabels[operation.type] || operation.type || (hebrew ? "עריכת גיליון" : "Workspace edit");
       const outputColumn = operation.type === "replace_column_when_value"
         ? operation.targetColumn
         : (operation.targetCol || operation.outputColumn || state.collectedInputs.targetCol || "");
       return [
-        hebrew ? "עריכת Sheet מוכנה:" : "Sheet edit ready:",
-        `${operationLabel} · ${state.collectedInputs.dryRun !== false ? "dry run" : "live write"}`,
+        hebrew ? "עריכת הגיליון מוכנה:" : "Sheet edit ready:",
+        `${operationLabel} · ${state.collectedInputs.dryRun !== false ? "בדיקה בלי כתיבה" : "כתיבה לגיליון"}`,
         `${hebrew ? "גיליון" : "Sheet"}: ${state.collectedInputs.targetUrl || (hebrew ? "חסר גיליון" : "missing sheet")}`,
         operation.type === "replace_column_when_value" ? `${hebrew ? "עמודות" : "Columns"}: ${operation.sourceColumn || state.collectedInputs.sourceColumn || "source"} → ${operation.targetColumn || state.collectedInputs.targetColumn || "target"}` : "",
-        outputColumn ? `${hebrew ? "פלט" : "Output"}: ${outputColumn}` : "",
+        outputColumn ? `${hebrew ? "עמודת יעד" : "Output"}: ${outputColumn}` : "",
         `${hebrew ? "הנחיה" : "Instruction"}: ${state.collectedInputs.instruction || (hebrew ? "חסרה הנחיה" : "missing instruction")}`,
         state.collectedInputs.sourceUrl ? `${hebrew ? "מקור מחקר" : "Research source"}: ${state.collectedInputs.sourceUrl}` : "",
-        operation.useWebSearch ? "AI/web search: live run only" : "",
-        state.collectedInputs.dryRun !== false ? "לא אכתוב בלי אישור חי." : ""
+        operation.useWebSearch ? (hebrew ? "כולל חיפוש/AI רק אחרי אישור כתיבה." : "AI/web search: live run only") : "",
+        state.collectedInputs.dryRun !== false ? (hebrew ? "לא אכתוב לגיליון בלי אישור נוסף." : "I will not write without another confirmation.") : ""
       ].filter(Boolean).join("\n");
     }
 
@@ -3691,7 +4562,7 @@
     });
     lines.push("");
     lines.push(hebrew
-      ? (tool.canRunDirectly ? "אפשר להריץ מכאן או לפתוח workspace." : "צריך לפתוח workspace לפני פעולה חיה.")
+      ? (tool.canRunDirectly ? "אפשר להריץ מכאן או לפתוח את הכלי." : "צריך לפתוח את הכלי לפני פעולה שמשנה נתונים.")
       : (tool.canRunDirectly ? "Ready to run or open workspace." : "Open the workspace before live operation."));
     return lines.join("\n");
   }
@@ -3703,12 +4574,12 @@
       const operation = (state.lastPayload || buildToolPayload(tool, state.collectedInputs))?.operation || {};
       const liveLabel = operation.type === "replace_column_when_value"
         ? (hebrew ? "לאשר כתיבה לגיליון" : "Confirm sheet write")
-        : (hebrew ? "לאשר כתיבה חיה" : "Confirm live AI/write");
-      replies.push({ label: hebrew ? "להריץ dry run כאן" : "Run dry run here", value: "format:dry-run", primary: state.collectedInputs.dryRun !== false });
+        : (hebrew ? "לאשר כתיבה לגיליון" : "Confirm live AI/write");
+      replies.push({ label: hebrew ? "לבדוק בלי לכתוב" : "Run dry run here", value: "format:dry-run", primary: state.collectedInputs.dryRun !== false });
       replies.push({ label: liveLabel, value: "format:confirm-live", primary: state.collectedInputs.dryRun === false });
-      replies.push({ label: hebrew ? "לפתוח workspace" : "Open workspace", value: "open-tool" });
+      replies.push({ label: hebrew ? "לפתוח כלי" : "Open workspace", value: "open-tool" });
       replies.push({ label: hebrew ? "להוסיף פרט" : "Add detail", value: "tool:detail" });
-      replies.push({ label: hebrew ? "להציג payload" : "Show payload", value: "review" });
+      replies.push({ label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" });
       replies.push({ label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" });
       setQuickReplies(replies);
       return;
@@ -3721,7 +4592,7 @@
       replies.push({ label: hebrew ? "לשנות מספר עמודים" : "Change page budget", value: "audit:pages" });
       replies.push({ label: hebrew ? "לפתוח עמוד דוח" : "Open report workspace", value: "open-tool" });
       replies.push({ label: hebrew ? "בלי AI summary" : "No AI summary", value: "audit:no-ai" });
-      replies.push({ label: hebrew ? "להציג payload" : "Show payload", value: "review" });
+      replies.push({ label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" });
       replies.push({ label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" });
       setQuickReplies(replies);
       return;
@@ -3729,25 +4600,58 @@
     if (tool.id === "site-ai-faq-audit") {
       const hebrew = prefersHebrew();
       replies.push({ label: hebrew ? "להריץ FAQ audit" : "Run FAQ audit", value: "run-tool" });
-      replies.push({ label: hebrew ? "סריקה מרונדרת" : "Rendered crawl", value: "faqaudit:rendered" });
-      replies.push({ label: hebrew ? "סריקה סטטית" : "Static crawl", value: "faqaudit:static" });
-      replies.push({ label: hebrew ? "להשוות ל־Sheet מקור" : "Compare source Sheet", value: "faqaudit:source" });
+      replies.push({ label: hebrew ? "בדיקה כמו בדפדפן" : "Rendered crawl", value: "faqaudit:rendered" });
+      replies.push({ label: hebrew ? "בדיקה מהקוד בלבד" : "Static crawl", value: "faqaudit:static" });
+      replies.push({ label: hebrew ? "להשוות לגיליון מקור" : "Compare source Sheet", value: "faqaudit:source" });
       replies.push({ label: hebrew ? "25 עמודים" : "25 pages", value: "pages:25" });
       replies.push({ label: hebrew ? "50 עמודים" : "50 pages", value: "pages:50" });
-      replies.push({ label: hebrew ? "לפתוח workspace" : "Open workspace", value: "open-tool" });
-      replies.push({ label: hebrew ? "להציג payload" : "Show payload", value: "review" });
+      replies.push({ label: hebrew ? "לפתוח כלי" : "Open workspace", value: "open-tool" });
+      replies.push({ label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" });
+      replies.push({ label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" });
+      setQuickReplies(replies);
+      return;
+    }
+    if (tool.id === "schema-builder") {
+      const hebrew = prefersHebrew();
+      const cell = schemaOutputCell();
+      const policy = existingValuePolicy();
+      if (state.collectedInputs.previewOnly === false) {
+        replies.push({ label: schemaWriteLabel(policy), value: `schema:run:${policy}`, primary: true });
+        replies.push({ label: schemaWriteLabel(policy === "overwrite" ? "skip" : "overwrite"), value: `schema:run:${policy === "overwrite" ? "skip" : "overwrite"}` });
+        replies.push({ label: hebrew ? "להישאר בבדיקה מקדימה" : "Stay in preview", value: "schema:preview" });
+      } else {
+        replies.push({ label: directRunLabel(tool), value: "run-tool", primary: true });
+        replies.push({ label: hebrew ? `לכתוב לתא ${cell} רק אם ריק` : `Write to ${cell} if empty`, value: "schema:run:skip" });
+        replies.push({ label: hebrew ? `לדרוס את ${cell}` : `Overwrite ${cell}`, value: "schema:run:overwrite" });
+      }
+      replies.push({ label: hebrew ? "לבחור תא אחר" : "Choose another cell", value: "schema:output" });
+      replies.push({ label: hebrew ? "לפתוח כלי סכמה" : "Open Schema Builder", value: "open-tool" });
+      replies.push({ label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" });
+      replies.push({ label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" });
+      setQuickReplies(replies);
+      return;
+    }
+    if (tool.id === "meta-tags") {
+      const hebrew = prefersHebrew();
+      const policy = existingValuePolicy();
+      if (state.collectedInputs.outputMode && state.collectedInputs.outputMode !== "preview") {
+        replies.push({ label: metaWriteLabel(policy), value: `meta:run:${policy}`, primary: true });
+        replies.push({ label: metaWriteLabel(policy === "overwrite" ? "skip" : "overwrite"), value: `meta:run:${policy === "overwrite" ? "skip" : "overwrite"}` });
+        replies.push({ label: hebrew ? "להישאר בבדיקה מקדימה" : "Stay in preview", value: "meta:preview" });
+      } else {
+        replies.push({ label: directRunLabel(tool), value: "run-tool", primary: true });
+      }
+      replies.push({ label: hebrew ? "לפתוח כלי Meta" : "Open Meta Tags Studio", value: "open-tool" });
+      replies.push({ label: hebrew ? "להוסיף פרט" : "Add detail", value: "tool:detail" });
+      replies.push({ label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" });
       replies.push({ label: hebrew ? "להתחיל מחדש" : "Start over", value: "reset" });
       setQuickReplies(replies);
       return;
     }
     if (tool.canRunDirectly) replies.push({ label: directRunLabel(tool), value: "run-tool" });
-    if (tool.id === "schema-builder") {
-      replies.push({ label: prefersHebrew() ? (state.collectedInputs.previewOnly === false ? "לחזור ל־Preview" : "לכתוב לגיליון") : (state.collectedInputs.previewOnly === false ? "Switch to preview" : "Write to Sheet"), value: state.collectedInputs.previewOnly === false ? "schema:preview" : "schema:write" });
-      replies.push({ label: prefersHebrew() ? "לשנות תא פלט" : "Change output cell", value: "schema:output" });
-    }
-    replies.push({ label: prefersHebrew() ? "לפתוח workspace" : "Open workspace", value: "open-tool", primary: !tool.canRunDirectly });
+    replies.push({ label: prefersHebrew() ? (tool.id === "schema-builder" ? "לפתוח כלי סכמה" : "לפתוח כלי") : "Open workspace", value: "open-tool", primary: !tool.canRunDirectly });
     replies.push({ label: prefersHebrew() ? "להוסיף פרט" : "Add detail", value: "tool:detail" });
-    replies.push({ label: prefersHebrew() ? "להציג payload" : "Show payload", value: "review" });
+    replies.push({ label: prefersHebrew() ? "פרטים טכניים" : "Show payload", value: "review" });
     replies.push({ label: prefersHebrew() ? "להתחיל מחדש" : "Start over", value: "reset" });
     setQuickReplies(replies);
   }
@@ -3756,16 +4660,39 @@
     return state.collectedInputs.outputCell || "E73";
   }
 
+  function existingValuePolicy() {
+    return state.collectedInputs.existingValuePolicy === "overwrite" ? "overwrite" : "skip";
+  }
+
+  function setExistingValuePolicy(policy) {
+    state.collectedInputs.existingValuePolicy = policy === "overwrite" ? "overwrite" : "skip";
+  }
+
+  function schemaWriteLabel(policy = existingValuePolicy()) {
+    const cell = schemaOutputCell();
+    if (prefersHebrew()) {
+      return policy === "overwrite" ? `לדרוס את ${cell}` : `לכתוב לתא ${cell} רק אם ריק`;
+    }
+    return policy === "overwrite" ? `Overwrite ${cell}` : `Write to ${cell} if empty`;
+  }
+
+  function metaWriteLabel(policy = existingValuePolicy()) {
+    if (prefersHebrew()) {
+      return policy === "overwrite" ? "לדרוס תאים מלאים" : "לכתוב רק לתאים ריקים";
+    }
+    return policy === "overwrite" ? "Overwrite filled cells" : "Write only to empty cells";
+  }
+
   function directRunLabel(tool) {
     const hebrew = prefersHebrew();
     if (tool.id === "translate-demo") return hebrew ? "להריץ תרגום" : "Run translation";
-    if (tool.id === "schema-builder" && state.collectedInputs.previewOnly !== false) return hebrew ? "להריץ Schema preview" : "Run schema preview";
-    if (tool.id === "schema-builder") return hebrew ? `לכתוב Schema ל־${schemaOutputCell()}` : `Write schema to ${schemaOutputCell()}`;
-    if (tool.id === "design-formatting") return state.collectedInputs.dryRun === false ? (hebrew ? "להריץ כתיבה חיה" : "Run live write") : (hebrew ? "להריץ dry run" : "Run dry run");
+    if (tool.id === "schema-builder" && state.collectedInputs.previewOnly !== false) return hebrew ? "לבדוק בלי לכתוב" : "Run schema preview";
+    if (tool.id === "schema-builder") return schemaWriteLabel();
+    if (tool.id === "design-formatting") return state.collectedInputs.dryRun === false ? (hebrew ? "לאשר כתיבה לגיליון" : "Run live write") : (hebrew ? "לבדוק בלי לכתוב" : "Run dry run");
     if (tool.id === "site-ai-audit") return hebrew ? "להריץ אודיט" : "Run audit";
     if (tool.id === "site-ai-faq-audit") return hebrew ? "להריץ FAQ audit" : "Run FAQ audit";
-    if (tool.id === "meta-tags" && state.collectedInputs.outputMode === "preview") return hebrew ? "ליצור preview" : "Generate preview";
-    if (tool.id === "meta-tags") return hebrew ? "ליצור Meta tags" : "Generate meta tags";
+    if (tool.id === "meta-tags" && state.collectedInputs.outputMode === "preview") return hebrew ? "לבדוק בלי לכתוב" : "Generate preview";
+    if (tool.id === "meta-tags") return metaWriteLabel();
     return hebrew ? "להריץ כאן" : "Run here";
   }
 
@@ -3781,16 +4708,16 @@
       : `run ${operation.useWebSearch ? "AI/web search" : "AI editing"}`;
     if (prefersHebrew()) {
       return [
-        "לא חייבים לפתוח עריכה ידנית. אפשר להריץ ישירות מכאן.",
+        "אפשר לבצע את זה ישירות מהצ׳אט.",
         "",
         operation.type === "replace_column_when_value"
-          ? `אישור אחרון: זה יעתיק ערכים מ־${sourceCol} אל ${targetCol} ויכתוב בחזרה ל־Google Sheet.`
-          : `אישור אחרון: זה יריץ ${operation.useWebSearch ? "AI/web search" : "AI editing"} ויכתוב בחזרה ל־Google Sheet.`,
-        `Sheet: ${target}`,
-        `Tab: ${tab}`,
-        `Output: ${targetCol}`,
+          ? `זה יעתיק ערכים מ־${sourceCol} אל ${targetCol} ויכתוב בחזרה לגיליון.`
+          : `זה ישתמש ב־${operation.useWebSearch ? "AI וחיפוש ברשת" : "AI לעריכת התוכן"} ויכתוב בחזרה לגיליון.`,
+        `גיליון: ${target}`,
+        `טאב: ${tab}`,
+        `עמודת יעד: ${targetCol}`,
         "",
-        "לאשר הרצה חיה?"
+        "לאשר כתיבה לגיליון?"
       ].join("\n");
     }
     return [
@@ -3809,8 +4736,8 @@
     const hebrew = prefersHebrew();
     ask("formatLiveConfirm", designFormattingLiveConfirmationText(), [
       { label: hebrew ? "כן, להריץ ולכתוב" : "Yes, run live", value: "format:live-run" },
-      { label: hebrew ? "קודם dry run" : "Dry run first", value: "format:dry-run", primary: false },
-      { label: hebrew ? "לפתוח workspace" : "Open workspace", value: "open-tool" }
+      { label: hebrew ? "קודם לבדוק בלי לכתוב" : "Dry run first", value: "format:dry-run", primary: false },
+      { label: hebrew ? "לפתוח כלי" : "Open workspace", value: "open-tool" }
     ]);
   }
 
@@ -3826,15 +4753,15 @@
   function runConfirmationText(tool, payload = state.lastPayload) {
     const hebrew = prefersHebrew();
     if (hebrew) {
-      if (tool.id === "translate-demo") return "אישור לפני הרצה: תרגום יוצר/מעדכן טאבים בגיליון ומשתמש בקריאות AI. להריץ?";
-      if (tool.id === "schema-builder") return `אישור לפני כתיבה: Schema Builder יכתוב JSON-LD ל־${payload?.outputCell || schemaOutputCell()} בגיליון. להריץ?`;
-      if (tool.id === "meta-tags") return "אישור לפני כתיבה: Meta Tags יכתוב תוצאות לגיליון לפי הגדרת output. להריץ?";
-      if (tool.id === "site-ai-audit") return `אישור לפני סריקה: האודיט יסרוק אתר עד ${payload?.maxPages || state.collectedInputs.maxPages || "מספר"} עמודים${payload?.includeAiAnalysis ? " ויכול להשתמש בניתוח AI" : ""}. להריץ?`;
-      if (tool.id === "site-ai-faq-audit") return "אישור לפני סריקה: FAQ Audit יסרוק אתר ויכול ליצור דוח. להריץ?";
-      return "אישור לפני הרצה: הפעולה יכולה להשתמש ב־AI או ליצור פלט חיצוני. להריץ?";
+      if (tool.id === "translate-demo") return "התרגום יעדכן או ייצור טאבים בגיליון וישתמש בקריאות AI. לאשר הרצה?";
+      if (tool.id === "schema-builder") return `אני עומדת לכתוב את הסכמה לתא ${payload?.outputCell || schemaOutputCell()}. זו פעולה שתעדכן את הגיליון. לאשר?`;
+      if (tool.id === "meta-tags") return "הכלי יכתוב תוצאות לגיליון לפי הגדרת הפלט. לאשר?";
+      if (tool.id === "site-ai-audit") return `האודיט יסרוק עד ${payload?.maxPages || state.collectedInputs.maxPages || "מספר"} עמודים${payload?.includeAiAnalysis ? " ויכול להשתמש בניתוח AI" : ""}. לאשר סריקה?`;
+      if (tool.id === "site-ai-faq-audit") return "האודיט יסרוק את האתר ויכול ליצור דוח. לאשר?";
+      return "הפעולה יכולה להשתמש ב־AI או ליצור פלט חיצוני. לאשר?";
     }
     if (tool.id === "translate-demo") return "Confirm before running: translation creates or updates Sheet tabs and spends AI calls. Run it?";
-    if (tool.id === "schema-builder") return `Confirm before writing: Schema Builder will write JSON-LD to ${payload?.outputCell || schemaOutputCell()} in the Sheet. Run it?`;
+    if (tool.id === "schema-builder") return `I’m ready to write the JSON-LD to ${payload?.outputCell || schemaOutputCell()}. This will update the Sheet. Continue?`;
     if (tool.id === "meta-tags") return "Confirm before writing: Meta Tags will write results back to the Sheet according to the output settings. Run it?";
     if (tool.id === "site-ai-audit") return `Confirm before crawling: the audit will inspect up to ${payload?.maxPages || state.collectedInputs.maxPages || "the selected"} pages${payload?.includeAiAnalysis ? " and may spend AI analysis calls" : ""}. Run it?`;
     if (tool.id === "site-ai-faq-audit") return "Confirm before crawling: FAQ Audit will inspect the site and may create a report. Run it?";
@@ -3845,8 +4772,8 @@
     const hebrew = prefersHebrew();
     ask("toolRunConfirm", runConfirmationText(tool, payload), [
       { label: hebrew ? "כן, להריץ" : "Yes, run", value: "tool:confirm-run", primary: true, echo: false },
-      { label: hebrew ? "לפתוח workspace" : "Open workspace", value: "open-tool" },
-      { label: hebrew ? "להציג payload" : "Show payload", value: "review" }
+      { label: hebrew ? (tool?.id === "schema-builder" ? "לפתוח כלי סכמה" : "לפתוח כלי") : "Open workspace", value: "open-tool" },
+      { label: hebrew ? "פרטים טכניים" : "Show payload", value: "review" }
     ]);
   }
 
@@ -3918,6 +4845,7 @@
   function buildFaqHandoffValues() {
     return {
       subjects: subjectList(),
+      subjectRaw: state.answers.subjectRaw || "",
       workflowType: state.answers.scope || "hotel",
       audience: state.answers.audience || "",
       language: state.answers.language || "",
@@ -3973,6 +4901,7 @@
     if (state.step === "subjects") {
       state.answers.scope = "";
       state.answers.subjects = "";
+      state.answers.subjectRaw = "";
       syncConversationFromFaq();
       askFaqScope(prefix);
       return true;
@@ -4114,6 +5043,7 @@
         refreshToolLanguageReplies(key);
         return true;
       }
+      if (state.activeToolId === "meta-tags" && key === "languages") state.collectedInputs.metaLanguageConfirmed = true;
       showSelectedAnswer(localizedLanguageCodes(state.collectedInputs[key]));
       advanceToolFlow(prefersHebrew()
         ? `בחרתי שפות: ${localizedLanguageCodes(state.collectedInputs[key])}.`
@@ -4132,12 +5062,23 @@
     }
 
     if (value.startsWith("schema:")) {
+      if (value.startsWith("schema:run:")) {
+        const policy = value.endsWith(":overwrite") ? "overwrite" : "skip";
+        setExistingValuePolicy(policy);
+        state.collectedInputs.previewOnly = false;
+        state.collectedInputs.dryRun = false;
+        updateToolMissingInputs();
+        runCurrentTool({ confirmed: true });
+        return true;
+      }
       if (value === "schema:output") {
         state.pendingQuestion = { toolId: state.activeToolId, key: "outputCell" };
-        ask("toolField", prefersHebrew() ? "איפה לשים את ה־JSON-LD? שלחי תא כמו E73, או טאב/תא כמו FAQPage Schema!A1." : "Where should Schema Builder place the JSON-LD? Send a cell like E73, or a tab/cell like FAQPage Schema!A1.", [
+        ask("toolField", prefersHebrew()
+          ? "לאיזה תא לכתוב את הסכמה? אפשר לשלוח תא כמו E73, או שם טאב ותא כמו FAQPage Schema!A1."
+          : "Where should I write the JSON-LD? Send a cell like E73, or a tab and cell like FAQPage Schema!A1.", [
           { label: prefersHebrew() ? "להשתמש ב־E73" : "Use E73", value: "toolfield:outputCell:E73" },
           { label: prefersHebrew() ? "להשתמש ב־A1" : "Use A1", value: "toolfield:outputCell:A1" },
-          { label: prefersHebrew() ? "להשאיר Preview בלבד" : "Keep preview only", value: "schema:preview" }
+          { label: prefersHebrew() ? "להישאר בבדיקה מקדימה" : "Keep preview only", value: "schema:preview" }
         ]);
         return true;
       }
@@ -4145,20 +5086,110 @@
         const [, , questionColumn, answerColumn] = value.split(":");
         state.collectedInputs.questionColumn = questionColumn || "B";
         state.collectedInputs.answerColumn = answerColumn || "C";
-        advanceToolFlow("Using question column B and answer column C.");
+        advanceToolFlow(prefersHebrew() ? "מעולה, אשתמש בעמודה B לשאלות ובעמודה C לתשובות." : "Great, I’ll use column B for questions and column C for answers.");
         return true;
       }
       state.collectedInputs.previewOnly = value === "schema:preview";
       state.collectedInputs.dryRun = state.collectedInputs.previewOnly;
+      if (!state.collectedInputs.previewOnly) setExistingValuePolicy("skip");
       const prefix = state.collectedInputs.previewOnly
-        ? "Preview only is on. I will not write schema back to the Sheet."
-        : `Write mode is on. Current output location: ${schemaOutputCell()}. You can change it before running.`;
+        ? (prefersHebrew() ? "חזרנו לבדיקה מקדימה. לא תהיה כתיבה לגיליון." : "Preview mode is on. I will not write anything to the Sheet.")
+        : (prefersHebrew() ? `אוקיי. הסכמה מיועדת לתא ${schemaOutputCell()}. אם התא מלא, בחרי אם לדלג או לדרוס.` : `Write target is ${schemaOutputCell()}. Choose whether to skip a filled cell or overwrite it.`);
       advanceToolFlow(prefix);
+      return true;
+    }
+
+    if (value.startsWith("meta-pages:")) {
+      const mode = value.replace("meta-pages:", "");
+      if (mode === "source") {
+        state.collectedInputs.metaPageSourceConfirmed = true;
+        advanceToolFlow(prefersHebrew()
+          ? "מעולה. אשתמש בשם הקובץ/הקבצים כמקור לשמות העמודים."
+          : "Great. I’ll use the file name(s) as the page topics.");
+        return true;
+      }
+      if (mode === "manual") {
+        state.pendingQuestion = { toolId: state.activeToolId, key: "metaManualPages" };
+        ask("toolField", prefersHebrew()
+          ? "כתבי כל עמוד בשורה נפרדת. זה ירוץ כבדיקה מקדימה, כי רשימה ידנית לא יכולה להיכתב אוטומטית בחזרה לגיליון."
+          : "Send each page on a separate line. This will run as preview, because manual page lists cannot be written back automatically.", [
+            { label: prefersHebrew() ? "לפתוח כלי Meta" : "Open Meta Tags Studio", value: "open-tool" }
+          ]);
+        return true;
+      }
+    }
+
+    if (value.startsWith("meta-fields:")) {
+      setMetaFields(value.replace("meta-fields:", ""));
+      advanceToolFlow(prefersHebrew()
+        ? `אבנה: ${metaFieldLabel()}.`
+        : `I’ll generate: ${metaFieldLabel()}.`);
+      return true;
+    }
+
+    if (value.startsWith("meta-language:")) {
+      const language = value.replace("meta-language:", "");
+      if (language === "custom") {
+        state.pendingQuestion = { toolId: state.activeToolId, key: "languages" };
+        askToolLanguages(getTool(state.activeToolId), { key: "languages" }, prefersHebrew() ? "בחרי שפה אחת או יותר." : "Choose one or more languages.");
+        return true;
+      }
+      state.collectedInputs.languages = [language];
+      state.collectedInputs.metaLanguageConfirmed = true;
+      advanceToolFlow(prefersHebrew()
+        ? `השפה תהיה ${localizedLanguageCodes(state.collectedInputs.languages)}.`
+        : `Language set to ${localizedLanguageCodes(state.collectedInputs.languages)}.`);
+      return true;
+    }
+
+    if (value.startsWith("meta-build:")) {
+      const mode = value.replace("meta-build:", "") === "ai" ? "ai" : "template";
+      state.collectedInputs.generationMode = mode;
+      state.collectedInputs.metaGenerationConfirmed = true;
+      advanceToolFlow(mode === "ai"
+        ? (prefersHebrew() ? "אבנה ניסוחים עם AI. זה צורך קריאת OpenAI בזמן ההרצה." : "I’ll use AI-written copy. This uses an OpenAI call when run.")
+        : (prefersHebrew() ? "אבנה מתבנית מהירה, בלי קריאת AI." : "I’ll use a fast template without an AI call."));
+      return true;
+    }
+
+    if (value.startsWith("meta-output:")) {
+      const [, modeRaw, policyRaw] = value.split(":");
+      if (modeRaw === "preview") {
+        state.collectedInputs.outputMode = "preview";
+        state.collectedInputs.metaOutputConfirmed = true;
+        setExistingValuePolicy("skip");
+      } else if (modeRaw === "firstTabCell") {
+        state.pendingQuestion = { toolId: state.activeToolId, key: "metaFirstTabCell" };
+        ask("metaFirstTabCell", prefersHebrew()
+          ? "מאיזה תא בטאב הראשון להתחיל לכתוב? למשל E70. ברירת המחדל היא לדלג אם יש כבר ערכים."
+          : "Which first-tab cell should I start writing from? For example E70. Default is to skip if cells already have values.", [
+          { label: "E70", value: "toolfield:metaFirstTabCell:E70", primary: true },
+          { label: "A1", value: "toolfield:metaFirstTabCell:A1" }
+        ]);
+        return true;
+      } else {
+        state.collectedInputs.outputMode = modeRaw === "firstTabRange" ? "firstTabRange" : "newTab";
+        state.collectedInputs.outputTabName = state.collectedInputs.outputMode === "newTab" ? (state.collectedInputs.outputTabName || "Meta Tags") : state.collectedInputs.outputTabName;
+        state.collectedInputs.outputStartCell = state.collectedInputs.outputStartCell || "A1";
+        state.collectedInputs.metaOutputConfirmed = true;
+        setExistingValuePolicy(policyRaw === "overwrite" ? "overwrite" : "skip");
+      }
+      advanceToolFlow(prefersHebrew()
+        ? `יעד הפלט: ${metaOutputLabel()}.`
+        : `Output destination: ${metaOutputLabel()}.`);
       return true;
     }
 
     if (value.startsWith("meta:")) {
       const mode = value.replace("meta:", "");
+      if (value.startsWith("meta:run:")) {
+        const policy = value.endsWith(":overwrite") ? "overwrite" : "skip";
+        setExistingValuePolicy(policy);
+        if (!state.collectedInputs.outputMode || state.collectedInputs.outputMode === "preview") state.collectedInputs.outputMode = "newTab";
+        updateToolMissingInputs();
+        runCurrentTool({ confirmed: true });
+        return true;
+      }
       if (mode === "ai" || mode === "template") state.collectedInputs.generationMode = mode;
       if (mode === "preview") state.collectedInputs.outputMode = "preview";
       advanceToolFlow();
@@ -4287,7 +5318,7 @@
       state.collectedInputs.dryRun = true;
       state.liveRunConfirmed = false;
       advanceToolFlow(prefersHebrew()
-        ? "מצב Preview מופעל. לא תהיה כתיבה לפני בדיקה."
+        ? "חזרנו לבדיקה בלי כתיבה. לא תהיה כתיבה לגיליון לפני אישור."
         : "Preview mode is on. Nothing will be written before review.");
       return true;
     }
@@ -4858,6 +5889,40 @@
       return true;
     }
 
+    if (value.startsWith("faq-validation:")) {
+      const action = value.replace("faq-validation:", "");
+      if (action === "accept") {
+        applyFaqValidation(state.faqSubjectValidation || {});
+        bot(prefersHebrew() ? "מעולה, אמשיך עם הנושא והשפה שאישרת." : "Great, I’ll continue with the confirmed subject and language.");
+        runWorkflow();
+        return true;
+      }
+      if (action === "keep-original") {
+        state.faqSubjectValidation = {
+          signature: faqValidationSignature(),
+          confirmed: true,
+          confirmedAt: new Date().toISOString(),
+          keptOriginal: true
+        };
+        bot(prefersHebrew() ? "בסדר, אשאיר את הנושא בדיוק כמו שהגדרת." : "Okay, I’ll keep the subject exactly as provided.");
+        runWorkflow();
+        return true;
+      }
+      if (action === "edit-subject") {
+        state.faqSubjectValidation = null;
+        state.answers.subjects = "";
+        state.answers.subjectRaw = "";
+        askFaqSubjects(prefersHebrew() ? "אין בעיה. כתבי את שם הנושא המדויק." : "No problem. Send the exact subject name.");
+        return true;
+      }
+      if (action === "edit-language") {
+        state.faqSubjectValidation = null;
+        state.answers.languageConfirmed = false;
+        askFaqLanguage(prefersHebrew() ? "אין בעיה. בחרי את שפת הפלט." : "No problem. Choose the output language.");
+        return true;
+      }
+    }
+
     if (value === "run") {
       runWorkflow();
       return true;
@@ -4923,11 +5988,14 @@
   }
 
   function extractExplicitOutputCell(text) {
-    const matches = Array.from(String(text || "").matchAll(/\b(?:[\w -]+!)?[A-Z]{1,3}\d{1,6}\b/gi))
+    const source = withoutUrlsForDisplay(text);
+    const matches = Array.from(String(source || "").matchAll(/\b(?:[\w -]+!)?[A-Z]{1,3}\d{1,6}\b/gi))
       .map((match) => match[0].trim());
     const cell = matches.find((item) => item.includes("!")) ||
       matches.find((item) => /^[A-Z]{1,3}\d{1,6}$/i.test(item));
-    return cell ? extractOutputCell(cell, cell) : "";
+    if (cell) return extractOutputCell(cell, cell);
+    const reversed = String(source || "").match(/\b(\d{1,6})\s*([A-Z]{1,3})\b/i);
+    return reversed ? `${reversed[2].toUpperCase()}${reversed[1]}` : "";
   }
 
   function isRunRequest(text) {
@@ -5035,6 +6103,13 @@
         state.collectedInputs.dryRun = false;
         changed = true;
       }
+      if (/overwrite|replace existing|דרוס|לדרוס|דריסה/i.test(clean)) {
+        setExistingValuePolicy("overwrite");
+        changed = true;
+      } else if (/skip|empty only|only if empty|דלג|ריק|תא ריק/i.test(clean)) {
+        setExistingValuePolicy("skip");
+        changed = true;
+      }
       if (/preview|dry|בלי כתיבה|לא לכתוב|תצוגה/i.test(clean)) {
         state.collectedInputs.previewOnly = true;
         state.collectedInputs.dryRun = true;
@@ -5068,22 +6143,18 @@
       if (langs.length && looksLikeLanguageUpdate(clean, langs)) {
         const current = manifestSplitList(state.collectedInputs.languages);
         state.collectedInputs.languages = Array.from(new Set([...current, ...langs]));
+        state.collectedInputs.metaLanguageConfirmed = true;
         changed = true;
       }
-      if (/new tab|write|sheet|tab|לכתוב|גיליון|טאב|לשונית/i.test(clean)) {
-        state.collectedInputs.outputMode = "newTab";
-        changed = true;
-      }
-      if (/preview|dry|בלי כתיבה|לא לכתוב|תצוגה/i.test(clean)) {
-        state.collectedInputs.outputMode = "preview";
-        changed = true;
-      }
+      if (applyMetaOutputIntentFromText(clean, { confirm: true })) changed = true;
       if (/\bai\b|בינה|איי/.test(lower)) {
         state.collectedInputs.generationMode = "ai";
+        state.collectedInputs.metaGenerationConfirmed = true;
         changed = true;
       }
       if (/template|תבנית/.test(lower)) {
         state.collectedInputs.generationMode = "template";
+        state.collectedInputs.metaGenerationConfirmed = true;
         changed = true;
       }
       if (changed) {
@@ -5127,6 +6198,20 @@
     ) {
       renderWorkspace();
       return;
+    }
+
+    if (state.activeToolId === "meta-tags" && state.mode === "tool") {
+      if (state.pendingQuestion?.toolId === state.activeToolId && state.step === "toolField") {
+        assignToolField(state.pendingQuestion.key, clean);
+        advanceToolFlow();
+        return;
+      }
+      if (handleMetaStepText(clean)) {
+        return;
+      }
+      if (state.step === "ready" && updateReadyToolFromText(clean)) {
+        return;
+      }
     }
 
     if (handlePlannedAssistantCommands(clean)) {
@@ -5202,6 +6287,10 @@
     if (state.pendingQuestion?.toolId === state.activeToolId && state.step === "toolField") {
       assignToolField(state.pendingQuestion.key, clean);
       advanceToolFlow();
+      return;
+    }
+
+    if (handleMetaStepText(clean)) {
       return;
     }
 
@@ -5365,8 +6454,28 @@
       return;
     }
 
+    if (state.step === "faqSubjectValidation") {
+      state.faqSubjectValidation = null;
+      state.answers.subjects = parseSubjectAnswer(clean);
+      state.answers.subjectRaw = clean;
+      const language = detectLanguage(clean);
+      if (language) {
+        state.answers.language = language;
+        state.answers.languageConfirmed = true;
+      }
+      finishSetup(prefersHebrew() ? "עדכנתי את ההגדרה לפני הרצה." : "Updated the setup before running.");
+      return;
+    }
+
     if (state.step === "subjects") {
       state.answers.subjects = parseSubjectAnswer(clean);
+      state.answers.subjectRaw = clean;
+      const language = detectLanguage(clean);
+      if (language) {
+        state.answers.language = language;
+        state.answers.languageConfirmed = true;
+      }
+      state.faqSubjectValidation = null;
       nextStep();
       return;
     }
@@ -5528,6 +6637,8 @@
       const subjectUpdate = parseSubjectAnswer(clean);
       if (/(הנושא|השם|שם המלון|subject|name)/i.test(clean) && subjectUpdate) {
         state.answers.subjects = subjectUpdate;
+        state.answers.subjectRaw = clean;
+        state.faqSubjectValidation = null;
         finishSetup(hasHebrew(clean) ? "עדכנתי את שם הנושא." : "Updated the subject.");
         return;
       }
@@ -5847,21 +6958,24 @@
       return;
     }
     if (!socket?.connected) {
-      bot(prefersHebrew() ? "החיבור לשרת הדמו לא פעיל כרגע. פתחי את השרת ואז אוכל להריץ מכאן." : "The demo backend socket is not connected. Start the server and refresh, then I can run it here.");
+      bot(prefersHebrew() ? "החיבור לשרת המקומי לא פעיל כרגע. פתחי את השרת ואז אוכל להריץ מכאן." : "The demo backend socket is not connected. Start the server and refresh, then I can run it here.");
       logLine("Backend socket is not connected.", "warn");
       return;
     }
 
     let payload = buildPayload();
+    const validationOk = await validateFaqBeforeRun(payload);
+    if (!validationOk) return;
+    payload = buildPayload();
     state.running = true;
     state.runningToolId = "faq-playground";
     state.runningPayload = payload;
     state.lastPayload = payload;
     rememberToolPayload("faq-playground", payload, buildFaqHandoffValues());
     renderWorkspace();
-    bot(prefersHebrew() ? "מריצה עכשיו. קובץ חדש יופיע בצד ימין כשיהיה מוכן." : "Running now. A new file will appear on the right when it’s ready.");
+    bot(prefersHebrew() ? "מעולה, מריצה עכשיו. הקובץ החדש יופיע בצד ימין כשהוא יהיה מוכן." : "Great, running now. The new file will appear on the right when it’s ready.");
     setQuickReplies([
-      { label: prefersHebrew() ? "להראות payload" : "Show payload", value: "review" },
+      { label: prefersHebrew() ? "פרטים טכניים" : "Show technical details", value: "review" },
       { label: prefersHebrew() ? "להתחיל תכנון חדש" : "Start a new plan", value: "reset" }
     ]);
     logLine(`Starting FAQ workflow for ${subjects.length} subject(s)...`);
@@ -5891,8 +7005,8 @@
         : "This tool needs the workspace or missing inputs before it can run.";
       bot(prefersHebrew()
         ? (tool.id === "translate-demo" && detectSourceType(state.collectedInputs.sourceUrl) === "folder"
-          ? "תרגום תיקייה צריך את ה־workspace הייעודי, כי ה־backend הנוכחי מאמת קובץ Sheet יחיד."
-          : "הכלי הזה צריך workspace או עוד פרטים לפני שאפשר להריץ.")
+          ? "תרגום תיקייה צריך את הכלי הייעודי, כי ההרצה הנוכחית עובדת מול קובץ Sheet יחיד."
+          : "חסרים לי עוד פרטים לפני שאפשר להריץ את הכלי.")
         : reason);
       setGenericReadyReplies(tool);
       return;
@@ -5915,7 +7029,7 @@
       return;
     }
     if (!socket?.connected) {
-      bot(prefersHebrew() ? "החיבור לשרת הדמו לא פעיל כרגע. פתחי את השרת ורענני, ואז אוכל להריץ מכאן." : "The demo backend socket is not connected. Start the server and refresh, then I can run it here.");
+      bot(prefersHebrew() ? "החיבור לשרת המקומי לא פעיל כרגע. פתחי את השרת ורענני, ואז אוכל להריץ מכאן." : "The demo backend socket is not connected. Start the server and refresh, then I can run it here.");
       logLine("Backend socket is not connected.", "warn");
       return;
     }
@@ -5929,21 +7043,21 @@
     renderWorkspace();
     if (tool.id === "schema-builder") {
       bot(payload.previewOnly
-        ? (prefersHebrew() ? "מריצה Schema Builder preview. אין כתיבה לגיליון." : "Running Schema Builder preview. No Sheet write.")
-        : (prefersHebrew() ? `כותבת FAQPage schema ל־${payload.outputCell || schemaOutputCell()}.` : `Writing FAQPage schema to ${payload.outputCell || schemaOutputCell()}.`));
+        ? (prefersHebrew() ? "בודקת את הסכמה בלי לכתוב לגיליון." : "Running a schema preview. Nothing will be written to the Sheet.")
+        : (prefersHebrew() ? `כותבת את סכמת ה־FAQ לתא ${payload.outputCell || schemaOutputCell()}.` : `Writing the FAQPage schema to ${payload.outputCell || schemaOutputCell()}.`));
     } else if (tool.id === "design-formatting") {
       const operation = payload.operation || payload.operations?.[0] || {};
       bot(payload.dryRun
-        ? (prefersHebrew() ? "מריצה dry run. שום דבר לא ייכתב." : "Running a dry run. Nothing will be written.")
+        ? (prefersHebrew() ? "בודקת את העריכה בלי לכתוב לגיליון." : "Running a dry run. Nothing will be written.")
         : operation.type === "replace_column_when_value"
-          ? (prefersHebrew() ? "מריצה החלפת עמודות חיה שאושרה." : "Running the approved live column replacement.")
-          : (prefersHebrew() ? "מריצה עריכת FAQ חיה שאושרה." : "Running the approved live FAQ edit."));
+          ? (prefersHebrew() ? "כותבת את החלפת העמודות שאישרת." : "Running the approved live column replacement.")
+          : (prefersHebrew() ? "כותבת את עריכת ה־FAQ שאישרת." : "Running the approved live FAQ edit."));
     } else {
       bot(prefersHebrew() ? `מריצה ${tool.title}.` : `Running ${tool.title}.`);
     }
     setQuickReplies([
-      { label: prefersHebrew() ? "להציג payload" : "Show payload", value: "review" },
-      { label: prefersHebrew() ? "לפתוח workspace" : "Open workspace", value: "open-tool" }
+      { label: prefersHebrew() ? "פרטים טכניים" : "Show technical details", value: "review" },
+      { label: prefersHebrew() ? (tool.id === "schema-builder" ? "לפתוח כלי סכמה" : "לפתוח כלי") : "Open workspace", value: "open-tool" }
     ]);
     logLine(`Starting ${tool.title}...`);
     logLine(`Mode: ${payload.mode || tool.mode || tool.id}`);
@@ -5980,6 +7094,7 @@
     state.runConfirmed = false;
     state.answers = freshAnswers();
     state.fileTask = freshFileTask();
+    state.faqSubjectValidation = null;
     state.faqAuditDiscovery = null;
     state.faqAuditDiscoveryPending = false;
     resetActiveDraft();
@@ -6009,14 +7124,17 @@
   function renderWorkspace() {
     if (state.mode === "file") {
       renderFileWorkspace();
+      scrollChatToLatest();
       return;
     }
     if (state.mode === "tool") {
       renderGenericToolWorkspace();
+      scrollChatToLatest();
       return;
     }
     if (state.mode !== "faq") {
       renderHomeWorkspace();
+      scrollChatToLatest();
       return;
     }
 
@@ -6070,12 +7188,12 @@
             `).join("")}
           </div>
           <details class="payload-details">
-            <summary>Workflow payload preview</summary>
+            <summary>${hebrew ? "פרטים טכניים" : "Workflow payload preview"}</summary>
             <pre class="payload-preview">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
           </details>
           <div class="action-buttons">
             <button class="primary-btn" type="button" data-run-workflow ${ready && !state.running ? "" : "disabled"}>${hebrew ? "להריץ FAQ" : "Run FAQ workflow"}</button>
-            <button class="ghost-btn" type="button" data-open-workspace ${ready ? "" : "disabled"}>${hebrew ? "לפתוח Builder" : "Open builder"}</button>
+            <button class="ghost-btn" type="button" data-open-workspace ${ready ? "" : "disabled"}>${hebrew ? "לפתוח כלי FAQ" : "Open builder"}</button>
             <button class="ghost-btn" type="button" data-show-faq-prompts>${hebrew ? "להראות פרומפטים" : "Show prompts"}</button>
             <button class="ghost-btn" type="button" data-add-context>${hebrew ? "להוסיף הקשר" : "Add context"}</button>
             <button class="ghost-btn" type="button" data-copy-payload>${hebrew ? "להעתיק תוכנית" : "Copy plan"}</button>
@@ -6084,23 +7202,25 @@
         </div>
       </article>
     `;
+    scrollChatToLatest();
   }
 
   function renderHomeWorkspace() {
     const tools = manifest.tools || [];
+    const hebrew = prefersHebrew();
     els.actionsList.innerHTML = `
       <article class="action-card">
         <div class="action-card-head">
           <div>
-            <h3 class="action-title"><span class="action-icon">AI</span>Workspace assistant</h3>
-            <p class="subtitle">One stateful chat that chooses a tool, collects missing inputs, builds payloads, and parses outputs.</p>
+            <h3 class="action-title"><span class="action-icon">AI</span>${hebrew ? "הצ׳אט המרכזי" : "Workspace assistant"}</h3>
+            <p class="subtitle">${hebrew ? "צ׳אט אחד שמבין את הבקשה, בוחר כלי, משלים פרטים חסרים ומחזיר תוצאה מסודרת." : "One stateful chat that chooses a tool, collects missing inputs, builds payloads, and parses outputs."}</p>
           </div>
-          <span class="risk-pill">idle</span>
+          <span class="risk-pill">${hebrew ? "ממתין" : "idle"}</span>
         </div>
         <div class="action-body">
           <div class="task-summary">
-            <strong>No active task yet</strong>
-            <span>${tools.length} tools registered in the manifest. New tools should be added there, then get an adapter when needed.</span>
+            <strong>${hebrew ? "אין משימה פעילה כרגע" : "No active task yet"}</strong>
+            <span>${hebrew ? `${tools.length} כלים זמינים לצ׳אט.` : `${tools.length} tools registered in the manifest. New tools should be added there, then get an adapter when needed.`}</span>
           </div>
           <div class="checklist">
             ${tools.slice(0, 8).map((tool) => `
@@ -6119,38 +7239,55 @@
   function renderGenericToolWorkspace() {
     const tool = getTool(state.activeToolId);
     if (!tool) return renderHomeWorkspace();
+    const hebrew = prefersHebrew();
     const allFields = [...(tool.requiredInputs || []), ...(tool.optionalInputs || [])];
     const alwaysShow = new Set(
       tool.id === "schema-builder"
-        ? ["sourceUrl", "tabName", "questionColumn", "answerColumn", "outputCell", "previewOnly"]
+        ? ["sourceUrl", "tabName", "questionColumn", "answerColumn", "outputCell", "previewOnly", "existingValuePolicy"]
         : (tool.requiredInputs || []).map((field) => field.key)
     );
     const fields = allFields
       .filter((field) => alwaysShow.has(field.key) || fieldHasValue(state.collectedInputs[field.key]))
-      .slice(0, tool.id === "schema-builder" ? 6 : 5);
+      .slice(0, tool.id === "schema-builder" ? 7 : 5);
     const needsFaqDiscovery = faqAuditNeedsDiscovery(tool);
     const payload = state.readyToRun
       ? (state.lastPayload || buildToolPayload(tool, state.collectedInputs))
       : (needsFaqDiscovery ? faqAuditDiscoveryPayload() : null);
     const operation = payload?.operation || payload?.operations?.[0] || null;
     const summaryNote = tool.id === "schema-builder"
-      ? `${state.collectedInputs.previewOnly === false ? "Write mode" : "Preview only"} · output ${schemaOutputCell()}`
+      ? (hebrew
+        ? `${state.collectedInputs.previewOnly === false ? "כתיבה לגיליון" : "בדיקה בלי כתיבה"} · תא ${schemaOutputCell()}`
+        : `${state.collectedInputs.previewOnly === false ? "Write mode" : "Preview only"} · output ${schemaOutputCell()}`)
       : needsFaqDiscovery
-        ? "Map robots.txt, sitemaps and internal URL groups before choosing FAQ audit pages."
+        ? (hebrew ? "צריך למפות robots.txt, sitemaps וקבוצות URL לפני בחירת עמודים לאודיט." : "Map robots.txt, sitemaps and internal URL groups before choosing FAQ audit pages.")
       : tool.id === "design-formatting" && operation
-        ? `${operation.type || "sheet edit"} · ${payload.dryRun !== false ? "dry run first" : "live write requested"}`
+        ? (hebrew
+          ? `${designOperationLabel(operation, true)} · ${payload.dryRun !== false ? "בדיקה בלי כתיבה" : "כתיבה לגיליון"}`
+          : `${operation.type || "sheet edit"} · ${payload.dryRun !== false ? "dry run first" : "live write requested"}`)
         : (tool.confirmationRules?.beforeRun || tool.risk || "");
-    const schemaButtons = tool.id === "schema-builder" ? `
-      <button class="ghost-btn" type="button" data-schema-output>Change output cell</button>
-      <button class="ghost-btn" type="button" data-schema-write>${state.collectedInputs.previewOnly === false ? "Preview instead" : "Write to Sheet"}</button>
-    ` : "";
+    const statusLabel = hebrew
+      ? (state.running ? "רץ עכשיו" : needsFaqDiscovery ? "צריך מיפוי" : state.readyToRun ? "מוכן" : "אוסף פרטים")
+      : (state.running ? "running" : needsFaqDiscovery ? "mapping needed" : state.readyToRun ? "ready" : "collecting");
+    const schemaButtons = tool.id === "schema-builder" ? (
+      state.collectedInputs.previewOnly === false
+        ? `
+          <button class="ghost-btn" type="button" data-schema-policy="${existingValuePolicy() === "overwrite" ? "skip" : "overwrite"}">${escapeHtml(schemaWriteLabel(existingValuePolicy() === "overwrite" ? "skip" : "overwrite"))}</button>
+          <button class="ghost-btn" type="button" data-schema-preview>${hebrew ? "להישאר בבדיקה מקדימה" : "Stay in preview"}</button>
+          <button class="ghost-btn" type="button" data-schema-output>${hebrew ? "לבחור תא אחר" : "Choose another cell"}</button>
+        `
+        : `
+          <button class="ghost-btn" type="button" data-schema-policy="skip">${escapeHtml(schemaWriteLabel("skip"))}</button>
+          <button class="ghost-btn" type="button" data-schema-policy="overwrite">${escapeHtml(schemaWriteLabel("overwrite"))}</button>
+          <button class="ghost-btn" type="button" data-schema-output>${hebrew ? "לבחור תא אחר" : "Choose another cell"}</button>
+        `
+    ) : "";
     const primaryActionButton = needsFaqDiscovery
-      ? `<button class="primary-btn" type="button" data-faqaudit-map ${state.running ? "disabled" : ""}>Map site</button>`
+      ? `<button class="primary-btn" type="button" data-faqaudit-map ${state.running ? "disabled" : ""}>${hebrew ? "למפות אתר" : "Map site"}</button>`
       : tool.canRunDirectly
       ? `<button class="primary-btn" type="button" data-run-tool ${isDirectRunAllowed(tool) && !state.running ? "" : "disabled"}>${escapeHtml(directRunLabel(tool))}</button>`
-      : `<button class="primary-btn" type="button" data-open-workspace>Open workspace</button>`;
+      : `<button class="primary-btn" type="button" data-open-workspace>${hebrew ? "לפתוח כלי" : "Open workspace"}</button>`;
     const workspaceActionButton = tool.canRunDirectly
-      ? `<button class="ghost-btn" type="button" data-open-workspace>Open workspace</button>`
+      ? `<button class="ghost-btn" type="button" data-open-workspace>${hebrew ? (tool.id === "schema-builder" ? "לפתוח כלי סכמה" : "לפתוח כלי") : "Open workspace"}</button>`
       : "";
 
     els.actionsList.innerHTML = `
@@ -6160,11 +7297,11 @@
             <h3 class="action-title"><span class="action-icon">${escapeHtml(tool.icon || "AI")}</span>${escapeHtml(tool.title)}</h3>
             <p class="subtitle">${escapeHtml(tool.description || "Tool adapter")}</p>
           </div>
-          <span class="risk-pill" data-risk="${escapeHtml(tool.risk || "draft")}">${state.running ? "running" : needsFaqDiscovery ? "mapping needed" : state.readyToRun ? "ready" : "collecting"}</span>
+          <span class="risk-pill" data-risk="${escapeHtml(tool.risk || "draft")}">${escapeHtml(statusLabel)}</span>
         </div>
         <div class="action-body">
           <div class="task-summary">
-            <strong>${escapeHtml(state.readyToRun ? "Payload ready" : needsFaqDiscovery ? "Site mapping needed" : "Collecting required inputs")}</strong>
+            <strong>${escapeHtml(hebrew ? (state.readyToRun ? "מוכן להרצה" : needsFaqDiscovery ? "צריך למפות את האתר" : "חסרים פרטים") : (state.readyToRun ? "Payload ready" : needsFaqDiscovery ? "Site mapping needed" : "Collecting required inputs"))}</strong>
             <span>${escapeHtml(summaryNote)}</span>
           </div>
           <div class="checklist">
@@ -6175,22 +7312,22 @@
                 <div class="check-item ${done ? "is-done" : ""}">
                   <span class="check-dot"></span>
                   <span>${escapeHtml(field.label || field.key)}</span>
-                  <strong>${escapeHtml(done ? (Array.isArray(value) ? value.join(", ") : value) : (field.required === false ? "Optional" : "Needed"))}</strong>
+                  <strong>${escapeHtml(done ? (Array.isArray(value) ? value.join(", ") : value) : (field.required === false ? (hebrew ? "אופציונלי" : "Optional") : (hebrew ? "חסר" : "Needed")))}</strong>
                 </div>
               `;
             }).join("")}
           </div>
           <details class="payload-details">
-            <summary>${payload ? "Tool payload preview" : "Collected inputs"}</summary>
+            <summary>${hebrew ? "פרטים טכניים" : (payload ? "Tool payload preview" : "Collected inputs")}</summary>
             <pre class="payload-preview">${escapeHtml(JSON.stringify(payload || state.collectedInputs, null, 2))}</pre>
           </details>
           <div class="action-buttons">
             ${primaryActionButton}
             ${workspaceActionButton}
             ${schemaButtons}
-            <button class="ghost-btn" type="button" data-add-tool-detail>Add detail</button>
-            <button class="ghost-btn" type="button" data-copy-payload ${payload ? "" : "disabled"}>Copy payload</button>
-            <button class="ghost-btn" type="button" data-reset-task>Start over</button>
+            <button class="ghost-btn" type="button" data-add-tool-detail>${hebrew ? "להוסיף פרט" : "Add detail"}</button>
+            <button class="ghost-btn" type="button" data-copy-payload ${payload ? "" : "disabled"}>${hebrew ? "להעתיק פרטים" : "Copy payload"}</button>
+            <button class="ghost-btn" type="button" data-reset-task>${hebrew ? "להתחיל מחדש" : "Start over"}</button>
           </div>
         </div>
       </article>
@@ -6544,7 +7681,9 @@
     if (event.target.closest("[data-open-workspace]")) openCurrentToolWorkspace();
     if (event.target.closest("[data-show-faq-prompts]")) handleSpecialReply("review-prompts");
     if (event.target.closest("[data-schema-output]")) handleSpecialReply("schema:output");
-    if (event.target.closest("[data-schema-write]")) handleSpecialReply(state.collectedInputs.previewOnly === false ? "schema:preview" : "schema:write");
+    const schemaPolicyButton = event.target.closest("[data-schema-policy]");
+    if (schemaPolicyButton) handleSpecialReply(`schema:run:${schemaPolicyButton.dataset.schemaPolicy || "skip"}`);
+    if (event.target.closest("[data-schema-preview]")) handleSpecialReply("schema:preview");
     if (event.target.closest("[data-add-context]")) handleSpecialReply("extra");
     if (event.target.closest("[data-add-tool-detail]")) handleSpecialReply("tool:detail");
     if (event.target.closest("[data-add-file-detail]")) handleSpecialReply("file:detail");
@@ -6571,7 +7710,7 @@
         : (faqAuditNeedsDiscovery() ? faqAuditDiscoveryPayload() : state.lastPayload);
       if (!payload) return;
       navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
-      bot(hasHebrew(JSON.stringify(payload)) ? "העתקתי את ה־payload." : "Copied the payload.");
+      bot(hasHebrew(JSON.stringify(payload)) ? "העתקתי את הפרטים הטכניים." : "Copied the payload.");
     }
   });
 
@@ -6623,37 +7762,45 @@
       renderWorkspace();
       logLine("Workflow finished.", "ok");
       if (completedToolId === "faq-playground") {
-        bot("ה־workflow הסתיים. כל Sheet שנוצר אמור להופיע גם ב־Generated outputs.");
+        bot("ההרצה הסתיימה. אם נוצר קובץ חדש, הוא יופיע בצד ימין.");
         setReadyReplies();
       } else if (completedToolId) {
         const tool = getTool(completedToolId);
         if (tool?.id === "schema-builder") {
-          bot(state.collectedInputs.previewOnly === false
-            ? "Schema Builder finished. If the backend wrote to a Sheet, the Sheet link is in Generated outputs."
-            : "Schema Builder preview finished. Nothing was written because Preview only is on; the preview marker is saved in Generated outputs.");
+          bot(prefersHebrew()
+            ? (state.collectedInputs.previewOnly === false
+              ? "הסכמה נכתבה לגיליון. הקישור לקובץ נמצא בצד ימין."
+              : "סיימתי את הבדיקה המקדימה. לא כתבתי לגיליון; התוצאה נשמרה בצד ימין.")
+            : (state.collectedInputs.previewOnly === false
+              ? "Schema Builder finished. The Sheet link is in Generated outputs."
+              : "Schema preview finished. Nothing was written to the Sheet; the preview output is saved in Generated outputs."));
         } else if (tool?.id === "design-formatting") {
-          bot(`${tool.title} finished. ${describeLastRunOutput(hasHebrew(JSON.stringify(completedPayload)) ? "איפה הפלט" : "where output")}`);
+          bot(prefersHebrew()
+            ? `סיימתי את ${designOperationLabel(payloadOperation(completedPayload), true)}. ${describeLastRunOutput("איפה הפלט")}`
+            : `${tool.title} finished. ${describeLastRunOutput("where output")}`);
         } else if (tool?.id === "site-ai-faq-audit" && completedPayload?.mode === "site-ai-discovery") {
           if (hasFaqAuditDiscovery()) {
             askFaqAuditGroups();
           } else {
             askFaqAuditDiscovery(prefersHebrew()
-              ? "המיפוי הסתיים אבל לא התקבלו קבוצות URL מובנות. נסי למפות שוב או לפתוח את ה־workspace."
+              ? "המיפוי הסתיים אבל לא התקבלו קבוצות עמודים מסודרות. נסי למפות שוב או לפתוח את כלי האודיט."
               : "Discovery finished but no URL groups were parsed. Try mapping again or open the workspace.");
           }
         } else if (tool?.id === "site-ai-faq-audit") {
           const latestFaqOutput = state.outputs.find((item) => item.source === "SITE_FAQ_AUDIT");
           if (latestFaqOutput?.url) {
             bot(prefersHebrew()
-              ? "האודיט הסתיים. דוח פנימי לחיץ מוכן ב־Generated outputs. לא יצרתי Google Sheet בלי אישור יצוא נפרד."
+              ? "האודיט הסתיים. הדוח הלחיץ מוכן בצד ימין. לא יצרתי Google Sheet בלי אישור יצוא נפרד."
               : "FAQ audit finished. A clickable internal report is ready in Generated outputs. I did not create a Google Sheet without a separate export confirmation.");
           } else {
             bot(prefersHebrew()
-              ? "האודיט הסתיים, אבל לא הצלחתי לבנות דוח לחיץ מהתוצאה. בדקי את ה־Run log או הריצי שוב."
+              ? "האודיט הסתיים, אבל לא הצלחתי לבנות דוח לחיץ מהתוצאה. בדקי את יומן ההרצה או הריצי שוב."
               : "FAQ audit finished, but I could not build a clickable report from the result. Check the run log or run it again.");
           }
         } else {
-          bot(`${tool?.title || "The workflow"} finished. Parsed links and result markers were saved in Generated outputs when available.`);
+          bot(prefersHebrew()
+            ? "ההרצה הסתיימה. אם זוהו קישורים או תוצאות מסודרות, הן נשמרו בצד ימין."
+            : `${tool?.title || "The workflow"} finished. Parsed links and result markers were saved in Generated outputs when available.`);
         }
         if (tool && !(tool.id === "site-ai-faq-audit" && completedPayload?.mode === "site-ai-discovery")) setGenericReadyReplies(tool);
       }

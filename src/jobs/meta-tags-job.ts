@@ -7,6 +7,7 @@ import { SheetsService } from "../services/sheets.js";
 
 const LEGACY_LONG_NAME_DESC = "Find essential details, services, location information and practical guidance before you book.";
 const DEFAULT_LONG_NAME_DESC = "{{page}}: essential details, services, location information and practical guidance before you book.";
+type ExistingValuePolicy = "skip" | "overwrite";
 
 export type MetaTagsPayload = {
   mode?: "template" | "ai";
@@ -38,6 +39,7 @@ export type MetaTagsPayload = {
   outputMode?: "preview" | "newTab" | "firstTabRange" | "existingRange";
   outputTabName?: string;
   outputStartCell?: string;
+  existingValuePolicy?: ExistingValuePolicy;
   activeRules?: string[];
 };
 
@@ -69,8 +71,10 @@ export type MetaTagsResult = {
     writeback?: {
       enabled: boolean;
       writes: number;
+      skipped?: number;
       tabName: string;
       startCell: string;
+      existingValuePolicy?: ExistingValuePolicy;
       error?: string;
     };
   };
@@ -105,8 +109,10 @@ export class MetaTagsJob {
       result.summary.writeback = {
         enabled: normalized.outputMode !== "preview",
         writes: 0,
+        skipped: 0,
         tabName: normalized.outputTabName,
         startCell: normalized.outputStartCell,
+        existingValuePolicy: normalized.existingValuePolicy,
         error: message,
       };
       console.log(chalk.yellow(`⚠️ meta-tags writeback failed: ${message}`));
@@ -318,6 +324,7 @@ export class MetaTagsJob {
       outputMode,
       outputTabName: String(payload.outputTabName || "Meta Tags").trim() || "Meta Tags",
       outputStartCell: String(payload.outputStartCell || "A1").trim() || "A1",
+      existingValuePolicy: payload.existingValuePolicy === "overwrite" ? "overwrite" : "skip",
       activeRules: Array.isArray(payload.activeRules) ? payload.activeRules : ["brandInTitle", "includeH1", "openGraph"],
     };
   }
@@ -415,8 +422,10 @@ export class MetaTagsJob {
       return {
         enabled: false,
         writes: 0,
+        skipped: 0,
         tabName: payload.outputTabName,
         startCell: payload.outputStartCell,
+        existingValuePolicy: payload.existingValuePolicy,
       };
     }
 
@@ -438,6 +447,7 @@ export class MetaTagsJob {
     });
 
     let writes = 0;
+    let skipped = 0;
     for (const [spreadsheetId, spreadsheetRows] of grouped) {
       const targetTab = payload.outputMode === "firstTabRange"
         ? await this.sheets.getFirstSheetTitle(spreadsheetId)
@@ -456,6 +466,13 @@ export class MetaTagsJob {
         ]),
       ];
       const range = this.makeWriteRange(targetTab, payload.outputStartCell, values.length, values[0].length);
+      const existing = await this.sheets.readValues(spreadsheetId, range);
+      if (payload.existingValuePolicy === "skip" && this.hasAnyValue(existing)) {
+        skipped += 1;
+        console.log(chalk.yellow(`Skipped metadata writeback to ${spreadsheetId} ${range} because the target range already has values.`));
+        continue;
+      }
+
       await this.sheets.writeValues(spreadsheetId, range, values);
       writes += 1;
       console.log(chalk.green(`Wrote ${spreadsheetRows.length} metadata row(s) to ${spreadsheetId} ${range}`));
@@ -464,8 +481,10 @@ export class MetaTagsJob {
     return {
       enabled: true,
       writes,
+      skipped,
       tabName: payload.outputTabName,
       startCell: payload.outputStartCell,
+      existingValuePolicy: payload.existingValuePolicy,
     };
   }
 
@@ -625,6 +644,10 @@ export class MetaTagsJob {
   private cleanStartCell(input: string): string {
     const value = input.trim().toUpperCase();
     return /^[A-Z]+[1-9][0-9]*$/.test(value) ? value : "A1";
+  }
+
+  private hasAnyValue(rows: unknown[][]): boolean {
+    return rows.some((row) => row.some((value) => String(value ?? "").trim().length > 0));
   }
 
   private normalizeLanguages(languages?: string[], language?: string): string[] {

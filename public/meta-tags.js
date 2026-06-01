@@ -71,6 +71,7 @@
     outputTabName: $("outputTabName"),
     outputStartColumn: $("outputStartColumn"),
     outputStartRow: $("outputStartRow"),
+    existingValuePolicyButtons: Array.from(document.querySelectorAll("[data-existing-policy]")),
     resultsBody: $("resultsBody"),
     terminalLog: $("terminalLog"),
     summaryText: $("summaryText"),
@@ -203,6 +204,7 @@
       outputStartCell: getOutputStartCell(),
       outputStartColumn: cleanColumn(els.outputStartColumn.value),
       outputStartRow: cleanRow(els.outputStartRow.value),
+      existingValuePolicy: getExistingValuePolicy(),
       activeRules: Array.from(state.activeRules),
     };
   }
@@ -236,6 +238,7 @@
     const start = splitCell(setup.outputStartCell || "A1");
     setValue(els.outputStartColumn, setup.outputStartColumn || start.col);
     setValue(els.outputStartRow, setup.outputStartRow || start.row);
+    setExistingValuePolicy(setup.existingValuePolicy);
     renderMode();
     renderSourceType();
     renderOutputMode();
@@ -260,7 +263,8 @@
         sourceType: payload.sourceType || values.sourceType,
         sourceLink: sourceUrl,
         spreadsheetId: payload.spreadsheetId || (detectSource(sourceUrl).type === "sheet" ? sourceUrl : ""),
-        folderId: payload.folderId || (detectSource(sourceUrl).type === "folder" ? sourceUrl : "")
+        folderId: payload.folderId || (detectSource(sourceUrl).type === "folder" ? sourceUrl : ""),
+        existingValuePolicy: payload.existingValuePolicy || values.existingValuePolicy
       };
       applySetup(setup);
       localStorage.removeItem("carmelonAssistantToolHandoff");
@@ -277,6 +281,21 @@
   function setValue(el, value) {
     if (el == null || value == null) return;
     el.value = String(value);
+  }
+
+  function getExistingValuePolicy() {
+    return els.existingValuePolicyButtons.find((button) => button.classList.contains("active"))?.dataset.existingPolicy === "overwrite"
+      ? "overwrite"
+      : "skip";
+  }
+
+  function setExistingValuePolicy(policy) {
+    const normalized = policy === "overwrite" ? "overwrite" : "skip";
+    els.existingValuePolicyButtons.forEach((button) => {
+      const active = button.dataset.existingPolicy === normalized;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
 
   function pagesFromSetup(setup) {
@@ -642,6 +661,7 @@
           ? `the first tab, starting at column ${setup.outputStartColumn}, row ${setup.outputStartRow}.`
           : `the "${setup.outputTabName || "Meta Tags"}" tab starting at column ${setup.outputStartColumn}, row ${setup.outputStartRow}.`;
       addLog(`Generated tags will be written to ${targetLabel}.`, "dim");
+      addLog(setup.existingValuePolicy === "overwrite" ? "Filled output cells will be overwritten." : "Filled output cells will be skipped.", "dim");
     }
     socket.emit("start-agent", {
       ...setup,
@@ -674,7 +694,8 @@
         if (result.summary.writeback.error) {
           addLog(`Writeback did not complete: ${result.summary.writeback.error}`, "warn");
         } else {
-          addLog(`Writeback complete: ${result.summary.writeback.writes || 0} spreadsheet update${result.summary.writeback.writes === 1 ? "" : "s"}.`, "success");
+          const skipped = result.summary.writeback.skipped || 0;
+          addLog(`Writeback complete: ${result.summary.writeback.writes || 0} spreadsheet update${result.summary.writeback.writes === 1 ? "" : "s"}${skipped ? `, ${skipped} skipped` : ""}.`, skipped ? "warn" : "success");
         }
       }
     } catch (error) {
@@ -1031,6 +1052,13 @@
     els.existingOutputModeButtons.forEach((button) => {
       button.addEventListener("click", () => {
         setOutputMode(button.dataset.existingOutputMode);
+      });
+    });
+
+    els.existingValuePolicyButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setExistingValuePolicy(button.dataset.existingPolicy);
+        updatePreview();
       });
     });
 

@@ -188,7 +188,7 @@
 
     .assistant-panel {
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
       min-height: 0;
     }
 
@@ -320,11 +320,14 @@
 
     .quick-replies {
       min-height: 48px;
+      max-height: min(132px, 24vh);
       display: flex;
       align-items: center;
+      align-content: flex-start;
       gap: 8px;
       flex-wrap: wrap;
-      padding: 10px 14px 0;
+      overflow-y: auto;
+      padding: 10px 14px;
       border-top: 1px solid var(--border);
       background: var(--surface);
     }
@@ -1197,6 +1200,7 @@
     </aside>
   </main>
 
+  <script src="/assistant-tool-contract.js"></script>
   <script src="/assistant-tools.js"></script>
   <script src="/assistant-command-model.js"></script>
   <script src="/assistant-workspace.js"></script>

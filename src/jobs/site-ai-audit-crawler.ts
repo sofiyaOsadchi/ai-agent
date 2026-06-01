@@ -324,8 +324,8 @@ const MAX_FAQ_ELEMENT_CLICKS = 36;
 const ASSET_RE = /\.(?:jpg|jpeg|png|gif|webp|avif|svg|pdf|zip|rar|mp4|webm|mov|css|js|ico|woff2?|ttf|eot)$/i;
 const EXCLUDED_PATH_RE =
   /\/(?:login|logout|signup|account|cart|checkout|careers?|jobs?|press|blog\/tag|wp-admin)(?:\/|$)/i;
-const FAQ_HINT_RE = /\b(faq|faqs|questions|answers|help|support|policies|policy|amenities|facilities|services)\b/i;
-const FAQ_PAGE_HINT_RE = /\b(faq|faqs|questions|answers|help|support)\b/i;
+const FAQ_HINT_RE = /\b(faq|faqs|frequently asked questions|questions?|answers?|q&a|policies|policy)\b/i;
+const FAQ_PAGE_HINT_RE = /\b(faq|faqs|frequently[-\s]?asked[-\s]?questions|questions?[-\s]*(?:and|&)?[-\s]*answers?|q&a|q-and-a)\b/i;
 const QUESTION_RE =
   /\?|^(what|when|where|who|how|why|which|can|does|do|is|are|will|should|may)\b|^(מה|מתי|איפה|היכן|מי|איך|כיצד|למה|מדוע|האם|איזה|כמה)\b/i;
 const FAQ_BOILERPLATE_RE =
@@ -918,7 +918,7 @@ export class SiteAiAuditCrawlerJob {
       issues.push(this.issue("critical", "structured-data", page.url, "Visible FAQ missing FAQPage schema", `${page.domFaqCount} DOM Q/A items found, no schema Q/A items.`, "Add FAQPage JSON-LD that mirrors the visible questions and answers."));
     }
 
-    if (page.schemaOnlyQuestions.length || page.domOnlyQuestions.length) {
+    if (page.schemaFaqCount > 0 && (page.schemaOnlyQuestions.length || page.domOnlyQuestions.length)) {
       issues.push(this.issue("critical", "faq", page.url, "FAQ DOM and schema mismatch", `Schema-only: ${page.schemaOnlyQuestions.length}; DOM-only: ${page.domOnlyQuestions.length}.`, "Keep visible FAQ and FAQPage JSON-LD in sync."));
     }
 
@@ -934,10 +934,11 @@ export class SiteAiAuditCrawlerJob {
       issues.push(this.issue("info", "ai-readiness", page.url, "Many external domains linked", `${page.linkDiagnostics.externalDomains.length} external domains were detected.`, "Review outbound links and keep only useful, trustworthy references or booking/support destinations."));
     }
 
+    const hasFaqPageHint = FAQ_PAGE_HINT_RE.test(`${page.url} ${page.title} ${page.h1}`);
     const hasFaqEvidence =
       page.domFaqCount > 0 ||
       page.schemaFaqCount > 0 ||
-      FAQ_PAGE_HINT_RE.test(`${page.url} ${page.title} ${page.h1}`);
+      hasFaqPageHint;
 
     for (const seoIssue of seoIssues) {
       if (!seoIssue.reason.startsWith("[schema]") && !seoIssue.reason.startsWith("[indexing]")) {
@@ -947,6 +948,24 @@ export class SiteAiAuditCrawlerJob {
       const isGenericNoSchema =
         seoIssue.reason.includes("No JSON-LD") ||
         seoIssue.reason.includes("No @type: FAQPage");
+
+      if (isGenericNoSchema && page.domFaqCount > 0 && page.schemaFaqCount === 0) {
+        continue;
+      }
+
+      if (isGenericNoSchema && hasFaqPageHint && page.domFaqCount === 0 && page.schemaFaqCount === 0) {
+        issues.push(
+          this.issue(
+            "warning",
+            "structured-data",
+            page.url,
+            "FAQ page needs schema verification",
+            "The page looks like an FAQ page by URL or title, but the crawler did not detect visible Q/A pairs or FAQPage JSON-LD.",
+            "Confirm that the page contains visible FAQ content. If it does, add FAQPage JSON-LD; if it does not, do not treat it as an FAQ schema task."
+          )
+        );
+        continue;
+      }
 
       if (isGenericNoSchema && !hasFaqEvidence) {
         if (!page.jsonLdTypes.length && this.shouldFlagMissingStructuredData(page)) {
@@ -2612,19 +2631,27 @@ export class SiteAiAuditCrawlerJob {
     const text = `${path} ${title} ${h1}`.toLowerCase();
     const segments = path.split("/").filter(Boolean);
     const last = segments[segments.length - 1] || "";
+    const first = segments[0] || "";
+    const hotelSubpage = /^(rooms?|restaurants?|dining|facilities|amenities|spa|wellness|reviews?|meeting|meetings|location|directions|faq)$/i.test(last);
+    const reservedTopLevel = /^(terms|privacy|cookie|cookies|contact|about|blog|meetings|wedding|newsletter|destinations|city-breaks|resorts-getaways|sustainability|limited-edition|leonardo-advantage-club|gift-voucher|nyx-tix|imprint)$/i.test(first);
+    const hotelLikeText = `${last} ${title} ${h1}`;
 
     if (path === "/") return "homepage";
-    if (/\b(faq|faqs|questions|answers|help|support)\b/.test(text)) return "faq";
+    if (FAQ_PAGE_HINT_RE.test(text)) return "faq";
+    if (/\b(privacy|terms|cookies?|imprint|legal|policy)\b/.test(text)) return "legal";
+    if (/\b(contact|about|corporation|company|newsletter)\b/.test(text)) return "contact";
     if (/\b(special-offers?|offers?|deals?|packages?|gift-voucher)\b/.test(text)) return "offer";
     if (/\b(meetings?|events?|conference|conferences|weddings?)\b/.test(text)) return "meeting";
     if (/\b(blog|news|magazine|article|stories)\b/.test(text)) return "blog";
-    if (/\b(privacy|terms|cookies?|imprint|legal|policy)\b/.test(text)) return "legal";
-    if (/\b(contact|about|corporation|company|newsletter)\b/.test(text)) return "contact";
+    if (/\b(location|directions|getting here|how to get)\b/.test(`${last} ${title} ${h1}`)) return "destination";
+    if (segments.length >= 2 && !hotelSubpage && /\b(hotel|hotels|hostel|resort|aparthotel|apartments?|suites?)\b/i.test(hotelLikeText)) {
+      return "hotel";
+    }
     if (/\b(brand|advantage-club|loyalty|limited-edition|nyx|royal|boutique)\b/.test(text)) return "brand";
     if (/\b(services?|amenities|facilities|spa|wellness|restaurant|restaurants|dining|bar|breakfast|parking|rooms?|suites?|accessibility)\b/.test(text)) {
       return "service";
     }
-    if (segments.length >= 2 && /\b(hotel|hotels|hostel|resort|aparthotel|apartments?|suites?)\b/.test(`${last} ${title}`)) {
+    if (segments.length === 2 && !reservedTopLevel) {
       return "hotel";
     }
     if (segments.length === 1 || /\b(hotels in|hotel in|destinations?|locations?|countries|country|cities|city|region)\b/.test(text)) {
@@ -2813,7 +2840,30 @@ export class SiteAiAuditCrawlerJob {
       push(question, answer);
     });
 
+    this.extractNumberedTextQAs($).forEach((item) => push(item.q, item.a));
+
     return this.dedupeQAs(items).slice(0, 100);
+  }
+
+  private extractNumberedTextQAs($: cheerio.Root): QA[] {
+    const text = this.mainText($);
+    const matches = Array.from(text.matchAll(/(?:^|\s)(\d{1,3})[\.)]\s+([^?]{8,180}\?)/g));
+    const items: QA[] = [];
+
+    matches.forEach((match, index) => {
+      const question = this.cleanText(match[2] || "");
+      const answerStart = (match.index || 0) + match[0].length;
+      const answerEnd = matches[index + 1]?.index ?? text.length;
+      const answer = this.cleanText(text.slice(answerStart, answerEnd).replace(/^[-:–—\s]+/, ""));
+
+      if (!this.looksLikeUsefulFaqQuestion(question)) return;
+      if (!answer || this.countWords(answer) < 4) return;
+      if (this.isBoilerplateQa(question, answer)) return;
+
+      items.push({ q: question, a: answer });
+    });
+
+    return items.slice(0, 100);
   }
 
   private extractQuestionSignals($: cheerio.Root, qas: QA[]): string[] {

@@ -1008,843 +1008,670 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
     ] },
 
     de: {
-        mappings: [
-            // === EXISTING MAPPINGS ===
-             {
+  mappings: [
+    // Stay-master identity - client hard rules
 
+    {
+      forbidden: "Was genau ist master St. Paul’s - Hotel, Aparthotel oder Serviced Apartments?",
+      preferred: "Was genau ist master St. Paul’s - ein Hotel, Aparthotel oder eine Unterkunft mit Serviced Apartments?",
+      reason: "Client-approved question structure.",
+    },
+
+    // Apartment / unit wording
+    {
+      forbidden: "Einheiten",
+      preferred: "Wohnungen",
+      reason: "Avoid literal 'units'. In stay-master guest-facing German, use 'Wohnungen' for the apartments.",
+    },
+    {
+      forbidden: "Einheit",
+      preferred: "Wohnung",
+      reason: "Avoid literal 'unit'. Use 'Wohnung' when referring to the guest apartment.",
+    },
+    {
+      forbidden: "alle Apartments",
+      preferred: "alle Wohnungen",
+      reason: "Client prefers 'Wohnungen' in answers for the apartment units.",
+    },
+    {
+      forbidden: "Die Apartments",
+      preferred: "Die Wohnungen",
+      reason: "Use 'Wohnungen' in descriptive answers for stay-master.",
+    },
+    {
+      forbidden: "in den Apartments",
+      preferred: "in den Wohnungen",
+      reason: "Use 'Wohnungen' for the guest units.",
+    },
+    {
+      forbidden: "Apartment-Grundrisse",
+      preferred: "großzügigen Apartment-Grundrisse",
+      reason: "Client correction for extended-stay answer wording.",
+    },
+    {
+      forbidden: "Apartment-PIN-Code",
+      preferred: "Apartment-PIN-Code",
+      reason: "Keep this wording unchanged when referring to the access code.",
+    },
+
+    // Laundry / housekeeping
+    {
       forbidden: "Wäscherei",
-
       preferred: "Wäschemöglichkeiten",
-
-      reason: "When referring to laundry facilities rather than a laundry service, 'Wäschemöglichkeiten' is more accurate."
-
+      reason: "When referring to laundry facilities rather than a laundry service, 'Wäschemöglichkeiten' is more accurate.",
+    },
+    {
+      forbidden: "Wasch-Trockner",
+      preferred: "Waschmaschine mit Trocknerfunktion",
+      reason: "More natural German for washer-dryer in the apartment.",
+    },
+    {
+      forbidden: "Wasch-Trockner-Einheiten",
+      preferred: "eigene Waschmaschine mit Trocknerfunktion",
+      reason: "Client correction: avoid literal 'units'.",
+    },
+    {
+      forbidden: "private Wasch-Trockner",
+      preferred: "eigene Waschmaschinen mit Trocknerfunktion",
+      reason: "Client correction for long-stay answer.",
+    },
+    {
+      forbidden: "Wäscheeinrichtungen",
+      preferred: "Waschmöglichkeiten",
+      reason: "More natural German for guest laundry facilities.",
+    },
+    {
+      forbidden: "Wie häufig erfolgt die Reinigung",
+      preferred: "Wie oft wird bei master St. Paul’s gereinigt?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Reinigung ist inbegriffen",
+      preferred: "Ein Reinigungsservice ist inklusive",
+      reason: "More natural hospitality phrasing.",
+    },
+    {
+      forbidden: "Zusätzliche Reinigungen können gegen Gebühr gebucht werden.",
+      preferred: "",
+      reason: "Client correction removed this sentence from the fixed answer. Do not include fee wording unless explicitly required by source.",
     },
 
+    // Guest support / reception / concierge
     {
+      forbidden: "Rezeption",
+      preferred: "Gästesupport",
+      reason: "For master St. Paul’s, avoid implying an on-site reception unless referring to the nearby Leonardo Hotel.",
+    },
+    {
+      forbidden: "24-Stunden-Rezeption",
+      preferred: "Gästesupport rund um die Uhr",
+      reason: "master St. Paul’s does not have an on-site 24-hour reception.",
+    },
+    {
+      forbidden: "Self-Check-in-System",
+      preferred: "kontaktloses Check-in-System",
+      reason: "Client-approved wording for the check-in process.",
+    },
+    {
+      forbidden: "Wie erfolgt der Check-in in master St. Paul’s?",
+      preferred: "Wie funktioniert der Check-in im master St. Paul’s?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Ein Mitarbeitender überprüft Ihre Buchung und hilft weiter.",
+      preferred: "Ein Mitarbeiter unseres Teams überprüft Ihre Buchung und hilft Ihnen weiter.",
+      reason: "Client correction for access-code support wording.",
+    },
+    {
+      forbidden: "Guest-Relations-Team",
+      preferred: "Guest-Relations-Team",
+      reason: "Keep official team label unchanged if already used.",
+    },
 
+    // Workspace / business
+    {
       forbidden: "arbeitsfreundliche Tische",
-
       preferred: "Tische, die sich gut zum Arbeiten eignen",
-
-      reason: "Avoid literal phrasing. This sounds more natural in German hospitality copy."
-
+      reason: "Avoid literal phrasing. This sounds more natural in German hospitality copy.",
     },
-
     {
-
       forbidden: "Remote-Worker",
-
       preferred: "Gäste, die remote arbeiten",
-
-      reason: "Avoid unnecessary English terms in German guest-facing copy."
-
+      reason: "Avoid unnecessary English terms in German guest-facing copy.",
     },
-
     {
-
-      forbidden: "Großes Studio Erdgeschoss",
-
-      preferred: "Großes Studio im Erdgeschoss",
-
-      reason: "Grammar fix. German requires 'im Erdgeschoss' here."
-
+      forbidden: "Arbeits- oder Co-Working-Bereich",
+      preferred: "Arbeitsbereich oder Co-Working-Bereich",
+      reason: "More natural phrasing in German FAQ questions.",
     },
-
     {
-
-      forbidden: "laptopsichere Safes",
-
-      preferred: "Safes in Laptopgröße",
-
-      reason: "'Laptopsichere Safes' sounds unnatural. Use the clearer hospitality term."
-
+      forbidden: "Tisch oder Arbeitsbereich",
+      preferred: "Arbeitsbereich mit Arbeitstisch",
+      reason: "Client correction for business-travel answer.",
     },
-
     {
-
-      forbidden: "leichte Auffrischung",
-
-      preferred: "leichter Reinigungsservice",
-
-      reason: "In housekeeping context, 'Auffrischung' is vague. Use a clear cleaning-related term."
-
+      forbidden: "Tisch bzw. Schreibtisch",
+      preferred: "Tisch bzw. Schreibtisch",
+      reason: "Keep this wording for remote-work answers when no dedicated co-working area exists.",
     },
 
+    // Utilities / fees / taxes
     {
-
-      forbidden: "vollständige Reinigung",
-
-      preferred: "vollständiger Reinigungsservice",
-
-      reason: "More natural and service-oriented in hotel FAQ copy."
-
+      forbidden: "Sind Nebenkosten wie WLAN, Strom und Wasser im Übernachtungspreis von master St. Paul’s enthalten?",
+      preferred: "Sind WLAN, Strom und Wasser im Übernachtungspreis von master St. Paul’s enthalten?",
+      reason: "Client-approved question phrasing. Avoid 'Nebenkosten' here.",
     },
-
     {
-
-      forbidden: "Lounge Bar",
-
-      preferred: "Lounge-Bar",
-
-      reason: "Use German compound hyphenation."
-
+      forbidden: "Gemeindesteuern",
+      preferred: "lokale Steuern und Gebühren",
+      reason: "'Council taxes' should not be translated literally as 'Gemeindesteuern' in guest-facing copy.",
     },
-
     {
-
-      forbidden: "Steuerinhalte",
-
-      preferred: "enthaltenen Steuern",
-
-      reason: "'Steuerinhalte' is unnatural German. Use a natural phrase for included taxes."
-
+      forbidden: "ohne Aufpreis in jedem Übernachtungspreis enthalten",
+      preferred: "ohne Aufpreis im Übernachtungspreis enthalten",
+      reason: "Client-approved smoother wording.",
     },
-
     {
-
-      forbidden: "wird die Stadtabgabe bei der Ankunft separat eingezogen",
-
-      preferred: "wird die Stadtabgabe bei der Ankunft separat berechnet",
-
-      reason: "Use natural payment wording. 'Eingezogen' sounds bureaucratic."
-
+      forbidden: "kostenlos",
+      preferred: "kostenfrei",
+      reason: "Preferred wording in polished hospitality communication.",
     },
 
+    // Booking / URL / contact
     {
-
-      forbidden: "Trevi-Fontäne",
-
-      preferred: "Trevi-Brunnen",
-
-      reason: "Keep terminology consistent. 'Trevi-Brunnen' is the standard German name."
-
+      forbidden: "https://www.stay-master.com/",
+      preferred: "https://www.stay-master.de/",
+      reason: "Use the German website URL in German FAQ content when referring to direct booking.",
     },
-
     {
-
-      forbidden: "direkt vor dem master Trevi",
-
-      preferred: "direkt vor master Trevi",
-
-      reason: "Do not add an article before the brand name."
-
+      forbidden: "info@staymaster.com",
+      preferred: "info@stay-master.com",
+      reason: "Fix incorrect email address. Official email includes a hyphen.",
     },
-
     {
-
-      forbidden: "Die Unterkunft arbeitet mit",
-
-      preferred: "Die Unterkunft nutzt",
-
-      reason: "More natural German phrasing for systems or processes."
-
+      forbidden: "Wie ist die direkte Telefonnummer von master St. Paul’s?",
+      preferred: "Wie lautet die Telefonnummer von master St. Paul’s?",
+      reason: "Client-approved question phrasing.",
     },
-
     {
-
-      forbidden: "im master Trevi",
-
-      preferred: "bei master Trevi",
-
-      reason: "For service and policy questions, 'bei master Trevi' usually sounds more natural than 'im master Trevi'."
-
+      forbidden: "+443308187011",
+      preferred: "+44 330 818 7011",
+      reason: "Use readable phone formatting in German guest-facing copy.",
     },
 
+    // Location / transport
     {
-
-      forbidden: "das master Trevi",
-
-      preferred: "master Trevi",
-
-      reason: "Avoid adding an article before the brand name unless a full noun phrase requires it."
-
+      forbidden: "wie nah ist es an der St Paul’s Cathedral",
+      preferred: "wie weit ist es von der St Paul’s Cathedral entfernt",
+      reason: "Client-approved phrasing for distance questions.",
     },
-     {
-
-      forbidden: "jede Einheit",
-
-      preferred: "jedes Apartment",
-
-      reason: "Avoid literal translation of 'unit'. In guest-facing apartment copy, 'Apartment' sounds more natural."
-
-    },
-
     {
-
-      forbidden: "in der Einheit",
-
-      preferred: "im Apartment",
-
-      reason: "Avoid literal 'unit' phrasing. Use 'Apartment' for natural hospitality German."
-
+      forbidden: "ab Heathrow",
+      preferred: "vom Flughafen Heathrow aus",
+      reason: "More natural German for airport-origin directions.",
+    },
+    {
+      forbidden: "Organisiert master St. Paul’s Flughafentransfers für Gäste?",
+      preferred: "Bietet master St. Paul’s Flughafentransfers an?",
+      reason: "Client-approved concise question phrasing.",
+    },
+    {
+      forbidden: "Taxi-Apps",
+      preferred: "Fahrdienst-Apps",
+      reason: "More accurate for Uber, Bolt and FreeNow.",
+    },
+    {
+      forbidden: "gegenüber des Flusses",
+      preferred: "auf der anderen Seite der Themse",
+      reason: "Client-approved wording for Borough Market location.",
+    },
+    {
+      forbidden: "Ein angenehmer Spaziergang über die Millennium Bridge erreicht die Tate Modern in etwa zehn Minuten.",
+      preferred: "Die Tate Modern erreichen Sie über die Millennium Bridge in etwa zehn Gehminuten.",
+      reason: "Client-approved natural German phrasing.",
     },
 
+    // Parking / local services
     {
-
-      forbidden: "Streaming-Vergnügen",
-
-      preferred: "Streaming-Unterhaltung",
-
-      reason: "Avoid overly promotional or unnatural phrasing. 'Streaming-Unterhaltung' is more neutral and polished."
-
+      forbidden: "Parkmöglichkeiten vor Ort",
+      preferred: "Parkmöglichkeiten vor Ort",
+      reason: "Allowed phrasing for parking questions.",
     },
-
     {
-
-      forbidden: "nächtliche Gebühr",
-
-      preferred: "Gebühr pro Nacht",
-
-      reason: "Use the standard German hospitality phrasing for nightly fees."
-
+      forbidden: "auf dem Gelände",
+      preferred: "vor Ort",
+      reason: "More natural location wording.",
     },
-
     {
-
       forbidden: "Convenience Stores",
-
       preferred: "Lebensmittelgeschäfte",
-
-      reason: "Avoid unnecessary English in German hotel copy."
-
+      reason: "Avoid unnecessary English in German copy.",
     },
 
+    // Food / breakfast / delivery
     {
-
-      forbidden: "Spätkauf-Lebensmittelgeschäfte",
-
-      preferred: "Lebensmittelgeschäfte mit langen Öffnungszeiten oder 24-Stunden-Shops",
-
-      reason: "'Spätkauf' is Germany-specific and sounds less suitable for Warsaw."
-
+      forbidden: "Serviert master St. Paul’s Frühstück vor Ort?",
+      preferred: "Serviert master St. Paul’s Frühstück vor Ort?",
+      reason: "Question is acceptable. Answer should begin with 'Nein,' when breakfast is not served on-site.",
+    },
+    {
+      forbidden: "Frühstück wird nicht vor Ort angeboten.",
+      preferred: "Nein, Frühstück wird nicht vor Ort angeboten.",
+      reason: "Client correction: answer should clearly start with 'Nein,'.",
+    },
+    {
+      forbidden: "Die Apartments sind für Selbstverpflegung ausgelegt",
+      preferred: "Die Wohnungen sind für Selbstverpflegung ausgelegt",
+      reason: "Use 'Wohnungen' in stay-master answers.",
+    },
+    {
+      forbidden: "in ihrem Apartment kochen",
+      preferred: "ihre Mahlzeiten im Apartment selbst zubereiten",
+      reason: "Client-approved more natural wording.",
+    },
+    {
+      forbidden: "Kooperiert master St. Paul’s mit örtlichen Restaurants für Essenslieferungen?",
+      preferred: "Arbeitet master St. Paul’s mit lokalen Restaurants oder Lieferdiensten zusammen?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Kuriere liefern in der Regel bis zum Haupteingang",
+      preferred: "Die Lieferung erfolgt in der Regel bis zum Haupteingang",
+      reason: "Client-approved answer phrasing.",
+    },
+    {
+      forbidden: "zu meinem Apartment",
+      preferred: "zu meiner Wohnung",
+      reason: "Use 'Wohnung' for the guest apartment in direct guest questions.",
+    },
+    {
+      forbidden: "Küchenutensilien, Geschirr und Besteck",
+      preferred: "Töpfen, Pfannen, Messern, Schneidebrettern, Geschirr, Gläsern und Besteck",
+      reason: "Use concrete kitchen items from the client-approved answer.",
     },
 
+    // Accessibility / facilities
     {
-
-      forbidden: "direkte Straßenbahn",
-
-      preferred: "direkte Straßenbahnverbindung",
-
-      reason: "More natural German when describing public transport access."
-
+      forbidden: "Gibt es in master St. Paul’s überall Aufzüge?",
+      preferred: "Verfügt master St. Paul’s über Aufzüge zu allen Etagen?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "stufenfreien Zugang",
+      preferred: "barrierefreien Zugang",
+      reason: "Client-approved phrasing for lift access.",
+    },
+    {
+      forbidden: "zu jeder Apartmentetage",
+      preferred: "zu allen Bereichen und Apartmentetagen",
+      reason: "Client-approved answer wording.",
+    },
+    {
+      forbidden: "Verfügen einige Apartments in master St. Paul’s über barrierefreie Badezimmer?",
+      preferred: "Verfügen einige Wohnungen in master St. Paul’s über barrierefreie Badezimmer?",
+      reason: "Client-approved wording with 'Wohnungen'.",
     },
 
+    // Check-in / check-out / payment
     {
-
-      forbidden: "muss am Abreisetag bis",
-
-      preferred: "erfolgt am Abreisetag bis",
-
-      reason: "Avoid regulatory tone in hotel FAQ copy; use neutral hospitality phrasing."
-
+      forbidden: "Wann sind die regulären Check-in- und Check-out-Zeiten bei master St. Paul’s?",
+      preferred: "Wann sind die regulären Check-in- und Check-out-Zeiten im master St. Paul’s?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Können Gäste einen frühen Check-in in master St. Paul’s anfragen?",
+      preferred: "Können Gäste einen frühen Check-in im master St. Paul’s anfragen?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Ist ein später Check-out in master St. Paul’s möglich und fällt eine Gebühr an?",
+      preferred: "Ist ein später Check-out im master St. Paul’s möglich und fallen dafür Gebühren an?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "kann gebührenpflichtig sein",
+      preferred: "kann mit zusätzlichen Gebühren verbunden sein",
+      reason: "Client-approved phrasing for late check-out fees.",
+    },
+    {
+      forbidden: "Vorauszahlungen oder Kautionsanforderungen",
+      preferred: "Vorauszahlungen oder Kautionen",
+      reason: "More natural guest-facing wording.",
+    },
+    {
+      forbidden: "zur Deckung von Schäden oder Nebenkosten vorautorisiert werden kann",
+      preferred: "zur Deckung möglicher Schäden oder zusätzlicher Kosten vorübergehend autorisiert werden kann",
+      reason: "Client-approved payment wording.",
+    },
+    {
+      forbidden: "über den bereitgestellten sicheren Zahlungslink im Voraus bezahlt werden",
+      preferred: "im Voraus über den bereitgestellten sicheren Zahlungslink bezahlt werden",
+      reason: "Client-approved word order.",
     },
 
+    // Pets / occupancy / experiences
     {
-
-      forbidden: "Wie ist die genaue Adresse",
-
-      preferred: "Wie lautet die genaue Adresse",
-
-      reason: "Standard German phrasing for asking about an exact address."
-
+      forbidden: "Langzeit-Rabatte",
+      preferred: "Rabatte für längere Aufenthalte",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Dürfen Hunde in den Apartments von master St. Paul’s übernachten?",
+      preferred: "Dürfen Hunde in den Wohnungen von master St. Paul’s übernachten?",
+      reason: "Use 'Wohnungen' for stay-master apartment units.",
+    },
+    {
+      forbidden: "Wie hoch ist die maximale Belegung",
+      preferred: "Wie viele Gäste können",
+      reason: "Client-approved question phrasing for occupancy.",
+    },
+    {
+      forbidden: "Studio-mit-Schlafsofa-Apartments",
+      preferred: "Studios mit Schlafsofa",
+      reason: "More natural German category wording.",
+    },
+    {
+      forbidden: "Family Apartment für bis zu 5 Gäste",
+      preferred: "Family Apartment für bis zu 5 Gäste",
+      reason: "Keep official category names if source provides them.",
+    },
+    {
+      forbidden: "Was sind die besten Unternehmungen",
+      preferred: "Was kann man unternehmen",
+      reason: "Client-approved softer question style for local experiences.",
+    },
+    {
+      forbidden: "St. Paul’s Cathedral erklimmen",
+      preferred: "Besuchen Sie die St. Paul’s Cathedral",
+      reason: "Client-approved, more natural recommendation wording.",
+    },
+    {
+      forbidden: "Organisiert master St. Paul’s lokale Touren oder Erlebnisse für Gäste?",
+      preferred: "Bietet master St. Paul’s Unterstützung bei der Buchung lokaler Touren oder Erlebnisse an?",
+      reason: "Client-approved question phrasing.",
+    },
+    {
+      forbidden: "Fitnesscenter",
+      preferred: "Fitnessstudios",
+      reason: "For nearby external gyms, 'Fitnessstudios' is more natural than 'Fitnesscenter'.",
+    },
+    {
+      forbidden: "Fitnessräume",
+      preferred: "Fitnessräume",
+      reason: "Allowed when referring to hotel fitness rooms such as the nearby Leonardo Royal Hotel.",
     },
 
+    // General old rules kept because still relevant
     {
-
+      forbidden: "in ca.",
+      preferred: "in etwa",
+      reason: "Prefer natural German.",
+    },
+    {
+      forbidden: "auf Wunsch",
+      preferred: "auf Anfrage",
+      reason: "Standard hospitality phrasing for requests.",
+    },
+    {
+      forbidden: "steht ... bereit",
+      preferred: "steht ... zur Verfügung",
+      reason: "Prefer standard hospitality phrasing.",
+    },
+    {
+      forbidden: "muss bis",
+      preferred: "erfolgt bis",
+      reason: "Avoid regulatory tone in check-out copy.",
+    },
+    {
+      forbidden: "zu erfolgen",
+      preferred: "",
+      reason: "Overly bureaucratic phrasing. Prefer natural forms like 'erfolgt bis'.",
+    },
+    {
+      forbidden: "Ortszeit",
+      preferred: "",
+      reason: "Redundant in hotel FAQs. Local time is assumed.",
+    },
+    {
+      forbidden: "Early Check-in",
+      preferred: "früher Check-in",
+      reason: "Avoid English hospitality terms where German wording is natural.",
+    },
+    {
+      forbidden: "Late Check-out",
+      preferred: "später Check-out",
+      reason: "Avoid English hospitality terms where German wording is natural.",
+    },
+    {
+      forbidden: "Bügeleisen und brett",
+      preferred: "Bügeleisen und Bügelbrett",
+      reason: "Grammar fix.",
+    },
+    {
       forbidden: "Geschirr und Besteck und Küchenutensilien",
-
       preferred: "Geschirr, Besteck und Küchenutensilien",
-
-      reason: "Avoid duplicated 'und' in lists."
-
+      reason: "Avoid duplicated 'und' in lists.",
     },
-
     {
-
-      forbidden: "Paare auf Städtetrip",
-
-      preferred: "Paare auf einem Städtetrip",
-
-      reason: "Correct and natural German phrasing."
-
+      forbidden: "direkte Straßenbahn",
+      preferred: "direkte Straßenbahnverbindung",
+      reason: "More natural German when describing public transport access.",
     },
-            { forbidden: "Haus", preferred: "Hotel", reason: "Do not refer to the property as 'Haus'." },
-            { forbidden: "Hausgäste", preferred: "Hotelgäste", reason: "Avoid 'Hausgäste'." },
-            { forbidden: "in ca.", preferred: "in etwa", reason: "Prefer natural German." },
-            { forbidden: "Ernährungswünsche", preferred: "Ernährungsbedürfnisse" },
-            { forbidden: "eigenes Badezimmer", preferred: "en-suite Badezimmer", reason: "Keep 'en-suite' explicit." },
-            { forbidden: "Familienreisende", preferred: "Familien", reason: "Natural German; avoid literal translation of 'family travelers'." },
-            { forbidden: "Bügeleisen und brett", preferred: "Bügeleisen und Bügelbrett", reason: "Grammar fix." },
-            { forbidden: "Gepäckaufbewahrungsregelung", preferred: "Gepäckaufbewahrung", reason: "Natural phrasing for guests." },
-            { forbidden: "aufgeführt", preferred: "angeboten", reason: "Avoid saying 'listed'; act as the provider, not an observer." },
-            { forbidden: "Wie lauten die regulären", preferred: "Wann sind die regulären", reason: "Avoid stiff template 'Wie lauten ...?'. Prefer natural 'Wann ...?'" },
-            { forbidden: "Wie lautet die Stornierungsregelung", preferred: "Wie sind die Stornierungsbedingungen", reason: "More natural and standard phrasing in hotel FAQs." },
-            { forbidden: "steht ... bereit", preferred: "steht ... zur Verfügung", reason: "Prefer standard hospitality phrasing." },
-            { forbidden: "auf Wunsch", preferred: "auf Anfrage", reason: "Standard hospitality phrasing for requests." },
+  ],
 
-            // === NEW MAPPINGS — cover orphaned examples ===
-            { forbidden: "Fitnessstudio", preferred: "Fitnessraum", reason: "Prefer hotel-typical 'Fitnessraum' unless official label is 'Fitnessstudio'." },
-            { forbidden: "besitzt", preferred: "verfügt über", reason: "Prefer standard hospitality verb 'verfügt über' over 'besitzt'." },
-            { forbidden: "mittags", preferred: "", reason: "Remove unnecessary 'mittags' after explicit time like '12:00 Uhr'. The time itself is clear." },
-            { forbidden: "Same-Day", preferred: "am selben Tag", reason: "Avoid English terms in German. Use 'mit Rückgabe am selben Tag'." },
-            { forbidden: "Mitarbeitenden", preferred: "Personal", reason: "Use 'das Personal' for natural hotel tone; avoids HR-style wording." },
-            { forbidden: "Frühstücksangebote", preferred: "Frühstücksoptionen", reason: "More standard hotel phrasing." },
-            { forbidden: "In-Room-Dining", preferred: "Zimmerservice", reason: "Use consistent German term; avoid mixed English." },
-            { forbidden: "Room-Service", preferred: "Zimmerservice", reason: "Use consistent German term." },
-            { forbidden: "engagiert", preferred: "", reason: "Avoid 'engagiert(e)' for reception. Rephrase to 'Rezeptionsteam steht ... zur Verfügung'." },
-            { forbidden: "arrangiert", preferred: "bereitgestellt", reason: "Avoid 'arrangiert'; prefer 'bereitgestellt', 'eingerichtet', or 'nach vorheriger Absprache'." },
-            { forbidden: "zu Fuß zurückgelegt werden", preferred: "zu Fuß zurücklegen", reason: "Prefer natural active 'lässt sich ... zurücklegen' over passive." },
-            { forbidden: "Haustür", preferred: "Hotel", reason: "Avoid metaphorical 'von der Haustür'. Use factual 'vom Hotel'." },
-            { forbidden: "durchgehend 24 Stunden", preferred: "rund um die Uhr", reason: "Prefer concise, natural 24/7 phrasing." },
-            { forbidden: "Unterstützung gewährleistet", preferred: "steht zur Verfügung", reason: "Prefer guest-focused phrasing over generic 'Unterstützung gewährleistet'." },
-            { forbidden: "Wie lautet", preferred: "Wie sind", reason: "Avoid stiff 'Wie lautet/lauten'; prefer natural question forms." },
-            // === NEW MAPPINGS — uncovered issues from current DE output ===
-
-{ 
-  forbidden: "Early Check-in", 
-  preferred: "früher Check-in", 
-  reason: "Avoid English hospitality terms; use natural German phrasing." 
-},
-{
-  forbidden: "(Italienisch, Russisch, Spanisch, Kroatisch)",
-  preferred: "(Italienisch, Russisch, Spanisch und Kroatisch)",
-  reason: "In Aufzählungen im Deutschen vor dem letzten Element 'und' verwenden (statt nur Kommas).",
-},
-{
-  forbidden: "sorgen für Barrierefreiheit und Komfort für Gäste mit eingeschränkter Mobilität",
-  preferred: "sorgen für einen barrierefreien und komfortablen Aufenthalt für Gäste mit eingeschränkter Mobilität",
-  reason: "Natürlicher und idiomatischer im Hotelkontext, vermeidet das abstrakte Substantiv 'Barrierefreiheit' in dieser Satzstruktur.",
-},
-{
-  forbidden: "Hallenschwimmbad",
-  preferred: "Innenpool",
-  reason: "Im Hotelkontext ist 'Innenpool' die gängigere Bezeichnung als 'Hallenschwimmbad'.",
-},
-
-{ 
-  forbidden: "Late Check-out", 
-  preferred: "später Check-out", 
-  reason: "Avoid English hospitality terms; use natural German phrasing." 
-},
-{ 
-  forbidden: "(Ortszeit)", 
-  preferred: "", 
-  reason: "Redundant after explicit times; standard hotel German omits it." 
-},
-{ 
-  forbidden: "zu erfolgen", 
-  preferred: "", 
-  reason: "Overly bureaucratic phrasing; prefer natural forms like 'erfolgt bis'." 
-},
-{ 
-  forbidden: "Anlage", 
-  preferred: "Hotel", 
-  reason: "Avoid property-style wording; 'Hotel' is the standard hospitality term." 
-},
-{ 
-  forbidden: "Front-Office-Team", 
-  preferred: "Rezeptionsteam", 
-  reason: "Avoid Denglish; use standard German hotel terminology." 
-},
-{ 
-  forbidden: "Front Office", 
-  preferred: "Rezeption", 
-  reason: "Avoid English terminology in German hotel copy." 
-},
-{ 
-  forbidden: "Gym", 
-  preferred: "Fitnessraum", 
-  reason: "Avoid English; 'Fitnessraum' is the typical hotel term." 
-},
-{ 
-  forbidden: "mehrsprachigen Service", 
-  preferred: "mehrsprachige Unterstützung", 
-  reason: "Avoid generic 'Service'; prefer guest-focused wording." 
-},
-{ 
-  forbidden: " – ", 
-  preferred: "-", 
-  reason: "Avoid spaced en dashes in numeric ranges; use hyphen without spaces (e.g., 6-25)." 
-},
-{
-  forbidden: "kostenlos",
-  preferred: "kostenfrei",
-  reason: "Preferred wording in upscale hotel communication."
-},
-{
-  forbidden: "nur Frühstück",
-  preferred: "ausschließlich Frühstück",
-  reason: "Prefer more polished hospitality tone."
-},
-{
-  forbidden: "warm-kaltes",
-  preferred: "warmes und kaltes",
-  reason: "Use natural coordinated adjectives in German."
-},
-{
-  forbidden: "muss bis",
-  preferred: "erfolgt bis",
-  reason: "Avoid regulatory tone; prefer neutral hospitality phrasing."
-},
-{
-  forbidden: "mehrsprachigen Service",
-  preferred: "mehrsprachige Unterstützung",
-  reason: "Avoid generic 'Service'; prefer natural guest-focused phrasing."
-},
-{
-  forbidden: "Ortszeit",
-  preferred: "",
-  reason: "Redundant in hotel FAQs; local time is assumed."
-},
-{
-  forbidden: "auf dem Gelände",
-  preferred: "vor Ort",
-  reason: "More natural hotel phrasing."
-},
-{
-  forbidden: "viel Spaß bereiten",
-  preferred: "zur Unterhaltung",
-  reason: "Avoid overly colloquial phrases in marketing copy; use professional hospitality tone."
-},
-{
-  forbidden: "Kaffee-und-Kuchen-Pause",
-  preferred: "Kaffee- und Kuchenpause",
-  reason: "Avoid excessive hyphenation (hyphen monsters) for better readability."
-},
-{
-  forbidden: "nachmittägliche",
-  preferred: "am Nachmittag",
-  reason: "Avoid clunky adjectives like 'nachmittägliche'. Prefer adding 'am Nachmittag' at the end of the phrase."
-}
-        ],
-        examples: [
-
-         {
-
-      draft: "master Trevi ist ein luxuriöses Aparthotel, das private Wohnbereiche mit hotelähnlichen Services wie Rezeption, Reinigung und Wäscherei verbindet.",
-
-      polish: "master Trevi ist ein luxuriöses Aparthotel, das private Wohnbereiche mit hotelähnlichen Leistungen wie Rezeption, Reinigung und Wäschemöglichkeiten verbindet.",
-
-      note: "Use 'Wäschemöglichkeiten' for laundry facilities. 'Wäscherei' may imply a laundry service."
-
-    },
-
+  examples: [
     {
-
-      draft: "Die Apartments verfügen über arbeitsfreundliche Tische.",
-
-      polish: "Die Apartments verfügen über Tische, die sich gut zum Arbeiten eignen.",
-
-      note: "Avoid literal phrasing. The polished version sounds more natural in German."
-
+      draft: "master St. Paul’s ist ein luxuriöses Aparthotel, das private Wohnbereiche mit hotelähnlichen Leistungen wie Rezeption, Reinigung und Wäschemöglichkeiten verbindet.",
+      polish: "master St. Paul’s bietet hochwertige Serviced Apartments mit privaten Wohnbereichen und den Services eines Hotels wie Reinigung und Wäschemöglichkeiten.",
+      note: "Client hard rule: master St. Paul’s is not an Aparthotel. Do not claim an on-site reception.",
     },
-
     {
-
-      draft: "Gibt es bei master Trevi einen Arbeitsplatz oder Co-Working-Bereich für Remote-Worker?",
-
-      polish: "Gibt es bei master Trevi einen Arbeitsbereich oder Co-Working-Bereich für Gäste, die remote arbeiten?",
-
-      note: "Avoid 'Remote-Worker' in German guest-facing copy."
-
+      draft: "Was genau ist master St. Paul’s - Hotel, Aparthotel oder Serviced Apartments?",
+      polish: "Was genau ist master St. Paul’s - ein Hotel, Aparthotel oder eine Unterkunft mit Serviced Apartments?",
+      note: "Use natural German grammar with articles in the accommodation-type list.",
     },
-
     {
-
-      draft: "Großes Studio Erdgeschoss",
-
-      polish: "Großes Studio im Erdgeschoss",
-
-      note: "Grammar fix. German needs 'im Erdgeschoss'."
-
+      draft: "master St. Paul’s eignet sich für Geschäftsreisende, Paare, alleinreisende Gäste und Familien, die großzügige Serviced Apartments mit Küche im Zentrum Londons suchen.",
+      polish: "master St. Paul’s eignet sich ideal für Geschäftsreisende, Paare, Alleinreisende und Familien, die großzügige Serviced Apartments mit eigener Küche im Zentrum Londons suchen.",
+      note: "Client-approved wording. Use 'Alleinreisende' and 'eigene Küche'.",
     },
-
     {
-
-      draft: "Sind in allen Apartments bei master Trevi laptopsichere Safes zur sicheren Aufbewahrung installiert?",
-
-      polish: "Gibt es in allen Apartments bei master Trevi Safes in Laptopgröße zur sicheren Aufbewahrung?",
-
-      note: "'Laptopsichere Safes' is unnatural. Prefer direct phrasing with 'Safes in Laptopgröße'."
-
+      draft: "Ja, die voll ausgestatteten Küchen, privaten Wasch-Trockner und Apartment-Grundrisse machen master St. Paul’s komfortabel für längere Aufenthalte.",
+      polish: "Ja, die voll ausgestatteten Küchen, eigene Waschmaschinen mit Trocknerfunktion und großzügigen Apartment-Grundrisse machen master St. Paul’s ideal für längere Aufenthalte.",
+      note: "Use client-approved washer-dryer wording and stronger extended-stay phrasing.",
     },
-
     {
-
-      draft: "Jedes Apartment erhält täglich eine leichte Auffrischung.",
-
-      polish: "Jedes Apartment erhält täglich einen leichten Reinigungsservice.",
-
-      note: "In housekeeping context, 'Reinigungsservice' is clearer than 'Auffrischung'."
-
+      draft: "Die Apartments bieten einen Tisch bzw. Schreibtisch, der sich zum Remote-Arbeiten eignet, sowie zuverlässiges High-Speed-Internet. Einen eigenen Co-Working-Bereich gibt es vor Ort nicht.",
+      polish: "Die Wohnungen bieten einen Tisch bzw. Schreibtisch, der sich zum Remote-Arbeiten eignet, sowie zuverlässiges High-Speed-Internet. Einen eigenen Co-Working-Bereich gibt es vor Ort nicht.",
+      note: "Use 'Wohnungen' for the apartment units.",
     },
-
     {
-
-      draft: "Verfügt master Trevi über eine Lounge Bar?",
-
-      polish: "Verfügt master Trevi über eine Lounge-Bar?",
-
-      note: "Use German compound hyphenation."
-
+      draft: "Sind Nebenkosten wie WLAN, Strom und Wasser im Übernachtungspreis von master St. Paul’s enthalten?",
+      polish: "Sind WLAN, Strom und Wasser im Übernachtungspreis von master St. Paul’s enthalten?",
+      note: "Client-approved question. Avoid 'Nebenkosten' in this FAQ question.",
     },
-
     {
-
-      draft: "Die Steuerinhalte hängen vom Buchungskanal ab.",
-
-      polish: "Welche Steuern enthalten sind, hängt vom Buchungskanal ab.",
-
-      note: "'Steuerinhalte' is not natural German. Rephrase the sentence."
-
+      draft: "Ja, unbegrenztes High-Speed-WLAN, Strom, Heizung, Wasser und Gemeindesteuern sind ohne Aufpreis in jedem Übernachtungspreis enthalten.",
+      polish: "Ja, unbegrenztes High-Speed-WLAN, Strom, Heizung, Wasser sowie lokale Steuern und Gebühren sind ohne Aufpreis im Übernachtungspreis enthalten.",
+      note: "Client-approved answer. Avoid literal 'Gemeindesteuern'.",
     },
-
     {
-
-      draft: "Bei Buchungen über Drittplattformen wird die Stadtabgabe bei der Ankunft separat eingezogen.",
-
-      polish: "Bei Buchungen über Drittplattformen wird die Stadtabgabe bei der Ankunft separat berechnet.",
-
-      note: "'Separat berechnet' is more natural than 'eingezogen'."
-
+      draft: "Wie häufig erfolgt die Reinigung bei master St. Paul’s?",
+      polish: "Wie oft wird bei master St. Paul’s gereinigt?",
+      note: "Client-approved question phrasing.",
     },
-
     {
-
-      draft: "Spazieren Sie zur Trevi-Fontäne, Spanischen Treppe, zum Pantheon und zur Piazza Navona.",
-
-      polish: "Spazieren Sie zum Trevi-Brunnen, zur Spanischen Treppe, zum Pantheon und zur Piazza Navona.",
-
-      note: "Use the standard German name 'Trevi-Brunnen' and maintain correct prepositions."
-
+      draft: "Reinigung ist inbegriffen; bei längeren Aufenthalten erfolgt ein Standardservice mit Bettwäsche- und Handtuchwechsel einmal pro Woche. Zusätzliche Reinigungen können gegen Gebühr gebucht werden.",
+      polish: "Ein Reinigungsservice ist inklusive; bei längeren Aufenthalten erfolgt einmal pro Woche ein Standardservice mit Bettwäsche- und Handtuchwechsel.",
+      note: "Client-approved answer. Remove extra-cleaning fee sentence unless the source specifically requires it.",
     },
-
     {
-
-      draft: "Einige der besten Trattorien und Aperitivo-Bars Roms liegen direkt vor dem master Trevi.",
-
-      polish: "Einige der besten Trattorien und Aperitivo-Bars Roms liegen direkt vor master Trevi.",
-
-      note: "Avoid adding an article before the brand name."
-
+      draft: "Wie ist die direkte Telefonnummer von master St. Paul’s?",
+      polish: "Wie lautet die Telefonnummer von master St. Paul’s?",
+      note: "Client-approved question phrasing.",
     },
-
     {
-
-      draft: "Die Unterkunft arbeitet mit einem Self-Check-in-System.",
-
-      polish: "Die Unterkunft nutzt ein Self-Check-in-System.",
-
-      note: "'Nutzt' sounds more natural than 'arbeitet mit' for systems."
-
+      draft: "Gäste erreichen das Team rund um die Uhr per WhatsApp unter +44 330 818 7011 oder per E-Mail an info@staymaster.com.",
+      polish: "Gäste erreichen das Team rund um die Uhr per WhatsApp unter +44 330 818 7011 oder per E-Mail an info@stay-master.com.",
+      note: "Fix the email address. Keep readable phone formatting.",
     },
-
     {
-
-      draft: "master Wola eignet sich sowohl für Geschäftsreisende auf längeren Einsätzen, Paare auf Städtetrip als auch Familien, die Warschau entdecken.",
-
-      polish: "master Wola eignet sich sowohl für Geschäftsreisende auf längeren Einsätzen als auch für Paare auf einem Städtetrip und Familien, die Warschau entdecken.",
-
-      note: "Fix missing article and improve the parallel structure of 'sowohl ... als auch'."
-
+      draft: "Wie können Gäste einen Aufenthalt in master St. Paul’s buchen?",
+      polish: "Wie können Gäste einen Aufenthalt im master St. Paul’s buchen?",
+      note: "Use natural German preposition for the stay.",
     },
-
     {
-
-      draft: "Der mehrsprachige Gästeservice antwortet rund um die Uhr per WhatsApp, Telefon und E-Mail.",
-
-      polish: "Das mehrsprachige Support-Team ist rund um die Uhr per WhatsApp, Telefon und E-Mail erreichbar.",
-
-      note: "Avoid generic 'Gästeservice' when a more natural support-team phrasing fits the source."
-
+      draft: "Gäste können direkt über die Website buchen: https://www.stay-master.com/",
+      polish: "Gäste können direkt über die Website buchen: https://www.stay-master.de/",
+      note: "Use the German website URL in German content.",
     },
-
     {
-
-      draft: "Ja, im hoteleigenen Waschraum zur Selbstbedienung stehen Waschmittel und gemeinschaftliche Bügelbretter bereit.",
-
-      polish: "Ja, im Waschraum zur Selbstbedienung vor Ort stehen Waschmittel und gemeinsam nutzbare Bügelbretter zur Verfügung.",
-
-      note: "Do not call master Wola 'hotel' in this context. Also prefer 'steht zur Verfügung' over 'steht bereit'."
-
+      draft: "Wo genau befindet sich master St. Paul’s und wie nah ist es an der St Paul’s Cathedral?",
+      polish: "Wo genau befindet sich master St. Paul’s und wie weit ist es von der St Paul’s Cathedral entfernt?",
+      note: "Client-approved distance question phrasing.",
     },
-
     {
-
-      draft: "Ja, jede Einheit verfügt über einen Smart-TV, auf dem Netflix für das Streaming-Vergnügen der Gäste vorinstalliert ist.",
-
-      polish: "Ja, jedes Apartment verfügt über einen Smart-TV mit vorinstalliertem Netflix für Streaming-Unterhaltung.",
-
-      note: "Avoid literal 'unit' and overly promotional 'Streaming-Vergnügen'."
-
+      draft: "Wie erreicht man master St. Paul’s am besten mit öffentlichen Verkehrsmitteln ab Heathrow?",
+      polish: "Wie erreicht man master St. Paul’s am besten mit öffentlichen Verkehrsmitteln vom Flughafen Heathrow aus?",
+      note: "Client-approved airport-origin phrasing.",
     },
-
     {
-
-      draft: "Darüber hinaus verfügen unsere Three-Bedroom Apartments exklusiv über eigene Waschmaschinen und Trockner in der Einheit.",
-
-      polish: "Darüber hinaus verfügen unsere Three-Bedroom Apartments über eigene Waschmaschinen und Trockner im Apartment.",
-
-      note: "Avoid 'in der Einheit'. 'Im Apartment' is more natural."
-
+      draft: "Organisiert master St. Paul’s Flughafentransfers für Gäste?",
+      polish: "Bietet master St. Paul’s Flughafentransfers an?",
+      note: "Client-approved question phrasing.",
     },
-
     {
-
-      draft: "Stellt master Wola in jeder Apartmentküche Kochgeschirr, Geschirr und Besteck und Küchenutensilien zur Verfügung?",
-
-      polish: "Stellt master Wola in jeder Apartmentküche Kochgeschirr, Geschirr, Besteck und Küchenutensilien zur Verfügung?",
-
-      note: "Fix duplicated 'und' in the list."
-
+      draft: "Nein, Flughafentransfers werden nicht angeboten. Gäste können jedoch Taxi-Apps wie Uber, Bolt oder FreeNow nutzen.",
+      polish: "Nein, Flughafentransfers werden nicht angeboten. Gäste können jedoch Fahrdienst-Apps wie Uber, Bolt oder FreeNow nutzen.",
+      note: "Use 'Fahrdienst-Apps' for ride-hailing apps.",
     },
-
     {
-
-      draft: "Sind Hunde in master Wola erlaubt und wie hoch ist die nächtliche Gebühr?",
-
-      polish: "Sind Hunde in master Wola erlaubt, und wie hoch ist die Gebühr pro Nacht?",
-
-      note: "'Gebühr pro Nacht' is the standard phrasing. Add comma before coordinated main clause."
-
+      draft: "Es handelt sich um eine Kollektion zeitgemäßer Serviced Apartments mit privaten Küchen, Wohnbereichen und Self-Check-in, die unabhängigen Wohnkomfort statt klassischer Full-Service-Hotelleistungen bietet.",
+      polish: "Es handelt sich um moderne Serviced Apartments mit privaten Küchen, Wohnbereichen und kontaktlosem Check-in, die unabhängiges Wohnen mit komfortablen Services verbinden.",
+      note: "Client-approved answer. Avoid over-emphasizing hotel/full-service framing.",
     },
-
     {
-
-      draft: "Wie ist die genaue Adresse von master Wola?",
-
-      polish: "Wie lautet die genaue Adresse von master Wola?",
-
-      note: "'Wie lautet die genaue Adresse' is the correct standard question form."
-
+      draft: "Ja, alle Apartments sind mit privaten Wasch-Trockner-Einheiten ausgestattet.",
+      polish: "Ja, alle Wohnungen sind mit einer eigenen Waschmaschine mit Trocknerfunktion ausgestattet.",
+      note: "Client-approved washer-dryer wording.",
     },
-
     {
-
-      draft: "Der Check-in beginnt um 15:00 Uhr, der Check-out muss am Abreisetag bis 11:00 Uhr erfolgen.",
-
-      polish: "Der Check-in beginnt um 15:00 Uhr, der Check-out erfolgt am Abreisetag bis 11:00 Uhr.",
-
-      note: "Avoid 'muss ... erfolgen', which sounds bureaucratic."
-
+      draft: "Ja, alle Apartments verfügen über eine individuell regelbare Klimaanlage und Heizung.",
+      polish: "Ja, alle Wohnungen verfügen über eine individuell regelbare Klimaanlage und Heizung.",
+      note: "Use 'Wohnungen' for apartment units.",
     },
-
     {
-
-      draft: "Die Warschauer Altstadt liegt etwa zwei Kilometer entfernt und ist mit einer direkten Straßenbahn in rund 15 Minuten bequem zu erreichen.",
-
-      polish: "Die Warschauer Altstadt liegt etwa zwei Kilometer entfernt und ist mit einer direkten Straßenbahnverbindung in rund 15 Minuten bequem zu erreichen.",
-
-      note: "'Direkte Straßenbahnverbindung' is more natural than 'direkte Straßenbahn'."
-
+      draft: "Gibt es in master St. Paul’s überall Aufzüge?",
+      polish: "Verfügt master St. Paul’s über Aufzüge zu allen Etagen?",
+      note: "Client-approved question phrasing.",
     },
-
     {
-
-      draft: "Gibt es Spätkauf-Lebensmittelgeschäfte in der Nähe von master Wola?",
-
-      polish: "Gibt es Lebensmittelgeschäfte mit langen Öffnungszeiten oder 24-Stunden-Shops in der Nähe von master Wola?",
-
-      note: "'Spätkauf' is Germany-specific and less suitable for Warsaw."
-
+      draft: "Ja, Aufzüge gewährleisten einen stufenfreien Zugang in allen Bereichen von master St. Paul’s zu jeder Apartmentetage.",
+      polish: "Ja, Aufzüge ermöglichen einen barrierefreien Zugang zu allen Bereichen und Apartmentetagen von master St. Paul’s.",
+      note: "Client-approved answer wording.",
     },
-            {
-                draft: "Gibt es im Haus kostenloses WLAN?",
-                polish: "Bietet das Hotel kostenloses WLAN?",
-                note: "Avoid 'Haus'. Prefer natural verb like 'bietet'.",
-            },
-            {
-                draft: "Ja, auf Wunsch bereitet das Restaurant vegetarische und vegane Speisen zu.",
-                polish: "Ja, auf Anfrage bereitet das Restaurant vegetarische und vegane Gerichte zu.",
-                note: "In dietary context, 'Gerichte' often sounds more natural than 'Speisen'. Keep 'auf Anfrage'.",
-            },
-            {
-                draft: "Sind Familienreisende willkommen?",
-                polish: "Sind Familien mit Kindern im Hotel herzlich willkommen?",
-                note: "Avoid 'Familienreisende'. Use 'Familien mit Kindern' for a warmer tone.",
-            },
-            {
-                draft: "Gibt es im Hotel ein Fitnessstudio?",
-                polish: "Gibt es im Hotel einen Fitnessraum?",
-                note: "Prefer the more hotel-typical term 'Fitnessraum' unless the official label is 'Fitnessstudio'.",
-            },
-            {
-                draft: "Ja, Kinder dürfen in Begleitung von Erwachsenen die Bar betreten.",
-                polish: "Ja, Kinder dürfen die Bar in Begleitung von Erwachsenen betreten.",
-                note: "Better word order for natural German flow.",
-            },
-            {
-                draft: "Es sind keine speziellen Kinderaktivitäten aufgeführt.",
-                polish: "Nein, es werden derzeit keine speziellen Kinderaktivitäten angeboten.",
-                note: "Never use 'not listed'. Speak as the hotel: 'not offered'.",
-            },
-            {
-                draft: "Welche Gepäckaufbewahrungsregelung gilt?",
-                polish: "Gibt es im Hotel eine Gepäckaufbewahrung?",
-                note: "Rephrase technical terms into natural guest questions.",
-            },
-            {
-                draft: "Das Hotel bietet gegen Gebühr Parkplätze.",
-                polish: "Das Hotel bietet Parkplätze direkt am Hotel gegen eine Gebühr an.",
-                note: "Be precise about location (vor Ort / direkt am Hotel).",
-            },
-            {
-                draft: "Verfügt jedes Zimmer im Leonardo Hotel Köln über einen Safe?",
-                polish: "Gibt es in jedem Zimmer des Leonardo Hotel Köln einen Safe?",
-                note: "Prefer direct 'Gibt es ...?' question form in FAQs.",
-            },
-            {
-                draft: "Ja, das Hotel besitzt eine Bar für Gäste (in der Regel abends geöffnet).",
-                polish: "Ja, das Hotel verfügt über eine Bar, die in der Regel abends geöffnet ist.",
-                note: "Prefer 'verfügt über' and avoid parentheses-heavy phrasing.",
-            },
-            {
-                draft: "Welche Gepäckaufbewahrungsregelung gilt im {HOTEL_NAME} für frühe Ankünfte oder späte Abreisen?",
-                polish: "Gibt es im {HOTEL_NAME} eine Gepäckaufbewahrung für frühe Ankünfte oder späte Abreisen?",
-                note: "Avoid bureaucratic compounds; use a guest-friendly question form.",
-            },
-            {
-                draft: "Serviert {HOTEL_NAME} Mittag- oder Abendessen und sind Reservierungen erforderlich?",
-                polish: "Serviert {HOTEL_NAME} Abendessen, und sind Reservierungen erforderlich?",
-                note: "Align the question to what the answer actually covers; do not add facts.",
-            },
-            {
-                draft: "Die Rezeption ist durchgehend 24 Stunden am Tag besetzt.",
-                polish: "Die Rezeption ist rund um die Uhr besetzt.",
-                note: "Prefer concise, natural 24/7 phrasing; avoid redundancy.",
-            },
-            {
-                draft: "Der Check-out erfolgt bis 12:00 Uhr mittags.",
-                polish: "Der Check-out erfolgt bis 12:00 Uhr.",
-                note: "Avoid unnecessary 'mittags' in standard time statements.",
-            },
-            {
-                draft: "… steht ein Same-Day-Wäsche- und Trockenreinigungsservice zur Verfügung.",
-                polish: "… steht ein Wäsche- und Trockenreinigungsservice mit Rückgabe am selben Tag zur Verfügung.",
-                note: "Avoid English 'Same-Day' in German; use a natural equivalent.",
-            },
-            {
-                draft: "Ja, die Rezeption ist rund um die Uhr besetzt, sodass jederzeit Unterstützung gewährleistet ist.",
-                polish: "Ja, das Rezeptionsteam steht Hotelgästen rund um die Uhr für alle Anliegen zur Verfügung.",
-                note: "Prefer the defined reception tone ('Rezeptionsteam ... zur Verfügung') over generic 'Unterstützung gewährleistet'. Keeps wording guest-focused and premium.",
-            },
-            {
-                draft: "Ja, die Mitarbeitenden an der Rezeption sprechen Deutsch, Englisch sowie weitere Sprachen (Italienisch, Russisch, Spanisch, Kroatisch) und bieten damit einen mehrsprachigen Service.",
-                polish: "Ja, das Personal an der Rezeption spricht Deutsch, Englisch sowie weitere Sprachen (Italienisch, Russisch, Spanisch, Kroatisch) und bietet damit einen mehrsprachigen Service.",
-                note: "Use 'das Personal' for a more natural hotel tone; avoids HR-style wording while preserving meaning and formality.",
-            },
-            {
-                draft: "Ja, Kinder sind herzlich willkommen; Babybetten, Familienzimmer und kinderfreundliche Frühstücksangebote stehen zur Verfügung.",
-                polish: "Ja, Kinder sind herzlich willkommen; Babybetten, Familienzimmer und kinderfreundliche Frühstücksoptionen stehen zur Verfügung.",
-                note: "Prefer the more standard hotel phrasing 'Frühstücksoptionen' over 'Frühstücksangebote' for a smoother native feel.",
-            },
-            {
-                draft: "… da kein Room-Service oder In-Room-Dining betrieben wird.",
-                polish: "… da kein Zimmerservice angeboten wird.",
-                note: "Use one consistent German term; avoid mixed English terms.",
-            },
-            {
-                draft: "Nein, Zimmerservice wird angeboten, steht jedoch nicht durchgehend zur Verfügung.",
-                polish: "Nein, Zimmerservice wird angeboten, ist jedoch nicht rund um die Uhr verfügbar.",
-                note: "Avoid internal contradiction; keep negation consistent and phrasing natural.",
-            },
-            {
-                draft: "Wie lauten die regulären Check-in- und Check-out-Zeiten?",
-                polish: "Wann sind die regulären Check-in- und Check-out-Zeiten?",
-                note: "Avoid stiff template 'Wie lauten ...?'. Prefer 'Wann ...?'.",
-            },
-            {
-                draft: "Verfügt das Hotel über einen Safe?",
-                polish: "Gibt es im Zimmer einen Safe?",
-                note: "Prefer direct 'Gibt es ...?' question form in FAQs.",
-            },
-            {
-                draft: "Verfügt das Hotel über eine Bar vor Ort und wie sind deren Öffnungszeiten?",
-                polish: "Gibt es im Hotel eine Bar vor Ort, und wie sind die Öffnungszeiten?",
-                note: "Cleaner coordination; prefer 'Gibt es ...?' and avoid 'deren'.",
-            },
-            {
-                draft: "… und kann die Strecke bequem zu Fuß zurückgelegt werden?",
-                polish: "… und lässt sich die Strecke bequem zu Fuß zurücklegen?",
-                note: "Prefer natural active phrasing over passive construction.",
-            },
-            {
-                draft: "Ja, das engagierte Team an der Rezeption ist rund um die Uhr für alle Anliegen verfügbar.",
-                polish: "Ja, das Rezeptionsteam steht Gästen rund um die Uhr für alle Anliegen zur Verfügung.",
-                note: "Avoid 'engagiert(e)' for reception; use standard hospitality phrasing.",
-            },
-            {
-                draft: "Steht im Hotel mehrsprachiges Personal zur Unterstützung internationaler Gäste zur Verfügung?",
-                polish: "Steht im Hotel mehrsprachiges Personal zur Verfügung, um internationale Gäste zu unterstützen?",
-                note: "Avoid repetition ('zur Unterstützung ... zur Verfügung'). Keep flow natural.",
-            },
-            {
-                draft: "Ja, auf Wunsch stellt das Frühstücksteam glutenfreie Produkte bereit.",
-                polish: "Ja, auf Anfrage stellt das Frühstücksteam glutenfreie Produkte bereit.",
-                note: "Prefer 'auf Anfrage' over 'auf Wunsch' in hotel phrasing.",
-            },
-            {
-                draft: "Berücksichtigt das Hotel vegetarische und vegane Ernährungswünsche?",
-                polish: "Berücksichtigt das Hotel vegetarische und vegane Ernährungsbedürfnisse?",
-                note: "Prefer 'Ernährungsbedürfnisse' for dietary needs.",
-            },
-            {
-                draft: "Die Sehenswürdigkeit ist in ca. acht Minuten erreichbar.",
-                polish: "Die Sehenswürdigkeit ist in etwa acht Minuten erreichbar.",
-                note: "Prefer 'in etwa' over 'in ca.' in German prose.",
-            },
-            {
-                draft: "Für größere Gruppen können reservierte Bereiche arrangiert werden.",
-                polish: "Für größere Gruppen können reservierte Bereiche eingerichtet werden.",
-                note: "Avoid 'arrangiert' here; prefer 'eingerichtet' or 'reserviert' depending on meaning.",
-            },
-            {
-                draft: "Serviert das Hotel Mittag- und Abendessen, und sind Reservierungen erforderlich?",
-                polish: "Serviert das Hotel Abendessen, und sind Reservierungen erforderlich?",
-                note: "If the answer only covers dinner, align the question without adding facts.",
-            },
-            {
-                draft: "Ja, der Busbahnhof liegt nur einen kurzen Spaziergang entfernt – weniger als fünf Gehminuten von der Haustür.",
-                polish: "Ja, der Busbahnhof ist weniger als fünf Gehminuten vom Hotel entfernt.",
-                note: "Prefer concise, factual phrasing; avoid metaphorical wording.",
-            },
-            {
-                draft: "Nein, Zimmerservice wird angeboten, steht jedoch nicht durchgehend zur Verfügung.",
-                polish: "Nein, Zimmerservice wird angeboten, ist jedoch nicht rund um die Uhr verfügbar.",
-                note: "Avoid internal contradiction and keep negation consistent.",
-            },
-            {
-                draft: "Der Check-in ist ab 15:00&nbsp;Uhr möglich; Check-out wird bis 11:00&nbsp;Uhr erbeten.",
-                polish: "Der Check-in ist ab 15:00&nbsp;Uhr möglich; der Check-out erfolgt bis 11:00&nbsp;Uhr.",
-                note: "Keep HTML entities unchanged. Improve flow: avoid 'wird ... erbeten'.",
-            },
-            {
-                draft: "Welche Gepäckaufbewahrungsregelung gilt für frühe Ankünfte oder späte Abreisen?",
-                polish: "Gibt es eine Gepäckaufbewahrung für frühe Ankünfte oder späte Abreisen?",
-                note: "Avoid bureaucratic '...regelung'. Use guest-friendly question form.",
-            },
-            {
-                draft: "Bügeleisen und brett sind auf Anfrage erhältlich.",
-                polish: "Bügeleisen und Bügelbrett sind auf Anfrage erhältlich.",
-                note: "Fix missing compound noun; keep capitalization consistent.",
-            },
-            {
-  draft: "… können ohne Aufpreis ein Babybett, eine Babywanne und einen Flaschenwärmer angefordert werden.",
-  polish: "… können ohne Aufpreis ein Babybett, eine Babywanne und ein Flaschenwärmer angefordert werden.",
-  note: "Grammar fix: In passive sentences ('können ... angefordert werden'), enumerated subjects must remain in the nominative case ('ein Flaschenwärmer', not accusative 'einen')."
+    {
+      draft: "Verfügen einige Apartments in master St. Paul’s über barrierefreie Badezimmer?",
+      polish: "Verfügen einige Wohnungen in master St. Paul’s über barrierefreie Badezimmer?",
+      note: "Use 'Wohnungen' for apartment units.",
+    },
+    {
+      draft: "Frühstück wird nicht vor Ort angeboten. Gäste können in nahegelegenen Cafés frühstücken oder gegen Aufpreis den Frühstücksservice im nahegelegenen Leonardo Royal Hotel nutzen.",
+      polish: "Nein, Frühstück wird nicht vor Ort angeboten. Gäste können in nahegelegenen Cafés frühstücken oder gegen Aufpreis den Frühstücksservice im nahegelegenen Leonardo Royal Hotel nutzen.",
+      note: "Client-approved answer should start with 'Nein,'.",
+    },
+    {
+      draft: "Die Apartments sind für Selbstverpflegung ausgelegt und verfügen weder über ein Restaurant noch über eine Bar. Gäste können in ihrem Apartment kochen, Lieferdienste nutzen oder die umliegenden Cafés, Restaurants sowie das Leonardo Royal Hotel besuchen.",
+      polish: "Die Wohnungen sind für Selbstverpflegung ausgelegt und verfügen weder über ein Restaurant noch über eine Bar. Gäste können ihre Mahlzeiten im Apartment selbst zubereiten, Lieferdienste nutzen oder die umliegenden Cafés, Restaurants sowie das Leonardo Royal Hotel besuchen.",
+      note: "Client-approved self-catering wording.",
+    },
+    {
+      draft: "Kooperiert master St. Paul’s mit örtlichen Restaurants für Essenslieferungen?",
+      polish: "Arbeitet master St. Paul’s mit lokalen Restaurants oder Lieferdiensten zusammen?",
+      note: "Client-approved question phrasing.",
+    },
+    {
+      draft: "Kann Essen von lokalen Liefer-Apps direkt zu meinem Apartment in master St. Paul’s geliefert werden?",
+      polish: "Kann Essen von lokalen Liefer-Apps direkt zu meiner Wohnung in master St. Paul’s geliefert werden?",
+      note: "Use 'Wohnung' for direct guest wording.",
+    },
+    {
+      draft: "Ja, Gäste können über gängige Apps wie Uber Eats, Deliveroo oder Just Eat bestellen. Die Kuriere liefern in der Regel bis zum Haupteingang, wo die Gäste ihre Bestellung entgegennehmen.",
+      polish: "Ja, Gäste können über gängige Apps wie Uber Eats, Deliveroo oder Just Eat bestellen. Die Lieferung erfolgt in der Regel bis zum Haupteingang, wo Gäste ihre Bestellung entgegennehmen können.",
+      note: "Client-approved answer phrasing.",
+    },
+    {
+      draft: "Wie erfolgt der Check-in in master St. Paul’s?",
+      polish: "Wie funktioniert der Check-in im master St. Paul’s?",
+      note: "Client-approved check-in question phrasing.",
+    },
+    {
+      draft: "Die Unterkunft nutzt ein Self-Check-in-System. Ihr individueller Apartment-PIN-Code wird Ihnen am Anreisetag um 09:00 Uhr per WhatsApp und E-Mail zugesandt.",
+      polish: "Die Unterkunft nutzt ein kontaktloses Check-in-System. Ihr individueller Apartment-PIN-Code wird Ihnen am Anreisetag um 09:00 Uhr per WhatsApp und E-Mail zugesandt.",
+      note: "Client-approved check-in answer wording.",
+    },
+    {
+      draft: "Was ist zu tun, wenn mein Zugangscode für master St. Paul’s bei der Ankunft nicht funktioniert?",
+      polish: "Was soll ich tun, wenn mein Zugangscode für master St. Paul’s bei der Ankunft nicht funktioniert?",
+      note: "Client-approved question phrasing.",
+    },
+    {
+      draft: "Bitte kontaktieren Sie umgehend das Guest-Relations-Team per WhatsApp (+44 330 818 7011) oder E-Mail (info@stay-master.com). Ein Mitarbeitender überprüft Ihre Buchung und hilft weiter.",
+      polish: "Bitte kontaktieren Sie umgehend das Guest-Relations-Team per WhatsApp (+44 330 818 7011) oder E-Mail (info@stay-master.com). Ein Mitarbeiter unseres Teams überprüft Ihre Buchung und hilft Ihnen weiter.",
+      note: "Client-approved support wording.",
+    },
+    {
+      draft: "Sind bei einer Reservierung in master St. Paul’s Vorauszahlungen oder Kautionsanforderungen erforderlich?",
+      polish: "Sind bei einer Reservierung im master St. Paul’s Vorauszahlungen oder Kautionen erforderlich?",
+      note: "Client-approved question phrasing.",
+    },
+    {
+      draft: "Es wird keine Kaution erhoben, jedoch ist eine gültige Kreditkarte erforderlich, die zur Deckung von Schäden oder Nebenkosten vorautorisiert werden kann.",
+      polish: "Es wird keine Kaution erhoben, jedoch ist eine gültige Kreditkarte erforderlich, die zur Deckung möglicher Schäden oder zusätzlicher Kosten vorübergehend autorisiert werden kann.",
+      note: "Client-approved payment wording.",
+    },
+    {
+      draft: "Welche Zahlungsmethoden werden in master St. Paul’s akzeptiert?",
+      polish: "Welche Zahlungsmethoden werden im master St. Paul’s akzeptiert?",
+      note: "Client-approved question phrasing.",
+    },
+    {
+      draft: "Alle Aufenthalte müssen über den bereitgestellten sicheren Zahlungslink im Voraus bezahlt werden.",
+      polish: "Alle Aufenthalte müssen im Voraus über den bereitgestellten sicheren Zahlungslink bezahlt werden.",
+      note: "Client-approved word order.",
+    },
+    {
+      draft: "Bietet master St. Paul’s Langzeit-Rabatte an?",
+      polish: "Bietet master St. Paul’s Rabatte für längere Aufenthalte an?",
+      note: "Client-approved question phrasing.",
+    },
+    {
+      draft: "Wie hoch ist die maximale Belegung für die einzelnen Apartmentkategorien in master St. Paul’s und gibt es Schlafsofas für zusätzliche Gäste?",
+      polish: "Wie viele Gäste können die einzelnen Apartmentkategorien im master St. Paul’s beherbergen und gibt es Schlafsofas für zusätzliche Gäste?",
+      note: "Client-approved occupancy question.",
+    },
+    {
+      draft: "Was sind die besten Unternehmungen in London während eines Aufenthalts in master St. Paul’s?",
+      polish: "Was kann man während eines Aufenthalts im master St. Paul’s in London unternehmen?",
+      note: "Client-approved local-experience question.",
+    },
+    {
+      draft: "St. Paul’s Cathedral erklimmen, über die Millennium Bridge zur Tate Modern gehen und den Borough Market erkunden.",
+      polish: "Besuchen Sie die St. Paul’s Cathedral, spazieren Sie über die Millennium Bridge zur Tate Modern und entdecken Sie den Borough Market.",
+      note: "Client-approved local-experience answer.",
+    },
+    {
+      draft: "Ja, der Borough Market liegt direkt gegenüber des Flusses, etwa 1,2 km entfernt.",
+      polish: "Ja, der Borough Market liegt auf der anderen Seite der Themse, etwa 1,2 km entfernt.",
+      note: "Client-approved location phrasing.",
+    },
+    {
+      draft: "Organisiert master St. Paul’s lokale Touren oder Erlebnisse für Gäste?",
+      polish: "Bietet master St. Paul’s Unterstützung bei der Buchung lokaler Touren oder Erlebnisse an?",
+      note: "Client-approved question phrasing.",
+    },
+  ],
 },
-{
-  draft: "Die All-Inclusive-Plus-Gäste genießen eine nachmittägliche Kaffee-und-Kuchen-Pause.",
-  polish: "Die All-Inclusive-Plus-Gäste genießen eine Kaffee- und Kuchenpause am Nachmittag.",
-  note: "Avoid excessive hyphenation and clunky adjectives. Rephrase for a more elegant, natural flow."
-},
-{
-  draft: "Im Games Room gibt es Videospiele, die Kindern viel Spaß bereiten.",
-  polish: "Im Games Room stehen Videospiele zur Unterhaltung der Kinder zur Verfügung.",
-  note: "Replace colloquial phrases like 'viel Spaß bereiten' with upscale, professional hotel phrasing ('zur Unterhaltung ... zur Verfügung')."
-}
-        ],
-    },
 
     it:
     { mappings: [
@@ -3250,3 +3077,171 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
 
     ] },
 };
+
+const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr" | "he"> = {
+    es: {
+        mappings: [
+            { forbidden: "apartamentos servidos", preferred: "apartamentos con servicios", reason: "Calco literal de serviced apartments; suena poco natural en web hotelera.", tags: ["master", "serviced-apartments"] },
+            { forbidden: "aparthotel", preferred: "apartamentos con servicios", reason: "Para este producto, explica mejor la propuesta sin encasillarla como hotel tradicional.", tags: ["master", "positioning"] },
+            { forbidden: "soporte virtual de huéspedes", preferred: "atención virtual al huésped", reason: "Más cercano, claro y natural para atención al cliente.", tags: ["master", "guest-support"] },
+            { forbidden: "servicio doméstico", preferred: "limpieza", reason: "Evita un tono doméstico extraño; en alojamiento funciona mejor como servicio de limpieza.", tags: ["master", "housekeeping"] },
+            { forbidden: "facilidades de lavandería", preferred: "zona de lavandería", reason: "Evita el calco de facilities.", tags: ["master", "amenities"] },
+            { forbidden: "viajeros empresariales", preferred: "viajeros de negocios", reason: "Más idiomático y menos rígido.", tags: ["master", "audience"] },
+            { forbidden: "trabajadores remotos", preferred: "personas que trabajan en remoto", reason: "Suena más humano y menos etiquetado.", tags: ["master", "audience"] },
+            { forbidden: "en sitio", preferred: "en el alojamiento", reason: "Para amenities, en el alojamiento es más natural que un calco de on-site.", tags: ["master", "amenities"] },
+            { forbidden: "auto check-in", preferred: "check-in autónomo", reason: "Más claro para usuarios hispanohablantes sin sonar técnico.", tags: ["master", "arrival"] },
+            { forbidden: "check-in propio", preferred: "check-in autónomo", reason: "Evita una traducción literal poco habitual.", tags: ["master", "arrival"] },
+            { forbidden: "tarifa nocturna", preferred: "tarifa por noche", reason: "Uso estándar en alojamiento.", tags: ["master", "booking"] },
+            { forbidden: "duchas roll-in", preferred: "duchas accesibles a ras de suelo", reason: "Lenguaje claro y útil para accesibilidad.", tags: ["master", "accessibility"] },
+            { forbidden: "rieles de agarre", preferred: "barras de apoyo", reason: "Término natural en accesibilidad.", tags: ["master", "accessibility"] },
+            { forbidden: "lavabos bajos", preferred: "lavabos a menor altura", reason: "Suena más cuidado y menos brusco.", tags: ["master", "accessibility"] },
+            { forbidden: "autoabastecimiento", preferred: "cocina equipada para uso propio", reason: "Self-catering no debe sonar técnico ni económico.", tags: ["master", "food"] },
+            { forbidden: "incidentes", preferred: "gastos adicionales", reason: "Incidentals en hotelería son cargos, no incidentes.", tags: ["master", "payments"] },
+            { forbidden: "preautorizado por daños", preferred: "preautorizada para posibles daños o gastos adicionales", reason: "Más preciso y menos alarmante.", tags: ["master", "payments"] },
+            { forbidden: "complementario", preferred: "gratuito", reason: "Complimentary en hotelería significa gratuito/incluido.", tags: ["master", "amenities"] }
+        ],
+        examples: [
+            {
+                draft: "master St. Paul's ofrece apartamentos servidos con soporte virtual de huéspedes y facilidades de lavandería.",
+                polish: "master St. Paul's ofrece apartamentos con servicios, atención virtual al huésped y zona de lavandería.",
+                note: "Keep the product clear and web-friendly without literal English calques.",
+                tags: ["master", "serviced-apartments"]
+            },
+            {
+                draft: "El auto check-in usa un código PIN y la tarjeta puede ser preautorizada por incidentes.",
+                polish: "El check-in autónomo funciona con un código PIN y la tarjeta puede quedar preautorizada para posibles daños o gastos adicionales.",
+                note: "Arrival and payment language should feel clear, calm, and guest-friendly.",
+                tags: ["master", "arrival", "payments"]
+            }
+        ]
+    },
+
+    it: {
+        mappings: [
+            { forbidden: "appartamenti serviti", preferred: "appartamenti con servizi", reason: "Calco poco elegante di serviced apartments; suona meno naturale per un sito hotel.", tags: ["master", "serviced-apartments"] },
+            { forbidden: "aparthotel", preferred: "appartamenti con servizi", reason: "Descrive meglio il prodotto senza farlo sembrare un hotel tradizionale.", tags: ["master", "positioning"] },
+            { forbidden: "supporto virtuale agli ospiti", preferred: "assistenza virtuale agli ospiti", reason: "Più naturale e più vicino al tono hospitality.", tags: ["master", "guest-support"] },
+            { forbidden: "governo della casa", preferred: "pulizie", reason: "Evita una resa letterale inadatta al contesto hotel.", tags: ["master", "housekeeping"] },
+            { forbidden: "facilità di lavanderia", preferred: "area lavanderia", reason: "Evita il calco di facilities.", tags: ["master", "amenities"] },
+            { forbidden: "viaggiatori business", preferred: "viaggiatori d'affari", reason: "Più scorrevole e meno ibrido.", tags: ["master", "audience"] },
+            { forbidden: "lavoratori remoti", preferred: "chi lavora da remoto", reason: "Più naturale per una frase rivolta agli ospiti.", tags: ["master", "audience"] },
+            { forbidden: "sul sito", preferred: "in struttura", reason: "Per amenities e servizi, in struttura è la formula naturale.", tags: ["master", "amenities"] },
+            { forbidden: "auto check-in", preferred: "self check-in", reason: "Formula più comune in contesto hotel italiano.", tags: ["master", "arrival"] },
+            { forbidden: "check-in automatico", preferred: "self check-in", reason: "Evita un tono tecnico e impersonale.", tags: ["master", "arrival"] },
+            { forbidden: "tariffa notturna", preferred: "tariffa per notte", reason: "Uso standard per prenotazioni e soggiorni.", tags: ["master", "booking"] },
+            { forbidden: "docce roll-in", preferred: "docce accessibili a filo pavimento", reason: "Più chiaro e corretto per accessibilità.", tags: ["master", "accessibility"] },
+            { forbidden: "rotaie di presa", preferred: "maniglioni di sostegno", reason: "Termine naturale per bagni accessibili.", tags: ["master", "accessibility"] },
+            { forbidden: "lavabi bassi", preferred: "lavabi ribassati", reason: "Più preciso e adatto a una descrizione accessibile.", tags: ["master", "accessibility"] },
+            { forbidden: "self-catering", preferred: "cucina attrezzata per uso autonomo", reason: "Spiega il beneficio senza lasciare inglese non necessario.", tags: ["master", "food"] },
+            { forbidden: "incidenti", preferred: "spese extra", reason: "Incidentals sono costi extra, non incidenti.", tags: ["master", "payments"] },
+            { forbidden: "preautorizzata per danni", preferred: "preautorizzata per eventuali danni o spese extra", reason: "Più preciso e meno brusco.", tags: ["master", "payments"] },
+            { forbidden: "accesso complementare", preferred: "accesso gratuito", reason: "Complimentary in hospitality significa gratuito/incluso.", tags: ["master", "amenities"] }
+        ],
+        examples: [
+            {
+                draft: "master St. Paul's offre appartamenti serviti con supporto virtuale agli ospiti e facilità di lavanderia.",
+                polish: "master St. Paul's offre appartamenti con servizi, assistenza virtuale agli ospiti e area lavanderia.",
+                note: "Keep the copy natural and aligned with Italian hotel websites.",
+                tags: ["master", "serviced-apartments"]
+            },
+            {
+                draft: "Il check-in automatico usa un codice PIN e la carta può essere preautorizzata per incidenti.",
+                polish: "Il self check-in funziona con un codice PIN e la carta può essere preautorizzata per eventuali danni o spese extra.",
+                note: "Arrival and payment language should be clear without sounding machine-translated.",
+                tags: ["master", "arrival", "payments"]
+            }
+        ]
+    },
+
+    fr: {
+        mappings: [
+            { forbidden: "appartements desservis", preferred: "appartements avec services hôteliers", reason: "Calque littéral de serviced apartments; évoque plutôt les transports.", tags: ["master", "serviced-apartments"] },
+            { forbidden: "appart'hôtel", preferred: "appartements avec services hôteliers", reason: "Décrit mieux le produit sans le réduire à une catégorie générique.", tags: ["master", "positioning"] },
+            { forbidden: "support invité virtuel", preferred: "assistance clients à distance", reason: "Plus naturel et plus professionnel pour une page web hôtelière.", tags: ["master", "guest-support"] },
+            { forbidden: "support virtuel aux clients", preferred: "assistance clients à distance", reason: "Évite une formulation traduite trop littéralement.", tags: ["master", "guest-support"] },
+            { forbidden: "ménage domestique", preferred: "service de ménage", reason: "Plus adapté au contexte hôtelier.", tags: ["master", "housekeeping"] },
+            { forbidden: "installations de blanchisserie", preferred: "espace laverie", reason: "Plus simple et plus naturel pour des appartements.", tags: ["master", "amenities"] },
+            { forbidden: "voyageurs business", preferred: "voyageurs d'affaires", reason: "Formulation française plus soignée.", tags: ["master", "audience"] },
+            { forbidden: "travailleurs à distance", preferred: "personnes en télétravail", reason: "Plus idiomatique et moins calqué.", tags: ["master", "audience"] },
+            { forbidden: "sur le site", preferred: "sur place", reason: "Pour les services d'un établissement, sur place est la formule naturelle.", tags: ["master", "amenities"] },
+            { forbidden: "check-in automatique", preferred: "arrivée autonome", reason: "Plus chaleureux et plus clair que le vocabulaire technique.", tags: ["master", "arrival"] },
+            { forbidden: "auto check-in", preferred: "arrivée autonome", reason: "Évite un anglicisme inutile.", tags: ["master", "arrival"] },
+            { forbidden: "tarif nocturne", preferred: "tarif par nuit", reason: "Usage standard pour l'hébergement.", tags: ["master", "booking"] },
+            { forbidden: "douches roll-in", preferred: "douches accessibles de plain-pied", reason: "Formulation claire pour l'accessibilité.", tags: ["master", "accessibility"] },
+            { forbidden: "rails de prise", preferred: "barres d'appui", reason: "Terme naturel pour les équipements accessibles.", tags: ["master", "accessibility"] },
+            { forbidden: "éviers de salle de bain plus bas", preferred: "lavabos abaissés", reason: "Plus précis et plus élégant.", tags: ["master", "accessibility"] },
+            { forbidden: "auto-restauration", preferred: "avec cuisine équipée pour préparer vos repas", reason: "Self-catering doit être expliqué de façon accueillante.", tags: ["master", "food"] },
+            { forbidden: "frais incidentels", preferred: "frais annexes", reason: "Évite un calque financier de l'anglais.", tags: ["master", "payments"] },
+            { forbidden: "complémentaire", preferred: "gratuit", reason: "Complimentary en hôtellerie signifie gratuit/inclus.", tags: ["master", "amenities"] }
+        ],
+        examples: [
+            {
+                draft: "master St. Paul's propose des appartements desservis avec support invité virtuel et installations de blanchisserie.",
+                polish: "master St. Paul's propose des appartements avec services hôteliers, une assistance clients à distance et un espace laverie.",
+                note: "Avoid literal English structure and keep French hospitality copy fluent.",
+                tags: ["master", "serviced-apartments"]
+            },
+            {
+                draft: "Le check-in automatique utilise un code PIN et la carte peut être préautorisée pour des frais incidentels.",
+                polish: "L'arrivée autonome fonctionne avec un code PIN et la carte peut faire l'objet d'une préautorisation pour couvrir d'éventuels dommages ou frais annexes.",
+                note: "Make arrival/payment instructions calm, clear, and guest-facing.",
+                tags: ["master", "arrival", "payments"]
+            }
+        ]
+    },
+
+    he: {
+        mappings: [
+            { forbidden: "דירות שירות", preferred: "דירות אירוח עם שירותים מלונאיים", reason: "תרגום מילולי ולא ברור בעברית ישראלית.", tags: ["master", "serviced-apartments"] },
+            { forbidden: "מלון דירות", preferred: "דירות אירוח עם שירותים מלונאיים", reason: "מדויק יותר למוצר של master ומונע ציפייה למלון מלא.", tags: ["master", "positioning"] },
+            { forbidden: "תמיכת אורחים וירטואלית", preferred: "תמיכת אורחים מרחוק", reason: "נשמע טבעי יותר ופחות מתורגם.", tags: ["master", "guest-support"] },
+            { forbidden: "שירות משק בית", preferred: "שירות ניקיון", reason: "באתר מלונאי בעברית זה נשמע ברור ונעים יותר.", tags: ["master", "housekeeping"] },
+            { forbidden: "מתקני כביסה באתר", preferred: "מתקני כביסה במקום", reason: "מונע תרגום מילולי של on-site.", tags: ["master", "amenities"] },
+            { forbidden: "נוסעי עסקים", preferred: "נוסעים עסקיים", reason: "ניסוח טבעי יותר לקהל יעד.", tags: ["master", "audience"] },
+            { forbidden: "עובדים מרוחקים", preferred: "אורחים שעובדים מרחוק", reason: "נשמע אנושי יותר ומתאים להקשר של אירוח.", tags: ["master", "audience"] },
+            { forbidden: "שהייה ארוכת טווח", preferred: "שהייה לטווח ארוך", reason: "ידידותי יותר לקופי באתר.", tags: ["master", "booking"] },
+            { forbidden: "אינטרנט אלחוטי במהירות גבוהה", preferred: "Wi-Fi מהיר", reason: "קצר, טבעי ושימושי יותר באתרי מלונות.", tags: ["master", "amenities"] },
+            { forbidden: "קבלה 24 שעות", preferred: "קבלה 24/7", reason: "ניסוח קצר ומוכר יותר.", tags: ["master", "service"] },
+            { forbidden: "בדיקה עצמית", preferred: "צ׳ק-אין עצמי", reason: "מונע תרגום שגוי של check-in.", tags: ["master", "arrival"] },
+            { forbidden: "צ׳ק אין עצמי", preferred: "צ׳ק-אין עצמי", reason: "אחידות כתיב עם מקף.", tags: ["master", "arrival"] },
+            { forbidden: "קוד גישה", preferred: "קוד כניסה", reason: "במוצר הזה מדובר בכניסה לדירה, ולכן זה ברור יותר לאורח.", tags: ["master", "arrival"] },
+            { forbidden: "מקלחוני רול-אין", preferred: "מקלחות נגישות ללא מדרגה", reason: "שפת נגישות ברורה וטבעית יותר.", tags: ["master", "accessibility"] },
+            { forbidden: "פסי אחיזה", preferred: "מאחזי יד", reason: "מונח טבעי יותר לתיאור נגישות.", tags: ["master", "accessibility"] },
+            { forbidden: "כיורים נמוכים", preferred: "כיורים מונמכים בחדר הרחצה", reason: "ניסוח מדויק ומכבד יותר.", tags: ["master", "accessibility"] },
+            { forbidden: "קייטרינג עצמי", preferred: "עם אפשרות להכנת ארוחות באופן עצמאי", reason: "קייטרינג עצמי נשמע לא טבעי בהקשר של דירה.", tags: ["master", "food"] },
+            { forbidden: "הוצאות נלוות", preferred: "חיובים נלווים", reason: "מתאים יותר להקשר של כרטיס אשראי ותשלום במלון.", tags: ["master", "payments"] },
+            { forbidden: "אישור מראש", preferred: "אישור מסגרת זמני באשראי", reason: "מבהיר את המשמעות של pre-authorisation ולא נשאר עמום.", tags: ["master", "payments"] },
+            { forbidden: "גישה משלימה לחדר כושר", preferred: "כניסה חינם לחדר הכושר", reason: "מונע תרגום מילולי של complimentary.", tags: ["master", "amenities"] }
+        ],
+        examples: [
+            {
+                draft: "master St. Paul's מציע דירות שירות עם תמיכת אורחים וירטואלית ומתקני כביסה באתר.",
+                polish: "master St. Paul's מציע דירות אירוח עם שירותים מלונאיים, תמיכת אורחים מרחוק ומתקני כביסה במקום.",
+                note: "Keep Hebrew natural, clear, and suitable for hotel web copy.",
+                tags: ["master", "serviced-apartments"]
+            },
+            {
+                draft: "הבדיקה העצמית מתבצעת עם קוד גישה והכרטיס עשוי לעבור אישור מראש עבור הוצאות נלוות.",
+                polish: "הצ׳ק-אין העצמי מתבצע עם קוד כניסה, והכרטיס עשוי לקבל אישור מסגרת זמני באשראי לכיסוי נזקים או חיובים נלווים.",
+                note: "Arrival and payment copy should sound human and precise, not literal.",
+                tags: ["master", "arrival", "payments"]
+            }
+        ]
+    }
+};
+
+(["es", "it", "fr", "he"] as const).forEach((lang) => {
+    const baseProfile = TERMINOLOGY_MANAGEMENT[lang];
+    const masterProfile = MASTER_ST_PAULS_TERMINOLOGY[lang];
+
+    TERMINOLOGY_MANAGEMENT[lang] = {
+        mappings: [
+            ...(baseProfile.mappings ?? []),
+            ...(masterProfile.mappings ?? [])
+        ],
+        examples: [
+            ...(baseProfile.examples ?? []),
+            ...(masterProfile.examples ?? [])
+        ]
+    };
+});

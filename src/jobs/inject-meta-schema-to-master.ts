@@ -170,9 +170,58 @@ private async resolveTabOrFirst(spreadsheetId: string, tabName?: string): Promis
   return all[0];
 }
 
+private async resolveSourceTab(
+  spreadsheetId: string,
+  cfg: InjectMetaSchemaToMasterConfig
+): Promise<string | null> {
+  const all = await this.sheets.getSheetTitles(spreadsheetId);
+  if (!all.length) throw new Error(`No tabs found in spreadsheet ${spreadsheetId}`);
+
+  const lang = (cfg.targetLocale ?? "").trim().toUpperCase();
+  const configuredTab = cfg.sourceTabName?.trim();
+
+  const candidates = [
+    configuredTab,
+    configuredTab ? configuredTab.replace(`– ${lang}`, `– EN – ${lang}`) : undefined,
+    configuredTab ? configuredTab.replace(`- ${lang}`, `- EN - ${lang}`) : undefined,
+    `Sheet1 – ${lang}`,
+    `Sheet1 – EN – ${lang}`,
+    `Sheet1 - ${lang}`,
+    `Sheet1 - EN - ${lang}`,
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    const exact = all.find((title) => title === candidate);
+    if (exact) return exact;
+
+    const normalizedMatch = all.find(
+      (title) => this.normalizeTabTitle(title) === this.normalizeTabTitle(candidate)
+    );
+
+    if (normalizedMatch) return normalizedMatch;
+  }
+
+  console.warn(
+    `Source tab not found in ${spreadsheetId}. Tried: [${candidates.join(", ")}]. Available: [${all.join(", ")}]`
+  );
+
+  return null;
+}
+
   private async readHotelPayload(cfg: InjectMetaSchemaToMasterConfig, spreadsheetId: string, hotelFileName: string): Promise<HotelMetaPayload> {
-    const sourceTab = await this.resolveTabOrFirst(spreadsheetId, cfg.sourceTabName);
-    const tabA1 = this.quoteA1Sheet(sourceTab);
+const sourceTab = await this.resolveSourceTab(spreadsheetId, cfg);
+
+if (!sourceTab) {
+  return {
+    hotelName: hotelFileName.trim(),
+    metaTitle: "",
+    metaDescription: "",
+    h1: "",
+    schemaJsonLd: "",
+    sourceSpreadsheetId: spreadsheetId,
+    sourceTab: "",
+  };
+}    const tabA1 = this.quoteA1Sheet(sourceTab);
 
     const metaRow = cfg.metaRow ?? 71;
     const metaStartCol = (cfg.metaStartCol ?? "A").toUpperCase();
@@ -231,6 +280,8 @@ private async resolveTabOrFirst(spreadsheetId: string, tabName?: string): Promis
         `Locale="${cfg.targetLocale}" -> columns: ${seoTitleWrite.name}, ${seoDescWrite.name}, ${seoSchemaWrite.name}, ${h1Write.name}`
       )
     );
+
+    
 
     // Build lookup: normalized hotel name -> master sheet row number (1-based)
     const masterLookup = new Map<string, number>();

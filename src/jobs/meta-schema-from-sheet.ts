@@ -193,6 +193,29 @@ private enforceMaxMetaDescLenItalian(desc: string, maxLen = 160): string {
   return s;
 }
 
+private enforceMaxMetaDescLenSpanish(desc: string, maxLen = 160): string {
+  let s = this.sanitizeOneLine(desc);
+
+  // Step 1: remove Wi-Fi
+  if (s.length > maxLen) {
+    s = s.replace(/,\s*Wi-Fi\s*,/g, ",");
+    s = s.replace(/\s*Wi-Fi\s*,/g, "");
+  }
+
+  // Step 2: remove parking
+  if (s.length > maxLen) {
+    s = s.replace(/,\s*aparcamiento\s*,/gi, ",");
+    s = s.replace(/\s*aparcamiento\s*,/gi, "");
+  }
+
+  // Step 3: hard cut
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen).replace(/[,\s:;.-]+$/g, "").trim();
+  }
+
+  return s;
+}
+
   private resolveHebrewHotelName(englishHotelName: string): string | null {
     const targetKey = this.normalizeHotelKey(englishHotelName);
 
@@ -232,6 +255,21 @@ private enforceMaxMetaDescLenItalian(desc: string, maxLen = 160): string {
 
       return { metaTitle, metaDesc, h1 };
     }
+
+if (lang.startsWith("es")) {
+  const metaTitle = this.sanitizeOneLine(`Preguntas frecuentes | ${hotelNameEn}`);
+
+  const metaDescRaw = this.sanitizeOneLine(
+    `Encuentra respuestas a preguntas frecuentes sobre ${hotelNameEn}: ` +
+      `check-in, aparcamiento, Wi-Fi, ubicación, servicios y mucho más.`
+  );
+
+  const metaDesc = this.enforceMaxMetaDescLenSpanish(metaDescRaw, 160);
+
+  const h1 = this.sanitizeOneLine(`Preguntas frecuentes sobre ${hotelNameEn}`);
+
+  return { metaTitle, metaDesc, h1 };
+}
 
     if (lang.startsWith("de")) {
   const metaTitle = this.sanitizeOneLine(`FAQ | ${hotelNameEn}`);

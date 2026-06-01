@@ -740,7 +740,15 @@
       gap: 8px;
     }
 
-    .output-mode-card {
+    .policy-mode-picker {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .output-mode-card,
+    .policy-mode-button {
       min-height: 50px;
       display: flex;
       align-items: center;
@@ -754,20 +762,23 @@
       text-align: center;
     }
 
-    .output-mode-card strong {
+    .output-mode-card strong,
+    .policy-mode-button strong {
       color: var(--ink);
       font-size: 0.82rem;
       line-height: 1.15;
     }
 
-    .output-mode-card small {
+    .output-mode-card small,
+    .policy-mode-button small {
       color: var(--dim);
       font-size: 0.68rem;
       line-height: 1.2;
       font-weight: 600;
     }
 
-    .output-mode-card.active {
+    .output-mode-card.active,
+    .policy-mode-button.active {
       border-color: rgba(74, 127, 199, 0.45);
       background: var(--blue-soft);
       box-shadow: 0 0 0 3px rgba(74, 127, 199, 0.10);
@@ -1227,6 +1238,16 @@ Contact</textarea>
                 <span class="field-label">Start row</span>
                 <input id="outputStartRow" type="number" min="1" value="1" />
               </label>
+            </div>
+            <div class="policy-mode-picker" id="existingValuePolicyPicker" aria-label="Existing value policy">
+              <button class="policy-mode-button active" type="button" data-existing-policy="skip">
+                <strong>דלג על תאים מלאים</strong>
+                <small>Default</small>
+              </button>
+              <button class="policy-mode-button" type="button" data-existing-policy="overwrite">
+                <strong>דרוס תאים מלאים</strong>
+                <small>Replace values</small>
+              </button>
             </div>
           </div>
         </div>
