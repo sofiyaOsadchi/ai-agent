@@ -670,6 +670,132 @@
       color: var(--text-muted);
     }
 
+    .community-section {
+      margin-top: 34px;
+    }
+
+    .community-feed-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 310px));
+      gap: 10px;
+    }
+
+    .community-card {
+      min-height: 146px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 24px rgba(38, 26, 15, 0.05);
+    }
+
+    .community-card-top {
+      display: grid;
+      gap: 10px;
+    }
+
+    .community-card-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .community-tool-pill,
+    .community-date-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .community-tool-pill {
+      color: var(--violet);
+      background: var(--violet-soft);
+      border-color: rgba(91, 58, 150, 0.18);
+    }
+
+    .community-card h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 0.94rem;
+      line-height: 1.22;
+      letter-spacing: 0;
+      font-weight: 800;
+    }
+
+    .community-card p {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      line-height: 1.42;
+      font-weight: 500;
+    }
+
+    .community-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 11px;
+      border-top: 1px solid var(--border);
+    }
+
+    .community-author {
+      min-width: 0;
+      color: var(--text-dim);
+      font-size: 0.68rem;
+      line-height: 1.35;
+      font-weight: 600;
+    }
+
+    .community-author strong {
+      display: block;
+      overflow: hidden;
+      color: var(--ink);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.84rem;
+      font-weight: 800;
+    }
+
+    .community-action {
+      flex: 0 0 auto;
+      color: var(--ink);
+      font-size: 0.72rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .community-action:hover {
+      color: var(--violet);
+    }
+
+    .community-empty {
+      grid-column: 1 / -1;
+      padding: 22px;
+      border-radius: var(--radius);
+      background: var(--surface-soft);
+      border: 1px dashed var(--border-strong);
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
     .note {
       margin-top: 28px;
       padding: 14px 18px;
@@ -683,7 +809,8 @@
     }
 
     @media (max-width: 980px) {
-      .cards {
+      .cards,
+      .community-feed-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
@@ -746,12 +873,18 @@
         width: 100%;
       }
 
-      .cards {
+      .cards,
+      .community-feed-grid {
         grid-template-columns: 1fr;
       }
 
       .tool-card {
         min-height: 185px;
+      }
+
+      .community-card-footer {
+        align-items: flex-start;
+        flex-direction: column;
       }
     }
   </style>
@@ -1011,11 +1144,49 @@
       </div>
     </section>
 
+    <section class="tool-section">
+      <div class="section-head">
+        <h2 class="section-title">Client walkthroughs</h2>
+        <p class="section-copy">Static planning pages for showing workflow direction before anything runs.</p>
+      </div>
+
+      <div class="cards">
+        <a class="tool-card builder" href="/faq-builder-plan.html">
+          <div class="tool-top">
+            <div class="tool-icon">PLAN</div>
+            <div>
+              <span class="tool-pill">Client walkthrough</span>
+              <h3 class="tool-title">FAQ Builder Work Plan</h3>
+              <p class="tool-description">
+                Present the planned hotel FAQ workflow, architecture, output review, and estimate without running the agent.
+              </p>
+            </div>
+          </div>
+          <div class="tool-footer">
+            <span class="tool-mode">static: faq-builder-plan</span>
+            <span class="tool-action">Open -></span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="tool-section community-section" aria-labelledby="communityFeedTitle">
+      <div class="section-head">
+        <h2 class="section-title" id="communityFeedTitle">Shared plans</h2>
+        <p class="section-copy">Team-shared workflows saved by people in the system.</p>
+      </div>
+
+      <div class="community-feed-grid" id="communityFeed">
+        <div class="community-empty">Shared plans will appear here after someone saves a plan and chooses Share with everyone.</div>
+      </div>
+    </section>
+
     <div class="note">
         Build with clarity, move with intention, and turn innovative ideas into tools that create real momentum.
     </div>
   </main>
 
+  <script src="/user-profile.js"></script>
   <script>
     (() => {
       const form = document.getElementById("assistantLaunchForm");
@@ -1054,6 +1225,96 @@
         event.preventDefault();
         form.requestSubmit();
       });
+
+      const communityFeed = document.getElementById("communityFeed");
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function planModeLabel(mode) {
+        return {
+          "faq-playground": "FAQ Builder",
+          "translate-demo": "Translator",
+          "schema-builder": "Schema",
+          "meta-tags": "Meta",
+          "site-ai-audit": "Audit",
+        }[mode] || mode || "Workflow";
+      }
+
+      function planModeHref(mode) {
+        return {
+          "faq-playground": "/faq-playground.html",
+          "translate-demo": "/translate-demo.html",
+          "schema-builder": "/schema-builder.html",
+          "meta-tags": "/meta-tags.html",
+          "site-ai-audit": "/site-ai-audit.html",
+        }[mode] || "/assistant-workspace.html";
+      }
+
+      function formatSharedDate(value) {
+        if (!value) return "Shared";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "Shared";
+        return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+
+      function renderCommunityFeed(plans) {
+        if (!communityFeed) return;
+        if (!Array.isArray(plans) || !plans.length) {
+          communityFeed.innerHTML = '<div class="community-empty">No shared plans yet. Save a plan from the Builder or Translator and choose Share with everyone.</div>';
+          return;
+        }
+
+        communityFeed.innerHTML = plans.map((plan) => {
+          const name = escapeHtml(plan.name || "Untitled plan");
+          const mode = escapeHtml(planModeLabel(plan.mode));
+          const description = escapeHtml(plan.description || "A reusable workflow shared with the team.");
+          const author = escapeHtml(plan.ownerDisplayName || "A teammate");
+          const href = escapeHtml(planModeHref(plan.mode));
+          const date = escapeHtml(formatSharedDate(plan.sharedAt || plan.updatedAt));
+
+          return `
+            <article class="community-card">
+              <div class="community-card-top">
+                <div class="community-card-meta">
+                  <span class="community-tool-pill">${mode}</span>
+                  <span class="community-date-pill">${date}</span>
+                </div>
+                <h3>${name}</h3>
+                <p>${description}</p>
+              </div>
+              <div class="community-card-footer">
+                <div class="community-author">Shared by <strong>${author}</strong></div>
+                <a class="community-action" href="${href}">Open workspace -></a>
+              </div>
+            </article>
+          `;
+        }).join("");
+      }
+
+      async function loadCommunityFeed() {
+        if (!communityFeed) return;
+
+        try {
+          const response = await fetch("/api/plans/public", { credentials: "same-origin" });
+          if (response.status === 401) {
+            communityFeed.innerHTML = '<div class="community-empty">Sign in to see shared plans from the team.</div>';
+            return;
+          }
+          if (!response.ok) throw new Error("Feed request failed");
+          const data = await response.json();
+          renderCommunityFeed(data.plans || []);
+        } catch {
+          communityFeed.innerHTML = '<div class="community-empty">Shared plans could not be loaded right now.</div>';
+        }
+      }
+
+      loadCommunityFeed();
     })();
   </script>
 </body>

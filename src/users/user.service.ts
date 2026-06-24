@@ -14,6 +14,20 @@ export function normalizeUserEmail(value: string): string | null {
   return email;
 }
 
+export function normalizeUserDisplayName(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const displayName = String(value || "").replace(/\s+/g, " ").trim();
+
+  if (!displayName || displayName.length > 80 || /[<>]/.test(displayName)) {
+    return null;
+  }
+
+  return displayName;
+}
+
 function parseRole(value: unknown): UserRole {
   return value === "admin" ? "admin" : "user";
 }
@@ -42,8 +56,10 @@ export async function getOrCreateUser(rawEmail: string): Promise<CurrentUser> {
 
     if (userSnapshot.exists) {
       const data = userSnapshot.data() || {};
+      const displayName = normalizeUserDisplayName(data.displayName);
       const user: CurrentUser = {
         email,
+        ...(displayName ? { displayName } : {}),
         role: parseRole(data.role),
         status: parseStatus(data.status),
       };
@@ -94,4 +110,32 @@ export async function getOrCreateUser(rawEmail: string): Promise<CurrentUser> {
   }
 
   return resolvedUser;
+}
+
+export async function updateUserDisplayName(rawEmail: string, rawDisplayName: unknown): Promise<CurrentUser> {
+  const email = normalizeUserEmail(rawEmail);
+  const displayName = normalizeUserDisplayName(rawDisplayName);
+
+  if (!email) {
+    throw new Error("Invalid user email.");
+  }
+
+  if (!displayName) {
+    throw new Error("Display name is required and must be 80 characters or fewer.");
+  }
+
+  await getFirestoreDb()
+    .collection(USERS_COLLECTION)
+    .doc(email)
+    .set(
+      {
+        email,
+        displayName,
+        updatedAt: FieldValue.serverTimestamp(),
+        lastSeenAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+  return getOrCreateUser(email);
 }

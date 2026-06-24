@@ -21,7 +21,7 @@ export class WrapPFromSheetJob {
       ? cfg.tab.trim()
       : await this.sheets.getFirstSheetTitle(spreadsheetId);
 
-    const col = (cfg.targetCol ?? "F").trim().toUpperCase();
+    const col = (cfg.targetCol ?? "D").trim().toUpperCase();
     const skipHeader = cfg.skipHeader ?? true;
 
     const range = `${tab}!${col}:${col}`; // entire column

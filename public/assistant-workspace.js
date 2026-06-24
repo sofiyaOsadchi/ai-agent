@@ -6782,15 +6782,17 @@
           "Check for duplicate FAQ questions that seek the same information.",
           "",
           "DATA TO CHECK:",
-          "{{answersTsv}}",
+          "{{answersTsvNumbered}}",
           "",
           "Return exactly:",
           "HEADER",
-          "Duplicate",
+          "Row\tDuplicate",
           "DATA",
-          "[one value per data row]",
+          "[one Row-numbered value per data row]",
           "",
-          "Write NO if unique. Write YES - Q[#] [question] and Q[#] [question] if duplicate. Return exactly one line per data row, excluding the header."
+          "Use format: Row number, tab, result.",
+          "Write NO if unique. Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
+          "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
         ].join("\n"),
         model
       });
@@ -6807,17 +6809,19 @@
           `Source policy: ${sourcePolicy}`,
           "",
           "DATA TO CHECK:",
-          "{{answersTsv}}",
+          "{{answersTsvNumbered}}",
           "",
           `If returning WRONG or FOUND text, apply these forbidden phrase rules: ${forbiddenPhrases}`,
           "",
           "Return exactly:",
           "HEADER",
-          "Source OK",
+          "Row\tSource OK",
           "DATA",
-          "[one value per data row]",
+          "[one Row-numbered value per data row]",
           "",
-          "For each row write OK, NOT VERIFIED, WRONG with correction, or FOUND with source. Return exactly one line per data row, excluding the header."
+          "Use format: Row number, tab, result.",
+          "For each row write OK, NOT VERIFIED, WRONG with correction, or FOUND with source.",
+          "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
         ].join("\n"),
         model
       });
@@ -6843,11 +6847,13 @@
           "Return ONLY the full corrected TSV.",
           "Keep the same header and row order as the input TSV.",
           "Edit the Question and Answer cells directly where grammar, clarity, tone, forbidden phrases, or answer fit need improvement.",
+          "For yes/no questions, do not start with Yes unless the answer is genuinely affirmative; use No when the service is unavailable.",
+          "For what/where/when/how/how much questions, do not start the answer with Yes.",
           "Keep Category and Frequency Level unchanged unless a tiny wording cleanup is required.",
           "Do not add a Grammar Fix column.",
           "Do not add commentary before or after the TSV."
         ].filter(Boolean).join("\n"),
-        model
+        model: "gpt-5.5"
       });
     }
 

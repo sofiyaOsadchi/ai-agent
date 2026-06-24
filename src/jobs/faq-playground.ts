@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
 import type { AIProvider } from "../core/ai/types.js";
-import { FaqDemandService, type FaqDemandPhrase, type FaqDemandResult } from "../services/faq-demand.js";
+import { FaqDemandService, type FaqOpportunity, type FaqDemandPhrase, type FaqDemandResult } from "../services/faq-demand.js";
 import { SheetsService } from "../services/sheets.js";
 import {
   createDuplicateCheckPrompt,
@@ -140,7 +140,7 @@ function prepareQaPrompt(
 }
 
 // Parse QA results into a column array
-function parseQA(text: string): string[] {
+function parseQA(text: string, expectedRows?: number): string[] {
   const raw = String(text || "")
     .trim()
     .split("\n")
@@ -150,13 +150,51 @@ function parseQA(text: string): string[] {
   if (raw.length === 0) return [];
 
   const dataIdx = raw.findIndex((l) => l.toUpperCase() === "DATA");
-  if (dataIdx !== -1) return raw.slice(dataIdx + 1);
+  let body = dataIdx !== -1 ? raw.slice(dataIdx + 1) : raw;
 
-  if (raw[0].toUpperCase() === "HEADER") {
-    return raw.slice(2);
+  if (dataIdx === -1 && raw[0].toUpperCase() === "HEADER") {
+    body = raw.slice(2);
   }
 
-  return raw;
+  body = body.filter((line) => {
+    const upper = line.toUpperCase();
+    return upper !== "HEADER" && !/^ROW\s*(\t|\||,|$)/i.test(line);
+  });
+
+  if (!expectedRows || expectedRows <= 0) return body;
+
+  const mapped = Array.from({ length: expectedRows }, () => "");
+  const sequential: string[] = [];
+  let sawNumbered = false;
+
+  for (const line of body) {
+    const tabParts = line.split("\t");
+    if (tabParts.length >= 2 && /^(?:Q)?\d+$/i.test(tabParts[0].trim())) {
+      const idx = Number(tabParts[0].trim().replace(/^Q/i, "")) - 1;
+      if (idx >= 0 && idx < expectedRows) {
+        mapped[idx] = tabParts.slice(1).join(" ").trim();
+        sawNumbered = true;
+        continue;
+      }
+    }
+
+    const match = line.match(/^(?:Q)?(\d+)\s*(?:\||[.:)\]-]|–|—)\s*(.+)$/i);
+    if (match) {
+      const idx = Number(match[1]) - 1;
+      if (idx >= 0 && idx < expectedRows) {
+        mapped[idx] = match[2].trim();
+        sawNumbered = true;
+        continue;
+      }
+    }
+
+    sequential.push(line);
+  }
+
+  if (sawNumbered) return mapped;
+
+  while (sequential.length < expectedRows) sequential.push("");
+  return sequential.slice(0, expectedRows);
 }
 
 function looksLikeTsv(tsv: string): boolean {
@@ -171,6 +209,20 @@ function padToDataRows(arr: string[], dataRowCount: number): string[] {
   const res = [...arr];
   while (res.length < dataRowCount) res.push("");
   return res.slice(0, dataRowCount);
+}
+
+function buildNumberedTsv(tsv: string): string {
+  const rows = String(tsv || "")
+    .trim()
+    .split("\n")
+    .map((r) => r.split("\t"));
+
+  if (rows.length === 0 || !rows[0]?.length) return "Row";
+
+  return [
+    ["Row", ...rows[0]].join("\t"),
+    ...rows.slice(1).map((row, idx) => [String(idx + 1), ...row].join("\t")),
+  ].join("\n");
 }
 
 function isBaseTsvReplacementTask(task: UiTask | undefined): boolean {
@@ -212,21 +264,40 @@ function sourceDemandPhrases(result: FaqDemandResult): FaqDemandPhrase[] {
     .filter((phrase) => phrase.source !== "starter-intent");
 }
 
+function automaticFaqOpportunities(result: FaqDemandResult): FaqOpportunity[] {
+  return (Array.isArray(result.opportunities) ? result.opportunities : [])
+    .filter((opportunity) =>
+      opportunity.strength === "strong"
+      && opportunity.risk !== "high"
+      && opportunity.verificationStatus !== "needs_verification"
+    );
+}
+
 function buildAutomaticDemandBrief(result: FaqDemandResult, questionsPerPhrase: number): string {
-  const phrases = sourceDemandPhrases(result);
-  if (!phrases.length) return "";
+  const opportunities = automaticFaqOpportunities(result);
+  if (!opportunities.length) return "";
 
   return [
     `SEARCH-DEMAND FAQ BRIEF FOR ${result.subject}`,
     "",
-    "Use these source phrases to influence the Research questions task. They do not replace factual answer sources.",
+    "Add these scored FAQ opportunities as mandatory candidate questions in the Research questions task. They do not replace factual answer sources.",
     "For final answers, verify facts against official or otherwise approved sources.",
-    "Selected phrases are demand signals only; rewrite or skip wording that conflicts with forbidden phrase rules.",
-    "All selected phrases are real source signals from Analytics/Search Console.",
+    "Only strong, low-risk, query-supported opportunities are included automatically. Raw source phrases are not used directly in automatic mode.",
+    "Use the candidate question itself as the preferred row wording. Keep it close to the source query intent; do not broaden it into nearby amenities, attractions, reviews or sales claims.",
+    "Skip a mandatory candidate only if it duplicates another row, violates source rules, or cannot be answered safely from approved sources.",
     "",
-    "SELECTED PHRASES TO TURN INTO FAQ QUESTIONS:",
-    `Generate up to ${questionsPerPhrase} natural FAQ question(s) from each selected phrase, but merge duplicates across similar intents.`,
-    ...phrases.map((phrase) => `- ${phrase.phrase} | Intent: ${phrase.intent || phrase.phrase} | ${phrase.source}: ${phrase.evidence}${phrase.page ? ` | Page: ${phrase.page}` : ""}`),
+    "MANDATORY FAQ OPPORTUNITIES TO INCLUDE:",
+    `Create at most ${questionsPerPhrase} row(s) from each opportunity, and merge duplicates across similar topics.`,
+    ...opportunities.map((opportunity) => [
+      `- ${opportunity.candidateQuestion}`,
+      `Topic: ${opportunity.topic}`,
+      `Category: ${opportunity.category}`,
+      `Evidence: ${opportunity.metrics.impressions} impressions, ${opportunity.metrics.clicks} clicks`,
+      opportunity.pages.length ? `Pages: ${opportunity.pages.join(", ")}` : "",
+      opportunity.sourceQueries.length ? `Source queries: ${opportunity.sourceQueries.join(", ")}` : "",
+      `Verification: ${opportunity.verificationStatus || "query_supported"}`,
+      `Reason: ${opportunity.reason}`,
+    ].filter(Boolean).join(" | ")),
   ].join("\n");
 }
 
@@ -276,17 +347,18 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
           dateRange: demandConfig?.dateRange,
           analytics: demandConfig?.analytics,
           searchConsole: demandConfig?.searchConsole,
-          limit: demandConfig?.limit || 80,
+          limit: demandConfig?.limit || 250,
           maxPhrases: demandConfig?.maxPhrases || 5,
           questionsPerPhrase,
         });
         automaticDemandBrief = buildAutomaticDemandBrief(demandResult, questionsPerPhrase);
 
+        const opportunityCount = automaticFaqOpportunities(demandResult).length;
         const phraseCount = sourceDemandPhrases(demandResult).length;
-        if (phraseCount) {
-          console.log(chalk.green(`📈 Added ${phraseCount} demand phrase(s) for this subject.`));
+        if (opportunityCount) {
+          console.log(chalk.green(`📈 Added ${opportunityCount} strong FAQ opportunit${opportunityCount === 1 ? "y" : "ies"} for this subject.`));
         } else {
-          console.log(chalk.yellow("⚠️ No subject-matching Analytics/Search Console phrases found. Continuing without demand inspiration."));
+          console.log(chalk.yellow(`⚠️ No strong low-risk FAQ opportunities found from ${phraseCount} source phrase(s). Continuing without automatic demand inspiration.`));
         }
 
         for (const warning of demandResult.sources?.warnings || []) {
@@ -307,13 +379,14 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
         hotel: subject,
         last,
         answersTsv,
+        answersTsvNumbered: answersTsv ? buildNumberedTsv(answersTsv) : "",
         baseTsv: answersTsv
       };
 
       const system = replaceVars(t.system || "", vars).trim();
       let user = replaceVars(t.user || "", vars).trim();
       if (t.id === 1 && automaticDemandBrief && !user.includes("SEARCH-DEMAND FAQ BRIEF")) {
-        user += `\n\nSEARCH PHRASE DEMAND SIGNALS:\n${automaticDemandBrief}`;
+        user += `\n\nSEARCH-DEMAND MANDATORY QUESTIONS:\n${automaticDemandBrief}`;
       }
       const { provider, model } = resolveTaskAi(t);
 
@@ -426,7 +499,7 @@ async function runFromUiTasks(agent: AIAgent, sheets: SheetsService, cfg: UiTask
       }
 
       // Extract lines: prefer HEADER/DATA format, otherwise raw lines
-      let values = parseQA(out);
+      let values = parseQA(out, dataRowCount);
       if (values.length === 0) {
         values = out
           .trim()
@@ -557,6 +630,8 @@ async function runFaqPlaygroundLegacy(agent: AIAgent, sheets: SheetsService, con
     // STEP 3: QA + Export
     if (config.steps.qa && step2Output) {
       console.log(chalk.yellow("🧪 Step 3: QA & Analysis (3 Sub-tasks)..."));
+      const preQaRows = step2Output.trim().split("\n").map((r) => r.split("\t"));
+      const preQaDataRowCount = Math.max(0, preQaRows.length - 1);
 
       // 3.1 Duplicate
       console.log(chalk.gray("   ↳ 3.1 Checking Duplicates..."));
@@ -564,7 +639,7 @@ async function runFaqPlaygroundLegacy(agent: AIAgent, sheets: SheetsService, con
       agent.clearTasks();
       agent.addTask(dupPrompt);
       await agent.executeChain();
-      const dupCol = parseQA(agent.getLastResult() || "");
+      const dupCol = parseQA(agent.getLastResult() || "", preQaDataRowCount);
 
       // 3.2 Source verify
       console.log(chalk.gray("   ↳ 3.2 Verifying Sources..."));
@@ -576,7 +651,7 @@ async function runFaqPlaygroundLegacy(agent: AIAgent, sheets: SheetsService, con
       agent.clearTasks();
       agent.addTask(verifyPrompt);
       await agent.executeChain();
-      const verifyCol = parseQA(agent.getLastResult() || "");
+      const verifyCol = parseQA(agent.getLastResult() || "", preQaDataRowCount);
 
       // 3.3 Grammar
       console.log(chalk.gray("   ↳ 3.3 Checking Grammar..."));
@@ -588,7 +663,7 @@ async function runFaqPlaygroundLegacy(agent: AIAgent, sheets: SheetsService, con
       agent.clearTasks();
       agent.addTask(grammarPrompt);
       await agent.executeChain();
-      const grammarCol = parseQA(agent.getLastResult() || "");
+      const grammarCol = parseQA(agent.getLastResult() || "", preQaDataRowCount);
 
       console.log(chalk.cyan("💾 Creating Spreadsheet..."));
 

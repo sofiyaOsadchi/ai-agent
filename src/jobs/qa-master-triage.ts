@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { AIAgent } from "../core/agent.js";
 import { SheetsService } from "../services/sheets.js";
+import { extractQaNumberTokens, qaNumberTokensEqual } from "./subjobs/qa-number-normalization.js";
 
 export type QaMasterTriageConfig = {
   spreadsheetId: string;
@@ -182,9 +183,7 @@ private isAffirmativeAnswer(text: string): boolean {
 }
 
   private tokensEqual(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
+    return qaNumberTokensEqual(a, b);
   }
 
   // ---------------------------
@@ -394,46 +393,7 @@ private isAffirmativeAnswer(text: string): boolean {
   // ---------------------------
 
   private extractNumberTokensNormalized(text: string, lang: string): string[] {
-    let t = this.normalizeTextForNumberCompare(text, lang);
-    if (!t) return [];
-
-    const tokens: string[] = [];
-
-    // Times HH:MM
-    const timeMatches = t.match(/\b\d{1,2}:\d{2}\b/g) ?? [];
-    for (const tm of timeMatches) {
-      const [hhRaw, mm] = tm.split(":");
-      const hh = String(parseInt(hhRaw, 10)).padStart(2, "0");
-      tokens.push(`${hh}:${mm}`);
-    }
-
-    // Remove times before scanning generic numbers (prevents 06 + 30 noise)
-    const tNoTimes = t.replace(/\b\d{1,2}:\d{2}\b/g, " ");
-
-    // Semantic 24h token
-    const has24h = /\b24h\b/.test(t);
-    if (has24h) tokens.push("24h");
-
-    // General numbers/decimals
-    const numMatches = tNoTimes.match(/\b\d+(?:\.\d+)?\b/g) ?? [];
-    for (const nm of numMatches) tokens.push(nm);
-
-    // If 24h exists, remove standalone "24" (and "7" if original included 24/7-like)
-    const has24slash7 = /\b24\/7\b/.test(this.normalizeBase(text)) || /\b24\s*h\b/.test(t);
-    const filtered = tokens.filter((x) => {
-      if (!x) return false;
-      if (has24h && x === "24") return false;
-      if (has24slash7 && has24h && x === "7") return false;
-      return true;
-    });
-
-    // De-duplicate while keeping order
-    const seen = new Set<string>();
-    return filtered.filter((x) => {
-      if (seen.has(x)) return false;
-      seen.add(x);
-      return true;
-    });
+    return extractQaNumberTokens(text, lang);
   }
 
   // ---------------------------
@@ -524,36 +484,33 @@ private isAffirmativeAnswer(text: string): boolean {
   // ---------------------------
 
   private systemForLang(lang: string): string {
-    if (lang === "de") {
-      return [
-        "ROLE: You are a strict Hotel FAQ QA & Getranslated localization editor.",
-        "GOAL: Identify only REAL issues and propose minimal fixes.",
-        "",
-        "CRITICAL RULES:",
-        "1) Do NOT invent facts. If the English source lacks a detail, the translated textmust not add it.",
-        "2) Preserve all numbers, times, distances and constraints exactly as in English unless clearly a formatting conversion (e.g., 4 p.m. -> 16:00).",
-        "3) Keep the hotel name exactly as in the translated question if it exists (do not remove it).",
-        "4) If the issue is only wording style, mark it as NOT a real issue.",
-        "4.1 if the name of the hotel is missing in the translated answer but is present in the translated question, it is NOT a real issue (",
-        "5) If translated is missing entirely, propose full translated question/answer translations.",
-        "6) If the issue is 24 hours-related, check if the translation conveys the same concept (e.g., 24/7, around the clock, all day etc.)",
-        "",
-        "OUTPUT FORMAT:",
-        "Return VALID JSON only: {\"items\":[ ... ]}",
-        "Each item must include:",
-        "- key (string) - pass through as provided",
-        "- isRealIssue (boolean)",
-        "- why (Hebrew string, short, practical)",
-        "- fixQuestion (translated string or empty)",
-        "- fixAnswer (translated string or empty)",
-      ].join("\n");
-    }
+    const languageName =
+      ({ de: "German", es: "Spanish", it: "Italian", he: "Hebrew", ar: "Arabic", fr: "French" } as Record<string, string>)[
+        lang
+      ] ?? lang.toUpperCase();
 
-    // default generic
     return [
-      "ROLE: You are a strict Hotel FAQ QA editor.",
-      "Return VALID JSON only: {\"items\":[...]} with key,isRealIssue,why,fixQuestion,fixAnswer.",
-      "Do NOT invent facts. Preserve numbers and times. If it's stylistic only, isRealIssue=false.",
+      "ROLE: You are a strict Hotel FAQ QA and localization editor.",
+      `TARGET LANGUAGE: ${languageName}.`,
+      "GOAL: Identify only REAL, material issues and propose minimal fixes.",
+      "",
+      "CRITICAL RULES:",
+      "1) Do NOT invent facts. If the English source lacks a detail, the translated text must not add it.",
+      "2) Preserve numbers, times, distances, prices, dates, percentages and constraints unless the translation uses an equivalent format.",
+      "3) Mark isRealIssue=false for stylistic-only wording, natural localization, proper nouns, brand names, room names, and acceptable loanwords.",
+      "4) Mark isRealIssue=false when 24/7, 24-hour, around the clock, all day, anytime, siempre, todo el dia, a cualquier hora, 24 ore su 24, sempre disponibile, or similar target-language wording clearly conveys the same availability concept.",
+      "5) If the hotel name is missing only from the translated answer but it already appears in the translated question, mark isRealIssue=false unless the answer becomes ambiguous or names a different hotel.",
+      "6) Keep a true issue only for missing translation, wrong language, wrong hotel/entity, factual contradiction, malformed content, or a number/time/constraint that was actually changed or lost.",
+      "7) If uncertain, prefer isRealIssue=false. This report must stay conservative.",
+      "",
+      "OUTPUT FORMAT:",
+      "Return VALID JSON only: {\"items\":[ ... ]}",
+      "Each item must include:",
+      "- key (string) - pass through as provided",
+      "- isRealIssue (boolean)",
+      "- why (Hebrew string, short, practical)",
+      "- fixQuestion (translated string or empty)",
+      "- fixAnswer (translated string or empty)",
     ].join("\n");
   }
 
@@ -573,6 +530,8 @@ private isAffirmativeAnswer(text: string): boolean {
     return [
       "TASK: Triage each issue. Mark only REAL issues and propose minimal fixes in target language.",
       "IMPORTANT: If a time conversion is purely formatting (e.g., 4 p.m. => 16:00), it is NOT a real issue.",
+      "IMPORTANT: If 24/7 or 24-hour availability is translated semantically without digits, it is NOT a real issue.",
+      "IMPORTANT: If the issue is only that the hotel name was not repeated in the translated answer, and the answer is still clear, it is NOT a real issue.",
       "Return JSON only.",
       JSON.stringify({ items }, null, 0),
     ].join("\n");
@@ -610,6 +569,26 @@ private isAffirmativeAnswer(text: string): boolean {
     return x ? x : marker;
   }
 
+  private isHotelNameMissingIssue(issue: QaIssueRow): boolean {
+    return issue.type === "HOTEL_NAME_MISSING_IN_TARGET_Q" || issue.type === "HOTEL_NAME_MISSING_IN_TARGET_A";
+  }
+
+  private toReportRow(issue: QaIssueRow, whyIssue?: string): TriageResultRow {
+    return {
+      hotel: issue.hotel,
+      questionEn: issue.questionEn,
+      answerEn: issue.answerEn,
+      questionTarget: issue.questionTarget,
+      answerTarget: issue.answerTarget,
+      whyIssue: whyIssue ?? issue.note ?? issue.type,
+      fixQuestionTarget: "",
+      fixAnswerTarget: "",
+      sourceSeverity: issue.severity,
+      sourceType: issue.type,
+      sourceRow: issue.row,
+    };
+  }
+
   // ---------------------------
   // Main
   // ---------------------------
@@ -643,8 +622,14 @@ private isAffirmativeAnswer(text: string): boolean {
 
     // 1) Deterministic noise filtering
     const candidates: QaIssueRow[] = [];
+    const hotelNameReviewRows: TriageResultRow[] = [];
     for (const it of issues) {
       if (candidates.length >= maxItems) break;
+
+      if (this.isHotelNameMissingIssue(it)) {
+        hotelNameReviewRows.push(this.toReportRow(it));
+        continue;
+      }
 
       if (it.type === "NUMBERS_MISMATCH") {
         const isNoise = this.isNumbersMismatchNoise(it, lang);
@@ -659,11 +644,15 @@ private isAffirmativeAnswer(text: string): boolean {
         continue;
       }
 
-      // Keep others (hotel name missing, language suspect, etc.) for AI triage
+      // Keep other candidates (language suspect, English QA mismatch, etc.) for AI triage.
       candidates.push(it);
     }
 
-    console.log(chalk.cyan(`Parsed issues: ${issues.length} | After deterministic noise filter: ${candidates.length}`));
+    console.log(
+      chalk.cyan(
+        `Parsed issues: ${issues.length} | After deterministic noise filter: ${candidates.length} | Hotel-name review: ${hotelNameReviewRows.length}`
+      )
+    );
 
     // If deterministicOnly: just write the remaining candidates without AI fixes
 const triagedRows: TriageResultRow[] = [];
@@ -671,19 +660,7 @@ const manualReviewRows: TriageResultRow[] = [];
 
     if (deterministicOnly) {
       for (const it of candidates) {
-        triagedRows.push({
-          hotel: it.hotel,
-          questionEn: it.questionEn,
-          answerEn: it.answerEn,
-          questionTarget: it.questionTarget,
-          answerTarget: it.answerTarget,
-          whyIssue: it.note || it.type,
-          fixQuestionTarget: "",
-          fixAnswerTarget: "",
-          sourceSeverity: it.severity,
-          sourceType: it.type,
-          sourceRow: it.row,
-        });
+        triagedRows.push(this.toReportRow(it));
       }
     } else {
       // 2) AI triage on remaining candidates + suggested fixes
@@ -705,19 +682,7 @@ const manualReviewRows: TriageResultRow[] = [];
 const items = obj?.items;
 if (!Array.isArray(items)) {
   for (const { issue } of batch) {
-    manualReviewRows.push({
-      hotel: issue.hotel,
-      questionEn: issue.questionEn,
-      answerEn: issue.answerEn,
-      questionTarget: issue.questionTarget,
-      answerTarget: issue.answerTarget,
-      whyIssue: issue.note || "Needs manual review (AI JSON failed)",
-      fixQuestionTarget: "",
-      fixAnswerTarget: "",
-      sourceSeverity: issue.severity,
-      sourceType: issue.type,
-      sourceRow: issue.row,
-    });
+    manualReviewRows.push(this.toReportRow(issue, issue.note || "Needs manual review (AI JSON failed)"));
   }
   idx += batchSize;
   continue;
@@ -734,19 +699,7 @@ if (!Array.isArray(items)) {
 
           // If AI doesn't return it - keep as manual review
          if (!ai) {
-  manualReviewRows.push({
-    hotel: issue.hotel,
-    questionEn: issue.questionEn,
-    answerEn: issue.answerEn,
-    questionTarget: issue.questionTarget,
-    answerTarget: issue.answerTarget,
-    whyIssue: issue.note || "Needs manual review (missing AI item)",
-    fixQuestionTarget: "",
-    fixAnswerTarget: "",
-    sourceSeverity: issue.severity,
-    sourceType: issue.type,
-    sourceRow: issue.row,
-  });
+  manualReviewRows.push(this.toReportRow(issue, issue.note || "Needs manual review (missing AI item)"));
   continue;
 }
 
@@ -782,6 +735,7 @@ if (!Array.isArray(items)) {
     out.push(["Total source issues", String(issues.length)]);
     out.push(["After deterministic filter", String(candidates.length)]);
     out.push(["True issues (final)", String(triagedRows.length)]);
+    out.push(["Hotel-name preservation review", String(hotelNameReviewRows.length)]);
     out.push([""]);
 
     out.push([
@@ -799,6 +753,38 @@ if (!Array.isArray(items)) {
     ]);
 
     for (const r of triagedRows) {
+      out.push([
+        this.cellOrMarker(r.hotel, marker),
+        this.cellOrMarker(r.questionEn, marker),
+        this.cellOrMarker(r.answerEn, marker),
+        this.cellOrMarker(r.questionTarget, marker),
+        this.cellOrMarker(r.answerTarget, marker),
+        this.cellOrMarker(r.whyIssue, marker),
+        this.cellOrMarker(r.fixQuestionTarget, marker),
+        this.cellOrMarker(r.fixAnswerTarget, marker),
+        this.cellOrMarker(r.sourceSeverity, marker),
+        this.cellOrMarker(r.sourceType, marker),
+        this.cellOrMarker(r.sourceRow, marker),
+      ]);
+    }
+
+    out.push([""]);
+    out.push(["hotel_name_preservation_review"]);
+    out.push([
+      "hotel",
+      "question_en_full",
+      "answer_en_full",
+      `question_${lang}_full`,
+      `answer_${lang}_full`,
+      "why_issue",
+      `fix_question_${lang}`,
+      `fix_answer_${lang}`,
+      "source_severity",
+      "source_type",
+      "source_row",
+    ]);
+
+    for (const r of hotelNameReviewRows) {
       out.push([
         this.cellOrMarker(r.hotel, marker),
         this.cellOrMarker(r.questionEn, marker),

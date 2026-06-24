@@ -152,16 +152,6 @@
       font-weight: 900;
     }
 
-    .plan-preview-link {
-      color: var(--purple-dark);
-      text-decoration: none;
-    }
-
-    .plan-preview-link:hover {
-      border-color: var(--purple);
-      background: var(--purple-soft);
-    }
-
     .topbar-actions {
       display: flex;
       align-items: center;
@@ -239,123 +229,6 @@
       box-shadow: 0 12px 28px rgba(126, 90, 174, 0.2);
     }
 
-    .flow-stepper {
-      display: flex;
-      align-items: stretch;
-      gap: 0;
-      margin-bottom: 18px;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface);
-    }
-
-    .flow-step {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-      padding: 10px 14px;
-      border-radius: 11px;
-    }
-
-    .flow-step-num {
-      flex: 0 0 auto;
-      display: grid;
-      place-items: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .flow-step.is-input .flow-step-num {
-      border: 1px solid rgba(217, 122, 60, 0.3);
-      background: var(--orange-soft);
-      color: #9a5b18;
-    }
-
-    .flow-step.is-process .flow-step-num {
-      border: 1px solid rgba(111, 147, 85, 0.3);
-      background: var(--teal-soft);
-      color: #3b6d11;
-    }
-
-    .flow-step.is-output .flow-step-num {
-      border: 1px solid rgba(74, 127, 199, 0.3);
-      background: var(--purple-soft);
-      color: #1a4f9c;
-    }
-
-    .flow-step-kicker {
-      display: block;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .flow-step.is-input .flow-step-kicker {
-      color: #9a5b18;
-    }
-
-    .flow-step.is-process .flow-step-kicker {
-      color: #3b6d11;
-    }
-
-    .flow-step.is-output .flow-step-kicker {
-      color: #1a4f9c;
-    }
-
-    .flow-step strong {
-      display: block;
-      margin-top: 1px;
-      color: var(--ink);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .flow-step-arrow {
-      display: flex;
-      align-items: center;
-      padding: 0 4px;
-      color: var(--border-strong);
-      font-size: 16px;
-    }
-
-    .step-tag {
-      display: inline-flex;
-      align-items: center;
-      margin-inline-end: 8px;
-      padding: 1px 7px;
-      border-radius: 5px;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      vertical-align: 1px;
-    }
-
-    .step-tag.step-input {
-      background: var(--orange-soft);
-      color: #9a5b18;
-    }
-
-    .step-tag.step-process {
-      background: var(--teal-soft);
-      color: #3b6d11;
-    }
-
-    .step-tag.step-output {
-      background: var(--purple-soft);
-      color: #1a4f9c;
-    }
-
     .plan-dock {
       position: relative;
       display: inline-flex;
@@ -372,8 +245,8 @@
     .plan-current {
       display: flex;
       align-items: center;
-      min-width: 190px;
-      max-width: 260px;
+      min-width: 104px;
+      max-width: 170px;
       padding: 0 4px;
     }
 
@@ -537,99 +410,12 @@
       align-items: start;
     }
 
-    .setup-section-marker {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 4px 0 -2px;
-    }
-
-    .setup-section-marker::after {
-      content: "";
-      flex: 1 1 auto;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .setup-section-marker span {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 0 10px;
-      border: 1px solid rgba(126, 90, 174, 0.18);
-      border-radius: 999px;
-      background: var(--surface-soft);
-      color: var(--purple-dark);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .setup-section-marker.is-required span {
-      border-color: rgba(217, 122, 60, 0.26);
-      background: rgba(248, 234, 220, 0.68);
-      color: #9a5b18;
-    }
-
-    .setup-section-marker.is-optional span {
-      border-color: rgba(111, 147, 85, 0.24);
-      background: var(--teal-soft);
-      color: var(--green);
-    }
-
     #subjects {
       min-height: 118px;
-      border-color: rgba(217, 122, 60, 0.32);
-      background:
-        linear-gradient(90deg, rgba(248, 234, 220, 0.42), rgba(255, 255, 255, 0) 20px),
-        #fff;
-      box-shadow: inset 4px 0 0 rgba(217, 122, 60, 0.2);
-    }
-
-    #subjects:hover {
-      border-color: rgba(217, 122, 60, 0.44);
-    }
-
-    #subjects:focus {
-      border-color: rgba(217, 122, 60, 0.58);
-      box-shadow:
-        inset 4px 0 0 rgba(217, 122, 60, 0.34),
-        0 0 0 4px rgba(217, 122, 60, 0.11);
     }
 
     .subject-field {
       grid-column: 1 / -1;
-    }
-
-    .subject-help-row {
-      margin-top: 0;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.35;
-    }
-
-    .subject-sheet-hint {
-      display: inline-flex;
-      align-items: baseline;
-      gap: 6px;
-      width: fit-content;
-      margin-top: -2px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.35;
-      text-transform: none !important;
-    }
-
-    .subject-sheet-hint strong {
-      color: var(--text);
-      font-family: "Inter", "DM Sans", "Segoe UI", Arial, sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0;
-      text-transform: none;
     }
 
     .control-grid {
@@ -641,68 +427,7 @@
       min-width: 0;
     }
 
-    .required-settings-heading {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 2px 0 -2px;
-    }
-
-    .required-settings-heading::after {
-      content: "";
-      flex: 1 1 auto;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .required-settings-tag {
-      display: inline-flex;
-      align-items: center;
-      min-height: 24px;
-      padding: 0 10px;
-      border: 1px solid rgba(217, 72, 63, 0.24);
-      border-radius: 999px;
-      background: rgba(252, 239, 237, 0.78);
-      color: #a33a32;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .required-settings-heading small {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .optional-settings-heading {
-      grid-column: 1 / -1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin: 8px 0 -2px;
-    }
-
-    .optional-settings-heading::after {
-      content: "";
-      flex: 1 1 auto;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .optional-settings-heading small {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .setup-controls > .audience-field {
+    .setup-controls > .field:nth-child(4) {
       grid-column: 1 / -1;
     }
 
@@ -1149,25 +874,13 @@
       margin-bottom: 0;
     }
 
-    .source-discovery-label {
-      margin: 2px 0 -2px;
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      line-height: 1.35;
-      text-transform: uppercase;
-    }
-
     .official-source-field {
       display: grid;
       gap: 6px;
       min-width: 0;
     }
 
-    .official-source-field > label,
-    .official-source-field > span {
+    .official-source-field span {
       color: var(--muted);
       font-size: 12px;
       font-weight: 800;
@@ -1176,75 +889,8 @@
       text-transform: uppercase;
     }
 
-    .official-source-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 8px;
-      align-items: center;
-    }
-
     .official-source-field .input {
       min-height: 40px;
-    }
-
-    .official-source-suggest-btn {
-      min-height: 40px;
-      padding-inline: 13px;
-      border-color: rgba(217, 72, 63, 0.24);
-      color: #a33a32;
-      background: rgba(252, 239, 237, 0.74);
-      white-space: nowrap;
-    }
-
-    .official-source-suggest-btn:hover {
-      border-color: rgba(217, 72, 63, 0.42);
-      background: #fff;
-    }
-
-    .official-source-field .hint {
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    .official-source-status {
-      min-height: 16px;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1.35;
-    }
-
-    .official-source-status:not(:empty) {
-      width: fit-content;
-      max-width: 100%;
-      padding: 6px 9px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface-soft);
-    }
-
-    .official-source-status.is-busy {
-      color: var(--blue);
-      border-color: rgba(74, 127, 199, 0.22);
-      background: var(--blue-soft);
-    }
-
-    .official-source-status.is-success {
-      color: #3f7f3a;
-      border-color: rgba(63, 127, 58, 0.22);
-      background: rgba(232, 245, 234, 0.72);
-    }
-
-    .official-source-status.is-warning {
-      color: #9a5b18;
-      border-color: rgba(154, 91, 24, 0.22);
-      background: rgba(248, 234, 220, 0.58);
-    }
-
-    .official-source-status.is-error {
-      color: #a33a32;
-      border-color: rgba(163, 58, 50, 0.22);
-      background: rgba(252, 239, 237, 0.72);
     }
 
     .source-group {
@@ -1281,19 +927,10 @@
       box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
     }
 
-    .source-panel > .source-group .source-panel-title::before {
-      background: #d9483f;
-      box-shadow: 0 0 0 4px rgba(217, 72, 63, 0.14);
-    }
-
     .source-panel-note {
       color: var(--muted);
       font-size: 12px;
       line-height: 1.35;
-    }
-
-    .source-panel-note.is-under-chips {
-      margin-top: -2px;
     }
 
     .source-rules {
@@ -1385,7 +1022,8 @@
     }
 
     .forbidden-panel-title::before {
-      display: none;
+      background: var(--orange);
+      box-shadow: 0 0 0 4px rgba(217, 122, 60, 0.12);
     }
 
     .forbidden-panel-note {
@@ -1408,16 +1046,16 @@
 
     .forbidden-panel-pill {
       flex: 0 0 auto;
-      min-height: 34px;
-      min-width: 62px;
-      padding: 7px 12px;
-      border: 1px solid var(--border);
+      min-height: 28px;
+      min-width: 54px;
+      padding: 0 10px;
+      border: 1px solid rgba(217, 122, 60, 0.24);
       border-radius: 999px;
-      color: var(--purple-dark);
-      background: var(--surface-soft);
-      font-size: 12px;
-      font-weight: 900;
-      line-height: 1;
+      color: var(--vx-orange);
+      background: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 28px;
       text-align: center;
       text-transform: uppercase;
       white-space: nowrap;
@@ -1429,6 +1067,19 @@
 
     .forbidden-panel[open] .forbidden-panel-pill::before {
       content: "Close";
+    }
+
+    .naming-panel {
+      align-self: stretch;
+    }
+
+    .setup-grid .naming-panel {
+      grid-column: auto;
+    }
+
+    .compact-panel.naming-panel .compact-combo {
+      grid-template-columns: 1fr !important;
+      gap: 10px;
     }
 
     .naming-details {
@@ -2152,51 +1803,12 @@
       content: "Close";
     }
 
-    .demand-persistent-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 18px 14px;
-      color: var(--green);
-      font-size: 12px;
-      font-weight: 750;
-      line-height: 1.35;
-    }
-
-    .demand-persistent-status::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
-    }
-
     .demand-helper strong {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      display: block;
       margin-top: 2px;
       color: var(--ink);
       font-size: 17px;
       line-height: 1.25;
-    }
-
-    .optional-tag {
-      display: inline-flex;
-      align-items: center;
-      min-height: 22px;
-      padding: 0 8px;
-      border: 1px solid rgba(111, 147, 85, 0.26);
-      border-radius: 999px;
-      background: var(--teal-soft);
-      color: var(--green);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
     }
 
     .demand-helper small {
@@ -2900,49 +2512,6 @@
       background: #fff !important;
     }
 
-    .prompt-combined .prompt-advanced-body {
-      gap: 12px;
-    }
-
-    .managed-prompt-block {
-      display: grid;
-      gap: 7px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface-soft);
-    }
-
-    .managed-prompt-label,
-    .editable-prompt-label {
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .managed-prompt-pre {
-      margin: 0;
-      max-height: 220px;
-      overflow: auto;
-      white-space: pre-wrap;
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .editable-prompt-field {
-      display: grid;
-      gap: 7px;
-    }
-
-    .editable-prompt-field .prompt-text {
-      min-height: 260px;
-    }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -3124,7 +2693,7 @@
       color: var(--muted);
       font-size: 12px;
       line-height: 1.35;
-      max-width: 760px;
+      max-width: 680px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -3178,91 +2747,19 @@
       line-height: 1.55;
     }
 
-    .setup-rail-card {
+    .rail-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
       display: grid;
-      gap: 14px;
-    }
-
-    .rail-status-line {
-      margin: -4px 0 0 !important;
-      color: var(--text) !important;
-      font-size: 13px !important;
-      font-weight: 750;
-      line-height: 1.45 !important;
-    }
-
-    .settings-checklist {
-      display: grid;
-      gap: 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .settings-check {
-      display: grid;
-      grid-template-columns: minmax(78px, auto) minmax(0, 1fr);
       gap: 10px;
-      align-items: baseline;
-      padding: 9px 0;
-      border-top: 1px solid rgba(235, 227, 214, 0.72);
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
     }
 
-    .settings-check:first-child {
-      border-top: 0;
-    }
-
-    .settings-check.is-warning {
-      color: #9a5b18;
-    }
-
-    .settings-check strong {
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .settings-check span {
-      min-width: 0;
-      color: var(--text);
-      font-size: 12px;
-      font-weight: 720;
-      overflow-wrap: anywhere;
-    }
-
-    .settings-check.is-warning span {
-      color: #9a5b18;
-    }
-
-    .rail-workflow-mini {
+    .rail-list li {
       display: grid;
+      grid-template-columns: 24px 1fr;
       gap: 8px;
-    }
-
-    .rail-section-label {
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .rail-workflow-chips {
-      gap: 6px;
-    }
-
-    .rail-workflow-chips .badge {
-      justify-content: flex-start;
-      min-height: 30px;
-      padding: 0 10px;
-      font-size: 12px;
+      align-items: start;
     }
 
     .dot {
@@ -3440,7 +2937,7 @@
 
     .page {
       width: min(1480px, calc(100% - 64px)) !important;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, 320px) !important;
+      grid-template-columns: minmax(0, 1fr) 400px !important;
       gap: 24px !important;
       margin-top: 36px !important;
       margin-bottom: 80px !important;
@@ -3637,20 +3134,6 @@
       line-height: 1.55;
     }
 
-    .managed-prompt-block {
-      background: var(--vx-surface-soft) !important;
-      border-color: var(--vx-border) !important;
-    }
-
-    .managed-prompt-pre {
-      color: var(--vx-muted) !important;
-    }
-
-    .editable-prompt-field .prompt-text {
-      min-height: 260px !important;
-      background: var(--vx-surface) !important;
-    }
-
     .input:hover,
     .textarea:hover,
     .select:hover,
@@ -3670,51 +3153,6 @@
       box-shadow: none !important;
     }
 
-    .required-setting .input,
-    .required-setting .select {
-      border-color: rgba(217, 72, 63, 0.22) !important;
-      background:
-        linear-gradient(90deg, rgba(252, 239, 237, 0.42), rgba(255, 255, 255, 0) 16px),
-        var(--vx-surface) !important;
-    }
-
-    .required-setting .input:hover,
-    .required-setting .select:hover {
-      border-color: rgba(217, 72, 63, 0.34) !important;
-    }
-
-    .required-setting .input:focus,
-    .required-setting .select:focus {
-      border-color: rgba(217, 72, 63, 0.54) !important;
-      box-shadow: 0 0 0 3px rgba(217, 72, 63, 0.09) !important;
-    }
-
-    .source-panel.required-setting {
-      border-color: rgba(217, 72, 63, 0.18) !important;
-      background:
-        linear-gradient(180deg, rgba(252, 239, 237, 0.34), rgba(255, 253, 249, 0.92)),
-        #fff !important;
-    }
-
-    #subjects {
-      border-color: rgba(217, 122, 60, 0.34) !important;
-      background:
-        linear-gradient(90deg, rgba(248, 234, 220, 0.42), rgba(255, 255, 255, 0) 20px),
-        var(--vx-surface) !important;
-      box-shadow: inset 4px 0 0 rgba(217, 122, 60, 0.22) !important;
-    }
-
-    #subjects:hover {
-      border-color: rgba(217, 122, 60, 0.48) !important;
-    }
-
-    #subjects:focus {
-      border-color: rgba(217, 122, 60, 0.62) !important;
-      box-shadow:
-        inset 4px 0 0 rgba(217, 122, 60, 0.34),
-        0 0 0 4px rgba(217, 122, 60, 0.11) !important;
-    }
-
     .field span,
     .field-label,
     .chat-summary-item span,
@@ -3722,12 +3160,6 @@
       color: var(--vx-muted) !important;
       font: 500 0.68rem/1.2 var(--vx-mono) !important;
       letter-spacing: 0.04em !important;
-    }
-
-    .forbidden-panel .forbidden-panel-pill {
-      color: var(--purple-dark) !important;
-      font: 900 12px/1 var(--vx-font) !important;
-      letter-spacing: 0 !important;
     }
 
     .hint,
@@ -3941,7 +3373,8 @@
       vertical-align: 0.08em;
     }
 
-    #workflowPanel .panel-head h2::before {
+    #workflowPanel .panel-head h2::before,
+    .rail-card:nth-of-type(2) h3::before {
       background: var(--vx-green);
       box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12);
     }
@@ -3966,6 +3399,7 @@
     }
 
     #outputsPanel .panel-head h2::before,
+    .rail-card:nth-of-type(3) h3::before,
     .terminal-head h3::before {
       background: var(--vx-blue);
       box-shadow: 0 0 0 4px rgba(74, 127, 199, 0.12);
@@ -3994,6 +3428,19 @@
       justify-content: end !important;
       align-items: stretch;
       flex-wrap: nowrap !important;
+    }
+
+    .header-metrics {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(86px, max-content));
+      gap: 8px;
+      align-items: stretch;
+      justify-content: end;
+    }
+
+    #setupPanel .panel-head {
+      align-items: center !important;
     }
 
     .strip-metric,
@@ -4048,14 +3495,6 @@
       margin: 0 !important;
       font-size: 1.04rem !important;
       line-height: 1.25 !important;
-    }
-
-    .task-step-description {
-      margin: 0;
-      color: var(--vx-muted);
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 1.35;
     }
 
     .task-step-heading {
@@ -4334,7 +3773,7 @@
       box-shadow: 0 0 0 4px rgba(111, 147, 85, 0.12) !important;
     }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1180px) {
       .page {
         grid-template-columns: 1fr !important;
       }
@@ -4400,29 +3839,6 @@
         width: min(100% - 18px, 1720px) !important;
       }
 
-      .flow-stepper {
-        gap: 4px;
-        padding: 5px;
-      }
-
-      .flow-step {
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 6px;
-      }
-
-      .flow-step .flow-step-kicker {
-        display: none;
-      }
-
-      .flow-step strong {
-        font-size: 11px;
-      }
-
-      .flow-step-arrow {
-        display: none;
-      }
-
       .setup-grid,
       .control-grid,
       .summary-grid,
@@ -4433,6 +3849,11 @@
       .output-grid,
       .mini-grid {
         grid-template-columns: 1fr !important;
+      }
+
+      .header-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        justify-content: stretch;
       }
 
       .panel-head,
@@ -4459,7 +3880,8 @@
         grid-template-columns: 1fr;
       }
 
-      .source-panel {
+      .source-panel,
+      .naming-panel {
         grid-column: auto;
       }
 
@@ -4537,8 +3959,7 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <a class="status-pill plan-preview-link" href="/faq-builder-plan.html">Client plan</a>
-      <span class="status-pill" id="saveStatus">Draft saved locally</span>
+      <span class="status-pill" id="saveStatus">Saved in browser</span>
     </div>
   </header>
 
@@ -4548,32 +3969,6 @@
         <button class="view-tab active" type="button" data-view-tab="builder">Editor</button>
         <button class="view-tab" type="button" data-view-tab="chat">Guided setup</button>
       </nav>
-
-      <div class="flow-stepper" data-builder-section aria-hidden="true">
-        <div class="flow-step is-input">
-          <span class="flow-step-num">1</span>
-          <div>
-            <span class="flow-step-kicker">Input</span>
-            <strong>Define</strong>
-          </div>
-        </div>
-        <span class="flow-step-arrow">→</span>
-        <div class="flow-step is-process">
-          <span class="flow-step-num">2</span>
-          <div>
-            <span class="flow-step-kicker">Process</span>
-            <strong>Build</strong>
-          </div>
-        </div>
-        <span class="flow-step-arrow">→</span>
-        <div class="flow-step is-output">
-          <span class="flow-step-num">3</span>
-          <div>
-            <span class="flow-step-kicker">Output</span>
-            <strong>Run &amp; review</strong>
-          </div>
-        </div>
-      </div>
 
       <section class="panel hidden" id="chatPanel" data-chat-section>
         <div class="panel-head">
@@ -4611,16 +4006,32 @@
       <section class="panel" id="setupPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-input">1 · Input</span> Setup</p>
-            <h2>Define FAQ plan</h2>
-            <p class="subtitle">Start with topics, required settings, and source rules before the workflow builds anything.</p>
+            <p class="eyebrow">Setup</p>
+            <h2>Workflow setup</h2>
+            <p class="subtitle">Enter a hotel, page, product, or topic. Use multiple lines when each subject should run as a separate job.</p>
+          </div>
+          <div class="header-metrics" aria-label="Workflow summary">
+            <div class="strip-metric">
+              <span>Subjects</span>
+              <strong id="subjectCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Categories</span>
+              <strong id="categoryCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Tasks</span>
+              <strong id="taskCount">0</strong>
+            </div>
+            <div class="strip-metric">
+              <span>Model</span>
+              <strong id="modelShort">o3</strong>
+            </div>
           </div>
         </div>
+
         <div class="panel-body">
           <div class="grid setup-grid">
-            <div class="setup-section-marker is-required" aria-hidden="true">
-              <span>Required setup</span>
-            </div>
             <div class="workflow-type-panel">
               <div class="workflow-type-copy">
                 <strong>Workflow type</strong>
@@ -4634,13 +4045,9 @@
             </div>
 
             <label class="field subject-field">
-              <span>Topics to run</span>
+              <span>Subjects / topics</span>
               <textarea id="subjects" class="textarea ltr" rows="3" placeholder="Leonardo Royal Berlin&#10;Toyota Corolla Hybrid&#10;Small business CRM"></textarea>
-              <span class="hint subject-help-row" id="subjectRunCounter" aria-live="polite"></span>
-              <span class="hint subject-sheet-hint">
-                <span>Sheet:</span>
-                <strong id="sheetNamePreview">{{subject}}</strong>
-              </span>
+              <span class="hint">Use a new line or comma between subjects. The setup is saved in this browser so you can continue later.</span>
               <div class="subject-history" id="subjectHistory" aria-label="Previous subject sets"></div>
             </label>
             <input id="namingPolicy" type="hidden" value="natural_exact" />
@@ -4648,12 +4055,7 @@
           </div>
 
           <div class="grid control-grid setup-controls" style="margin-top: 18px;">
-            <div class="required-settings-heading" aria-hidden="true">
-              <span class="required-settings-tag">Required settings</span>
-              <small>Used by every FAQ run</small>
-            </div>
-
-            <label class="field required-setting">
+            <label class="field">
               <span>Main model</span>
               <select id="globalModel" class="select ltr">
                 <option value="o3">OpenAI o3 - balanced</option>
@@ -4664,7 +4066,7 @@
               </select>
             </label>
 
-            <label class="field required-setting">
+            <label class="field">
               <span>Question target</span>
               <select id="questionRangePreset" class="select question-range-select">
                 <option value="10-15">Lean · 10-15</option>
@@ -4676,7 +4078,7 @@
               <input id="questionCount" type="hidden" value="20-30" />
             </label>
 
-            <label class="field required-setting">
+            <label class="field">
               <span>Output language</span>
               <select id="outputLanguage" class="select">
                 <option value="English (UK)">English (UK)</option>
@@ -4689,19 +4091,31 @@
               </select>
             </label>
 
-            <label class="field audience-field required-setting">
+            <label class="field">
               <span>Audience</span>
               <input id="audience" class="input ltr" value="Guests before booking, guests before arrival, and in-house guests" />
             </label>
 
-            <div class="field compact-panel source-panel required-setting">
+            <details class="field compact-panel forbidden-panel wide-field">
+              <summary class="forbidden-panel-head">
+                <div>
+                  <h3 class="source-panel-title forbidden-panel-title">Words to avoid</h3>
+                  <p class="forbidden-panel-note">Optional global guardrail. These words or phrases are avoided across questions, answers, and final polish.</p>
+                </div>
+                <span class="forbidden-panel-pill" aria-hidden="true"></span>
+              </summary>
+              <div class="forbidden-panel-body">
+                <textarea id="forbiddenPhrases" class="textarea ltr" rows="3" placeholder="One forbidden word or phrase per line"></textarea>
+              </div>
+            </details>
+
+            <div class="field compact-panel source-panel">
               <span>Global sources</span>
               <div class="source-group">
                 <div class="source-panel-head">
                   <h3 class="source-panel-title">Research sources</h3>
                   <span class="source-panel-note">Choose where the agent may look for FAQ intent.</span>
                 </div>
-                <div class="source-discovery-label">Question discovery only - not used for facts</div>
                 <div class="source-picker" id="sourceOptions">
                   <label class="source-chip"><input type="checkbox" value="Official website" checked />Official website</label>
                   <label class="source-chip"><input type="checkbox" value="Google Business Profile" />GBP</label>
@@ -4709,16 +4123,10 @@
                   <label class="source-chip"><input type="checkbox" value="Public reviews" />Reviews</label>
                   <label class="source-chip"><input type="checkbox" value="Competitors" />Competitors</label>
                 </div>
-                <p class="source-panel-note is-under-chips">Use these to find question ideas. Use the official source of truth for factual answers.</p>
-                <div class="official-source-field">
-                  <label for="officialSourceUrl">Official source of truth</label>
-                  <div class="official-source-row">
-                    <input id="officialSourceUrl" class="input ltr" placeholder="https://www.example.com/" />
-                    <button class="ghost-btn official-source-suggest-btn" type="button" id="suggestOfficialSourceBtn">Suggest site</button>
-                  </div>
-                  <span class="hint">The agent uses this URL for factual answers and exact naming.</span>
-                  <div class="official-source-status" id="officialSourceStatus" aria-live="polite"></div>
-                </div>
+                <label class="official-source-field">
+                  <span>Official website URL</span>
+                  <input id="officialSourceUrl" class="input ltr" placeholder="https://www.example.com/" />
+                </label>
               </div>
               <details class="source-rules">
                 <summary>Advanced source policy</summary>
@@ -4726,27 +4134,18 @@
               </details>
             </div>
 
-            <div class="optional-settings-heading" aria-hidden="true">
-              <span class="optional-tag">Optional</span>
-              <small>Enhancements you can skip</small>
-            </div>
-
             <details class="demand-helper wide-field" id="faqDemandPanel">
               <summary>
                 <span>
-                  <span class="eyebrow">Question helper</span>
-                  <strong>Real search demand</strong>
-                  <small>Uses GA4 and Search Console data to guide question selection.</small>
+                  <span class="eyebrow">Optional question helper</span>
+                  <strong>Use search phrases for guidance</strong>
+                  <small>Optional: add GA4/Search Console terms to shape question research.</small>
                 </span>
                 <label class="demand-summary-toggle" id="faqDemandAutoRunQuickToggle" title="Run search-demand mining automatically when the workflow runs">
                   <input id="faqDemandAutoRunQuick" type="checkbox" checked />
                   <span>Auto mine</span>
                 </label>
               </summary>
-
-              <p class="demand-persistent-status" id="demandAlwaysOnStatus">
-                <span id="demandAlwaysOnText">Auto mining is on - will scan each topic when you run.</span>
-              </p>
 
               <div class="demand-helper-body">
                 <div class="signals-card demand-source-card">
@@ -4837,19 +4236,10 @@
               </div>
             </details>
 
-            <details class="field compact-panel forbidden-panel wide-field">
-              <summary class="forbidden-panel-head">
-                <div>
-                  <h3 class="source-panel-title forbidden-panel-title">Words to avoid</h3>
-                  <p class="forbidden-panel-note">Optional global guardrail. These words or phrases are avoided across questions, answers, and final polish.</p>
-                </div>
-                <span class="forbidden-panel-pill" aria-hidden="true"></span>
-              </summary>
-              <div class="forbidden-panel-body">
-                <textarea id="forbiddenPhrases" class="textarea ltr" rows="3" placeholder="One forbidden word or phrase per line"></textarea>
-              </div>
-            </details>
-
+            <div class="read-only-note wide-field">
+              <span>The sheet name is generated automatically from the subject:</span>
+              <strong id="sheetNamePreview">{{subject}}</strong>
+            </div>
           </div>
         </div>
       </section>
@@ -4857,7 +4247,7 @@
       <section class="panel" id="workflowPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-process">2 · Process</span> Workflow</p>
+            <p class="eyebrow">Workflow</p>
             <h2>FAQ workflow</h2>
             <p class="subtitle">Review the default steps or edit the instructions before running.</p>
           </div>
@@ -4874,9 +4264,9 @@
       <section class="panel" id="categoryPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-process">2 · Process</span> Optional</p>
-            <h2>Question mix</h2>
-            <p class="subtitle">Controls how questions are distributed. Active count and ranges are shown below.</p>
+            <p class="eyebrow">Optional</p>
+            <h2>Question-generation categories</h2>
+            <p class="subtitle">Open this only when you need to refine the types of questions. These settings feed the question-generation prompt.</p>
           </div>
           <details class="category-tools">
             <summary>Category tools</summary>
@@ -4908,8 +4298,8 @@
       <section class="panel" id="outputsPanel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-output">3 · Output</span> Outputs</p>
-            <h2>Outputs</h2>
+            <p class="eyebrow">Outputs</p>
+            <h2>Plans and generated files</h2>
             <p class="subtitle">Plans are saved from the sticky toolbar. Workflow files appear here after runs.</p>
           </div>
           <div class="toolbar">
@@ -4940,7 +4330,7 @@
           <div class="plan-dock" id="faqPlanDock">
             <button class="ghost-btn plan-menu-btn" type="button" id="faqPlanMenuBtn" aria-expanded="false" aria-controls="faqPlanPopover">Plans</button>
             <div class="plan-current">
-              <strong id="faqCurrentPlanName" title="Local draft - not saved to account">Local draft - not saved to account</strong>
+              <strong id="faqCurrentPlanName">Unsaved plan</strong>
             </div>
             <button class="ghost-btn icon-btn plan-icon-btn has-tooltip" type="button" id="faqPlanRenameBtn" aria-label="Edit plan name" title="Edit plan name" data-tooltip="Edit plan name">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -4988,18 +4378,24 @@
     </section>
 
     <aside class="rail">
-      <section class="rail-card setup-rail-card">
-        <p class="eyebrow">Setup</p>
-        <h3>Run readiness</h3>
-        <p class="rail-status-line" id="railSetupStatus">Add a topic to start.</p>
-        <div class="settings-checklist" id="settingsChecklist"></div>
-        <div class="rail-workflow-mini">
-          <span class="rail-section-label">Will run</span>
-          <div class="chips rail-workflow-chips" id="workflowChips"></div>
-        </div>
+      <section class="rail-card">
+        <p class="eyebrow">Reading map</p>
+        <h3>What matters in a good FAQ</h3>
+        <ul class="rail-list">
+          <li><span class="dot"></span><span>Start from user intent: before booking, before arrival, during the stay, and after checkout.</span></li>
+          <li><span class="dot"></span><span>A good question is specific to the page or property, not a generic heading like “Amenities”.</span></li>
+          <li><span class="dot"></span><span>A good answer is short, verifiable, and clearly marks facts that still need a reliable source.</span></li>
+          <li><span class="dot"></span><span>Categories are internal guidance for the model. They should not turn into generic questions.</span></li>
+        </ul>
       </section>
 
-      <section class="rail-card outputs-rail-card">
+      <section class="rail-card">
+        <p class="eyebrow">Workflow</p>
+        <h3>What will run now</h3>
+        <div class="chips" id="workflowChips"></div>
+      </section>
+
+      <section class="rail-card">
         <p class="eyebrow">Outputs</p>
         <h3>Plans and files</h3>
         <div class="rail-output-grid" id="railArtifactList">
@@ -5388,19 +4784,18 @@
           "Prefer the broader question as primary and mark the narrower repeated question as duplicate.",
           "",
           "DATA TO CHECK:",
-          "{{answersTsvNumbered}}",
+          "{{answersTsv}}",
           "",
-        "Return exactly:",
-        "HEADER",
-        "Row\tDuplicate",
-        "DATA",
-        "[one Row-numbered value per data row]",
-        "",
-        "Use format: Row number, tab, result.",
-        "Write NO if unique.",
-        "Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
-        "If a row is empty or cannot be judged, write -.",
-        "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+          "Return exactly:",
+          "HEADER",
+          "Duplicate",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "Write NO if unique.",
+          "Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
         ].join("\n"),
         tone: "Strict and concrete.",
         sources: ""
@@ -5417,25 +4812,24 @@
           "Pay special attention to rows marked [VERIFY] or rows saying information is not available.",
           "",
           "DATA TO CHECK:",
-          "{{answersTsvNumbered}}",
+          "{{answersTsv}}",
           "",
           "If returning WRONG or FOUND text, apply these forbidden phrase rules: {{forbiddenPhrases}}",
           "",
-        "Return exactly:",
-        "HEADER",
-        "Row\tSource OK",
-        "DATA",
-        "[one Row-numbered value per data row]",
-        "",
-        "Use format: Row number, tab, result.",
-        "For each row write one of:",
-        "- OK",
-        "- NOT VERIFIED",
-        "- WRONG: [correct full answer] - Source: [source name]",
-        "- FOUND: [new full answer] - Source: [source name]",
-        "",
-        "If a row is empty or cannot be judged, write -.",
-        "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+          "Return exactly:",
+          "HEADER",
+          "Source OK",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "For each row write one of:",
+          "- Q[#] - OK",
+          "- Q[#] - NOT VERIFIED",
+          "- Q[#] - WRONG: [correct full answer] - Source: [source name]",
+          "- Q[#] - FOUND: [new full answer] - Source: [source name]",
+          "",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
         ].join("\n"),
         tone: "Cautious, factual and evidence-first.",
         sources: "Use the same approved sources selected for the workflow."
@@ -5444,7 +4838,7 @@
         id: 5,
         name: "Grammar and answer fit",
         enabled: false,
-        model: "gpt-5.5",
+        model: "inherit",
         outputMode: "replace_base_tsv",
         system: "You are a strict FAQ editor. You check grammar, answer fit, clarity and tone without adding unsupported facts.",
         user: [
@@ -5455,13 +4849,11 @@
           "",
           "Check:",
           "- Does the answer directly answer the exact question?",
-        "- Is the wording clear, grammatical and natural in {{language}}?",
-        "- Is the answer concise and useful rather than promotional?",
-        "- For yes/no questions, does it start with Yes, No, or Currently only when logically appropriate?",
-        "- For what/where/when/how/how much questions, does it avoid starting with Yes?",
-        "- Is there any positive Yes where the hotel does not offer the service or the answer is conditional?",
-        "- Does the question include the subject name naturally when needed, without keyword stuffing?",
-        "- Apply these forbidden phrase rules across the final TSV: {{forbiddenPhrases}}.",
+          "- Is the wording clear, grammatical and natural in {{language}}?",
+          "- Is the answer concise and useful rather than promotional?",
+          "- For yes/no questions, does it start with Yes, No, or Currently when appropriate?",
+          "- Does the question include the subject name naturally when needed, without keyword stuffing?",
+          "- Apply these forbidden phrase rules across the final TSV: {{forbiddenPhrases}}.",
           "",
           "{{grammarOutputInstructions}}"
         ].join("\n"),
@@ -5469,14 +4861,6 @@
         sources: ""
       }
     ];
-
-    const TASK_DESCRIPTIONS = {
-      1: "Builds the question plan from sources, categories, and demand signals.",
-      2: "Uses the questions from Step 1 to write source-grounded answers.",
-      3: "Checks the answers from Step 2 for duplicate questions.",
-      4: "Verifies the answers from Step 2 against approved sources. Off by default.",
-      5: "Polishes the final answers for writing quality. Off by default."
-    };
 
     function normalizeTaskName(task) {
       if (Number(task?.id) === 2 && /^write answers as tsv$/i.test(String(task?.name || "").trim())) {
@@ -5543,16 +4927,12 @@
 
     function currentFaqPlanLabel() {
       const activePlan = faqAccountPlans.find((plan) => plan.id === activeFaqAccountPlanId);
-      return activePlan?.name || $("faqAccountPlanName")?.value.trim() || "Local draft - not saved to account";
+      return activePlan?.name || $("faqAccountPlanName")?.value.trim() || "Unsaved plan";
     }
 
     function updateFaqPlanDisplay() {
       const label = $("faqCurrentPlanName");
-      if (label) {
-        const text = currentFaqPlanLabel();
-        label.textContent = text;
-        label.title = text;
-      }
+      if (label) label.textContent = currentFaqPlanLabel();
     }
 
     function faqAccountPlanDescription() {
@@ -6124,57 +5504,11 @@
         .trim();
     }
 
-    const EDITABLE_PROMPT_MARKERS = [
-      "Research rules:",
-      "Rules:",
-      "A question is duplicate if",
-      "Pay special attention",
-      "Check:"
-    ];
-
-    function splitPromptSections(value) {
-      const text = stripDeprecatedWordRuleBlocks(value);
-      const matches = EDITABLE_PROMPT_MARKERS
-        .map((marker) => {
-          const index = text.indexOf(marker);
-          return index >= 0 ? { marker, index } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.index - b.index);
-
-      if (!matches.length) {
-        return { managed: "", editable: text.trim() };
-      }
-
-      const index = matches[0].index;
-      return {
-        managed: text.slice(0, index).trim(),
-        editable: text.slice(index).trim()
-      };
-    }
-
-    function combinePromptSections(managed, editable) {
-      return [managed, editable].map((part) => String(part || "").trim()).filter(Boolean).join("\n\n");
-    }
-
     function mergeTasks(savedTasks) {
       const savedById = new Map((Array.isArray(savedTasks) ? savedTasks : []).map((task) => [Number(task.id), task]));
       return DEFAULT_TASKS.map((task) => {
         const saved = savedById.get(task.id) || {};
-        const defaultSections = splitPromptSections(task.user);
-        const savedSections = typeof saved.user === "string" && !hasHebrewText(saved.user)
-          ? splitPromptSections(saved.user)
-          : defaultSections;
-        const savedNotes = String(saved.userNotes || "").trim();
-        const editable = savedNotes
-          ? combinePromptSections(savedSections.editable, savedNotes)
-          : savedSections.editable;
-        const merged = {
-          ...task,
-          ...saved,
-          user: combinePromptSections(defaultSections.managed, editable),
-          system: task.system
-        };
+        const merged = { ...task, ...saved };
         merged.name = normalizeTaskName(merged) || task.name;
         if (typeof merged.user === "string") {
           merged.user = stripDeprecatedWordRuleBlocks(merged.user);
@@ -6258,28 +5592,25 @@
       const preset = WORKFLOW_PRESETS[normalizePreset(presetName)];
       taskDrafts = taskDrafts.map((task) => {
         if (task.id === 1) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
             tone: preset.questionTone || task.tone,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "Question focus", preset.questionNote))
+            user: upsertTextBlock(task.user, "Question focus", preset.questionNote)
           };
         }
 
         if (task.id === 2) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
             tone: preset.answerTone || task.tone,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "Answer rules", preset.answerNote))
+            user: upsertTextBlock(task.user, "Answer rules", preset.answerNote)
           };
         }
 
         if (task.id === 3 || task.id === 5) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "QA checks", `Check the output against the selected ${preset.label.toLowerCase()} context, audience, source rules and category plan.`))
+            user: upsertTextBlock(task.user, "QA checks", `Check the output against the selected ${preset.label.toLowerCase()} context, audience, source rules and category plan.`)
           };
         }
 
@@ -6545,7 +5876,6 @@
     function renderTaskCard(task) {
         const active = task.enabled ? "is-active" : "";
         const taskName = normalizeTaskName(task);
-        const promptSections = splitPromptSections(task.user || "");
         return `
           <details class="task-card ${active}" id="card-${task.id}">
             <summary class="card-summary">
@@ -6556,7 +5886,6 @@
                     Step ${task.id}
                   </span>
                   <h3>${escapeHtml(taskName)}</h3>
-                  <p class="task-step-description">${escapeHtml(TASK_DESCRIPTIONS[task.id] || "")}</p>
                 </div>
               </div>
               <div class="summary-controls">
@@ -6569,9 +5898,6 @@
             </summary>
             <div class="card-body">
               <input type="hidden" id="name-${task.id}" value="${escapeHtml(taskName)}" />
-              <input type="hidden" id="sys-${task.id}" value="${escapeHtml(task.system || "")}" />
-              <input type="hidden" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
-              <textarea class="hidden" id="managed-${task.id}" aria-hidden="true" tabindex="-1">${escapeHtml(promptSections.managed)}</textarea>
               <div class="grid control-grid task-config-grid">
                 <label class="field task-tone-field">
                   <span>Writing style</span>
@@ -6587,26 +5913,47 @@
                 </label>` : ""}
               </div>
 
-              <details class="prompt-advanced prompt-combined">
+              <label class="field">
+                <span>Sources / policy</span>
+                <input class="input ltr" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
+              </label>
+
+              <details class="prompt-advanced">
                 <summary>
-                  <span class="system-prompt-mark">PRM</span>
+                  <span class="system-prompt-mark">SYS</span>
                   <span class="system-prompt-copy">
-                    <span class="prompt-editor-kicker">Prompt</span>
-                    <strong>Prompt instructions</strong>
-                    <small>The grey part is filled by the builder. Edit the rules below it.</small>
+                    <span class="prompt-editor-kicker">System prompt</span>
+                    <strong>Model role & boundaries</strong>
+                    <small>Behind-the-scenes context sent before the Agent work instructions.</small>
                   </span>
                 </summary>
                 <div class="prompt-advanced-body">
-                  <div class="managed-prompt-block">
-                    <span class="managed-prompt-label">Filled automatically from setup</span>
-                    <pre class="managed-prompt-pre">${escapeHtml(promptSections.managed || "This step has no automatic setup prefix.")}</pre>
-                  </div>
-                  <label class="editable-prompt-field" for="user-${task.id}">
-                    <span class="editable-prompt-label">Editable instructions</span>
-                    <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(promptSections.editable || "")}</textarea>
-                  </label>
+                  <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
                 </div>
               </details>
+
+              <div class="prompt-editor">
+                <div class="prompt-editor-head">
+                  <div>
+                    <span class="prompt-editor-kicker">Prompt</span>
+                    <h4 class="prompt-editor-title">Agent work instructions</h4>
+                  </div>
+                  <p class="prompt-editor-note">Primary prompt for this workflow step.</p>
+                </div>
+                <div class="prompt-variable-row">
+                  <span class="prompt-variable-label">Variables</span>
+                  <button class="var-btn" type="button" data-insert-var="{{subject}}" data-task-id="${task.id}">{{subject}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{last}}" data-task-id="${task.id}">{{last}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{answersTsv}}" data-task-id="${task.id}">{{answersTsv}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{categoryPlan}}" data-task-id="${task.id}">{{categoryPlan}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{questionTarget}}" data-task-id="${task.id}">{{questionTarget}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{language}}" data-task-id="${task.id}">{{language}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{namingRules}}" data-task-id="${task.id}">{{namingRules}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{forbiddenPhrases}}" data-task-id="${task.id}">{{forbiddenPhrases}}</button>
+                </div>
+                <span class="prompt-help">Variables are shortcuts preserved in the prompt; subject and last are replaced at runtime.</span>
+                <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(task.user || "")}</textarea>
+              </div>
             </div>
           </details>
         `;
@@ -6661,7 +6008,7 @@
         tone: $(`tone-${base.id}`)?.value || "",
         sources: $(`src-${base.id}`)?.value || "",
         system: $(`sys-${base.id}`)?.value || "",
-        user: combinePromptSections($(`managed-${base.id}`)?.value || splitPromptSections(base.user).managed, $(`user-${base.id}`)?.value || "")
+        user: $(`user-${base.id}`)?.value || ""
       }));
     }
 
@@ -6723,142 +6070,6 @@
       return String($("officialSourceUrl")?.value || "").trim();
     }
 
-    function setOfficialSourceStatus(message, kind = "") {
-      const status = $("officialSourceStatus");
-      if (!status) return;
-      status.textContent = message || "";
-      status.classList.toggle("is-busy", kind === "busy");
-      status.classList.toggle("is-success", kind === "success");
-      status.classList.toggle("is-warning", kind === "warning");
-      status.classList.toggle("is-error", kind === "error");
-    }
-
-    function finishOfficialSourceSuggestButton(label = "Suggest site") {
-      const button = $("suggestOfficialSourceBtn");
-      if (!button) return;
-      button.disabled = false;
-      button.textContent = label;
-      if (label !== "Suggest site") {
-        window.setTimeout(() => {
-          if (button.textContent === label) button.textContent = "Suggest site";
-        }, 2200);
-      }
-    }
-
-    function comparableOfficialUrl(value) {
-      const raw = String(value || "").trim();
-      if (!raw) return "";
-      try {
-        const parsed = new URL(raw);
-        parsed.hash = "";
-        parsed.search = "";
-        return `${parsed.hostname.replace(/^www\./i, "").toLowerCase()}${parsed.pathname.replace(/\/+$/, "")}`;
-      } catch {
-        return raw.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/+$/, "").toLowerCase();
-      }
-    }
-
-    function officialSourceSuggestionSubject(subjects) {
-      if (!subjects.length) return "";
-      return subjects.length === 1
-        ? subjects[0]
-        : `${subjects[0]} (+${subjects.length - 1} more topic${subjects.length > 2 ? "s" : ""})`;
-    }
-
-    async function suggestOfficialSourceFromTopics() {
-      const button = $("suggestOfficialSourceBtn");
-      const subjects = getSubjects();
-      const currentUrl = officialSourceUrl();
-
-      if (!subjects.length) {
-        setOfficialSourceStatus("Add at least one topic above before suggesting an official site.", "warning");
-        $("subjects")?.focus({ preventScroll: true });
-        return;
-      }
-
-      if (button) {
-        button.disabled = true;
-        button.textContent = "Finding site...";
-      }
-      setOfficialSourceStatus(`Looking for the official source for ${officialSourceSuggestionSubject(subjects)}...`, "busy");
-
-      try {
-        const preset = document.querySelector(".seg-btn.active")?.dataset.preset || "hotel";
-        const response = await fetch("/api/assistant-preflight", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phase: "faq-subject-validation",
-            toolId: "faq-playground",
-            values: {
-              subjects,
-              subjectRaw: subjects.join("\n"),
-              sourceUrl: currentUrl,
-              language: $("outputLanguage")?.value || "",
-              audience: $("audience")?.value || "",
-              workflowType: preset
-            },
-            payload: {
-              subjects,
-              state: {
-                controls: {
-                  officialSourceUrl: currentUrl,
-                  outputLanguage: $("outputLanguage")?.value || "",
-                  preset
-                }
-              }
-            },
-            messages: [
-              {
-                role: "user",
-                content: `Find the best official factual source URL for these FAQ topics: ${subjects.join("; ")}`
-              }
-            ]
-          })
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.error || await response.text());
-        }
-
-        const data = await response.json();
-        const validation = data.faqValidation || {};
-        const candidateUrl = String(validation.sourceUrlCandidate || "").trim();
-        const candidateTitle = String(validation.sourceTitle || "").trim();
-        const confidence = Number(validation.sourceConfidence || 0);
-
-        if (!candidateUrl) {
-          setOfficialSourceStatus("No confident official site was found. Add the official URL manually.", "warning");
-          finishOfficialSourceSuggestButton("No match");
-          return;
-        }
-
-        const isSame = comparableOfficialUrl(currentUrl) === comparableOfficialUrl(candidateUrl);
-        if (currentUrl && !isSame && !confirm(`Replace the current official source URL with this suggested site?\n\n${candidateUrl}`)) {
-          setOfficialSourceStatus(`Suggested: ${candidateUrl}`, "warning");
-          finishOfficialSourceSuggestButton("Review");
-          return;
-        }
-
-        $("officialSourceUrl").value = candidateUrl;
-        updateSummary();
-        saveState();
-        const titlePart = candidateTitle ? `${candidateTitle} - ` : "";
-        const confidencePart = confidence ? ` (${Math.round(confidence * 100)}% confidence)` : "";
-        setOfficialSourceStatus(`${titlePart}official source added${confidencePart}.`, "success");
-        finishOfficialSourceSuggestButton("Added");
-      } catch (error) {
-        const message = String(error?.message || error || "Source suggestion failed.");
-        setOfficialSourceStatus(message.includes("OPENAI_API_KEY")
-          ? "Official-site suggestion needs the OpenAI API key configured on the local server."
-          : `Could not suggest an official site: ${message}`, "error");
-        finishOfficialSourceSuggestButton("Try again");
-      } finally {
-        if (button?.disabled) finishOfficialSourceSuggestButton();
-      }
-    }
-
     function buildNamingRules() {
       const policy = $("namingPolicy").value || "natural_exact";
       const customNote = ($("namingRules").value || "").trim();
@@ -6899,14 +6110,13 @@
       return [
         "Return exactly:",
         "HEADER",
-        "Row\tGrammar Fix",
+        "Grammar Fix",
         "DATA",
-        "[one Row-numbered value per data row]",
+        "[one value per data row]",
         "",
-        "Use format: Row number, tab, result.",
         "Write - if the row is good.",
         "If any issue exists, write the complete fixed question or complete fixed answer in one line.",
-        "Do not add extra commentary. Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+        "Do not add extra commentary. Return exactly one line per data row, excluding the header."
       ].join("\n");
     }
 
@@ -7029,7 +6239,7 @@
 
     function saveState() {
       writeSavedState(collectState());
-      $("saveStatus").textContent = "Draft saved locally";
+      $("saveStatus").textContent = "Saved in browser";
     }
 
     function saveStateWithSubjectMemory() {
@@ -7057,20 +6267,11 @@
       const enabledTasks = readTaskDraftsFromDom().filter((task) => task.enabled);
       const model = $("globalModel").value;
       const questionTarget = describeQuestionTargetForUi($("questionCountMode").value, $("questionCount").value);
-      const preset = document.querySelector(".seg-btn.active")?.dataset.preset || "hotel";
-      const presetLabel = WORKFLOW_PRESETS[preset]?.label || "FAQ";
-      const officialUrl = officialSourceUrl();
-      const subjectRunCounter = $("subjectRunCounter");
-      const selectedSources = getSelectedSourceOptions();
-      const audience = String($("audience")?.value || "").trim();
 
-      if (subjectRunCounter) {
-        subjectRunCounter.textContent = subjects.length > 1
-          ? `${subjects.length} topics -> ${subjects.length} runs. One line per topic.`
-          : subjects.length === 1
-            ? "1 topic -> 1 run. Add each extra topic on a new line."
-            : "One topic per line.";
-      }
+      $("subjectCount").textContent = subjects.length;
+      $("categoryCount").textContent = selectedCategories.length;
+      $("taskCount").textContent = enabledTasks.length;
+      $("modelShort").textContent = modelLabel(model).replace("gpt-", "");
       $("sheetNamePreview").textContent = subjects.length
         ? subjects.slice(0, 3).join(" | ")
         : "Generated automatically from the subject name";
@@ -7078,80 +6279,13 @@
       $("runSummary").textContent = subjects.length
         ? `${subjects.length} subject${subjects.length === 1 ? "" : "s"} · ${enabledTasks.length} task${enabledTasks.length === 1 ? "" : "s"}`
         : "Ready to run";
-      const runNeeds = [
-        subjects.length ? "" : "add a topic",
-        enabledTasks.length ? "" : "enable a workflow step",
-        selectedCategories.length ? "" : "choose categories"
-      ].filter(Boolean);
-      $("runDetails").textContent = runNeeds.length
-        ? `Before running: ${runNeeds.join(", ")}.`
-        : officialUrl
-          ? "Ready. Full setup progress is in the right panel."
-          : "Ready. Add an official URL from the right panel when available.";
-      const railSetupStatus = $("railSetupStatus");
-      if (railSetupStatus) {
-        railSetupStatus.textContent = runNeeds.length
-          ? `${runNeeds.length} required setup item${runNeeds.length === 1 ? "" : "s"} need attention.`
-          : officialUrl
-            ? "Required setup is ready."
-            : "Runnable, but the official source URL is still missing.";
-      }
+      $("runDetails").textContent = selectedCategories.length
+        ? `${selectedCategories.length} categories · ${questionTarget}`
+        : "Choose a subject and category.";
 
       $("workflowChips").innerHTML = enabledTasks
         .map((task) => `<span class="badge active">Step ${task.id} · ${escapeHtml(normalizeTaskName(task))}</span>`)
         .join("") || `<span class="badge">No active tasks</span>`;
-
-      const settingsChecklist = $("settingsChecklist");
-      if (settingsChecklist) {
-        const shortText = (value, fallback = "") => {
-          const clean = String(value || fallback || "").trim();
-          return clean.length > 58 ? `${clean.slice(0, 55)}...` : clean;
-        };
-        const forbiddenCount = ruleLines("forbiddenPhrases").length;
-        const optionalParts = [
-          isFaqDemandAutoRunEnabled() ? "Auto mine on" : "Auto mine off",
-          forbiddenCount ? `${forbiddenCount} avoid rule${forbiddenCount === 1 ? "" : "s"}` : "No avoid list"
-        ];
-        const outputLanguage = $("outputLanguage").value || "Not set";
-        const checks = [
-          {
-            label: "Topics",
-            value: subjects.length ? `${subjects.length} topic${subjects.length === 1 ? "" : "s"}` : "Add a topic",
-            warning: !subjects.length
-          },
-          {
-            label: "Workflow",
-            value: `${presetLabel} · ${enabledTasks.length || 0} step${enabledTasks.length === 1 ? "" : "s"}`,
-            warning: !enabledTasks.length
-          },
-          {
-            label: "Question plan",
-            value: `${selectedCategories.length} categor${selectedCategories.length === 1 ? "y" : "ies"} · ${questionTarget}`,
-            warning: !selectedCategories.length
-          },
-          {
-            label: "Sources",
-            value: `${selectedSources.length || 0} intent source${selectedSources.length === 1 ? "" : "s"} · ${officialUrl ? "official URL set" : "official URL missing"}`,
-            warning: !officialUrl || !selectedSources.length
-          },
-          {
-            label: "Output",
-            value: `${modelLabel(model).replace("OpenAI ", "")} · ${outputLanguage}`
-          },
-          {
-            label: "Audience",
-            value: shortText(audience, "Not set"),
-            warning: !audience
-          },
-          { label: "Helpers", value: optionalParts.join(" · ") }
-        ];
-        settingsChecklist.innerHTML = checks.map((item) => `
-          <div class="settings-check${item.warning ? " is-warning" : ""}">
-            <strong>${escapeHtml(item.label)}</strong>
-            <span>${escapeHtml(item.value)}</span>
-          </div>
-        `).join("");
-      }
 
       updateCardStates();
     }
@@ -7208,16 +6342,6 @@
         const input = $(id);
         if (input) input.checked = checked;
       });
-      const statusText = $("demandAlwaysOnText");
-      if (statusText) {
-        statusText.textContent = checked
-          ? "Auto mining is on - will scan each topic when you run."
-          : "Auto mining is off - open this helper to scan manually.";
-      }
-      const statusWrap = $("demandAlwaysOnStatus");
-      if (statusWrap) {
-        statusWrap.style.color = checked ? "var(--green)" : "var(--muted)";
-      }
     }
 
     function collectFaqDemandSettings() {
@@ -7582,6 +6706,7 @@
       document.querySelectorAll("[data-preset]").forEach((button) => {
         button.classList.toggle("active", button.dataset.preset === presetName);
       });
+
       if (!shouldApply) return;
 
       const presetConfig = WORKFLOW_PRESETS[presetName];
@@ -7716,7 +6841,7 @@
         mimeType: "application/json"
       });
       $("saveStatus").textContent = "JSON exported";
-      setTimeout(() => ($("saveStatus").textContent = "Draft saved locally"), 1600);
+      setTimeout(() => ($("saveStatus").textContent = "Saved in browser"), 1600);
     }
 
     function importWorkPlan(file) {
@@ -8062,7 +7187,6 @@
     });
     $("faqDemandRefreshSourcesBtn")?.addEventListener("click", () => loadFaqDemandSources(true));
     $("faqDemandRunBtn")?.addEventListener("click", analyzeFaqDemandSignals);
-    $("suggestOfficialSourceBtn")?.addEventListener("click", suggestOfficialSourceFromTopics);
 
     socket?.on("log", (msg) => appendLog(msg));
 
@@ -8104,7 +7228,8 @@
           [`model-${id}`]: normalizeModelOptionValue(task.provider && task.model ? `${task.provider}:${task.model}` : task.model),
           [`output-mode-${id}`]: task.outputMode,
           [`src-${id}`]: task.sources,
-          [`sys-${id}`]: task.system
+          [`sys-${id}`]: task.system,
+          [`user-${id}`]: task.user
         };
 
         Object.entries(fields).forEach(([elementId, value]) => {
@@ -8112,14 +7237,6 @@
           if (!element || typeof value !== "string" || !value.trim()) return;
           element.value = value;
         });
-
-        if (typeof task.user === "string" && task.user.trim()) {
-          const sections = splitPromptSections(task.user);
-          const managed = $(`managed-${id}`);
-          const user = $(`user-${id}`);
-          if (managed && sections.managed) managed.value = sections.managed;
-          if (user) user.value = sections.editable || task.user;
-        }
       });
 
       updateSummary();
@@ -8217,7 +7334,7 @@
       saveState();
       localStorage.removeItem(storageKey);
       $("saveStatus").textContent = "Loaded from assistant";
-      setTimeout(() => ($("saveStatus").textContent = "Draft saved locally"), 1800);
+      setTimeout(() => ($("saveStatus").textContent = "Saved in browser"), 1800);
     }
 
     applySavedControls();

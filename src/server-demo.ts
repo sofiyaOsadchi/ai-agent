@@ -26,7 +26,8 @@ import {
 import { TRANSLATION_GLOSSARY } from "./jobs/subjobs/translation-glossary.js";
 import { TERMINOLOGY_MANAGEMENT } from "./jobs/subjobs/terminology-management.js";
 import { writeFirestoreHealthCheck } from "./firebase/firestore.js";
-import { getCurrentUser, getCurrentUserFromHeaders } from "./auth/current-user.js";
+import { getCurrentUser, getCurrentUserFromHeaders, requireActiveCurrentUser } from "./auth/current-user.js";
+import { updateUserDisplayName } from "./users/user.service.js";
 import planRoutes from "./plans/plan.routes.js";
 import runRoutes from "./runs/run.routes.js";
 import { createRun, updateRun } from "./runs/run.service.js";
@@ -122,6 +123,25 @@ app.get("/api/me", async (req, res) => {
     });
   } catch {
     res.status(500).json({ error: "Failed to resolve current user" });
+  }
+});
+
+app.post("/api/me/profile", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    const user = await requireActiveCurrentUser(req, res);
+
+    if (!user) {
+      return;
+    }
+
+    const updatedUser = await updateUserDisplayName(user.email, req.body?.displayName);
+
+    res.json({
+      authenticated: true,
+      user: updatedUser,
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error?.message || "Failed to update user profile" });
   }
 });
 
@@ -1457,6 +1477,7 @@ httpServer.listen(PORT, async () => {
   console.log("🚀 Demo server is running");
   console.log(`Main Hub:           ${defaultUrl}`);
   console.log(`FAQ Playground:     ${baseUrl}/faq-playground.html`);
+  console.log(`FAQ Builder Plan:   ${baseUrl}/faq-builder-plan.html`);
   console.log(`Design Formatting:  ${baseUrl}/design-formatting.html`);
   console.log(`Translate Demo:     ${baseUrl}/translate-demo.html`);
   console.log(`Sheet Utilities:    ${baseUrl}/sheet-utilities.html`);

@@ -4,10 +4,11 @@ import {
   createPlan,
   deletePlan,
   listPlans,
+  listPublicPlans,
   PlanForbiddenError,
   updatePlan,
 } from "./plan.service.js";
-import type { CreatePlanInput, UpdatePlanInput } from "./plan.types.js";
+import type { CreatePlanInput, PlanVisibility, UpdatePlanInput } from "./plan.types.js";
 
 const router = Router();
 
@@ -20,17 +21,36 @@ function readRequiredString(value: unknown): string | null {
   return text || null;
 }
 
+function readOptionalString(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function readVisibility(value: unknown): PlanVisibility | null {
+  if (value === undefined) {
+    return "private";
+  }
+
+  return value === "public" || value === "private" ? value : null;
+}
+
 function readCreatePlanInput(body: any): CreatePlanInput | null {
   const name = readRequiredString(body?.name);
   const mode = readRequiredString(body?.mode);
+  const visibility = readVisibility(body?.visibility);
 
-  if (!name || !mode) {
+  if (!name || !mode || !visibility) {
     return null;
   }
 
   return {
     name,
     mode,
+    description: readOptionalString(body?.description, 280),
+    visibility,
     config: body?.config ?? {},
   };
 }
@@ -62,6 +82,20 @@ function readUpdatePlanInput(body: any): UpdatePlanInput | null {
     input.config = body.config;
   }
 
+  if (body?.description !== undefined) {
+    input.description = readOptionalString(body.description, 280);
+  }
+
+  if (body?.visibility !== undefined) {
+    const visibility = readVisibility(body.visibility);
+
+    if (!visibility) {
+      return null;
+    }
+
+    input.visibility = visibility;
+  }
+
   return Object.keys(input).length ? input : null;
 }
 
@@ -83,6 +117,21 @@ router.get("/", async (req, res) => {
     }
 
     const plans = await listPlans(user, isAllQueryEnabled(req));
+    res.json({ plans });
+  } catch (error) {
+    sendRouteError(res, error);
+  }
+});
+
+router.get("/public", async (req, res) => {
+  try {
+    const user = await requireActiveCurrentUser(req, res);
+
+    if (!user) {
+      return;
+    }
+
+    const plans = await listPublicPlans();
     res.json({ plans });
   } catch (error) {
     sendRouteError(res, error);

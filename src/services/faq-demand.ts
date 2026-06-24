@@ -61,6 +61,31 @@ export type FaqDemandCategory = {
   signals: string[];
 };
 
+export type FaqOpportunityStrength = "strong" | "maybe" | "weak" | "rejected";
+
+export type FaqOpportunityRisk = "low" | "medium" | "high";
+
+export type FaqOpportunityVerificationStatus = "query_supported" | "needs_verification" | "rejected";
+
+export type FaqOpportunity = {
+  id: string;
+  topic: string;
+  category: string;
+  candidateQuestion: string;
+  strength: FaqOpportunityStrength;
+  verificationStatus: FaqOpportunityVerificationStatus;
+  reason: string;
+  risk: FaqOpportunityRisk;
+  sourceQueries: string[];
+  pages: string[];
+  metrics: {
+    impressions: number;
+    clicks: number;
+    ctr?: number;
+    avgPosition?: number;
+  };
+};
+
 export type FaqDemandResult = {
   ok: true;
   generatedAt: string;
@@ -88,6 +113,7 @@ export type FaqDemandResult = {
   topLandingPages: AnalyticsFaqLandingPage[];
   topSiteSearchTerms: AnalyticsFaqSearchTerm[];
   phrases: FaqDemandPhrase[];
+  opportunities: FaqOpportunity[];
   categories: FaqDemandCategory[];
   candidates: FaqDemandCandidate[];
   promptBrief: string;
@@ -171,6 +197,8 @@ const DEMAND_INTENT_TOKENS = new Set([
   "airport",
   "amenities",
   "amenity",
+  "apartment",
+  "apartments",
   "arrival",
   "attraction",
   "attractions",
@@ -180,6 +208,7 @@ const DEMAND_INTENT_TOKENS = new Set([
   "book",
   "booking",
   "breakfast",
+  "business",
   "cancel",
   "cancellation",
   "center",
@@ -188,27 +217,38 @@ const DEMAND_INTENT_TOKENS = new Set([
   "checkin",
   "checkout",
   "close",
+  "code",
   "contact",
+  "corporate",
   "cost",
+  "coworking",
   "deal",
   "deals",
   "deposit",
   "directions",
   "distance",
+  "dryer",
   "email",
+  "extended",
   "facilities",
   "facility",
   "fee",
   "fees",
+  "fitness",
   "help",
+  "gym",
   "kid",
   "kids",
   "kitchen",
   "landmark",
+  "linen",
   "location",
+  "long",
+  "luggage",
   "map",
   "near",
   "nearby",
+  "occupancy",
   "parking",
   "payment",
   "pets",
@@ -220,19 +260,509 @@ const DEMAND_INTENT_TOKENS = new Set([
   "rates",
   "refund",
   "restaurant",
+  "rooftop",
   "review",
   "reviews",
   "room",
   "rooms",
   "service",
   "spa",
+  "storage",
   "support",
+  "terrace",
+  "term",
   "train",
   "transport",
+  "vat",
+  "washer",
   "wifi",
   "wi",
   "fi",
+  "workspace",
 ]);
+
+type FaqOpportunityTopicDefinition = {
+  id: string;
+  topic: string;
+  category: string;
+  terms: string[];
+  question: string;
+  risk: FaqOpportunityRisk;
+  intentBase: number;
+  reason: string;
+  verificationRequired?: boolean;
+  rejected?: boolean;
+};
+
+type FaqOpportunitySignal = {
+  text: string;
+  page?: string;
+  source: "search-console" | "analytics-page" | "analytics-site-search";
+  impressions: number;
+  clicks: number;
+  ctr?: number;
+  position?: number;
+};
+
+type FaqOpportunityAccumulator = {
+  definition: FaqOpportunityTopicDefinition;
+  sourceQueries: Set<string>;
+  pages: Set<string>;
+  impressions: number;
+  clicks: number;
+  positionWeightedTotal: number;
+  positionWeight: number;
+  faqIntentScores: number[];
+  pageFitScores: number[];
+  performanceScores: number[];
+  finalScores: number[];
+  reasonFlags: Set<string>;
+};
+
+const FAQ_OPPORTUNITY_TOPICS: FaqOpportunityTopicDefinition[] = [
+  {
+    id: "room-types",
+    topic: "Room types and suites",
+    category: "amenities",
+    terms: ["room type", "room types", "rooms", "room", "suite", "suites", "junior suite", "family room", "family rooms", "zimmer", "suite", "suiten", "camera", "camere", "habitacion", "habitación", "habitaciones", "חדר", "חדרים", "סוויטה", "סוויטות"],
+    question: "What room types and suites are available at {{subject}}?",
+    risk: "low",
+    intentBase: 88,
+    reason: "Direct room or suite query support; the opportunity stays close to the source search intent.",
+  },
+  {
+    id: "parking",
+    topic: "Parking",
+    category: "location",
+    terms: ["parking", "car park", "parkplatz", "parken", "parcheggio", "aparcamiento", "estacionamiento", "חניה", "חניון"],
+    question: "What parking options are available at {{subject}}?",
+    risk: "medium",
+    intentBase: 90,
+    reason: "Clear practical arrival-planning intent.",
+    verificationRequired: true,
+  },
+  {
+    id: "breakfast",
+    topic: "Breakfast",
+    category: "amenities",
+    terms: ["breakfast", "fruhstuck", "frühstück", "colazione", "desayuno", "ארוחת בוקר"],
+    question: "What breakfast options are available at {{subject}}?",
+    risk: "medium",
+    intentBase: 88,
+    reason: "Common stay-planning question with stable factual answers.",
+    verificationRequired: true,
+  },
+  {
+    id: "check-in",
+    topic: "Check-in",
+    category: "policy",
+    terms: ["check in", "check-in", "checkin", "einchecken", "arrival time", "orario arrivo", "orario check in", "entrada", "hora de entrada", "צק אין", "צ ק אין", "צ'ק אין"],
+    question: "What are the standard check-in times at {{subject}}?",
+    risk: "low",
+    intentBase: 90,
+    reason: "High-value operational FAQ intent before arrival.",
+  },
+  {
+    id: "check-out",
+    topic: "Check-out",
+    category: "policy",
+    terms: ["check out", "check-out", "checkout", "auschecken", "departure time", "orario partenza", "orario check out", "salida", "hora de salida", "צק אאוט", "צ ק אאוט", "צ'ק אאוט"],
+    question: "Can guests arrange late check-out at {{subject}}?",
+    risk: "low",
+    intentBase: 88,
+    reason: "High-value operational FAQ intent during stay planning.",
+  },
+  {
+    id: "cancellation",
+    topic: "Cancellation",
+    category: "booking",
+    terms: ["cancellation", "cancel", "refund", "storno", "stornierung", "cancellazione", "annullamento", "cancelacion", "cancelación", "reembolso", "ביטול", "החזר"],
+    question: "What is the cancellation policy for reservations at {{subject}}?",
+    risk: "medium",
+    intentBase: 86,
+    reason: "Commercial friction intent that can reduce repeated support questions.",
+  },
+  {
+    id: "pets",
+    topic: "Pets",
+    category: "policy",
+    terms: ["pets", "pet friendly", "dog", "dogs", "cat", "hund", "hunde", "haustiere", "animali", "cane", "mascotas", "perros", "חיות מחמד", "כלבים"],
+    question: "Are pets allowed at {{subject}}?",
+    risk: "medium",
+    intentBase: 86,
+    reason: "Specific policy intent with a clear FAQ answer.",
+    verificationRequired: true,
+  },
+  {
+    id: "accessibility",
+    topic: "Accessibility",
+    category: "amenities",
+    terms: ["accessible", "accessibility", "wheelchair", "disabled", "barrierefrei", "rollstuhl", "accessibile", "sedia a rotelle", "accesible", "silla de ruedas", "נגיש", "נגישות", "כיסא גלגלים"],
+    question: "What accessibility options are available at {{subject}}?",
+    risk: "medium",
+    intentBase: 88,
+    reason: "Important guest-fit intent with practical factual needs.",
+    verificationRequired: true,
+  },
+  {
+    id: "family-rooms",
+    topic: "Family rooms",
+    category: "amenities",
+    terms: ["family room", "family rooms", "families", "kids", "children", "connecting rooms", "familienzimmer", "kinder", "camera familiare", "bambini", "habitacion familiar", "habitación familiar", "familias", "ninos", "niños", "חדר משפחה", "חדרי משפחה", "ילדים", "משפחה"],
+    question: "Is {{subject}} suitable for families or longer stays?",
+    risk: "medium",
+    intentBase: 84,
+    reason: "Guest-fit intent that often creates useful room and policy FAQs.",
+    verificationRequired: true,
+  },
+  {
+    id: "apartment-hotel-fit",
+    topic: "Hotel vs apartment stay",
+    category: "general",
+    terms: ["serviced apartment", "apartment hotel", "apartments", "hotel or apartment", "private apartment", "ferienwohnung", "aparthotel", "appartamento", "apartamento", "דירה", "דירות", "מלון דירות"],
+    question: "Is {{subject}} more like a hotel or a private apartment?",
+    risk: "low",
+    intentBase: 84,
+    reason: "Useful fit question for guests comparing stay types.",
+  },
+  {
+    id: "business-travel",
+    topic: "Business travel",
+    category: "support",
+    terms: ["business", "business traveller", "business traveler", "corporate", "work trip", "geschäftsreise", "business reise", "viaggio di lavoro", "corporate stay", "viaje de negocios", "נסיעת עסקים", "עסקים"],
+    question: "Is {{subject}} set up for business travellers?",
+    risk: "low",
+    intentBase: 82,
+    reason: "Decision-fit intent for corporate and work stays.",
+  },
+  {
+    id: "long-stay",
+    topic: "Long stay",
+    category: "booking",
+    terms: ["long stay", "long-term stay", "extended stay", "monthly stay", "several weeks", "langzeitaufenthalt", "soggiorno lungo", "larga estancia", "estancia larga", "שהייה ארוכה", "לטווח ארוך"],
+    question: "Is {{subject}} suitable for a long-term stay?",
+    risk: "low",
+    intentBase: 82,
+    reason: "Strong suitability intent for guests planning longer stays.",
+  },
+  {
+    id: "workspace",
+    topic: "Workspace",
+    category: "amenities",
+    terms: ["workspace", "work space", "desk", "co-working", "coworking", "remote work", "arbeitsplatz", "coworking", "scrivania", "lavoro remoto", "espacio de trabajo", "coworking", "עמדת עבודה", "חלל עבודה", "עבודה מרחוק"],
+    question: "Is there a workspace or co-working area at {{subject}}?",
+    risk: "medium",
+    intentBase: 82,
+    reason: "Practical amenity intent for remote workers.",
+    verificationRequired: true,
+  },
+  {
+    id: "wifi",
+    topic: "Wi-Fi",
+    category: "amenities",
+    terms: ["wifi", "wi fi", "wi-fi", "internet", "wlan", "אינטרנט", "וויי פיי", "וייפיי"],
+    question: "Does {{subject}} provide complimentary Wi-Fi?",
+    risk: "medium",
+    intentBase: 82,
+    reason: "Specific amenity intent with a simple factual answer.",
+    verificationRequired: true,
+  },
+  {
+    id: "fitness",
+    topic: "Fitness centre",
+    category: "amenities",
+    terms: ["fitness", "gym", "fitness center", "fitness centre", "fitnessraum", "palestra", "gimnasio", "חדר כושר", "כושר"],
+    question: "Does {{subject}} have a fitness centre?",
+    risk: "medium",
+    intentBase: 80,
+    reason: "Specific amenity intent with clear FAQ value.",
+    verificationRequired: true,
+  },
+  {
+    id: "rooftop",
+    topic: "Rooftop terrace",
+    category: "amenities",
+    terms: ["rooftop", "roof terrace", "terrace", "panoramic terrace", "dachterrasse", "terrazza", "terraza", "גג", "מרפסת גג", "רופטופ"],
+    question: "Can guests use the rooftop terrace at {{subject}}?",
+    risk: "medium",
+    intentBase: 80,
+    reason: "Specific facility question that can become useful FAQ coverage.",
+    verificationRequired: true,
+  },
+  {
+    id: "luggage-storage",
+    topic: "Luggage storage",
+    category: "support",
+    terms: ["luggage", "baggage", "bag storage", "luggage storage", "koffer", "gepäck", "deposito bagagli", "equipaje", "consigna", "שמירת חפצים", "אחסון מזוודות", "מזוודות"],
+    question: "Does {{subject}} offer luggage storage before check-in or after check-out?",
+    risk: "low",
+    intentBase: 84,
+    reason: "Common pre-arrival and departure support question.",
+  },
+  {
+    id: "spa",
+    topic: "Spa",
+    category: "amenities",
+    terms: ["spa", "wellness", "massage", "ספא", "מסאז"],
+    question: "Does {{subject}} have spa or wellness facilities?",
+    risk: "medium",
+    intentBase: 80,
+    reason: "Amenity intent that can produce concrete FAQ coverage.",
+    verificationRequired: true,
+  },
+  {
+    id: "pool",
+    topic: "Pool",
+    category: "amenities",
+    terms: ["pool", "swimming pool", "piscina", "schwimmbad", "בריכה"],
+    question: "Does {{subject}} have a pool?",
+    risk: "medium",
+    intentBase: 82,
+    reason: "Specific facility intent with stable guest-facing details.",
+    verificationRequired: true,
+  },
+  {
+    id: "all-inclusive",
+    topic: "All-inclusive stays",
+    category: "booking",
+    terms: ["all inclusive", "all-inclusive", "allinclusive", "alles inklusive", "tutto incluso", "todo incluido", "הכל כלול", "הכול כלול"],
+    question: "Does {{subject}} offer all-inclusive stays?",
+    risk: "medium",
+    intentBase: 78,
+    reason: "Direct all-inclusive query support, but this service claim must be verified against an official source before use.",
+    verificationRequired: true,
+  },
+  {
+    id: "restaurant",
+    topic: "Restaurant and dining",
+    category: "amenities",
+    terms: ["restaurant", "restaurants", "dining", "dinner", "lunch", "bar", "ristorante", "cena", "pranzo", "restaurante", "comida", "essen", "abendessen", "מסעדה", "מסעדות", "ארוחת ערב", "בר"],
+    question: "What dining options are available at {{subject}}?",
+    risk: "medium",
+    intentBase: 82,
+    reason: "Common in-stay planning intent with useful FAQ potential.",
+    verificationRequired: true,
+  },
+  {
+    id: "kitchen",
+    topic: "Kitchen facilities",
+    category: "amenities",
+    terms: ["kitchen", "kitchenette", "oven", "stovetop", "microwave", "dishwasher", "fridge", "refrigerator", "küche", "cucina", "cocina", "מטבח", "מיקרוגל", "מדיח", "מקרר"],
+    question: "Do rooms or apartments at {{subject}} include a kitchen?",
+    risk: "low",
+    intentBase: 82,
+    reason: "Specific room-facility intent that helps guests assess fit.",
+  },
+  {
+    id: "washer-dryer",
+    topic: "Washer and dryer",
+    category: "amenities",
+    terms: ["washer", "dryer", "washer dryer", "laundry", "washing machine", "waschmaschine", "trockner", "lavatrice", "asciugatrice", "lavadora", "secadora", "מכונת כביסה", "מייבש", "כביסה"],
+    question: "Is a washer or dryer available at {{subject}}?",
+    risk: "low",
+    intentBase: 80,
+    reason: "Useful practical-stay detail, especially for longer stays.",
+  },
+  {
+    id: "cleaning",
+    topic: "Cleaning and linen",
+    category: "amenities",
+    terms: ["cleaning", "housekeeping", "linen", "towels", "sheets", "room cleaning", "zimmerreinigung", "reinigung", "pulizia", "biancheria", "limpieza", "sabanas", "sábanas", "ניקיון", "מצעים", "מגבות"],
+    question: "How often are cleaning and linen changes provided at {{subject}}?",
+    risk: "low",
+    intentBase: 80,
+    reason: "Operational stay-detail question with strong FAQ value.",
+  },
+  {
+    id: "payment",
+    topic: "Payment",
+    category: "booking",
+    terms: ["payment", "pay", "credit card", "card", "prepayment", "zahlung", "kreditkarte", "pagamento", "carta di credito", "pago", "tarjeta", "תשלום", "אשראי", "כרטיס אשראי"],
+    question: "What payment methods and deposits does {{subject}} require?",
+    risk: "medium",
+    intentBase: 84,
+    reason: "Booking-friction intent that can become a useful policy FAQ.",
+  },
+  {
+    id: "access-code",
+    topic: "Access code",
+    category: "policy",
+    terms: ["access code", "door code", "entry code", "self check-in", "self check in", "codigo de acceso", "código de acceso", "codice accesso", "zugangscode", "קוד כניסה", "קוד גישה"],
+    question: "When will guests receive the access code for {{subject}}?",
+    risk: "low",
+    intentBase: 86,
+    reason: "Specific arrival-flow question that can prevent support issues.",
+  },
+  {
+    id: "deposit",
+    topic: "Damage deposit",
+    category: "booking",
+    terms: ["damage deposit", "security deposit", "deposit", "kaution", "cauzione", "fianza", "deposito", "depósito", "פיקדון", "פקדון"],
+    question: "Is a damage deposit required at {{subject}}?",
+    risk: "medium",
+    intentBase: 84,
+    reason: "Booking-friction intent that belongs in a policy FAQ when source-confirmed.",
+  },
+  {
+    id: "vat-tax",
+    topic: "VAT and taxes",
+    category: "booking",
+    terms: ["vat", "tax", "taxes", "tourist tax", "iva", "mwst", "mehrwertsteuer", "impuestos", "imposta", "מע מ", "מע״מ", "מס", "מיסים"],
+    question: "Does {{subject}} charge VAT or local taxes?",
+    risk: "medium",
+    intentBase: 80,
+    reason: "Commercial policy intent that is useful when verified against official sources.",
+  },
+  {
+    id: "occupancy",
+    topic: "Occupancy",
+    category: "policy",
+    terms: ["occupancy", "maximum guests", "max guests", "capacity", "persons", "people", "belegung", "ospiti", "capienza", "ocupacion", "ocupación", "תפוסה", "מספר אורחים", "אורחים"],
+    question: "What is the maximum occupancy for each room or apartment type at {{subject}}?",
+    risk: "low",
+    intentBase: 80,
+    reason: "Specific suitability and policy question for booking decisions.",
+  },
+  {
+    id: "airport",
+    topic: "Airport access",
+    category: "location",
+    terms: ["airport", "airport shuttle", "flughafen", "aeroporto", "aeropuerto", "שדה תעופה", "נתבג"],
+    question: "What airport transfer options are available for {{subject}}?",
+    risk: "medium",
+    intentBase: 84,
+    reason: "Arrival-planning intent with practical location value.",
+    verificationRequired: true,
+  },
+  {
+    id: "transport",
+    topic: "Transport",
+    category: "location",
+    terms: ["transport", "public transport", "bus", "train", "metro", "taxi", "bahnhof", "zug", "autobus", "trasporto", "transporte", "tren", "תחבורה", "רכבת", "אוטובוס", "מונית"],
+    question: "What public transport options are near {{subject}}?",
+    risk: "low",
+    intentBase: 82,
+    reason: "Practical arrival and local-navigation intent.",
+  },
+  {
+    id: "location",
+    topic: "Location",
+    category: "location",
+    terms: ["location", "address", "where", "map", "adresse", "lage", "posizione", "indirizzo", "ubicacion", "ubicación", "direccion", "dirección", "כתובת", "מיקום", "איפה"],
+    question: "Where is {{subject}} located?",
+    risk: "low",
+    intentBase: 80,
+    reason: "Direct location or address query support without inventing nearby attractions.",
+  },
+  {
+    id: "location-ibiza-area",
+    topic: "Location ambiguity",
+    category: "location",
+    terms: ["es canar", "santa eularia", "santa eulalia del rio", "santa eulària", "cala nova"],
+    question: "Is {{subject}} located in Es Canar or Santa Eulalia?",
+    risk: "low",
+    intentBase: 86,
+    reason: "Direct area-name query support suggests guests may need location disambiguation.",
+  },
+  {
+    id: "beach-distance",
+    topic: "Beach distance",
+    category: "location",
+    terms: ["beach", "beaches", "strand", "spiaggia", "playa", "חוף"],
+    question: "How close is {{subject}} to the beach?",
+    risk: "low",
+    intentBase: 78,
+    reason: "Direct beach-distance intent; the question stays close to the searched location signal.",
+  },
+  {
+    id: "city-centre-distance",
+    topic: "City centre distance",
+    category: "location",
+    terms: ["city centre", "city center", "center", "centre", "zentrum", "centro", "מרכז"],
+    question: "How close is {{subject}} to the city centre?",
+    risk: "low",
+    intentBase: 78,
+    reason: "Direct centre-distance intent; the question stays close to the searched location signal.",
+  },
+  {
+    id: "nearby-attractions",
+    topic: "Nearby attractions",
+    category: "location",
+    terms: ["attractions", "things to do", "nearby attractions", "nightlife", "market", "promenade", "shopping", "sehenswurdigkeiten", "sehenswürdigkeiten", "attrazioni", "cose da fare", "atracciones", "que hacer", "qué hacer", "אטרקציות", "מה לעשות", "שוק", "טיילת", "חיי לילה"],
+    question: "What attractions or places of interest are near {{subject}}?",
+    risk: "low",
+    intentBase: 80,
+    reason: "Direct attractions or things-to-do query support.",
+  },
+  {
+    id: "policies",
+    topic: "Policies",
+    category: "policy",
+    terms: ["policy", "policies", "rules", "smoking", "age", "allowed", "hours", "richtlinie", "regeln", "rauchen", "politica", "politiche", "fumare", "politica", "política", "normas", "fumar", "מדיניות", "כללים", "עישון", "גיל", "מותר"],
+    question: "What house rules or quiet hours apply at {{subject}}?",
+    risk: "low",
+    intentBase: 82,
+    reason: "Specific rule or requirement intent that belongs in FAQs.",
+  },
+  {
+    id: "price",
+    topic: "Price and rates",
+    category: "booking",
+    terms: ["price", "prices", "rate", "rates", "cost", "cheap", "preco", "preços", "prezzo", "prezzi", "precio", "precios", "preis", "preise", "מחיר", "מחירים", "עלות"],
+    question: "Where can guests check current rates for {{subject}}?",
+    risk: "high",
+    intentBase: 58,
+    reason: "Commercial intent is real, but prices change and should not be auto-used without care.",
+    verificationRequired: true,
+  },
+];
+
+const FAQ_NOISE_TOPICS: FaqOpportunityTopicDefinition[] = [
+  {
+    id: "noise-photos",
+    topic: "Photos and images",
+    category: "general",
+    terms: ["photo", "photos", "image", "images", "picture", "pictures", "gallery", "fotos", "bilder", "immagini", "imagenes", "imágenes", "תמונה", "תמונות", "גלריה"],
+    question: "Filtered out: photo and image searches for {{subject}}",
+    risk: "high",
+    intentBase: 8,
+    reason: "Rejected as visual intent, not a FAQ/GEO opportunity.",
+    rejected: true,
+  },
+  {
+    id: "noise-reviews",
+    topic: "Reviews",
+    category: "comparison",
+    terms: ["review", "reviews", "rating", "ratings", "tripadvisor", "opinion", "opinions", "avaliacao", "avaliacoes", "avaliação", "avaliações", "bewertung", "bewertungen", "recensione", "recensioni", "opiniones", "reseñas", "ביקורת", "ביקורות", "חוות דעת", "דירוג"],
+    question: "Filtered out: review and trust searches for {{subject}}",
+    risk: "high",
+    intentBase: 8,
+    reason: "Rejected as review/trust intent, not a direct FAQ opportunity.",
+    rejected: true,
+  },
+  {
+    id: "noise-official-homepage",
+    topic: "Official site and homepage",
+    category: "general",
+    terms: ["official", "official website", "homepage", "home page", "website", "sito ufficiale", "web oficial", "offizielle website", "אתר רשמי", "האתר הרשמי"],
+    question: "Filtered out: official-site navigation for {{subject}}",
+    risk: "high",
+    intentBase: 8,
+    reason: "Rejected as navigational intent rather than guest FAQ intent.",
+    rejected: true,
+  },
+  {
+    id: "noise-booking-navigation",
+    topic: "Booking navigation",
+    category: "booking",
+    terms: ["booking.com", "booking com", "book hotel", "hotel booking", "reservar hotel", "prenota hotel", "hotel buchen", "בוקינג"],
+    question: "Filtered out: booking-platform navigation for {{subject}}",
+    risk: "high",
+    intentBase: 10,
+    reason: "Rejected as booking-platform or navigation intent unless the query contains a concrete policy topic.",
+    rejected: true,
+  },
+];
 
 export class FaqDemandService {
   private analytics = new AnalyticsService();
@@ -255,7 +785,7 @@ export class FaqDemandService {
 
   async analyze(input: FaqDemandInput = {}): Promise<FaqDemandResult> {
     const subject = String(input.subject || input.websiteUrl || "this site").trim();
-    const limit = Math.max(10, Math.min(Number(input.limit || 60), 150));
+    const limit = Math.max(25, Math.min(Number(input.limit || 200), 500));
     const maxPhrases = Math.max(3, Math.min(Number(input.maxPhrases || 10), 30));
     const questionsPerPhrase = Math.max(1, Math.min(Number(input.questionsPerPhrase || 1), 5));
     const warnings: string[] = [];
@@ -294,7 +824,7 @@ export class FaqDemandService {
           subject,
           siteUrl: searchConsoleSite.siteUrl,
           dateRange: input.dateRange,
-          limit: Math.min(limit, 50),
+          limit: Math.min(limit, 150),
         });
         topQueries = this.uniqueSearchConsoleRows([...searchResult.rows, ...subjectRows.rows])
           .sort((a, b) => this.searchConsoleScore(b) - this.searchConsoleScore(a));
@@ -308,14 +838,17 @@ export class FaqDemandService {
     const rawLandingPages = topLandingPages.length;
     const rawSiteSearchTerms = topSiteSearchTerms.length;
     const rawSignalCount = rawQueries + rawLandingPages + rawSiteSearchTerms;
-    topQueries = this.filterBySubject(topQueries, subject, (row) => `${row.query} ${row.page}`).slice(0, 40);
-    topLandingPages = this.filterBySubject(topLandingPages, subject, (page) => `${page.pageTitle} ${page.pagePath}`).slice(0, 20);
-    topSiteSearchTerms = this.filterBySubject(topSiteSearchTerms, subject, (term) => term.searchTerm).slice(0, 20);
+    const matchedQueryRows = this.filterBySubject(topQueries, subject, (row) => `${row.query} ${row.page}`);
+    const matchedLandingPageRows = this.filterBySubject(topLandingPages, subject, (page) => `${page.pageTitle} ${page.pagePath}`);
+    const matchedSiteSearchTermRows = this.filterBySubject(topSiteSearchTerms, subject, (term) => term.searchTerm);
+    topQueries = matchedQueryRows.slice(0, 40);
+    topLandingPages = matchedLandingPageRows.slice(0, 20);
+    topSiteSearchTerms = matchedSiteSearchTermRows.slice(0, 20);
 
-    const matchedQueries = topQueries.length;
-    const matchedLandingPages = topLandingPages.length;
-    const matchedSiteSearchTerms = topSiteSearchTerms.length;
-    const subjectSignalCount = topQueries.length + topLandingPages.length + topSiteSearchTerms.length;
+    const matchedQueries = matchedQueryRows.length;
+    const matchedLandingPages = matchedLandingPageRows.length;
+    const matchedSiteSearchTerms = matchedSiteSearchTermRows.length;
+    const subjectSignalCount = matchedQueries + matchedLandingPages + matchedSiteSearchTerms;
     if (rawSignalCount && !subjectSignalCount) {
       warnings.push(`Ignored ${rawSignalCount - subjectSignalCount} signals that did not match "${subject}". Check the selected GA4 property or Search Console site if this looks too strict.`);
     }
@@ -328,6 +861,7 @@ export class FaqDemandService {
       phrases = this.addStarterPhrases(subject, phrases, maxPhrases);
       warnings.push(`No subject-matching search phrases were found for "${subject}". Showing starter FAQ phrases instead of unrelated account data.`);
     }
+    const opportunities = this.buildOpportunities(subject, matchedQueryRows, matchedLandingPageRows, matchedSiteSearchTermRows);
     const sourcePhraseCount = phrases.filter((phrase) => phrase.source !== "starter-intent").length;
     const starterIdeaCount = phrases.filter((phrase) => phrase.source === "starter-intent").length;
     const candidates = this.buildCandidates(subject, phrases, questionsPerPhrase);
@@ -360,9 +894,10 @@ export class FaqDemandService {
       topLandingPages,
       topSiteSearchTerms,
       phrases,
+      opportunities,
       categories,
       candidates,
-      promptBrief: this.buildPromptBrief(subject, topQueries, topLandingPages, topSiteSearchTerms, phrases, categories, candidates, warnings, questionsPerPhrase),
+      promptBrief: this.buildPromptBrief(subject, topQueries, topLandingPages, topSiteSearchTerms, phrases, opportunities, categories, candidates, warnings, questionsPerPhrase),
     };
   }
 
@@ -519,6 +1054,284 @@ export class FaqDemandService {
     return phrases;
   }
 
+  private buildOpportunities(
+    subject: string,
+    queries: SearchConsoleQueryRow[],
+    _landingPages: AnalyticsFaqLandingPage[],
+    siteSearchTerms: AnalyticsFaqSearchTerm[]
+  ): FaqOpportunity[] {
+    const signals: FaqOpportunitySignal[] = [
+      ...queries.map((row) => ({
+        text: this.cleanSignal(row.query || this.pathToSignal(row.page)),
+        page: row.page,
+        source: "search-console" as const,
+        impressions: Math.max(0, Math.round(row.impressions || 0)),
+        clicks: Math.max(0, Math.round(row.clicks || 0)),
+        ctr: row.ctr,
+        position: row.position,
+      })),
+      ...siteSearchTerms.map((term) => ({
+        text: this.cleanSignal(term.searchTerm),
+        page: undefined,
+        source: "analytics-site-search" as const,
+        impressions: Math.max(0, Math.round(term.sessions || term.events || 0)),
+        clicks: 0,
+      })),
+    ].filter((signal) => signal.text || signal.page);
+
+    const groups = new Map<string, FaqOpportunityAccumulator>();
+
+    for (const signal of signals) {
+      const text = `${signal.text} ${signal.page || ""}`;
+      if (!this.matchesSubject(subject, text)) continue;
+
+      const definition = this.opportunityDefinitionForSignal(subject, signal);
+      if (!definition) continue;
+
+      const key = definition.id;
+      const accumulator = groups.get(key) || this.createOpportunityAccumulator(definition);
+      const faqIntentScore = this.faqIntentScore(subject, signal, definition);
+      const pageFitScore = this.pageFitScore(signal, definition);
+      const performanceScore = this.performanceScore(signal);
+      const finalOpportunityScore = this.finalOpportunityScore(faqIntentScore, pageFitScore, performanceScore, definition);
+
+      accumulator.sourceQueries.add(signal.text || this.pathToSignal(signal.page || ""));
+      if (signal.page) accumulator.pages.add(signal.page);
+      accumulator.impressions += signal.impressions;
+      accumulator.clicks += signal.clicks;
+      if (Number.isFinite(signal.position) && signal.position && signal.impressions > 0) {
+        accumulator.positionWeightedTotal += signal.position * signal.impressions;
+        accumulator.positionWeight += signal.impressions;
+      }
+      accumulator.faqIntentScores.push(faqIntentScore);
+      accumulator.pageFitScores.push(pageFitScore);
+      accumulator.performanceScores.push(performanceScore);
+      accumulator.finalScores.push(finalOpportunityScore);
+      this.addOpportunityReasonFlags(subject, signal, definition, accumulator.reasonFlags);
+      groups.set(key, accumulator);
+    }
+
+    return Array.from(groups.values())
+      .map((accumulator) => this.finalizeOpportunity(subject, accumulator))
+      .sort((a, b) => {
+        const order: Record<FaqOpportunityStrength, number> = {
+          strong: 0,
+          maybe: 1,
+          weak: 2,
+          rejected: 3,
+        };
+        const byStrength = order[a.strength] - order[b.strength];
+        if (byStrength) return byStrength;
+        return b.metrics.impressions - a.metrics.impressions;
+      });
+  }
+
+  private createOpportunityAccumulator(definition: FaqOpportunityTopicDefinition): FaqOpportunityAccumulator {
+    return {
+      definition,
+      sourceQueries: new Set<string>(),
+      pages: new Set<string>(),
+      impressions: 0,
+      clicks: 0,
+      positionWeightedTotal: 0,
+      positionWeight: 0,
+      faqIntentScores: [],
+      pageFitScores: [],
+      performanceScores: [],
+      finalScores: [],
+      reasonFlags: new Set<string>(),
+    };
+  }
+
+  private opportunityDefinitionForSignal(subject: string, signal: FaqOpportunitySignal): FaqOpportunityTopicDefinition | null {
+    const text = signal.text || "";
+    const intentText = this.intentFromPhrase(subject, text);
+    const noiseDefinition = FAQ_NOISE_TOPICS.find((definition) => this.matchesAnyTerm(text, definition.terms));
+    const positiveDefinition = FAQ_OPPORTUNITY_TOPICS.find((definition) => this.matchesAnyTerm(intentText, definition.terms));
+
+    if (noiseDefinition?.rejected) {
+      return noiseDefinition;
+    }
+
+    if (this.isBookingNavigationSignal(text) && !positiveDefinition) {
+      return FAQ_NOISE_TOPICS.find((definition) => definition.id === "noise-booking-navigation") || null;
+    }
+
+    if (!positiveDefinition && (this.isBrandOnly(subject, signal.text) || this.isEntityVariantSignal(subject, signal.text))) {
+      return {
+        id: "noise-brand-navigation",
+        topic: "Brand or hotel-name variant",
+        category: "general",
+        terms: [],
+        question: "Filtered out: brand or hotel-name navigation for {{subject}}",
+        risk: "high",
+        intentBase: 5,
+        reason: "Rejected as brand-only or hotel-name navigation without a concrete FAQ intent.",
+        rejected: true,
+      };
+    }
+
+    return positiveDefinition || null;
+  }
+
+  private faqIntentScore(subject: string, signal: FaqOpportunitySignal, definition: FaqOpportunityTopicDefinition): number {
+    if (definition.rejected) return definition.intentBase;
+
+    const text = `${signal.text} ${signal.page || ""}`;
+    const intentText = this.intentFromPhrase(subject, signal.text);
+    let score = definition.intentBase;
+
+    if (this.looksLikeQuestion(signal.text)) score += 10;
+    if (this.matchesAnyTerm(text, ["how", "what", "when", "where", "does", "is", "are", "can", "should", "wie", "was", "wann", "wo", "como", "cómo", "que", "qué", "donde", "dónde", "איך", "מה", "מתי", "איפה", "האם"])) {
+      score += 6;
+    }
+
+    const intentTokens = this.intentKey(subject, signal.text).split(" ").filter(Boolean);
+    if (intentTokens.length >= 2) score += 6;
+    if (intentTokens.length >= 4) score += 4;
+
+    if (definition.rejected && this.matchesAnyTerm(text, ["photo", "photos", "image", "reviews", "official", "homepage", "booking.com"])) {
+      score -= 35;
+    } else if (this.matchesAnyTerm(text, ["photo", "photos", "image", "reviews", "booking.com"])) {
+      score -= 6;
+    }
+
+    if (!this.matchesAnyTerm(intentText, definition.terms)
+      && (this.isBrandOnly(subject, signal.text) || this.isEntityVariantSignal(subject, signal.text))) {
+      score -= 50;
+    }
+
+    return this.clampScore(score);
+  }
+
+  private pageFitScore(signal: FaqOpportunitySignal, definition: FaqOpportunityTopicDefinition): number {
+    const page = signal.page || "";
+    if (!page) return signal.source === "analytics-site-search" ? 58 : 48;
+
+    let score = 54;
+    if (this.matchesAnyTerm(page, [definition.topic, ...definition.terms])) score += 24;
+    if (this.matchesAnyTerm(page, ["faq", "questions", "help", "info", "amenities", "facilities", "rooms", "location", "policy", "policies"])) score += 10;
+    if (/\/$/.test(page) || this.matchesAnyTerm(page, ["homepage", "home", "gallery", "photos", "reviews"])) score -= 24;
+
+    return this.clampScore(score);
+  }
+
+  private performanceScore(signal: FaqOpportunitySignal): number {
+    const impressionScore = Math.min(42, Math.log10(Math.max(1, signal.impressions) + 1) * 18);
+    const clickScore = Math.min(28, Math.sqrt(Math.max(0, signal.clicks)) * 8);
+    const positionScore = signal.position ? Math.max(0, 30 - Math.min(30, signal.position)) : 10;
+    return this.clampScore(impressionScore + clickScore + positionScore);
+  }
+
+  private finalOpportunityScore(
+    faqIntentScore: number,
+    pageFitScore: number,
+    performanceScore: number,
+    definition: FaqOpportunityTopicDefinition
+  ): number {
+    const weighted = faqIntentScore * 0.5 + pageFitScore * 0.25 + performanceScore * 0.25;
+    const riskPenalty = definition.risk === "high" ? 12 : definition.risk === "medium" ? 4 : 0;
+    const rejectedCap = definition.rejected ? 24 : 100;
+    return Math.min(rejectedCap, this.clampScore(weighted - riskPenalty));
+  }
+
+  private addOpportunityReasonFlags(
+    subject: string,
+    signal: FaqOpportunitySignal,
+    definition: FaqOpportunityTopicDefinition,
+    flags: Set<string>
+  ): void {
+    const intentText = this.intentFromPhrase(subject, signal.text);
+
+    if (definition.rejected) flags.add(definition.reason);
+    if (definition.verificationRequired) flags.add("Needs verification from an official source before it can be used automatically.");
+    if (definition.risk === "high") flags.add("High factual or usefulness risk; should not be used automatically.");
+    if (this.matchesAnyTerm(intentText, definition.terms)) flags.add(definition.reason);
+    if (this.looksLikeQuestion(signal.text)) flags.add("The source query is already phrased like a question.");
+    if (signal.clicks > 0 || signal.impressions >= 50) flags.add("There is measurable demand, but demand is capped in scoring.");
+    if (!this.matchesAnyTerm(intentText, definition.terms)
+      && (this.isBrandOnly(subject, signal.text) || this.isEntityVariantSignal(subject, signal.text))) {
+      flags.add("Brand-only or hotel-name variant signal with no concrete guest question.");
+    }
+  }
+
+  private finalizeOpportunity(subject: string, accumulator: FaqOpportunityAccumulator): FaqOpportunity {
+    const definition = accumulator.definition;
+    const faqIntentScore = this.averageScore(accumulator.faqIntentScores);
+    const pageFitScore = this.averageScore(accumulator.pageFitScores);
+    const performanceScore = this.performanceScore({
+      text: definition.topic,
+      source: "search-console",
+      impressions: accumulator.impressions,
+      clicks: accumulator.clicks,
+      position: accumulator.positionWeight ? accumulator.positionWeightedTotal / accumulator.positionWeight : undefined,
+    });
+    const finalOpportunityScore = this.finalOpportunityScore(faqIntentScore, pageFitScore, performanceScore, definition);
+    const strength = this.opportunityStrength(definition, finalOpportunityScore);
+    const verificationStatus = this.opportunityVerificationStatus(definition);
+    const avgPosition = accumulator.positionWeight
+      ? accumulator.positionWeightedTotal / accumulator.positionWeight
+      : undefined;
+    const ctr = accumulator.impressions > 0 ? accumulator.clicks / accumulator.impressions : undefined;
+    const scoreSummary = `Scores: intent ${Math.round(faqIntentScore)}, page ${Math.round(pageFitScore)}, performance ${Math.round(performanceScore)}, final ${Math.round(finalOpportunityScore)}.`;
+
+    return {
+      id: definition.id,
+      topic: definition.topic,
+      category: definition.category,
+      candidateQuestion: this.renderOpportunityQuestion(definition, subject),
+      strength,
+      verificationStatus,
+      reason: [Array.from(accumulator.reasonFlags)[0] || definition.reason, scoreSummary].join(" "),
+      risk: definition.risk,
+      sourceQueries: Array.from(accumulator.sourceQueries).filter(Boolean).slice(0, 8),
+      pages: Array.from(accumulator.pages).filter(Boolean).slice(0, 6),
+      metrics: {
+        impressions: accumulator.impressions,
+        clicks: accumulator.clicks,
+        ...(ctr != null ? { ctr: this.roundNumber(ctr, 4) } : {}),
+        ...(avgPosition != null ? { avgPosition: this.roundNumber(avgPosition, 1) } : {}),
+      },
+    };
+  }
+
+  private opportunityStrength(
+    definition: FaqOpportunityTopicDefinition,
+    finalOpportunityScore: number
+  ): FaqOpportunityStrength {
+    if (definition.rejected) return "rejected";
+    if (definition.verificationRequired && finalOpportunityScore >= 48) return "maybe";
+    if (finalOpportunityScore >= 72 && definition.risk !== "high") return "strong";
+    if (finalOpportunityScore >= 48) return "maybe";
+    return "weak";
+  }
+
+  private opportunityVerificationStatus(definition: FaqOpportunityTopicDefinition): FaqOpportunityVerificationStatus {
+    if (definition.rejected) return "rejected";
+    if (definition.verificationRequired) return "needs_verification";
+    return "query_supported";
+  }
+
+  private renderOpportunityQuestion(definition: FaqOpportunityTopicDefinition, subject: string): string {
+    return definition.question.replace(/{{subject}}/g, subject || "this property");
+  }
+
+  private isEntityVariantSignal(subject: string, signal: string): boolean {
+    const key = this.intentKey(subject, signal);
+    const tokens = this.tokenize(key);
+    if (!tokens.length) return false;
+    return tokens.every((token) =>
+      HOSPITALITY_ENTITY_TOKENS.has(token) ||
+      SUBJECT_GENERIC_TOKENS.has(token) ||
+      ["royal", "grand", "palace", "plaza", "beach"].includes(token)
+    );
+  }
+
+  private isBookingNavigationSignal(text: string): boolean {
+    if (!this.matchesAnyTerm(text, ["booking", "booking.com", "booking com", "book hotel"])) return false;
+    return !this.matchesAnyTerm(text, ["cancel", "cancellation", "refund", "payment", "deposit", "policy", "policies", "ביטול", "תשלום", "החזר"]);
+  }
+
   private addStarterPhrases(subject: string, phrases: FaqDemandPhrase[], maxPhrases: number): FaqDemandPhrase[] {
     if (!this.hasSubjectAnchors(subject) || phrases.length >= maxPhrases) return phrases;
 
@@ -599,28 +1412,54 @@ export class FaqDemandService {
     landingPages: AnalyticsFaqLandingPage[],
     siteSearchTerms: AnalyticsFaqSearchTerm[],
     phrases: FaqDemandPhrase[],
-    categories: FaqDemandCategory[],
-    candidates: FaqDemandCandidate[],
+    opportunities: FaqOpportunity[],
+    _categories: FaqDemandCategory[],
+    _candidates: FaqDemandCandidate[],
     warnings: string[],
     questionsPerPhrase: number
   ): string {
+    const mandatoryOpportunities = opportunities.filter((opportunity) =>
+      opportunity.strength === "strong"
+      && opportunity.risk !== "high"
+      && opportunity.verificationStatus !== "needs_verification"
+    );
+    const reviewOnlyOpportunities = opportunities.filter((opportunity) =>
+      opportunity.strength === "maybe"
+      || opportunity.verificationStatus === "needs_verification"
+    );
+    const rejectedOpportunities = opportunities.filter((opportunity) => opportunity.strength === "rejected");
     const lines = [
       `SEARCH-DEMAND FAQ BRIEF FOR ${subject}`,
       "",
-      "Use these GA4/Search Console phrases as evidence for question demand. The phrases are not factual answer sources.",
-      "If a phrase is marked as starter-intent, treat it as a fallback suggestion only, not as evidence that users searched it.",
+      "Use Search Console and GA4 signals as question-demand evidence only. They are not factual answer sources.",
       "For final answers, verify facts against official or otherwise approved sources.",
-      `For each selected phrase, generate up to ${questionsPerPhrase} natural FAQ question(s), only when the questions are useful and not duplicates.`,
-      "Avoid duplicate questions caused by similar long-tail phrases. Merge similar intents into one stronger question.",
+      "Mandatory opportunities are strong, low-risk and query-supported. Add them to the Research questions plan unless they duplicate another row or violate source rules.",
+      "Review-only opportunities need human/source verification and must not be added automatically.",
+      `Use the candidate question itself as preferred wording. Create at most ${questionsPerPhrase} row(s) per opportunity and merge duplicates across similar topics.`,
       "",
-      "Selected search phrases and inferred intents:",
+      "Mandatory FAQ opportunities:",
+      ...(mandatoryOpportunities.length
+        ? mandatoryOpportunities.slice(0, 12).map((opportunity) =>
+            `- ${opportunity.candidateQuestion} | Topic: ${opportunity.topic} | ${opportunity.category} | ${opportunity.metrics.impressions} impressions, ${opportunity.metrics.clicks} clicks | Queries: ${opportunity.sourceQueries.join(", ")} | ${opportunity.reason}`
+          )
+        : ["- No mandatory query-supported FAQ opportunities were found."]),
+      "",
+      "Review-only opportunities:",
+      ...(reviewOnlyOpportunities.length
+        ? reviewOnlyOpportunities.slice(0, 8).map((opportunity) =>
+            `- ${opportunity.candidateQuestion} | ${opportunity.verificationStatus} | ${opportunity.metrics.impressions} impressions, ${opportunity.metrics.clicks} clicks | Queries: ${opportunity.sourceQueries.join(", ")}`
+          )
+        : ["- None."]),
+      "",
+      "Rejected signals for debug only:",
+      ...(rejectedOpportunities.length
+        ? rejectedOpportunities.slice(0, 8).map((opportunity) =>
+            `- ${opportunity.topic}: ${opportunity.sourceQueries.join(", ")} | ${opportunity.reason}`
+          )
+        : ["- None."]),
+      "",
+      "Raw source phrases for evidence only:",
       ...phrases.slice(0, 20).map((phrase) => `- ${phrase.phrase} | Intent: ${phrase.intent} | ${phrase.source} | ${phrase.evidence}${phrase.page ? ` | Page: ${phrase.page}` : ""}`),
-      "",
-      "Intent categories:",
-      ...categories.slice(0, 8).map((category) => `- ${category.title}: ${category.description} Signals: ${category.signals.join(", ")}`),
-      "",
-      "Possible question angles:",
-      ...candidates.slice(0, 18).map((candidate) => `- [${candidate.source}] ${candidate.question} | Evidence: ${candidate.evidence}${candidate.page ? ` | Page: ${candidate.page}` : ""}`),
       "",
       "Top Search Console queries:",
       ...queries.slice(0, 12).map((row) => `- ${row.query || "(empty query)"} | ${row.impressions} impressions, ${row.clicks} clicks, avg. position ${this.round(row.position)}${row.page ? ` | ${row.page}` : ""}`),
@@ -698,6 +1537,8 @@ export class FaqDemandService {
   private tokenize(value: string): string[] {
     return String(value || "")
       .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .replace(/https?:\/\/\S+/g, " ")
       .replace(/[^a-z0-9\u0590-\u05ff]+/g, " ")
       .split(/\s+/)
@@ -792,13 +1633,13 @@ export class FaqDemandService {
   }
 
   private classify(value: string): string {
-    const text = String(value || "").toLowerCase();
-    if (/price|cost|fee|fees|deposit|refund|cancel|cancellation|payment|book|booking|rate|rates|cheap|deal|מחיר|עלות|ביטול|הזמנה/.test(text)) return "booking";
+    const text = this.normalizeMatchText(value);
+    if (/price|prices|preco|precos|prezzo|prezzi|precio|precios|preis|preise|cost|fee|fees|deposit|refund|cancel|cancellation|payment|book|booking|rate|rates|cheap|deal|מחיר|עלות|ביטול|הזמנה|תשלום/.test(text)) return "booking";
     if (/contact|support|help|phone|email|change|problem|request|service|customer|צור קשר|עזרה|תמיכה|טלפון|שירות/.test(text)) return "support";
-    if (/where|address|location|near|nearby|close|airport|train|metro|parking|transport|map|directions|beach|center|centre|distance|attraction|attractions|landmark|איפה|כתובת|חניה|קרוב|שדה/.test(text)) return "location";
-    if (/room|suite|apartment|amenit|facility|facilities|wifi|wi-fi|breakfast|pool|spa|kitchen|balcony|air conditioning|\bac\b|accessible|accessibility|חדר|בריכה|ארוחת|מטבח|מרפסת|נגיש/.test(text)) return "amenities";
-    if (/policy|policies|check.?in|check.?out|pet|pets|smok|children|kid|age|rules|allowed|hours|צ.?ק|חיות|עישון|ילדים|מותר/.test(text)) return "policy";
-    if (/review|reviews|best|vs|versus|compare|comparison|rating|worth|safe|legit|recommended|המלצות|ביקורות|מומלץ|השוואה/.test(text)) return "comparison";
+    if (/where|address|location|near|nearby|close|airport|flughafen|aeroporto|aeropuerto|train|metro|parking|parkplatz|parcheggio|aparcamiento|transport|map|directions|beach|center|centre|distance|attraction|attractions|landmark|איפה|כתובת|חניה|קרוב|שדה|מיקום/.test(text)) return "location";
+    if (/room|suite|apartment|amenit|facility|facilities|wifi|wi fi|wi-fi|wlan|breakfast|fruhstuck|colazione|desayuno|pool|piscina|spa|kitchen|balcony|air conditioning|\bac\b|accessible|accessibility|barrierefrei|accessibile|accesible|חדר|בריכה|ארוחת|מטבח|מרפסת|נגיש|אינטרנט/.test(text)) return "amenities";
+    if (/policy|policies|check.?in|check.?out|pet|pets|smok|children|kid|age|rules|allowed|hours|haustiere|animali|mascotas|צ.?ק|חיות|עישון|ילדים|מותר|מדיניות/.test(text)) return "policy";
+    if (/review|reviews|best|vs|versus|compare|comparison|rating|worth|safe|legit|recommended|bewertung|recension|opiniones|המלצות|ביקורות|מומלץ|השוואה/.test(text)) return "comparison";
     return "general";
   }
 
@@ -824,6 +1665,52 @@ export class FaqDemandService {
       .replace(/[?!.]+$/g, "")
       .trim()
       .slice(0, 120);
+  }
+
+  private matchesAnyTerm(value: string, terms: string[]): boolean {
+    return terms.some((term) => this.matchesTerm(value, term));
+  }
+
+  private matchesTerm(value: string, term: string): boolean {
+    const haystack = this.normalizeMatchText(value);
+    const needle = this.normalizeMatchText(term);
+    if (!haystack || !needle) return false;
+
+    const compactHaystack = haystack.replace(/\s+/g, "");
+    const compactNeedle = needle.replace(/\s+/g, "");
+    if (needle.includes(" ")) {
+      return haystack.includes(needle) || compactHaystack.includes(compactNeedle);
+    }
+
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|\\s)${escaped}(\\s|$)`).test(haystack)
+      || (compactNeedle.length >= 4 && compactHaystack.includes(compactNeedle));
+  }
+
+  private normalizeMatchText(value: string): string {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[^a-z0-9\u0590-\u05ff]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  private averageScore(scores: number[]): number {
+    if (!scores.length) return 0;
+    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  }
+
+  private clampScore(score: number): number {
+    if (!Number.isFinite(score)) return 0;
+    return Math.max(0, Math.min(100, score));
+  }
+
+  private roundNumber(value: number, digits: number): number {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
   }
 
   private slugifyForSearchConsole(value: string): string {

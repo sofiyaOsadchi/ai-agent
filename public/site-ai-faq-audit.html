@@ -814,6 +814,7 @@
                   <th>Status</th>
                   <th>URL</th>
                   <th>Title</th>
+                  <th>Language</th>
                   <th>Main issue</th>
                   <th>Recommended action</th>
                   <th>Rendered</th>
@@ -1074,11 +1075,14 @@
       const summary = result.summary || {};
       const faqPageObjectCount = pages.reduce((sum, page) => sum + Number(page.faqPageSchemaCount || 0), 0);
       const invalidJsonLdCount = pages.reduce((sum, page) => sum + Number(page.invalidJsonLdCount || 0), 0);
+      const languageSummary = Array.isArray(result.languageSummary) ? result.languageSummary : [];
+      const languageWarningCount = languageSummary.reduce((sum, item) => sum + ((item.warnings || []).length), 0);
 
       document.getElementById("faqSubtitle").textContent =
         `${result.normalizedStartUrl || result.startUrl || ""} | ${summary.pagesChecked || pages.length} pages checked | ${summary.totalVisibleQuestions || 0} visible questions | ${summary.totalSchemaQuestions || 0} schema questions | ${faqPageObjectCount} FAQPage objects`;
       document.getElementById("faqMetrics").innerHTML = [
         renderMetric("Pages", summary.pagesChecked || pages.length, "Pages checked", "blue"),
+        renderMetric("Languages", languageSummary.length ? renderLanguageSummaryText(languageSummary) : "-", languageWarningCount ? `${languageWarningCount} language warnings` : "Detected page language", languageWarningCount ? "amber" : ""),
         renderMetric("Visible Q/A", summary.totalVisibleQuestions || 0, "Questions found on pages", ""),
         renderMetric("Schema Q/A", summary.totalSchemaQuestions || 0, "Questions found in FAQPage", ""),
         renderMetric("FAQPage objects", faqPageObjectCount, invalidJsonLdCount ? `${invalidJsonLdCount} invalid JSON-LD blocks` : "FAQPage JSON-LD blocks found", invalidJsonLdCount ? "amber" : ""),
@@ -1103,6 +1107,7 @@
           <td><span class="status-pill ${statusClass}">${escapeHtml(statusLabels[page.auditStatus] || page.auditStatus)}</span></td>
           <td class="url-cell">${escapeHtml(page.url)}</td>
           <td>${escapeHtml(page.title || page.h1 || "-")}</td>
+          <td>${renderPageLanguage(page.language)}</td>
           <td>${escapeHtml(pageIssueSummary(page))}</td>
           <td>${escapeHtml(pageRecommendedAction(page))}</td>
           <td><span class="tiny-pill">${page.rendered ? "Rendered" : "Static"}</span></td>
@@ -1254,6 +1259,22 @@
       return list.map((item) => `<span class="tiny-pill">${escapeHtml(item)}</span>`).join("");
     }
 
+    function renderPageLanguage(language) {
+      if (!language || !language.code) return "-";
+      const label = `${language.name || language.code} (${language.code})`;
+      const meta = `${language.source || "unknown"} · ${language.confidence || "low"}`;
+      const warnings = Array.isArray(language.warnings) && language.warnings.length
+        ? `<div class="muted-small">${escapeHtml(language.warnings.slice(0, 2).join(" | "))}</div>`
+        : "";
+      return `<span class="tiny-pill">${escapeHtml(label)}</span><div class="muted-small">${escapeHtml(meta)}</div>${warnings}`;
+    }
+
+    function renderLanguageSummaryText(summary) {
+      const list = Array.isArray(summary) ? summary.slice(0, 3) : [];
+      if (!list.length) return "-";
+      return list.map((item) => `${item.code || "?"}: ${item.count || 0}`).join(" | ");
+    }
+
     function renderMetric(label, value, text, tone) {
       const className = tone ? `metric ${tone}` : "metric";
       return `<div class="${className}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><p>${escapeHtml(text)}</p></div>`;
@@ -1347,13 +1368,19 @@
     function downloadFaqCsv() {
       if (!lastFaqAudit) return;
       const rows = [
-        ["status", "url", "title", "mainIssue", "recommendedAction", "rendered", "visibleQaCount", "schemaQaCount", "faqPageSchemaCount", "visibleOnlyQuestions", "schemaOnlyQuestions", "schemaTypes", "notes"]
+        ["status", "url", "title", "language", "languageSource", "htmlLang", "hreflangs", "languageWarnings", "mainIssue", "recommendedAction", "rendered", "visibleQaCount", "schemaQaCount", "faqPageSchemaCount", "visibleOnlyQuestions", "schemaOnlyQuestions", "schemaTypes", "notes"]
       ];
       (lastFaqAudit.pages || []).forEach((page) => {
+        const language = page.language || {};
         rows.push([
           page.auditStatus,
           page.url,
           page.title || page.h1 || "",
+          `${language.name || ""} (${language.code || ""})`,
+          `${language.source || ""}; ${language.confidence || ""}`,
+          language.htmlLang || "",
+          (language.hreflangs || []).join(" | "),
+          (language.warnings || []).join(" | "),
           pageIssueSummary(page),
           pageRecommendedAction(page),
           page.rendered ? "rendered" : "static",

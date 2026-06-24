@@ -2167,33 +2167,903 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
       forbidden: "Un environnement maîtrisé en matière d'allergènes",
       preferred: "Un environnement préservé de tout allergène",
       reason: "'Maîtrisé' sounds like a laboratory report. 'Préservé' sounds like a guest benefit and a clean, luxury space."
+    },
+    {
+      forbidden: "gracieusement mise à disposition",
+      preferred: "mise à disposition gratuitement",
+      reason: "French FAQ reviewer note: 'gracieusement' sounds too strong for standard complimentary services."
+    },
+    {
+      forbidden: "met gracieusement à disposition",
+      preferred: "met à disposition gratuitement",
+      reason: "Keeps the benefit factual and natural without over-luxury wording."
+    },
+    {
+      forbidden: "sont proposés gracieusement",
+      preferred: "sont proposés gratuitement",
+      reason: "Avoids the elevated register of 'gracieusement' for regular hotel amenities."
+    },
+    {
+      forbidden: "gracieusement proposés",
+      preferred: "proposés gratuitement",
+      reason: "Use clear FAQ wording for free services."
+    },
+    {
+      forbidden: "gracieusement",
+      preferred: "gratuitement",
+      reason: "Use only when grammar requires an adverb; prefer 'gratuit' or 'sans supplément' when more natural."
+    },
+    {
+      forbidden: "sac petit-déjeuner à emporter",
+      preferred: "petit déjeuner à emporter",
+      reason: "Reviewer note: 'sac' sounds odd in French here; the service should be named as the takeaway breakfast."
+    },
+    {
+      forbidden: "Breakfast Bag préparé",
+      preferred: "petit déjeuner à emporter préparé",
+      reason: "Avoid leaving the English product label inside French FAQ copy unless it is an official brand term."
+    },
+    {
+      forbidden: "frais modiques",
+      preferred: "petit supplément",
+      reason: "Reviewer note: 'modiques' sounds unnatural for hotel fee policy copy."
+    },
+    {
+      forbidden: "donner lieu à des frais modiques",
+      preferred: "entraîner un petit supplément",
+      reason: "More natural French for small extra-charge policy wording."
+    },
+    {
+      forbidden: "sous réserve de la circulation",
+      preferred: "sous réserve des conditions de circulation",
+      reason: "Reviewer-preferred French phrasing for traffic-dependent travel times."
+    },
+    {
+      forbidden: "chiens bien éduqués",
+      preferred: "chiens",
+      reason: "Reviewer note: this implies only especially well-trained dogs are allowed; keep the pet policy neutral."
+    },
+    {
+      forbidden: "remis sur simple demande plutôt que",
+      preferred: "remis sur simple demande auprès de la réception plutôt que",
+      reason: "For on-request room items, include the reception touchpoint when the source points guests there."
+    },
+    {
+      forbidden: "€15",
+      preferred: "15 €",
+      reason: "French price formatting puts the euro sign after the number with a space."
+    },
+    {
+      forbidden: "€25",
+      preferred: "25 €",
+      reason: "French price formatting puts the euro sign after the number with a space."
+    },
+    {
+      forbidden: "1.0 kilomètre",
+      preferred: "1 km",
+      reason: "Use natural French distance formatting; avoid English decimal punctuation and unnecessary .0."
+    },
+    {
+      forbidden: "1.2 kilomètres",
+      preferred: "1,2 km",
+      reason: "Use a decimal comma and compact distance unit in French."
+    },
+    {
+      forbidden: "3.0 kilomètres",
+      preferred: "3 km",
+      reason: "Use natural French distance formatting; avoid unnecessary .0."
+    },
+    {
+      forbidden: "1,0 km",
+      preferred: "1 km",
+      reason: "Avoid unnecessary decimal zero in French distances."
+    },
+    {
+      forbidden: "3,0 km",
+      preferred: "3 km",
+      reason: "Avoid unnecessary decimal zero in French distances."
+    },
+    {
+      forbidden: "1 June",
+      preferred: "1er juin",
+      reason: "Translate English month names and use French date style."
+    },
+    {
+      forbidden: "30 September",
+      preferred: "30 septembre",
+      reason: "Translate English month names."
+    },
+    {
+      forbidden: "11:00 AM",
+      preferred: "11 h 00",
+      reason: "Convert AM/PM to French 24-hour hotel style."
+    },
+    {
+      forbidden: "9:00 PM",
+      preferred: "21 h 00",
+      reason: "Convert AM/PM to French 24-hour hotel style."
+    },
+    {
+      forbidden: "15:00",
+      preferred: "15 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "7:00",
+      preferred: "7 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "10:30",
+      preferred: "10 h 30",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "8:00",
+      preferred: "8 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "13:00",
+      preferred: "13 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "16:00",
+      preferred: "16 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "19:00",
+      preferred: "19 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "22:30",
+      preferred: "22 h 30",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "23:00",
+      preferred: "23 h 00",
+      reason: "Prefer French hotel time formatting with spaces around h."
+    },
+    {
+      forbidden: "bar du lobby",
+      preferred: "bar du hall",
+      reason: "Avoid unnecessary English in French hotel copy."
+    },
+    {
+      forbidden: "buffet petit-déjeuner",
+      preferred: "buffet du petit-déjeuner",
+      reason: "More natural French collocation for a breakfast buffet."
+    },
+    {
+      forbidden: "buffet international pour le petit-déjeuner dans la salle de petit-déjeuner",
+      preferred: "buffet international dans la salle du petit-déjeuner",
+      reason: "Avoid repetitive translated wording around breakfast room references."
+    },
+    {
+      forbidden: "café décontracté sur place",
+      preferred: "espace café sur place",
+      reason: "More natural and less translated for hotel amenity copy."
+    },
+    {
+      forbidden: "clients enregistrés",
+      preferred: "clients de l'hôtel",
+      reason: "Avoid technical registration wording when the meaning is registered hotel guests."
+    },
+    {
+      forbidden: "dans le parking",
+      preferred: "sur le parking",
+      reason: "Use the natural French preposition for parking facilities in hotel copy."
+    },
+    {
+      forbidden: "vues panoramiques",
+      preferred: "une vue panoramique",
+      reason: "In French hotel copy, singular 'une vue panoramique' is usually more natural unless multiple distinct views are meant."
+    },
+    {
+      forbidden: "service d’appel de réveil",
+      preferred: "service de réveil",
+      reason: "Shorter and more natural hotel terminology."
+    },
+    {
+      forbidden: "lors de l’enregistrement",
+      preferred: "à l'arrivée",
+      reason: "Guest-facing hotel French usually sounds more natural with 'à l'arrivée' than technical 'enregistrement'."
+    },
+    {
+      forbidden: "avant l’enregistrement",
+      preferred: "avant l'arrivée",
+      reason: "Use natural guest-facing arrival wording."
+    },
+    {
+      forbidden: "âge minimum requis pour l’arrivée",
+      preferred: "âge minimum requis pour s'enregistrer",
+      reason: "Arrival can sound like physical arrival; this policy is about check-in/registration."
     }
   ],
   examples: [
     {
-      draft: "Le check-out doit s’effectuer avant 12h00, offrant un départ détendu avant midi.",
-      polish: "Au Leonardo Hotel Almere City Center, les chambres doivent être libérées avant 12h00, vous permettant un départ en toute sérénité.",
+      draft: "Le check-out doit s’effectuer avant 12 h 00, offrant un départ détendu avant midi.",
+      polish: "Au Leonardo Hotel Almere City Center, les chambres doivent être libérées avant 12 h 00, vous permettant un départ en toute sérénité.",
       note: "Replacing anglicisms and literal translations with professional French hospitality idioms."
     },
     {
-      draft: "L'enregistrement officiel au Leonardo Hotel Almere City Center commence à 15h00...",
-      polish: "Les arrivées au Leonardo Hotel Almere City Center s'effectuent à partir de 15h00...",
+      draft: "L'enregistrement officiel au Leonardo Hotel Almere City Center commence à 15 h 00...",
+      polish: "Les arrivées au Leonardo Hotel Almere City Center s'effectuent à partir de 15 h 00...",
       note: "Standardizing the welcome process phrasing."
     },
     {
       draft: "Oui, le Wi-Fi haut débit est offert gratuitement dans l’ensemble des chambres...",
-      polish: "Oui, une connexion Wi-Fi haut débit est gracieusement mise à votre disposition dans l'ensemble des chambres du Leonardo Hotel Almere City Center...",
-      note: "Using 'gracieusement mise à disposition' instead of just 'offert' for a more prestigious tone."
+      polish: "Oui, une connexion Wi-Fi haut débit est mise à disposition gratuitement dans l'ensemble des chambres du Leonardo Hotel Almere City Center...",
+      note: "Use clear complimentary-service wording; avoid over-elevated 'gracieusement'."
     },
     {
       draft: "Les clients non résidents peuvent-ils dîner au Bierfabriek Almere...",
       polish: "La clientèle non-résidente peut-elle déjeuner ou dîner au Bierfabriek Almere...",
       note: "Specifying the type of guest (clientèle) and the meals (déjeuner/dîner) for a more complete response."
+    },
+    {
+      draft: "Oui, le Leonardo Boutique Museumhotel Amsterdam City Center met gracieusement à disposition une connexion Wi-Fi haut débit dans l’ensemble des chambres et des espaces communs.",
+      polish: "Oui, le Leonardo Boutique Museumhotel Amsterdam City Center met à disposition gratuitement une connexion Wi-Fi haut débit dans l’ensemble des chambres et des espaces communs.",
+      note: "Use clear complimentary-service wording; avoid 'gracieusement'."
+    },
+    {
+      draft: "Oui, des lits bébé sont proposés gracieusement sur réservation préalable et sous réserve de disponibilité.",
+      polish: "Oui, des lits bébé sont proposés gratuitement sur réservation préalable et sous réserve de disponibilité.",
+      note: "Keep the policy factual and natural."
+    },
+    {
+      draft: "Le Leonardo Hotel Almere City Center propose-t-il un sac petit-déjeuner à emporter pour les départs matinaux ?",
+      polish: "Le Leonardo Hotel Almere City Center propose-t-il un petit déjeuner à emporter pour les départs tôt le matin ?",
+      note: "Reviewer note: avoid 'sac petit-déjeuner'; phrase the service naturally."
+    },
+    {
+      draft: "Oui, les clients prenant un train ou un vol tôt peuvent demander à la réception un Breakfast Bag préparé à l’avance.",
+      polish: "Oui, les clients prenant un train ou un vol tôt peuvent demander à la réception un petit déjeuner à emporter préparé à l’avance.",
+      note: "Translate the service label unless it is an official brand name."
+    },
+    {
+      draft: "Oui, une arrivée anticipée ou un départ tardif peut être organisé, sous réserve de disponibilité, et peut donner lieu à des frais modiques.",
+      polish: "Oui, une arrivée anticipée ou un départ tardif peut être organisé, sous réserve de disponibilité, et peut entraîner un petit supplément.",
+      note: "Use the reviewer-preferred fee wording."
+    },
+    {
+      draft: "Le trajet en taxi depuis Schiphol prend généralement entre 25 et 30 minutes, sous réserve de la circulation.",
+      polish: "Le trajet en taxi depuis Schiphol prend généralement entre 25 et 30 minutes, sous réserve des conditions de circulation.",
+      note: "Use the more natural travel-time disclaimer."
+    },
+    {
+      draft: "Oui, les chiens bien éduqués sont les bienvenus sans supplément ; il convient simplement de nous en informer à l'avance.",
+      polish: "Oui, les chiens sont les bienvenus sans supplément ; il convient simplement de nous en informer à l'avance.",
+      note: "Keep the pet policy neutral and avoid implying a stricter training requirement."
+    },
+    {
+      draft: "Le buffet petit-déjeuner est actuellement proposé au tarif de €15 par personne.",
+      polish: "Le buffet petit-déjeuner est actuellement proposé au tarif de 15 € par personne.",
+      note: "Use French price formatting with the euro sign after the number."
+    },
+    {
+      draft: "La plage d'Ondarreta est accessible à pied, à environ 1.2 kilomètres.",
+      polish: "La plage d'Ondarreta est accessible à pied, à environ 1,2 km.",
+      note: "Use decimal comma and compact distance units in French."
+    },
+    {
+      draft: "La piscine est ouverte chaque année du 1 June au 30 September.",
+      polish: "La piscine est ouverte chaque année du 1er juin au 30 septembre.",
+      note: "Translate English month names and keep natural French date style."
+    },
+    {
+      draft: "La piscine saisonnière sur le toit est ouverte tous les jours de 11:00 AM à 9:00 PM.",
+      polish: "La piscine saisonnière sur le toit est ouverte tous les jours de 11 h 00 à 21 h 00.",
+      note: "Convert AM/PM to French 24-hour hotel style."
+    },
+    {
+      draft: "Oui, un café décontracté sur place sert des boissons et des en-cas légers tout au long de la journée.",
+      polish: "Oui, un espace café sur place sert des boissons et des en-cas légers tout au long de la journée.",
+      note: "Avoid literal 'casual coffee shop' wording."
+    },
+    {
+      draft: "Oui, une piscine extérieure saisonnière sur le toit est à la disposition des clients enregistrés.",
+      polish: "Oui, une piscine extérieure saisonnière sur le toit est à la disposition des clients de l'hôtel.",
+      note: "Use natural guest-facing French rather than technical registration wording."
+    },
+    {
+      draft: "Le buffet petit-déjeuner est actuellement proposé au tarif de 15 € par personne.",
+      polish: "Le buffet du petit-déjeuner est actuellement proposé au tarif de 15 € par personne.",
+      note: "Use the natural French collocation for breakfast buffet."
+    },
+    {
+      draft: "La plage de La Concha se situe à environ 1,0 km.",
+      polish: "La plage de La Concha se situe à environ 1 km.",
+      note: "Remove unnecessary decimal zero."
+    },
+    {
+      draft: "Oui, une borne de recharge pour véhicules électriques est disponible dans le parking du Leonardo Hotel San Sebastián.",
+      polish: "Oui, une borne de recharge pour véhicules électriques est disponible sur le parking du Leonardo Hotel San Sebastián.",
+      note: "Use the natural preposition for parking facilities."
+    },
+    {
+      draft: "Oui, les clients peuvent profiter de vues panoramiques depuis la vaste terrasse sur le toit.",
+      polish: "Oui, les clients peuvent profiter d'une vue panoramique depuis la vaste terrasse sur le toit.",
+      note: "Singular 'vue panoramique' sounds more natural in French hospitality copy."
+    },
+    {
+      draft: "Le Leonardo Hotel San Sebastián sert chaque matin un généreux buffet international pour le petit-déjeuner dans la salle de petit-déjeuner.",
+      polish: "Le Leonardo Hotel San Sebastián sert chaque matin un généreux buffet international dans la salle du petit-déjeuner.",
+      note: "Avoid repetition and keep breakfast-room phrasing natural."
+    },
+    {
+      draft: "Quel est l’âge minimum requis pour l’arrivée au Leonardo Hotel San Sebastián ? L’âge minimum requis pour l’enregistrement est de 18 ans.",
+      polish: "Quel est l’âge minimum requis pour s'enregistrer au Leonardo Hotel San Sebastián ? L’âge minimum requis pour s'enregistrer est de 18 ans.",
+      note: "Use check-in/registration wording instead of physical-arrival wording for age policy."
     }
   ]
 },
     pl: { mappings: [], examples: [] },
-    ru: { mappings: [], examples: [] },
+    ru: {
+        mappings: [
+            {
+                forbidden: "отелем на 100 % для некурящих",
+                preferred: "полностью некурящим отелем",
+                reason: "Natural Russian hotel phrasing for a fully non-smoking hotel."
+            },
+            {
+                forbidden: "полностью является отелем на 100 % для некурящих",
+                preferred: "является полностью некурящим отелем",
+                reason: "Avoid literal English structure and redundant percentage wording."
+            },
+            {
+                forbidden: "индивидуально регулируемые кондиционирование и отопление",
+                preferred: "индивидуально регулируемые системы кондиционирования и отопления",
+                reason: "Keeps agreement natural and avoids an awkward compound subject."
+            },
+            {
+                forbidden: "больших компаний",
+                preferred: "больших групп",
+                reason: "In hotel room-layout context, 'groups' is more accurate than 'companies'."
+            },
+            {
+                forbidden: "мини-бар-холодильник",
+                preferred: "мини-бар",
+                reason: "Russian hotel copy normally uses 'мини-бар' for a stocked minibar refrigerator."
+            },
+            {
+                forbidden: "любой помощи гостям",
+                preferred: "помощи гостям по любым вопросам",
+                reason: "More idiomatic Russian service phrasing."
+            },
+            {
+                forbidden: "интернациональных блюд",
+                preferred: "блюд международной кухни",
+                reason: "More natural Russian hospitality wording for international cuisine."
+            },
+            {
+                forbidden: "07:00 утра",
+                preferred: "07:00",
+                reason: "24-hour times do not need day-part words in Russian."
+            },
+            {
+                forbidden: "22:00 вечера",
+                preferred: "22:00",
+                reason: "24-hour times do not need day-part words in Russian."
+            },
+            {
+                forbidden: "с 07:00 утра до 22:00 вечера",
+                preferred: "с 07:00 до 22:00",
+                reason: "Natural Russian time formatting for hotel operating hours."
+            },
+            {
+                forbidden: "1.6 км",
+                preferred: "1,6 км",
+                reason: "Russian distance formatting uses a decimal comma."
+            },
+            {
+                forbidden: "5.9 км",
+                preferred: "5,9 км",
+                reason: "Russian distance formatting uses a decimal comma."
+            },
+            {
+                forbidden: "14 km",
+                preferred: "14 км",
+                reason: "Do not leave English distance units in Russian copy."
+            },
+            {
+                forbidden: "km",
+                preferred: "км",
+                reason: "Do not leave English distance units in Russian copy."
+            },
+            {
+                forbidden: "организует такси",
+                preferred: "может организовать такси",
+                reason: "Matches the source meaning 'can arrange' without overpromising."
+            },
+            {
+                forbidden: "приобрести билеты на достопримечательности",
+                preferred: "помочь с покупкой билетов на достопримечательности",
+                reason: "More natural concierge-service wording."
+            },
+            {
+                forbidden: "спортивные события",
+                preferred: "спортивные трансляции",
+                reason: "In a hotel bar context, guests are asking about broadcasts or matches."
+            },
+            {
+                forbidden: "баре-лаундже",
+                preferred: "лаунж-баре",
+                reason: "More natural Russian term for a bar-lounge area."
+            },
+            {
+                forbidden: "услугами печати, ксерокопирования и другими услугами",
+                preferred: "услугами печати, ксерокопирования и другими бизнес-услугами",
+                reason: "Avoids repetition and keeps the business-centre context clear."
+            },
+            {
+                forbidden: "официальные время заезда и выезда",
+                preferred: "официальные часы заезда и выезда",
+                reason: "Natural Russian phrasing for check-in/check-out times."
+            },
+            {
+                forbidden: "для заезда, услуг консьержа и помощи гостям",
+                preferred: "для оформления заезда, услуг консьержа и помощи гостям",
+                reason: "Use the standard Russian hotel phrase 'оформление заезда'."
+            },
+            {
+                forbidden: "для заезда, услуг консьержа и любой помощи гостям",
+                preferred: "для оформления заезда, услуг консьержа и помощи гостям по любым вопросам",
+                reason: "More natural service phrasing for front-desk availability."
+            },
+            {
+                forbidden: "кондиционирование и отопление",
+                preferred: "системы кондиционирования и отопления",
+                reason: "Avoids an awkward pair of abstract nouns in room-amenity questions."
+            },
+            {
+                forbidden: "для персонального комфорта",
+                preferred: "для комфортного микроклимата",
+                reason: "More idiomatic Russian for personalised climate comfort."
+            },
+            {
+                forbidden: "мини-бар-холодильник, укомплектованный для удобства гостей",
+                preferred: "мини-бар с наполнением для удобства гостей",
+                reason: "Avoids the unnatural compound 'мини-бар-холодильник'."
+            },
+            {
+                forbidden: "установлен мини-бар-холодильник",
+                preferred: "есть мини-бар",
+                reason: "Simpler and more natural hotel-room wording."
+            },
+            {
+                forbidden: "экспресс-прачечная",
+                preferred: "услуги экспресс-стирки",
+                reason: "A laundry facility is not meant here; the service is express laundry."
+            },
+            {
+                forbidden: "парковку на территории Leonardo Hotel Bucharest City Center или поблизости",
+                preferred: "парковку на территории отеля или поблизости",
+                reason: "Avoids repeating the long hotel name inside the same question."
+            },
+            {
+                forbidden: "зарабатывать баллы",
+                preferred: "накапливать баллы",
+                reason: "Natural Russian loyalty-program wording."
+            },
+            {
+                forbidden: "подходящее проживание",
+                preferred: "проживание по подходящему тарифу",
+                reason: "Avoids a literal and vague translation of eligible stay."
+            },
+            {
+                forbidden: "квалифицирующим тарифам",
+                preferred: "подходящим тарифам",
+                reason: "Avoids legal/corporate calque in loyalty-program copy."
+            },
+            {
+                forbidden: "квалифицирующие тарифы",
+                preferred: "подходящие тарифы",
+                reason: "Use clear guest-facing Russian."
+            },
+            {
+                forbidden: "последняя полная реновация",
+                preferred: "последний полный ремонт",
+                reason: "More natural Russian than the loanword 'реновация' for hotel renovation."
+            },
+            {
+                forbidden: "полная реновация",
+                preferred: "полный ремонт",
+                reason: "Prefer natural Russian for renovation."
+            },
+            {
+                forbidden: "Комплексная реновация",
+                preferred: "Масштабное обновление",
+                reason: "A smoother Russian hospitality phrase for comprehensive renovation."
+            },
+            {
+                forbidden: "бесступенчатый доступ",
+                preferred: "доступ без ступеней",
+                reason: "More natural accessibility wording in Russian."
+            },
+            {
+                forbidden: "машина Nespresso для приготовления кофе и чая",
+                preferred: "кофемашина Nespresso и принадлежности для чая",
+                reason: "A Nespresso machine makes coffee, not tea; keep the tea amenity separate."
+            },
+            {
+                forbidden: "туалетными принадлежностями L’Occitane",
+                preferred: "косметическими принадлежностями L’Occitane",
+                reason: "More polished Russian hotel phrasing for premium bathroom amenities."
+            },
+            {
+                forbidden: "туалетные принадлежности L’Occitane",
+                preferred: "косметические принадлежности L’Occitane",
+                reason: "More polished Russian hotel phrasing for premium bathroom amenities."
+            },
+            {
+                forbidden: "премиальные туалетные принадлежности L’Occitane",
+                preferred: "премиальные косметические принадлежности L’Occitane",
+                reason: "More polished Russian hotel phrasing for premium bathroom amenities."
+            },
+            {
+                forbidden: "туалетные принадлежности премиум-класса",
+                preferred: "косметические принадлежности премиум-класса",
+                reason: "More natural Russian hotel phrasing for premium bathroom amenities."
+            },
+            {
+                forbidden: "бесплатные туалетные принадлежности премиум-класса",
+                preferred: "бесплатные косметические принадлежности премиум-класса",
+                reason: "More natural Russian hotel phrasing for premium bathroom amenities."
+            },
+            {
+                forbidden: "каждый день в каждый номер ставят",
+                preferred: "ежедневно в каждый номер ставят",
+                reason: "Smoother Russian word order."
+            },
+            {
+                forbidden: "ежедневно в каждом номере размещаются",
+                preferred: "ежедневно в каждый номер ставят",
+                reason: "More natural Russian for bottled-water amenities."
+            },
+            {
+                forbidden: "размещаются две бесплатные бутылки",
+                preferred: "ставят две бесплатные бутылки",
+                reason: "More natural Russian for bottled-water amenities."
+            },
+            {
+                forbidden: "ежедневного «шведского стола»",
+                preferred: "завтрака «шведский стол»",
+                reason: "Avoids the clipped noun phrase 'daily buffet'."
+            },
+            {
+                forbidden: "Стоимость ежедневного «шведского стола» составляет",
+                preferred: "Завтрак «шведский стол» стоит",
+                reason: "More natural, direct Russian FAQ answer."
+            },
+            {
+                forbidden: "не включая применимый городской налог",
+                preferred: "без учета городского налога",
+                reason: "Avoids legal-sounding calque in Russian price copy."
+            },
+            {
+                forbidden: "применимый городской налог",
+                preferred: "городской налог",
+                reason: "Simpler and more natural Russian tax wording."
+            },
+            {
+                forbidden: "€40",
+                preferred: "40 €",
+                reason: "Use Russian currency order in running text."
+            },
+            {
+                forbidden: "от €40",
+                preferred: "от 40 €",
+                reason: "Use Russian currency order in running text."
+            },
+            {
+                forbidden: "в любую категорию тарифа",
+                preferred: "во все тарифы",
+                reason: "Fixes an unnatural literal phrase for breakfast-rate inclusion."
+            },
+            {
+                forbidden: "служба хозяйственного обслуживания",
+                preferred: "служба уборки",
+                reason: "Avoids a stiff literal housekeeping translation."
+            },
+            {
+                forbidden: "профессиональные услуги прачечной",
+                preferred: "профессиональную стирку",
+                reason: "The service is laundry, not a laundry facility."
+            },
+            {
+                forbidden: "услуги прачечной",
+                preferred: "услуги стирки",
+                reason: "More natural for guest-facing service copy."
+            },
+            {
+                forbidden: "музейные абонементы",
+                preferred: "билеты в музеи",
+                reason: "Museum passes in this FAQ context are tickets/passes for museums, not subscriptions."
+            },
+            {
+                forbidden: "с радостью организует",
+                preferred: "может организовать",
+                reason: "Avoids translated customer-service enthusiasm."
+            },
+            {
+                forbidden: "спортивные мероприятия",
+                preferred: "спортивные трансляции",
+                reason: "In a bar/lounge context the source means broadcasts."
+            },
+            {
+                forbidden: "зоне отдыха",
+                preferred: "лаунж-зоне",
+                reason: "More natural for hotel bar/lounge context."
+            },
+            {
+                forbidden: "обеспечивая оформление заезда",
+                preferred: "помогая с оформлением заезда",
+                reason: "Smoother Russian sentence after 'стойка регистрации работает круглосуточно'."
+            },
+            {
+                forbidden: "он предлагает доступ без ступеней",
+                preferred: "в нем предусмотрен доступ без ступеней",
+                reason: "Avoids literal English 'offers access' in Russian accessibility wording."
+            },
+            {
+                forbidden: "любую помощь гостям",
+                preferred: "помощь гостям по любым вопросам",
+                reason: "More idiomatic guest-service phrase."
+            },
+            {
+                forbidden: "воспитанные собаки и кошки",
+                preferred: "собаки и кошки",
+                reason: "Keep the pet policy neutral unless the source truly imposes a training condition."
+            },
+            {
+                forbidden: "воспитанные собаки и кошки допускаются бесплатно",
+                preferred: "собаки и кошки принимаются бесплатно",
+                reason: "Natural Russian pet-policy wording."
+            },
+            {
+                forbidden: "по ключ-картам",
+                preferred: "по ключ-карте",
+                reason: "Natural Russian key-card access wording."
+            },
+            {
+                forbidden: "служебные животные размещаются всегда",
+                preferred: "служебные животные принимаются всегда",
+                reason: "More natural Russian policy wording."
+            },
+            {
+                forbidden: "lifestyle-коллекцию",
+                preferred: "коллекцию lifestyle-отелей",
+                reason: "Avoids an awkward mixed English-Russian compound."
+            },
+            {
+                forbidden: "готовит обильный ежедневный завтрак",
+                preferred: "ежедневно сервирует обильный завтрак",
+                reason: "More natural Russian hotel breakfast wording."
+            },
+            {
+                forbidden: "подаётся в обеденной зоне",
+                preferred: "подаётся в зале для завтраков",
+                reason: "Use natural hotel wording for a breakfast dining area."
+            },
+            {
+                forbidden: "растительных блюд",
+                preferred: "блюд на растительной основе",
+                reason: "More natural Russian for plant-based breakfast options."
+            },
+            {
+                forbidden: "по цене 38 € в сутки",
+                preferred: "за 38 € в сутки",
+                reason: "More natural Russian price phrasing."
+            },
+            {
+                forbidden: "организуется платный трансфер",
+                preferred: "можно организовать платный трансфер",
+                reason: "Avoids a stiff passive and better matches arrangeable shuttle service."
+            },
+            {
+                forbidden: "это лёгкая прогулка пешком",
+                preferred: "до него легко дойти пешком",
+                reason: "More natural Russian walking-distance wording."
+            },
+            {
+                forbidden: "видом на городской горизонт",
+                preferred: "панорамным видом на город",
+                reason: "Avoids a literal skyline calque."
+            },
+            {
+                forbidden: "оригинальные работы местного уличного искусства",
+                preferred: "оригинальные работы местного стрит-арта",
+                reason: "More natural Russian wording for street art."
+            },
+            {
+                forbidden: "надёжное хранение велосипедов",
+                preferred: "охраняемое хранение велосипедов",
+                reason: "Use the standard Russian wording for secure storage."
+            },
+            {
+                forbidden: "защищённое хранение велосипедов в помещении",
+                preferred: "охраняемое помещение для хранения велосипедов",
+                reason: "More natural Russian wording for secure indoor bicycle storage."
+            },
+            {
+                forbidden: "регулярные кураторские выставки местных художников",
+                preferred: "регулярные выставки работ местных художников",
+                reason: "Less stiff and more guest-facing Russian."
+            },
+            {
+                forbidden: "кураторские выставки работ современных местных художников",
+                preferred: "выставки работ современных местных художников",
+                reason: "Less stiff and more guest-facing Russian."
+            }
+        ],
+        examples: [
+            {
+                draft: "Да, Leonardo Hotel Bucharest City Center полностью является отелем на 100 % для некурящих, включая все номера и зоны общего пользования.",
+                polish: "Да, Leonardo Hotel Bucharest City Center является полностью некурящим отелем, включая все номера и зоны общего пользования.",
+                note: "Keep the non-smoking claim natural and avoid literal percentage wording."
+            },
+            {
+                draft: "Бар Leonardo Hotel Bucharest City Center открыт ежедневно с 07:00 утра до 22:00 вечера.",
+                polish: "Бар Leonardo Hotel Bucharest City Center открыт ежедневно с 07:00 до 22:00.",
+                note: "Use 24-hour time without redundant day-part words."
+            },
+            {
+                draft: "Leonardo Hotel Bucharest City Center расположен в 14 km от аэропорта имени Анри Коанды; доступен платный трансфер.",
+                polish: "Leonardo Hotel Bucharest City Center расположен в 14 км от аэропорта имени Анри Коанды; доступен платный трансфер.",
+                note: "Use Russian distance units while preserving the numeric value."
+            },
+            {
+                draft: "Исторический Старый город расположен примерно в 1.6 км, около 20 минут пешком.",
+                polish: "Исторический Старый город расположен примерно в 1,6 км, около 20 минут пешком.",
+                note: "Use a decimal comma in Russian distance formatting."
+            },
+            {
+                draft: "Да, в Leonardo Hotel Bucharest City Center имеется бизнес-центр с услугами печати, ксерокопирования и другими услугами.",
+                polish: "Да, в Leonardo Hotel Bucharest City Center имеется бизнес-центр с услугами печати, ксерокопирования и другими бизнес-услугами.",
+                note: "Avoid repeated 'услуги' and keep the business-centre meaning clear."
+            },
+            {
+                draft: "Каковы официальные время заезда и выезда в Leonardo Hotel Bucharest City Center?",
+                polish: "Каковы официальные часы заезда и выезда в Leonardo Hotel Bucharest City Center?",
+                note: "Use natural Russian phrasing for hotel times."
+            },
+            {
+                draft: "Работает ли стойка регистрации в Leonardo Hotel Bucharest City Center круглосуточно для заезда, услуг консьержа и помощи гостям?",
+                polish: "Работает ли стойка регистрации в Leonardo Hotel Bucharest City Center круглосуточно для оформления заезда, услуг консьержа и помощи гостям?",
+                note: "Use 'оформление заезда' in front-desk context."
+            },
+            {
+                draft: "Есть ли во всех номерах Leonardo Hotel Bucharest City Center индивидуально регулируемые кондиционирование и отопление?",
+                polish: "Есть ли во всех номерах Leonardo Hotel Bucharest City Center индивидуально регулируемые системы кондиционирования и отопления?",
+                note: "Keep the amenity phrasing grammatically natural."
+            },
+            {
+                draft: "Да, во всех номерах установлен мини-бар-холодильник, укомплектованный для удобства гостей.",
+                polish: "Да, во всех номерах есть мини-бар с наполнением для удобства гостей.",
+                note: "Avoid the unnatural compound 'мини-бар-холодильник'."
+            },
+            {
+                draft: "Да, доступны экспресс-прачечная и профессиональная химчистка с возвратом в тот же день.",
+                polish: "Да, доступны услуги экспресс-стирки и профессиональной химчистки с возвратом в тот же день.",
+                note: "Clarify that this is a laundry service, not a physical laundry room."
+            },
+            {
+                draft: "Предоставляет ли Leonardo Hotel Bucharest City Center парковку на территории Leonardo Hotel Bucharest City Center или поблизости и какова её стоимость?",
+                polish: "Предоставляет ли Leonardo Hotel Bucharest City Center парковку на территории отеля или поблизости и какова её стоимость?",
+                note: "Avoid repeating the full hotel name in the same sentence when 'отель' is clear."
+            },
+            {
+                draft: "Могут ли участники программы AdvantageCLUB зарабатывать баллы, проживая в Leonardo Boutique Hotel Paris Opera?",
+                polish: "Могут ли участники программы AdvantageCLUB накапливать баллы за проживание в Leonardo Boutique Hotel Paris Opera?",
+                note: "Use natural loyalty-program phrasing."
+            },
+            {
+                draft: "Да, участники AdvantageCLUB получают бонусные баллы за каждое подходящее проживание, забронированное по квалифицирующим тарифам в этом отеле.",
+                polish: "Да, участники AdvantageCLUB получают бонусные баллы за каждое проживание по подходящему тарифу, забронированное в этом отеле.",
+                note: "Avoid legal/corporate calques in loyalty copy."
+            },
+            {
+                draft: "Когда в Leonardo Boutique Hotel Paris Opera была проведена последняя полная реновация?",
+                polish: "Когда в Leonardo Boutique Hotel Paris Opera был проведён последний полный ремонт?",
+                note: "Use natural Russian for renovation."
+            },
+            {
+                draft: "Комплексная реновация Leonardo Boutique Hotel Paris Opera была завершена в 2020 году.",
+                polish: "Масштабное обновление Leonardo Boutique Hotel Paris Opera было завершено в 2020 году.",
+                note: "Use smoother Russian hotel copy for comprehensive renovation."
+            },
+            {
+                draft: "Да, специально оборудованный номер категории Comfort Triple обеспечивает бесступенчатый доступ и удобства для гостей, пользующихся инвалидной коляской.",
+                polish: "Да, специально оборудованный номер категории Comfort Triple предлагает доступ без ступеней и удобства для гостей, пользующихся инвалидной коляской.",
+                note: "Accessibility wording should be clear and natural."
+            },
+            {
+                draft: "Да, в каждой категории номеров есть машина Nespresso для приготовления кофе и чая.",
+                polish: "Да, в каждой категории номеров есть кофемашина Nespresso и принадлежности для чая.",
+                note: "Separate the Nespresso coffee machine from tea-making supplies."
+            },
+            {
+                draft: "Стоимость ежедневного «шведского стола» составляет €15 с человека, не включая возможный городской налог.",
+                polish: "Завтрак «шведский стол» стоит 15 € с человека, не включая возможный городской налог.",
+                note: "Use direct Russian breakfast-price phrasing and Russian price order."
+            },
+            {
+                draft: "Завтрак «шведский стол» стоит 15 € с человека, не включая применимый городской налог.",
+                polish: "Завтрак «шведский стол» стоит 15 € с человека, без учета городского налога.",
+                note: "Avoid legal-sounding Russian calques for taxes."
+            },
+            {
+                draft: "Да, через службу хозяйственного обслуживания можно заказать профессиональные услуги прачечной, химчистки и глажки.",
+                polish: "Да, через службу уборки можно заказать профессиональную стирку, химчистку и глажку.",
+                note: "Avoid stiff housekeeping/laundry calques."
+            },
+            {
+                draft: "Да, ежедневно в каждом номере размещаются две бесплатные бутылки минеральной воды.",
+                polish: "Да, ежедневно в каждый номер ставят две бесплатные бутылки минеральной воды.",
+                note: "Use natural Russian for bottled-water amenities."
+            },
+            {
+                draft: "Да, воспитанные собаки и кошки допускаются бесплатно; служебные животные размещаются всегда.",
+                polish: "Да, собаки и кошки принимаются бесплатно; служебные животные принимаются всегда.",
+                note: "Use neutral, natural Russian pet-policy wording."
+            },
+            {
+                draft: "Да, фитнес-зал доступен проживающим гостям круглосуточно по ключ-картам.",
+                polish: "Да, фитнес-зал доступен проживающим гостям круглосуточно по ключ-карте.",
+                note: "Use natural Russian key-card access wording."
+            },
+            {
+                draft: "NYX Hotel Prague входит в lifestyle-коллекцию NYX Hotels сети Leonardo Hotels.",
+                polish: "NYX Hotel Prague входит в коллекцию lifestyle-отелей NYX Hotels сети Leonardo Hotels.",
+                note: "Avoid mixed-script compounds that sound machine-translated."
+            },
+            {
+                draft: "Да, NYX Hotel Prague готовит обильный ежедневный завтрак «шведский стол», который подаётся в обеденной зоне.",
+                polish: "Да, NYX Hotel Prague ежедневно сервирует обильный завтрак «шведский стол» в зале для завтраков.",
+                note: "Use natural Russian breakfast wording."
+            },
+            {
+                draft: "Аэропорт имени Вацлава Гавела расположен примерно в 10 км от NYX Hotel Prague; организуется платный трансфер.",
+                polish: "Аэропорт имени Вацлава Гавела расположен примерно в 10 км от NYX Hotel Prague; можно организовать платный трансфер.",
+                note: "Avoid stiff passive wording for hotel-arranged services."
+            },
+            {
+                draft: "Да, Главный вокзал Праги расположен примерно в 450 м, это лёгкая прогулка пешком.",
+                polish: "Да, Главный вокзал Праги расположен примерно в 450 м, до него легко дойти пешком.",
+                note: "Use natural Russian walking-distance wording."
+            },
+            {
+                draft: "Да, для удобства гостей доступно защищённое хранение велосипедов в помещении.",
+                polish: "Да, для удобства гостей доступно охраняемое помещение для хранения велосипедов.",
+                note: "Use natural Russian for secure bicycle storage."
+            },
+            {
+                draft: "Да, NYX Hotel Prague периодически проводит кураторские выставки работ современных местных художников.",
+                polish: "Да, NYX Hotel Prague периодически проводит выставки работ современных местных художников.",
+                note: "Keep art-program wording fluent and guest-facing."
+            },
+            {
+                draft: "Да, консьерж с радостью организует билеты в театр, музейные абонементы и экскурсии по Парижу.",
+                polish: "Да, консьерж может организовать билеты в театр, билеты в музеи и экскурсии по Парижу.",
+                note: "Keep concierge-service wording neutral and natural."
+            },
+            {
+                draft: "Транслируются ли спортивные мероприятия в баре или зоне отдыха Leonardo Boutique Hotel Paris Opera?",
+                polish: "Показывают ли спортивные трансляции в баре или лаунж-зоне Leonardo Boutique Hotel Paris Opera?",
+                note: "Use natural bar/lounge broadcast wording."
+            },
+            {
+                draft: "Да, спортивные трансляции регулярно показываются в баре и зоне отдыха.",
+                polish: "Да, спортивные трансляции регулярно показывают в баре и лаунж-зоне.",
+                note: "More natural Russian active phrasing."
+            }
+        ]
+    },
    he: {
     mappings: [
         { forbidden: "חצות היום", preferred: "צהריים", reason: "Natural Hebrew; 'חצות היום' is a literal translation of midday." },
@@ -3082,7 +3952,7 @@ const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr
     es: {
         mappings: [
             { forbidden: "apartamentos servidos", preferred: "apartamentos con servicios", reason: "Calco literal de serviced apartments; suena poco natural en web hotelera.", tags: ["master", "serviced-apartments"] },
-            { forbidden: "aparthotel", preferred: "apartamentos con servicios", reason: "Para este producto, explica mejor la propuesta sin encasillarla como hotel tradicional.", tags: ["master", "positioning"] },
+            { forbidden: "aparthotel", preferred: "Aparthotel", reason: "Stay Master uses Aparthotel as the official Trevi property type.", tags: ["master", "positioning"] },
             { forbidden: "soporte virtual de huéspedes", preferred: "atención virtual al huésped", reason: "Más cercano, claro y natural para atención al cliente.", tags: ["master", "guest-support"] },
             { forbidden: "servicio doméstico", preferred: "limpieza", reason: "Evita un tono doméstico extraño; en alojamiento funciona mejor como servicio de limpieza.", tags: ["master", "housekeeping"] },
             { forbidden: "facilidades de lavandería", preferred: "zona de lavandería", reason: "Evita el calco de facilities.", tags: ["master", "amenities"] },
@@ -3118,8 +3988,8 @@ const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr
 
     it: {
         mappings: [
-            { forbidden: "appartamenti serviti", preferred: "appartamenti con servizi", reason: "Calco poco elegante di serviced apartments; suona meno naturale per un sito hotel.", tags: ["master", "serviced-apartments"] },
-            { forbidden: "aparthotel", preferred: "appartamenti con servizi", reason: "Descrive meglio il prodotto senza farlo sembrare un hotel tradizionale.", tags: ["master", "positioning"] },
+            { forbidden: "appartamenti con servizi", preferred: "appartamenti serviti", reason: "Stay Master uses Appartamenti serviti as the official Italian label for serviced apartments.", tags: ["master", "serviced-apartments"] },
+            { forbidden: "aparthotel", preferred: "Aparthotel", reason: "Stay Master uses Aparthotel as the official Trevi property type.", tags: ["master", "positioning"] },
             { forbidden: "supporto virtuale agli ospiti", preferred: "assistenza virtuale agli ospiti", reason: "Più naturale e più vicino al tono hospitality.", tags: ["master", "guest-support"] },
             { forbidden: "governo della casa", preferred: "pulizie", reason: "Evita una resa letterale inadatta al contesto hotel.", tags: ["master", "housekeeping"] },
             { forbidden: "facilità di lavanderia", preferred: "area lavanderia", reason: "Evita il calco di facilities.", tags: ["master", "amenities"] },
@@ -3139,8 +4009,8 @@ const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr
         ],
         examples: [
             {
-                draft: "master St. Paul's offre appartamenti serviti con supporto virtuale agli ospiti e facilità di lavanderia.",
-                polish: "master St. Paul's offre appartamenti con servizi, assistenza virtuale agli ospiti e area lavanderia.",
+                draft: "master St. Paul's offre appartamenti con servizi, supporto virtuale agli ospiti e facilità di lavanderia.",
+                polish: "master St. Paul's offre appartamenti serviti, assistenza virtuale agli ospiti e area lavanderia.",
                 note: "Keep the copy natural and aligned with Italian hotel websites.",
                 tags: ["master", "serviced-apartments"]
             },
@@ -3230,6 +4100,81 @@ const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr
     }
 };
 
+const STAY_MASTER_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it"> = {
+    es: {
+        mappings: [
+            { forbidden: "apartotel", preferred: "Aparthotel", reason: "The Stay Master Spanish site labels master Trevi as Aparthotel.", tags: ["stay-master", "trevi", "property-type"] },
+            { forbidden: "hotel de apartamentos", preferred: "Aparthotel", reason: "Use the brand's official Trevi property type instead of a generic paraphrase.", tags: ["stay-master", "trevi", "property-type"] },
+            { forbidden: "apartamentos servidos", preferred: "Apartamentos con servicios", reason: "The Stay Master Spanish site uses Apartamentos con servicios for serviced-apartment locations.", tags: ["stay-master", "serviced-apartments"] },
+            { forbidden: "servicio de estilo hotel", preferred: "servicios de hotel", reason: "Shorter, more natural and closer to the brand copy.", tags: ["stay-master", "brand-voice"] },
+            { forbidden: "habitaciones de master Trevi", preferred: "apartamentos de master Trevi", reason: "Trevi sells apartments/studios, not hotel rooms, when the copy refers to units.", tags: ["stay-master", "trevi", "rooms"] },
+            { forbidden: "habitaciones de huéspedes", preferred: "apartamentos", reason: "For Stay Master apartment inventory, avoid hotel-room wording unless the source explicitly says room.", tags: ["stay-master", "rooms"] },
+            { forbidden: "servicio de refrescos diario", preferred: "servicio ligero diario de repaso", reason: "In the Trevi questionnaire this refers to a light apartment refresh, not drinks.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "servicio diario de refrigerios", preferred: "servicio ligero diario de repaso", reason: "Avoid confusing housekeeping refresh with lobby refreshments.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "limpieza de habitaciones", preferred: "limpieza del apartamento", reason: "Use apartment wording for Stay Master units.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "front desk", preferred: "recepción", reason: "Keep Spanish output free of unnecessary English for reception/front desk.", tags: ["stay-master", "service"] },
+            { forbidden: "mostrador de recepción", preferred: "recepción", reason: "Reception is more natural in Stay Master Spanish copy.", tags: ["stay-master", "service"] },
+            { forbidden: "documento de identidad emitido por el gobierno con foto", preferred: "documento de identidad válido con fotografía", reason: "Less bureaucratic and clearer for guests.", tags: ["stay-master", "check-in"] },
+            { forbidden: "tarjeta preautorizada por incidentes", preferred: "tarjeta preautorizada para posibles daños o gastos adicionales", reason: "Incidentals are charges, not incidents.", tags: ["stay-master", "payments"] },
+            { forbidden: "tasa municipal de Roma", preferred: "tasa turística de Roma", reason: "Use the standard traveller-facing city-tax term.", tags: ["stay-master", "tax"] },
+            { forbidden: "plataformas de terceras partes", preferred: "plataformas de terceros", reason: "More natural Spanish for booking channels.", tags: ["stay-master", "booking"] },
+            { forbidden: "se recoge separadamente al llegar", preferred: "se cobra por separado a la llegada", reason: "Use natural payment wording for city tax.", tags: ["stay-master", "tax"] },
+            { forbidden: "perros entrenados", preferred: "perros adiestrados", reason: "More natural Spanish for trained dogs in hotel policy text.", tags: ["stay-master", "pets"] },
+            { forbidden: "sin atender", preferred: "sin supervisión", reason: "Natural phrasing for pets not being left unattended.", tags: ["stay-master", "pets"] },
+            { forbidden: "áreas exteriores designadas", preferred: "zonas exteriores habilitadas", reason: "More native Spanish for smoking-policy areas.", tags: ["stay-master", "policy"] }
+        ],
+        examples: [
+            {
+                draft: "master Trevi es un hotel de apartamentos de lujo con habitaciones, servicio de estilo hotel y servicio de refrescos diario.",
+                polish: "master Trevi es un Aparthotel con apartamentos, servicios de hotel y un servicio ligero diario de repaso.",
+                note: "Trevi should keep the official Aparthotel/apartment positioning and avoid confusing refresh service with drinks.",
+                tags: ["stay-master", "trevi", "property-type", "housekeeping"]
+            },
+            {
+                draft: "La tarjeta puede ser preautorizada por incidentes y la tasa municipal de Roma se recoge separadamente al llegar.",
+                polish: "La tarjeta puede quedar preautorizada para posibles daños o gastos adicionales, y la tasa turística de Roma se cobra por separado a la llegada.",
+                note: "Payment and tax copy should be calm, clear and guest-facing.",
+                tags: ["stay-master", "payments", "tax"]
+            }
+        ]
+    },
+    it: {
+        mappings: [
+            { forbidden: "appartamenti con servizi", preferred: "appartamenti serviti", reason: "The Stay Master Italian site uses Appartamenti serviti.", tags: ["stay-master", "serviced-apartments"] },
+            { forbidden: "hotel appartamento", preferred: "Aparthotel", reason: "The Stay Master Italian site labels master Trevi as Aparthotel.", tags: ["stay-master", "trevi", "property-type"] },
+            { forbidden: "servizi in stile hotel", preferred: "servizi da hotel", reason: "Closer to the brand wording Appartamenti con servizi da hotel.", tags: ["stay-master", "brand-voice"] },
+            { forbidden: "camere di master Trevi", preferred: "appartamenti di master Trevi", reason: "Trevi sells apartments/studios, not hotel rooms, when the copy refers to units.", tags: ["stay-master", "trevi", "rooms"] },
+            { forbidden: "camere degli ospiti", preferred: "appartamenti", reason: "For Stay Master apartment inventory, avoid hotel-room wording unless the source explicitly says room.", tags: ["stay-master", "rooms"] },
+            { forbidden: "servizio quotidiano di rinfresco", preferred: "riassetto leggero quotidiano", reason: "In the Trevi questionnaire this refers to light housekeeping, not refreshments.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "servizio di rinfresco leggero quotidiano", preferred: "riassetto leggero quotidiano", reason: "Avoid confusing housekeeping refresh with lobby refreshments.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "pulizia delle camere", preferred: "pulizia dell'appartamento", reason: "Use apartment wording for Stay Master units.", tags: ["stay-master", "housekeeping"] },
+            { forbidden: "scrivania frontale", preferred: "reception", reason: "Avoid literal front-desk translation.", tags: ["stay-master", "service"] },
+            { forbidden: "documento d'identità rilasciato dal governo con foto", preferred: "documento d'identità valido con foto", reason: "Less bureaucratic and clearer for guests.", tags: ["stay-master", "check-in"] },
+            { forbidden: "carta preautorizzata per incidenti", preferred: "carta preautorizzata per eventuali danni o spese extra", reason: "Incidentals are charges, not incidents.", tags: ["stay-master", "payments"] },
+            { forbidden: "tassa cittadina di Roma", preferred: "tassa di soggiorno di Roma", reason: "Use the standard traveller-facing city-tax term.", tags: ["stay-master", "tax"] },
+            { forbidden: "piattaforme di terze parti", preferred: "piattaforme di terzi", reason: "More natural Italian for booking channels.", tags: ["stay-master", "booking"] },
+            { forbidden: "viene raccolta separatamente all'arrivo", preferred: "viene riscossa separatamente all'arrivo", reason: "Use natural payment wording for city tax.", tags: ["stay-master", "tax"] },
+            { forbidden: "cani allenati", preferred: "cani addestrati", reason: "Correct Italian for trained dogs in hotel policy text.", tags: ["stay-master", "pets"] },
+            { forbidden: "lasciati non sorvegliati", preferred: "lasciati incustoditi", reason: "Natural Italian for pets not being left unattended.", tags: ["stay-master", "pets"] },
+            { forbidden: "aree esterne designate", preferred: "aree esterne dedicate", reason: "More fluent Italian for smoking-policy areas.", tags: ["stay-master", "policy"] }
+        ],
+        examples: [
+            {
+                draft: "master Trevi è un hotel appartamento di lusso con camere, servizi in stile hotel e servizio quotidiano di rinfresco.",
+                polish: "master Trevi è un Aparthotel con appartamenti, servizi da hotel e un riassetto leggero quotidiano.",
+                note: "Trevi should keep the official Aparthotel/apartment positioning and avoid confusing refresh service with drinks.",
+                tags: ["stay-master", "trevi", "property-type", "housekeeping"]
+            },
+            {
+                draft: "La carta può essere preautorizzata per incidenti e la tassa cittadina di Roma viene raccolta separatamente all'arrivo.",
+                polish: "La carta può essere preautorizzata per eventuali danni o spese extra, e la tassa di soggiorno di Roma viene riscossa separatamente all'arrivo.",
+                note: "Payment and tax copy should be calm, clear and guest-facing.",
+                tags: ["stay-master", "payments", "tax"]
+            }
+        ]
+    }
+};
+
 (["es", "it", "fr", "he"] as const).forEach((lang) => {
     const baseProfile = TERMINOLOGY_MANAGEMENT[lang];
     const masterProfile = MASTER_ST_PAULS_TERMINOLOGY[lang];
@@ -3242,6 +4187,22 @@ const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr
         examples: [
             ...(baseProfile.examples ?? []),
             ...(masterProfile.examples ?? [])
+        ]
+    };
+});
+
+(["es", "it"] as const).forEach((lang) => {
+    const baseProfile = TERMINOLOGY_MANAGEMENT[lang];
+    const stayMasterProfile = STAY_MASTER_TERMINOLOGY[lang];
+
+    TERMINOLOGY_MANAGEMENT[lang] = {
+        mappings: [
+            ...(baseProfile.mappings ?? []),
+            ...(stayMasterProfile.mappings ?? [])
+        ],
+        examples: [
+            ...(baseProfile.examples ?? []),
+            ...(stayMasterProfile.examples ?? [])
         ]
     };
 });

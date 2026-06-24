@@ -7,6 +7,7 @@ export type UserStatus = "active" | "blocked";
 
 export type CurrentUser = {
   email: string;
+  displayName?: string;
   role: UserRole;
   status: UserStatus;
 };

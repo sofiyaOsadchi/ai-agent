@@ -30,8 +30,7 @@ const LOADMORE_CYCLES = Number(process.env.FAQ_AUDIT_LOADMORE_CYCLES ?? "8");
 const SCROLL_STEPS = Number(process.env.FAQ_AUDIT_SCROLL_STEPS ?? "12");
 const SCROLL_DELTA = Number(process.env.FAQ_AUDIT_SCROLL_DELTA ?? "1400");
 
-type SiteLocale = "en" | "he" | "de" | "it";
-
+type SiteLocale = "en" | "he" | "de" | "it" | "es";
 type DiscoveryMode = "auto" | "leonardo";
 
 type SiteConfig = {
@@ -121,6 +120,24 @@ const SITE_CONFIG: Record<SiteLocale, SiteConfig> = {
 
     faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
     faqLinkKeywords: DEFAULT_FAQ_LINK_KEYWORDS,
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
+  },
+
+    es: {
+    locale: "es",
+    allowedHosts: ["www.leonardo-hotels.com"],
+    acceptLanguage: "es-ES,es;q=0.9,en;q=0.8",
+
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: [
+      ...DEFAULT_FAQ_LINK_KEYWORDS,
+      "preguntas frecuentes",
+      "preguntas y respuestas",
+    ],
     excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
   },
 };

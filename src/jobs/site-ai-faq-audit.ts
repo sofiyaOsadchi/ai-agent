@@ -13,6 +13,32 @@ export type FaqAuditRenderMode = "rendered" | "static";
 export type FaqQA = { q: string; a: string };
 export type FaqTextIssueSeverity = "warning" | "info";
 export type FaqTextIssueScope = "source" | "site";
+export type FaqLanguageConfidence = "high" | "medium" | "low";
+export type FaqLanguageSignalSource = "html-lang" | "og-locale" | "hreflang" | "url" | "content" | "unknown";
+export type FaqTextDirection = "ltr" | "rtl" | "unknown";
+
+export type FaqPageLanguage = {
+  code: string;
+  name: string;
+  confidence: FaqLanguageConfidence;
+  source: FaqLanguageSignalSource;
+  direction: FaqTextDirection;
+  htmlLang: string;
+  ogLocale: string;
+  hreflangs: string[];
+  urlHints: string[];
+  contentHints: string[];
+  warnings: string[];
+};
+
+export type FaqLanguageSummary = {
+  code: string;
+  name: string;
+  count: number;
+  sources: FaqLanguageSignalSource[];
+  urls: string[];
+  warnings: string[];
+};
 
 export type SourceFaqRow = FaqQA & {
   sourceFile: string;
@@ -139,6 +165,7 @@ export type FaqAuditPageResult = {
   url: string;
   title: string;
   h1: string;
+  language: FaqPageLanguage;
   statusCode: number;
   rendered: boolean;
   auditStatus: FaqAuditStatus;
@@ -166,6 +193,7 @@ export type SiteFaqAuditResult = {
   discovery: Pick<SiteDiscoveryResult, "host" | "groups"> | null;
   selectedUrls: string[];
   pages: FaqAuditPageResult[];
+  languageSummary: FaqLanguageSummary[];
   summary: {
     pagesChecked: number;
     pagesWithVisibleFaq: number;
@@ -221,6 +249,34 @@ const DEFAULT_USER_AGENT =
 
 const FAQ_GROUPS: SiteUrlGroup[] = ["faq", "hotel", "location"];
 
+const LANGUAGE_NAMES: Record<string, string> = {
+  ar: "Arabic",
+  cs: "Czech",
+  da: "Danish",
+  de: "German",
+  el: "Greek",
+  en: "English",
+  es: "Spanish",
+  fi: "Finnish",
+  fr: "French",
+  he: "Hebrew",
+  hu: "Hungarian",
+  it: "Italian",
+  ja: "Japanese",
+  nl: "Dutch",
+  no: "Norwegian",
+  pl: "Polish",
+  pt: "Portuguese",
+  ro: "Romanian",
+  ru: "Russian",
+  sv: "Swedish",
+  tr: "Turkish",
+  uk: "Ukrainian",
+  zh: "Chinese",
+};
+
+const RTL_LANGUAGES = new Set(["ar", "he"]);
+
 export class SiteFaqAuditJob {
   async run(input: SiteFaqAuditConfig): Promise<SiteFaqAuditResult> {
     const startedAt = new Date().toISOString();
@@ -243,6 +299,7 @@ export class SiteFaqAuditJob {
         : null,
       selectedUrls: selected.urls,
       pages,
+      languageSummary: this.summarizeLanguages(pages),
       summary: this.summarize(pages),
     };
 
@@ -339,6 +396,7 @@ export class SiteFaqAuditJob {
         url,
         title: "",
         h1: "",
+        language: this.detectPageLanguage(url, null, []),
         statusCode: 0,
         rendered: config.renderMode === "rendered",
         auditStatus: "fetch-failed",
@@ -370,6 +428,12 @@ export class SiteFaqAuditJob {
     const emptySchemaAnswers = schemaQAs.filter((item) => item.a.length < 8).map((item) => item.q);
     const faqPageSchemaCount = this.countFaqPageObjects(jsonLd.objects);
     const auditStatus = this.getAuditStatus(visibleQAs, schemaQAs, gap);
+    const language = this.detectPageLanguage(url, $, [
+      title,
+      h1,
+      ...visibleQAs.flatMap((item) => [item.q, item.a]),
+      ...schemaQAs.flatMap((item) => [item.q, item.a]),
+    ]);
     const notes = this.buildPageNotes({
       auditStatus,
       rendered: fetched.rendered,
@@ -377,6 +441,7 @@ export class SiteFaqAuditJob {
       schemaCount: schemaQAs.length,
       invalidJsonLdCount: jsonLd.invalidCount,
       faqPageSchemaCount,
+      language,
       visibleOnlyQuestions: gap.visibleOnly,
       schemaOnlyQuestions: gap.schemaOnly,
       emptyVisibleAnswers,
@@ -387,6 +452,7 @@ export class SiteFaqAuditJob {
       url,
       title,
       h1,
+      language,
       statusCode: fetched.status,
       rendered: fetched.rendered,
       auditStatus,
@@ -426,6 +492,7 @@ export class SiteFaqAuditJob {
     schemaCount: number;
     invalidJsonLdCount: number;
     faqPageSchemaCount: number;
+    language?: FaqPageLanguage;
     visibleOnlyQuestions?: string[];
     schemaOnlyQuestions?: string[];
     emptyVisibleAnswers?: string[];
@@ -441,6 +508,17 @@ export class SiteFaqAuditJob {
 
     if (input.invalidJsonLdCount) {
       notes.push(`${input.invalidJsonLdCount} invalid JSON-LD script(s) found.`);
+    }
+
+    if (input.language) {
+      const languageLabel = input.language.code === "unknown"
+        ? "Language could not be detected"
+        : `Language detected: ${input.language.name} (${input.language.code}) via ${input.language.source}`;
+      notes.push(`${languageLabel}; confidence: ${input.language.confidence}.`);
+
+      for (const warning of input.language.warnings) {
+        notes.push(`[language] ${warning}`);
+      }
     }
 
     if (input.auditStatus === "missing-schema") {
@@ -489,6 +567,262 @@ export class SiteFaqAuditJob {
     };
   }
 
+  private summarizeLanguages(pages: FaqAuditPageResult[]): FaqLanguageSummary[] {
+    const map = new Map<string, FaqLanguageSummary>();
+
+    for (const page of pages) {
+      const code = page.language?.code || "unknown";
+      const existing = map.get(code) || {
+        code,
+        name: this.languageName(code),
+        count: 0,
+        sources: [],
+        urls: [],
+        warnings: [],
+      };
+
+      existing.count += 1;
+      existing.urls.push(page.url);
+
+      if (page.language?.source && !existing.sources.includes(page.language.source)) {
+        existing.sources.push(page.language.source);
+      }
+
+      for (const warning of page.language?.warnings || []) {
+        existing.warnings.push(`${page.url}: ${warning}`);
+      }
+
+      map.set(code, existing);
+    }
+
+    return Array.from(map.values())
+      .map((item) => ({
+        ...item,
+        urls: item.urls.slice(0, 12),
+        warnings: item.warnings.slice(0, 20),
+      }))
+      .sort((a, b) => {
+        if (a.code === "unknown") return 1;
+        if (b.code === "unknown") return -1;
+        return b.count - a.count || a.name.localeCompare(b.name);
+      });
+  }
+
+  private detectPageLanguage(url: string, $: cheerio.Root | null, textParts: string[]): FaqPageLanguage {
+    const htmlLang = this.normalizeLocaleCode($ ? String($("html").first().attr("lang") || "") : "");
+    const ogLocale = this.normalizeLocaleCode($ ? String($('meta[property="og:locale"], meta[name="og:locale"]').first().attr("content") || "") : "");
+    const htmlDir = $ ? String($("html").first().attr("dir") || "").trim().toLowerCase() : "";
+    const hreflangs = $
+      ? this.uniqueStrings(
+        $('link[rel~="alternate"][hreflang]')
+          .map((_, element) => this.normalizeLocaleCode(String($(element).attr("hreflang") || "")))
+          .get()
+          .filter(Boolean)
+      )
+      : [];
+    const urlHints = this.detectUrlLanguageHints(url);
+    const bodyText = $ ? this.cleanText($("body").text()).slice(0, 12000) : "";
+    const contentHints = this.detectContentLanguageHints([...textParts, bodyText].join(" "));
+
+    const candidates: Array<{ code: string; source: FaqLanguageSignalSource; score: number }> = [];
+    const addCandidate = (code: string, source: FaqLanguageSignalSource, score: number) => {
+      const normalized = this.primaryLanguageCode(code);
+      if (!normalized) return;
+      const existing = candidates.find((item) => item.code === normalized && item.source === source);
+      if (existing) {
+        existing.score = Math.max(existing.score, score);
+        return;
+      }
+      candidates.push({ code: normalized, source, score });
+    };
+
+    addCandidate(htmlLang, "html-lang", 100);
+    addCandidate(ogLocale, "og-locale", 90);
+    if (urlHints[0]) addCandidate(urlHints[0], "url", 72);
+    if (contentHints[0]) addCandidate(contentHints[0], "content", 66);
+
+    const hreflangCodes = this.uniqueStrings(hreflangs.map((item) => this.primaryLanguageCode(item)).filter(Boolean));
+    if (!candidates.length && hreflangCodes.length === 1) {
+      addCandidate(hreflangCodes[0], "hreflang", 55);
+    }
+
+    candidates.sort((a, b) => b.score - a.score);
+    const primary = candidates[0] || { code: "unknown", source: "unknown" as FaqLanguageSignalSource, score: 0 };
+    const confidence: FaqLanguageConfidence = primary.score >= 85 ? "high" : primary.score >= 55 ? "medium" : "low";
+    const warnings = this.buildLanguageWarnings({
+      primaryCode: primary.code,
+      htmlLang,
+      ogLocale,
+      hreflangs,
+      urlHints,
+      contentHints,
+    });
+
+    return {
+      code: primary.code,
+      name: this.languageName(primary.code),
+      confidence,
+      source: primary.source,
+      direction: this.languageDirection(primary.code, htmlDir),
+      htmlLang,
+      ogLocale,
+      hreflangs,
+      urlHints,
+      contentHints,
+      warnings,
+    };
+  }
+
+  private buildLanguageWarnings(input: {
+    primaryCode: string;
+    htmlLang: string;
+    ogLocale: string;
+    hreflangs: string[];
+    urlHints: string[];
+    contentHints: string[];
+  }): string[] {
+    const warnings: string[] = [];
+    const htmlCode = this.primaryLanguageCode(input.htmlLang);
+    const ogCode = this.primaryLanguageCode(input.ogLocale);
+    const urlCode = input.urlHints[0] || "";
+    const contentCode = input.contentHints[0] || "";
+    const hreflangCodes = this.uniqueStrings(input.hreflangs.map((item) => this.primaryLanguageCode(item)).filter(Boolean));
+
+    if (htmlCode && ogCode && htmlCode !== ogCode) {
+      warnings.push(`html lang is ${input.htmlLang}, but og:locale points to ${input.ogLocale}.`);
+    }
+
+    if (urlCode && input.primaryCode !== "unknown" && urlCode !== input.primaryCode) {
+      warnings.push(`URL/domain suggests ${this.languageName(urlCode)} (${urlCode}), but the strongest page signal is ${this.languageName(input.primaryCode)} (${input.primaryCode}).`);
+    }
+
+    if (contentCode && input.primaryCode !== "unknown" && contentCode !== input.primaryCode) {
+      warnings.push(`Page text looks like ${this.languageName(contentCode)} (${contentCode}), but the strongest page signal is ${this.languageName(input.primaryCode)} (${input.primaryCode}).`);
+    }
+
+    if (htmlCode && hreflangCodes.length && !hreflangCodes.includes(htmlCode)) {
+      warnings.push(`hreflang alternates do not include the current html language ${htmlCode}.`);
+    }
+
+    if (input.primaryCode === "unknown") {
+      warnings.push("No reliable language signal was found in html lang, URL, structured metadata or FAQ text.");
+    }
+
+    return this.uniqueStrings(warnings);
+  }
+
+  private detectUrlLanguageHints(rawUrl: string): string[] {
+    const hints: string[] = [];
+
+    try {
+      const parsed = new URL(rawUrl);
+      const host = parsed.hostname.toLowerCase();
+      const pathParts = parsed.pathname
+        .split("/")
+        .map((part) => decodeURIComponent(part).toLowerCase())
+        .filter(Boolean);
+
+      const tldHints: Array<[RegExp, string]> = [
+        [/(\.|^)co\.il$/, "he"],
+        [/\.de$/, "de"],
+        [/\.fr$/, "fr"],
+        [/\.it$/, "it"],
+        [/\.es$/, "es"],
+        [/\.nl$/, "nl"],
+        [/\.pt$/, "pt"],
+        [/\.pl$/, "pl"],
+        [/\.cz$/, "cs"],
+        [/\.ru$/, "ru"],
+        [/\.gr$/, "el"],
+        [/\.tr$/, "tr"],
+        [/\.ae$/, "ar"],
+      ];
+
+      for (const [pattern, code] of tldHints) {
+        if (pattern.test(host)) hints.push(code);
+      }
+
+      for (const part of pathParts.slice(0, 3)) {
+        const normalized = this.primaryLanguageCode(part);
+        if (normalized) hints.push(normalized);
+      }
+    } catch {
+      // Invalid URLs are reported by fetch; language detection stays best effort.
+    }
+
+    return this.uniqueStrings(hints);
+  }
+
+  private detectContentLanguageHints(value: string): string[] {
+    const text = this.cleanText(value).toLowerCase();
+    if (!text) return [];
+
+    const scores = new Map<string, number>();
+    const add = (code: string, score: number) => {
+      scores.set(code, (scores.get(code) || 0) + score);
+    };
+
+    const scriptChecks: Array<[RegExp, string]> = [
+      [/[\u0590-\u05ff]/g, "he"],
+      [/[\u0600-\u06ff]/g, "ar"],
+      [/[\u0400-\u04ff]/g, "ru"],
+      [/[\u0370-\u03ff]/g, "el"],
+    ];
+
+    for (const [pattern, code] of scriptChecks) {
+      const count = (text.match(pattern) || []).length;
+      if (count >= 12) add(code, Math.min(40, count));
+    }
+
+    const wordSignals: Record<string, RegExp> = {
+      en: /\b(the|and|or|is|are|with|what|where|when|how|can|does|hotel|room|breakfast|check[- ]?in|parking)\b/g,
+      de: /\b(und|oder|ist|sind|mit|was|wo|wann|wie|kann|hotel|zimmer|frühstück|parkplatz|ankunft)\b/g,
+      fr: /\b(et|ou|est|sont|avec|quel|quelle|où|quand|comment|peut|hôtel|chambre|petit[- ]déjeuner|parking)\b/g,
+      es: /\b(y|o|es|son|con|qué|dónde|cuándo|cómo|puede|hotel|habitación|desayuno|aparcamiento)\b/g,
+      it: /\b(e|o|è|sono|con|che|dove|quando|come|può|hotel|camera|colazione|parcheggio)\b/g,
+      nl: /\b(en|of|is|zijn|met|wat|waar|wanneer|hoe|kan|hotel|kamer|ontbijt|parkeren)\b/g,
+      pt: /\b(e|ou|é|são|com|que|onde|quando|como|pode|hotel|quarto|pequeno[- ]almoço|estacionamento)\b/g,
+      he: /\b(האם|מה|איפה|מתי|איך|מלון|חדר|ארוחת|בוקר|חניה|צ'ק)\b/g,
+    };
+
+    for (const [code, pattern] of Object.entries(wordSignals)) {
+      const matches = text.match(pattern) || [];
+      if (matches.length >= 3) add(code, matches.length * 2);
+    }
+
+    return Array.from(scores.entries())
+      .filter(([, score]) => score >= 6)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([code]) => code)
+      .slice(0, 4);
+  }
+
+  private normalizeLocaleCode(value: string): string {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, "-")
+      .replace(/^"+|"+$/g, "");
+  }
+
+  private primaryLanguageCode(value: string): string {
+    const normalized = this.normalizeLocaleCode(value);
+    if (!normalized || normalized === "x-default") return "";
+    const first = normalized.split("-")[0] || "";
+    return LANGUAGE_NAMES[first] ? first : "";
+  }
+
+  private languageName(code: string): string {
+    return LANGUAGE_NAMES[code] || (code === "unknown" ? "Unknown" : code.toUpperCase());
+  }
+
+  private languageDirection(code: string, explicitDirection: string): FaqTextDirection {
+    if (explicitDirection === "rtl" || explicitDirection === "ltr") return explicitDirection;
+    if (RTL_LANGUAGES.has(code)) return "rtl";
+    if (code && code !== "unknown") return "ltr";
+    return "unknown";
+  }
+
   private extractJsonLd($: cheerio.Root): JsonLdExtraction {
     const objects: unknown[] = [];
     const types = new Set<string>();
@@ -498,16 +832,16 @@ export class SiteFaqAuditJob {
       const type = String($(element).attr("type") || "").toLowerCase();
       if (!type.includes("ld+json")) return;
 
-      const raw = $(element).contents().text();
+      const raw = this.cleanJsonLdText($(element).contents().text());
       if (!raw.trim()) return;
 
-      try {
-        const parsed = JSON.parse(raw);
-        this.flattenJsonLd(parsed).forEach((item) => {
+      const parsed = this.parseJsonLd(raw);
+      if (parsed.ok) {
+        this.flattenJsonLd(parsed.value).forEach((item) => {
           objects.push(item);
           this.collectSchemaTypes(item, types);
         });
-      } catch {
+      } else {
         invalidCount += 1;
       }
     });
@@ -517,6 +851,59 @@ export class SiteFaqAuditJob {
       invalidCount,
       types: Array.from(types).sort(),
     };
+  }
+
+  private cleanJsonLdText(raw: string): string {
+    return String(raw || "")
+      .replace(/^\uFEFF/, "")
+      .replace(/^\s*<!--/, "")
+      .replace(/-->\s*$/, "")
+      .replace(/^\s*\/\*\s*<!\[CDATA\[\s*\*\//, "")
+      .replace(/\/\*\s*\]\]>\s*\*\/\s*$/, "")
+      .replace(/^\s*<!\[CDATA\[/, "")
+      .replace(/\]\]>\s*$/, "")
+      .replace(/^\s*\/\/\s*<!\[CDATA\[/, "")
+      .replace(/\/\/\s*\]\]>\s*$/, "")
+      .replace(/\u2028|\u2029/g, " ")
+      .trim()
+      .replace(/;\s*$/, "");
+  }
+
+  private parseJsonLd(raw: string): { ok: true; value: unknown } | { ok: false } {
+    const candidates = this.uniqueStrings([
+      raw,
+      this.decodePossiblyEscapedJsonLd(raw),
+      this.extractJsonBlock(raw),
+    ]).filter(Boolean);
+
+    for (const candidate of candidates) {
+      try {
+        return { ok: true, value: JSON.parse(candidate) };
+      } catch {
+        // Try the next safe cleanup candidate.
+      }
+    }
+
+    return { ok: false };
+  }
+
+  private decodePossiblyEscapedJsonLd(raw: string): string {
+    if (!/&(?:quot|apos|amp|lt|gt|#[0-9]+|#x[0-9a-f]+);/i.test(raw)) return raw;
+    return cheerio.load(`<textarea>${raw}</textarea>`)("textarea").text().trim();
+  }
+
+  private extractJsonBlock(raw: string): string {
+    const firstObject = raw.indexOf("{");
+    const firstArray = raw.indexOf("[");
+    const starts: number[] = [firstObject, firstArray].filter((index) => index >= 0);
+    if (!starts.length) return raw;
+
+    const start = Math.min(...starts);
+    const endObject = raw.lastIndexOf("}");
+    const endArray = raw.lastIndexOf("]");
+    const end = Math.max(endObject, endArray);
+    if (end <= start) return raw;
+    return raw.slice(start, end + 1).trim();
   }
 
   private flattenJsonLd(value: unknown): unknown[] {
@@ -533,6 +920,9 @@ export class SiteFaqAuditJob {
       if (Array.isArray(obj["@graph"])) obj["@graph"].forEach(visit);
       if (Array.isArray(obj.mainEntity)) obj.mainEntity.forEach(visit);
       if (obj.mainEntity && !Array.isArray(obj.mainEntity)) visit(obj.mainEntity);
+      if (Array.isArray(obj.itemListElement)) obj.itemListElement.forEach(visit);
+      if (obj.itemListElement && !Array.isArray(obj.itemListElement)) visit(obj.itemListElement);
+      if (obj.item) visit(obj.item);
     };
 
     visit(value);
@@ -584,6 +974,11 @@ export class SiteFaqAuditJob {
   private schemaQuestionToQA(value: unknown): QA | null {
     if (!value || typeof value !== "object") return null;
     const obj = value as Record<string, unknown>;
+    if (obj.item) {
+      const nested = this.schemaQuestionToQA(obj.item);
+      if (nested) return nested;
+    }
+
     const hasQuestionShape = this.hasType(obj, "Question") || Boolean(obj.acceptedAnswer || obj.acceptedAnswers || obj.answer);
     if (!hasQuestionShape) return null;
 
@@ -1619,6 +2014,8 @@ export class SiteFaqAuditJob {
       ["Pages missing visible FAQ", String(result.summary.pagesMissingVisibleFaq)],
       ["Visible Q/A total", String(result.summary.totalVisibleQuestions)],
       ["Schema Q/A total", String(result.summary.totalSchemaQuestions)],
+      ["Languages detected", this.formatLanguageSummary(result.languageSummary)],
+      ["Language warnings", String(result.languageSummary.reduce((sum, item) => sum + item.warnings.length, 0))],
       ["", ""],
       ["How to read this report", "Start with the לטיפול tab. It combines all actionable issues from DOM/schema gaps, source-file comparison, and light QA checks."],
     ];
@@ -1643,12 +2040,24 @@ export class SiteFaqAuditJob {
     return rows;
   }
 
+  private formatLanguageSummary(summary: FaqLanguageSummary[]): string {
+    if (!summary.length) return "No pages checked";
+    return summary
+      .map((item) => `${item.name} (${item.code}): ${item.count}`)
+      .join(" | ");
+  }
+
   private buildPageRows(result: SiteFaqAuditResult): string[][] {
     return [
       [
         "Status",
         "URL",
         "Title",
+        "Detected language",
+        "Language source",
+        "HTML lang",
+        "hreflang alternates",
+        "Language warnings",
         "Rendered",
         "Visible Q/A",
         "Schema Q/A",
@@ -1664,6 +2073,11 @@ export class SiteFaqAuditJob {
         page.auditStatus,
         page.url,
         page.title || page.h1 || "",
+        `${page.language.name} (${page.language.code})`,
+        `${page.language.source}; ${page.language.confidence}`,
+        page.language.htmlLang,
+        page.language.hreflangs.join(", "),
+        page.language.warnings.join(" | "),
         page.rendered ? "Rendered" : "Static",
         String(page.visibleQaCount),
         String(page.schemaQaCount),
@@ -1807,6 +2221,20 @@ export class SiteFaqAuditJob {
           notes: page.notes.join(" | "),
         });
         continue;
+      }
+
+      for (const warning of page.language.warnings) {
+        pushRow({
+          area: "שפה/לוקאל",
+          issueType: "חשד לערבוב שפה",
+          priority: "בינונית",
+          status: "לבדיקה",
+          url: page.url,
+          title: page.title || page.h1 || "",
+          problem: warning,
+          action: "לבדוק שהעמוד, ה-URL, html lang, og:locale, hreflang ותוכן ה-FAQ מצביעים לאותה שפה.",
+          notes: `Detected: ${page.language.name} (${page.language.code}); source: ${page.language.source}; confidence: ${page.language.confidence}`,
+        });
       }
 
       if (page.auditStatus === "missing-schema") {

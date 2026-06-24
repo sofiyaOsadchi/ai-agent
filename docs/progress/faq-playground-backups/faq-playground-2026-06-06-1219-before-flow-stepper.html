@@ -152,16 +152,6 @@
       font-weight: 900;
     }
 
-    .plan-preview-link {
-      color: var(--purple-dark);
-      text-decoration: none;
-    }
-
-    .plan-preview-link:hover {
-      border-color: var(--purple);
-      background: var(--purple-soft);
-    }
-
     .topbar-actions {
       display: flex;
       align-items: center;
@@ -237,123 +227,6 @@
       background: var(--purple);
       border-color: var(--purple);
       box-shadow: 0 12px 28px rgba(126, 90, 174, 0.2);
-    }
-
-    .flow-stepper {
-      display: flex;
-      align-items: stretch;
-      gap: 0;
-      margin-bottom: 18px;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface);
-    }
-
-    .flow-step {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-width: 0;
-      padding: 10px 14px;
-      border-radius: 11px;
-    }
-
-    .flow-step-num {
-      flex: 0 0 auto;
-      display: grid;
-      place-items: center;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .flow-step.is-input .flow-step-num {
-      border: 1px solid rgba(217, 122, 60, 0.3);
-      background: var(--orange-soft);
-      color: #9a5b18;
-    }
-
-    .flow-step.is-process .flow-step-num {
-      border: 1px solid rgba(111, 147, 85, 0.3);
-      background: var(--teal-soft);
-      color: #3b6d11;
-    }
-
-    .flow-step.is-output .flow-step-num {
-      border: 1px solid rgba(74, 127, 199, 0.3);
-      background: var(--purple-soft);
-      color: #1a4f9c;
-    }
-
-    .flow-step-kicker {
-      display: block;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .flow-step.is-input .flow-step-kicker {
-      color: #9a5b18;
-    }
-
-    .flow-step.is-process .flow-step-kicker {
-      color: #3b6d11;
-    }
-
-    .flow-step.is-output .flow-step-kicker {
-      color: #1a4f9c;
-    }
-
-    .flow-step strong {
-      display: block;
-      margin-top: 1px;
-      color: var(--ink);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .flow-step-arrow {
-      display: flex;
-      align-items: center;
-      padding: 0 4px;
-      color: var(--border-strong);
-      font-size: 16px;
-    }
-
-    .step-tag {
-      display: inline-flex;
-      align-items: center;
-      margin-inline-end: 8px;
-      padding: 1px 7px;
-      border-radius: 5px;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      vertical-align: 1px;
-    }
-
-    .step-tag.step-input {
-      background: var(--orange-soft);
-      color: #9a5b18;
-    }
-
-    .step-tag.step-process {
-      background: var(--teal-soft);
-      color: #3b6d11;
-    }
-
-    .step-tag.step-output {
-      background: var(--purple-soft);
-      color: #1a4f9c;
     }
 
     .plan-dock {
@@ -2900,49 +2773,6 @@
       background: #fff !important;
     }
 
-    .prompt-combined .prompt-advanced-body {
-      gap: 12px;
-    }
-
-    .managed-prompt-block {
-      display: grid;
-      gap: 7px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface-soft);
-    }
-
-    .managed-prompt-label,
-    .editable-prompt-label {
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .managed-prompt-pre {
-      margin: 0;
-      max-height: 220px;
-      overflow: auto;
-      white-space: pre-wrap;
-      color: var(--muted);
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-
-    .editable-prompt-field {
-      display: grid;
-      gap: 7px;
-    }
-
-    .editable-prompt-field .prompt-text {
-      min-height: 260px;
-    }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -3635,20 +3465,6 @@
       font-size: 0.82rem !important;
       font-weight: 500;
       line-height: 1.55;
-    }
-
-    .managed-prompt-block {
-      background: var(--vx-surface-soft) !important;
-      border-color: var(--vx-border) !important;
-    }
-
-    .managed-prompt-pre {
-      color: var(--vx-muted) !important;
-    }
-
-    .editable-prompt-field .prompt-text {
-      min-height: 260px !important;
-      background: var(--vx-surface) !important;
     }
 
     .input:hover,
@@ -4400,29 +4216,6 @@
         width: min(100% - 18px, 1720px) !important;
       }
 
-      .flow-stepper {
-        gap: 4px;
-        padding: 5px;
-      }
-
-      .flow-step {
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 6px;
-      }
-
-      .flow-step .flow-step-kicker {
-        display: none;
-      }
-
-      .flow-step strong {
-        font-size: 11px;
-      }
-
-      .flow-step-arrow {
-        display: none;
-      }
-
       .setup-grid,
       .control-grid,
       .summary-grid,
@@ -4537,7 +4330,6 @@
       </div>
     </div>
     <div class="topbar-actions">
-      <a class="status-pill plan-preview-link" href="/faq-builder-plan.html">Client plan</a>
       <span class="status-pill" id="saveStatus">Draft saved locally</span>
     </div>
   </header>
@@ -4548,32 +4340,6 @@
         <button class="view-tab active" type="button" data-view-tab="builder">Editor</button>
         <button class="view-tab" type="button" data-view-tab="chat">Guided setup</button>
       </nav>
-
-      <div class="flow-stepper" data-builder-section aria-hidden="true">
-        <div class="flow-step is-input">
-          <span class="flow-step-num">1</span>
-          <div>
-            <span class="flow-step-kicker">Input</span>
-            <strong>Define</strong>
-          </div>
-        </div>
-        <span class="flow-step-arrow">→</span>
-        <div class="flow-step is-process">
-          <span class="flow-step-num">2</span>
-          <div>
-            <span class="flow-step-kicker">Process</span>
-            <strong>Build</strong>
-          </div>
-        </div>
-        <span class="flow-step-arrow">→</span>
-        <div class="flow-step is-output">
-          <span class="flow-step-num">3</span>
-          <div>
-            <span class="flow-step-kicker">Output</span>
-            <strong>Run &amp; review</strong>
-          </div>
-        </div>
-      </div>
 
       <section class="panel hidden" id="chatPanel" data-chat-section>
         <div class="panel-head">
@@ -4609,17 +4375,10 @@
       </section>
 
       <section class="panel" id="setupPanel" data-builder-section>
-        <div class="panel-head">
-          <div>
-            <p class="eyebrow"><span class="step-tag step-input">1 · Input</span> Setup</p>
-            <h2>Define FAQ plan</h2>
-            <p class="subtitle">Start with topics, required settings, and source rules before the workflow builds anything.</p>
-          </div>
-        </div>
         <div class="panel-body">
           <div class="grid setup-grid">
             <div class="setup-section-marker is-required" aria-hidden="true">
-              <span>Required setup</span>
+              <span>1 Required</span>
             </div>
             <div class="workflow-type-panel">
               <div class="workflow-type-copy">
@@ -4857,7 +4616,7 @@
       <section class="panel" id="workflowPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-process">2 · Process</span> Workflow</p>
+            <p class="eyebrow">Workflow</p>
             <h2>FAQ workflow</h2>
             <p class="subtitle">Review the default steps or edit the instructions before running.</p>
           </div>
@@ -4874,7 +4633,7 @@
       <section class="panel" id="categoryPanel" data-builder-section>
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-process">2 · Process</span> Optional</p>
+            <p class="eyebrow">Optional</p>
             <h2>Question mix</h2>
             <p class="subtitle">Controls how questions are distributed. Active count and ranges are shown below.</p>
           </div>
@@ -4908,7 +4667,7 @@
       <section class="panel" id="outputsPanel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow"><span class="step-tag step-output">3 · Output</span> Outputs</p>
+            <p class="eyebrow">Outputs</p>
             <h2>Outputs</h2>
             <p class="subtitle">Plans are saved from the sticky toolbar. Workflow files appear here after runs.</p>
           </div>
@@ -5388,19 +5147,18 @@
           "Prefer the broader question as primary and mark the narrower repeated question as duplicate.",
           "",
           "DATA TO CHECK:",
-          "{{answersTsvNumbered}}",
+          "{{answersTsv}}",
           "",
-        "Return exactly:",
-        "HEADER",
-        "Row\tDuplicate",
-        "DATA",
-        "[one Row-numbered value per data row]",
-        "",
-        "Use format: Row number, tab, result.",
-        "Write NO if unique.",
-        "Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
-        "If a row is empty or cannot be judged, write -.",
-        "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+          "Return exactly:",
+          "HEADER",
+          "Duplicate",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "Write NO if unique.",
+          "Write YES - Q[#] [question] and Q[#] [question] if duplicate.",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
         ].join("\n"),
         tone: "Strict and concrete.",
         sources: ""
@@ -5417,25 +5175,24 @@
           "Pay special attention to rows marked [VERIFY] or rows saying information is not available.",
           "",
           "DATA TO CHECK:",
-          "{{answersTsvNumbered}}",
+          "{{answersTsv}}",
           "",
           "If returning WRONG or FOUND text, apply these forbidden phrase rules: {{forbiddenPhrases}}",
           "",
-        "Return exactly:",
-        "HEADER",
-        "Row\tSource OK",
-        "DATA",
-        "[one Row-numbered value per data row]",
-        "",
-        "Use format: Row number, tab, result.",
-        "For each row write one of:",
-        "- OK",
-        "- NOT VERIFIED",
-        "- WRONG: [correct full answer] - Source: [source name]",
-        "- FOUND: [new full answer] - Source: [source name]",
-        "",
-        "If a row is empty or cannot be judged, write -.",
-        "Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+          "Return exactly:",
+          "HEADER",
+          "Source OK",
+          "DATA",
+          "[one value per data row]",
+          "",
+          "For each row write one of:",
+          "- Q[#] - OK",
+          "- Q[#] - NOT VERIFIED",
+          "- Q[#] - WRONG: [correct full answer] - Source: [source name]",
+          "- Q[#] - FOUND: [new full answer] - Source: [source name]",
+          "",
+          "If a row is empty or cannot be judged, write -.",
+          "Return exactly one line per data row, excluding the header."
         ].join("\n"),
         tone: "Cautious, factual and evidence-first.",
         sources: "Use the same approved sources selected for the workflow."
@@ -5444,7 +5201,7 @@
         id: 5,
         name: "Grammar and answer fit",
         enabled: false,
-        model: "gpt-5.5",
+        model: "inherit",
         outputMode: "replace_base_tsv",
         system: "You are a strict FAQ editor. You check grammar, answer fit, clarity and tone without adding unsupported facts.",
         user: [
@@ -5455,13 +5212,11 @@
           "",
           "Check:",
           "- Does the answer directly answer the exact question?",
-        "- Is the wording clear, grammatical and natural in {{language}}?",
-        "- Is the answer concise and useful rather than promotional?",
-        "- For yes/no questions, does it start with Yes, No, or Currently only when logically appropriate?",
-        "- For what/where/when/how/how much questions, does it avoid starting with Yes?",
-        "- Is there any positive Yes where the hotel does not offer the service or the answer is conditional?",
-        "- Does the question include the subject name naturally when needed, without keyword stuffing?",
-        "- Apply these forbidden phrase rules across the final TSV: {{forbiddenPhrases}}.",
+          "- Is the wording clear, grammatical and natural in {{language}}?",
+          "- Is the answer concise and useful rather than promotional?",
+          "- For yes/no questions, does it start with Yes, No, or Currently when appropriate?",
+          "- Does the question include the subject name naturally when needed, without keyword stuffing?",
+          "- Apply these forbidden phrase rules across the final TSV: {{forbiddenPhrases}}.",
           "",
           "{{grammarOutputInstructions}}"
         ].join("\n"),
@@ -5472,10 +5227,10 @@
 
     const TASK_DESCRIPTIONS = {
       1: "Builds the question plan from sources, categories, and demand signals.",
-      2: "Uses the questions from Step 1 to write source-grounded answers.",
-      3: "Checks the answers from Step 2 for duplicate questions.",
-      4: "Verifies the answers from Step 2 against approved sources. Off by default.",
-      5: "Polishes the final answers for writing quality. Off by default."
+      2: "Writes source-grounded answers from the question plan output.",
+      3: "Flags questions that ask for the same information.",
+      4: "Cross-checks answers against approved sources. Off by default.",
+      5: "Writing quality and polish review. Off by default."
     };
 
     function normalizeTaskName(task) {
@@ -6124,57 +5879,11 @@
         .trim();
     }
 
-    const EDITABLE_PROMPT_MARKERS = [
-      "Research rules:",
-      "Rules:",
-      "A question is duplicate if",
-      "Pay special attention",
-      "Check:"
-    ];
-
-    function splitPromptSections(value) {
-      const text = stripDeprecatedWordRuleBlocks(value);
-      const matches = EDITABLE_PROMPT_MARKERS
-        .map((marker) => {
-          const index = text.indexOf(marker);
-          return index >= 0 ? { marker, index } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.index - b.index);
-
-      if (!matches.length) {
-        return { managed: "", editable: text.trim() };
-      }
-
-      const index = matches[0].index;
-      return {
-        managed: text.slice(0, index).trim(),
-        editable: text.slice(index).trim()
-      };
-    }
-
-    function combinePromptSections(managed, editable) {
-      return [managed, editable].map((part) => String(part || "").trim()).filter(Boolean).join("\n\n");
-    }
-
     function mergeTasks(savedTasks) {
       const savedById = new Map((Array.isArray(savedTasks) ? savedTasks : []).map((task) => [Number(task.id), task]));
       return DEFAULT_TASKS.map((task) => {
         const saved = savedById.get(task.id) || {};
-        const defaultSections = splitPromptSections(task.user);
-        const savedSections = typeof saved.user === "string" && !hasHebrewText(saved.user)
-          ? splitPromptSections(saved.user)
-          : defaultSections;
-        const savedNotes = String(saved.userNotes || "").trim();
-        const editable = savedNotes
-          ? combinePromptSections(savedSections.editable, savedNotes)
-          : savedSections.editable;
-        const merged = {
-          ...task,
-          ...saved,
-          user: combinePromptSections(defaultSections.managed, editable),
-          system: task.system
-        };
+        const merged = { ...task, ...saved };
         merged.name = normalizeTaskName(merged) || task.name;
         if (typeof merged.user === "string") {
           merged.user = stripDeprecatedWordRuleBlocks(merged.user);
@@ -6258,28 +5967,25 @@
       const preset = WORKFLOW_PRESETS[normalizePreset(presetName)];
       taskDrafts = taskDrafts.map((task) => {
         if (task.id === 1) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
             tone: preset.questionTone || task.tone,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "Question focus", preset.questionNote))
+            user: upsertTextBlock(task.user, "Question focus", preset.questionNote)
           };
         }
 
         if (task.id === 2) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
             tone: preset.answerTone || task.tone,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "Answer rules", preset.answerNote))
+            user: upsertTextBlock(task.user, "Answer rules", preset.answerNote)
           };
         }
 
         if (task.id === 3 || task.id === 5) {
-          const sections = splitPromptSections(task.user);
           return {
             ...task,
-            user: combinePromptSections(sections.managed, upsertTextBlock(sections.editable, "QA checks", `Check the output against the selected ${preset.label.toLowerCase()} context, audience, source rules and category plan.`))
+            user: upsertTextBlock(task.user, "QA checks", `Check the output against the selected ${preset.label.toLowerCase()} context, audience, source rules and category plan.`)
           };
         }
 
@@ -6545,7 +6251,6 @@
     function renderTaskCard(task) {
         const active = task.enabled ? "is-active" : "";
         const taskName = normalizeTaskName(task);
-        const promptSections = splitPromptSections(task.user || "");
         return `
           <details class="task-card ${active}" id="card-${task.id}">
             <summary class="card-summary">
@@ -6569,9 +6274,6 @@
             </summary>
             <div class="card-body">
               <input type="hidden" id="name-${task.id}" value="${escapeHtml(taskName)}" />
-              <input type="hidden" id="sys-${task.id}" value="${escapeHtml(task.system || "")}" />
-              <input type="hidden" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
-              <textarea class="hidden" id="managed-${task.id}" aria-hidden="true" tabindex="-1">${escapeHtml(promptSections.managed)}</textarea>
               <div class="grid control-grid task-config-grid">
                 <label class="field task-tone-field">
                   <span>Writing style</span>
@@ -6587,26 +6289,47 @@
                 </label>` : ""}
               </div>
 
-              <details class="prompt-advanced prompt-combined">
+              <label class="field">
+                <span>Sources / policy</span>
+                <input class="input ltr" id="src-${task.id}" value="${escapeHtml(task.sources || "")}" />
+              </label>
+
+              <details class="prompt-advanced">
                 <summary>
-                  <span class="system-prompt-mark">PRM</span>
+                  <span class="system-prompt-mark">SYS</span>
                   <span class="system-prompt-copy">
-                    <span class="prompt-editor-kicker">Prompt</span>
-                    <strong>Prompt instructions</strong>
-                    <small>The grey part is filled by the builder. Edit the rules below it.</small>
+                    <span class="prompt-editor-kicker">System prompt</span>
+                    <strong>Model role & boundaries</strong>
+                    <small>Behind-the-scenes context sent before the Agent work instructions.</small>
                   </span>
                 </summary>
                 <div class="prompt-advanced-body">
-                  <div class="managed-prompt-block">
-                    <span class="managed-prompt-label">Filled automatically from setup</span>
-                    <pre class="managed-prompt-pre">${escapeHtml(promptSections.managed || "This step has no automatic setup prefix.")}</pre>
-                  </div>
-                  <label class="editable-prompt-field" for="user-${task.id}">
-                    <span class="editable-prompt-label">Editable instructions</span>
-                    <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(promptSections.editable || "")}</textarea>
-                  </label>
+                  <textarea class="textarea prompt-text" id="sys-${task.id}" rows="2">${escapeHtml(task.system || "")}</textarea>
                 </div>
               </details>
+
+              <div class="prompt-editor">
+                <div class="prompt-editor-head">
+                  <div>
+                    <span class="prompt-editor-kicker">Prompt</span>
+                    <h4 class="prompt-editor-title">Agent work instructions</h4>
+                  </div>
+                  <p class="prompt-editor-note">Primary prompt for this workflow step.</p>
+                </div>
+                <div class="prompt-variable-row">
+                  <span class="prompt-variable-label">Variables</span>
+                  <button class="var-btn" type="button" data-insert-var="{{subject}}" data-task-id="${task.id}">{{subject}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{last}}" data-task-id="${task.id}">{{last}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{answersTsv}}" data-task-id="${task.id}">{{answersTsv}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{categoryPlan}}" data-task-id="${task.id}">{{categoryPlan}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{questionTarget}}" data-task-id="${task.id}">{{questionTarget}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{language}}" data-task-id="${task.id}">{{language}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{namingRules}}" data-task-id="${task.id}">{{namingRules}}</button>
+                  <button class="var-btn" type="button" data-insert-var="{{forbiddenPhrases}}" data-task-id="${task.id}">{{forbiddenPhrases}}</button>
+                </div>
+                <span class="prompt-help">Variables are shortcuts preserved in the prompt; subject and last are replaced at runtime.</span>
+                <textarea class="textarea prompt-text" id="user-${task.id}" rows="10">${escapeHtml(task.user || "")}</textarea>
+              </div>
             </div>
           </details>
         `;
@@ -6661,7 +6384,7 @@
         tone: $(`tone-${base.id}`)?.value || "",
         sources: $(`src-${base.id}`)?.value || "",
         system: $(`sys-${base.id}`)?.value || "",
-        user: combinePromptSections($(`managed-${base.id}`)?.value || splitPromptSections(base.user).managed, $(`user-${base.id}`)?.value || "")
+        user: $(`user-${base.id}`)?.value || ""
       }));
     }
 
@@ -6899,14 +6622,13 @@
       return [
         "Return exactly:",
         "HEADER",
-        "Row\tGrammar Fix",
+        "Grammar Fix",
         "DATA",
-        "[one Row-numbered value per data row]",
+        "[one value per data row]",
         "",
-        "Use format: Row number, tab, result.",
         "Write - if the row is good.",
         "If any issue exists, write the complete fixed question or complete fixed answer in one line.",
-        "Do not add extra commentary. Return exactly one line per data row, excluding the header, and preserve the input Row numbers."
+        "Do not add extra commentary. Return exactly one line per data row, excluding the header."
       ].join("\n");
     }
 
@@ -8104,7 +7826,8 @@
           [`model-${id}`]: normalizeModelOptionValue(task.provider && task.model ? `${task.provider}:${task.model}` : task.model),
           [`output-mode-${id}`]: task.outputMode,
           [`src-${id}`]: task.sources,
-          [`sys-${id}`]: task.system
+          [`sys-${id}`]: task.system,
+          [`user-${id}`]: task.user
         };
 
         Object.entries(fields).forEach(([elementId, value]) => {
@@ -8112,14 +7835,6 @@
           if (!element || typeof value !== "string" || !value.trim()) return;
           element.value = value;
         });
-
-        if (typeof task.user === "string" && task.user.trim()) {
-          const sections = splitPromptSections(task.user);
-          const managed = $(`managed-${id}`);
-          const user = $(`user-${id}`);
-          if (managed && sections.managed) managed.value = sections.managed;
-          if (user) user.value = sections.editable || task.user;
-        }
       });
 
       updateSummary();

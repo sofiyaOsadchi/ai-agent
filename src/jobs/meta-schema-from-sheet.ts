@@ -216,6 +216,31 @@ private enforceMaxMetaDescLenSpanish(desc: string, maxLen = 160): string {
   return s;
 }
 
+private enforceMaxMetaDescLenArabic(desc: string, maxLen = 160): string {
+  let s = this.sanitizeOneLine(desc);
+
+  // Step 1: remove Wi-Fi
+  if (s.length > maxLen) {
+    s = s.replace(/،\s*Wi-Fi\s*،/g, "،");
+    s = s.replace(/\s*Wi-Fi\s*،/g, "");
+    s = s.replace(/،\s*الواي فاي\s*،/g, "،");
+    s = s.replace(/\s*الواي فاي\s*،/g, "");
+  }
+
+  // Step 2: remove parking
+  if (s.length > maxLen) {
+    s = s.replace(/،\s*مواقف السيارات\s*،/g, "،");
+    s = s.replace(/\s*مواقف السيارات\s*،/g, "");
+  }
+
+  // Step 3: hard cut
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen).replace(/[،,\s:;.-]+$/g, "").trim();
+  }
+
+  return s;
+}
+
   private resolveHebrewHotelName(englishHotelName: string): string | null {
     const targetKey = this.normalizeHotelKey(englishHotelName);
 
@@ -296,6 +321,26 @@ if (lang.startsWith("it")) {
   const metaDesc = this.enforceMaxMetaDescLenItalian(metaDescRaw, 160);
 
   const h1 = this.sanitizeOneLine(`Domande frequenti su ${hotelNameEn}`);
+
+  return { metaTitle, metaDesc, h1 };
+}
+
+if (lang.startsWith("ar")) {
+  const hasLongHotelName = hotelNameEn.length > 45;
+  const metaTitle = this.sanitizeOneLine(
+    hasLongHotelName
+      ? `${hotelNameEn} | معلومات`
+      : `الأسئلة الشائعة | ${hotelNameEn}`
+  );
+
+  const metaDescRaw = this.sanitizeOneLine(
+    hasLongHotelName
+      ? `إجابات واضحة عن الأسئلة الشائعة حول ${hotelNameEn}: تسجيل الوصول، مواقف السيارات، الخدمات والموقع قبل الإقامة.`
+      : `اعرف إجابات واضحة عن الأسئلة الشائعة حول ${hotelNameEn}: تسجيل الوصول، مواقف السيارات، الواي فاي، الموقع، الخدمات والمزيد.`
+  );
+
+  const metaDesc = this.enforceMaxMetaDescLenArabic(metaDescRaw, 160);
+  const h1 = this.sanitizeOneLine(`الأسئلة الشائعة حول ${hotelNameEn}`);
 
   return { metaTitle, metaDesc, h1 };
 }

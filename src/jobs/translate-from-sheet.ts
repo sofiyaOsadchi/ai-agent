@@ -16,6 +16,12 @@ type TranslateSheetConfig = {
   
 };
 
+type TranslateSheetResult = {
+  succeededLangs: string[];
+  skippedLangs: string[];
+  failedLangs: Array<{ lang: string; error: string }>;
+};
+
 type ReviewRow = {
   questionFix: string;
   answerFix: string;
@@ -112,7 +118,17 @@ const LANGUAGE_NOTES: Record<string, string> = {
     "Questions naturelles: “L’hôtel dispose-t-il de… ?”.",
     "Termes standard: Wi-Fi gratuit; réception ouverte 24h/24.",
     "Typo FR: espace avant ? : ;.",
-    "Respect exact de la marque."
+    "Respect exact de la marque.",
+    "FAQ tone: prefer clear guest-facing French over luxury overstatement. Avoid “gracieusement” for complimentary/free services; use “gratuit”, “gratuitement”, or “sans supplément” according to the sentence.",
+    "Breakfast wording: translate “Breakfast Bag” / “grab-and-go breakfast bag” as “petit déjeuner à emporter”; do not use “sac petit-déjeuner”.",
+    "Fee wording: translate “modest fee” / small extra charges as “petit supplément”, not “frais modiques”.",
+    "Pets: do not translate “well-behaved dogs” literally as “chiens bien éduqués”; keep the policy neutral unless the source explicitly requires training.",
+    "Traffic wording: use “sous réserve des conditions de circulation” for “traffic permitting”.",
+    "On-request amenities: use natural hospitality phrasing such as “sur simple demande auprès de la réception” when the source directs guests to reception.",
+    "French formatting: put the euro sign after the number with a space (15 €, 25 €), use decimal commas and compact distance units (1,2 km, not 1.2 kilometres), and avoid English date/time remnants.",
+    "Time and date style: convert English months and AM/PM to French. Prefer 24-hour French hotel style such as “15 h 00”, “7 h 00 - 10 h 30”, “11 h 00 - 21 h 00”.",
+    "Hotel-name grammar: when the hotel name is the grammatical subject at the start of a French question or answer, add the natural article (“Le Leonardo Hotel ...”) unless the official name already includes an article.",
+    "Avoid translated English hospitality labels: prefer “bar du hall” over “bar du lobby”, “espace café” over “café décontracté”, and “clients de l’hôtel” over “clients enregistrés”."
   ].join(" "),
   pl: [
     "Polite, neutral Polish; clear syntax.",
@@ -123,7 +139,23 @@ const LANGUAGE_NOTES: Record<string, string> = {
     "Формальный, нейтральный стиль; 3-е лицо.",
     "Термины: бесплатный Wi-Fi; круглосуточная стойка регистрации.",
     "Не оставлять англицизмы.",
-    "Соблюдать единообразие брендов."
+    "Соблюдать единообразие брендов.",
+    "Keep the official hotel name in Latin script unless an official Russian name is explicitly provided.",
+    "Use natural Russian hotel wording: заезд/выезд, стойка регистрации, услуги консьержа, хранение багажа, бизнес-центр.",
+    "Room categories and branded venue names should stay unchanged unless an official Russian label is known.",
+    "Use Russian unit formatting while preserving the value: 1,6 км, 600 м, 14 км. Do not leave English 'km' in Russian copy.",
+    "With 24-hour times, do not add redundant day-part words: use 'с 07:00 до 22:00', not 'с 07:00 утра до 22:00 вечера'.",
+    "For complimentary/free services, prefer clear factual wording such as 'бесплатный', 'бесплатно', or 'без дополнительной платы'.",
+    "Prioritize idiomatic Russian hospitality copy over literal English structure. If a phrase sounds legal, corporate, or machine-translated, rewrite it into simpler guest-facing Russian without changing facts.",
+    "Avoid awkward loyalty-program calques: use 'накапливать баллы' / 'получать бонусные баллы', and prefer 'подходящий тариф' over 'квалифицирующий тариф'.",
+    "Prefer natural Russian hotel terms: 'последний полный ремонт' or 'масштабное обновление' over 'реновация', 'доступ без ступеней' over 'бесступенчатый доступ', 'билеты в музеи' over 'музейные абонементы'.",
+    "Avoid overly enthusiastic service formulas like 'с радостью организует'; use neutral helpful phrasing such as 'может организовать' or 'поможет организовать'.",
+    "Use Russian currency order in running text: 15 €, 40 €, not €15 or €40.",
+    "For pet policies, use neutral guest-facing wording such as 'собаки и кошки принимаются бесплатно'; avoid awkward literal phrases like 'воспитанные собаки'.",
+    "For key-card access, prefer 'по ключ-карте' or 'с помощью ключ-карты', not plural calques like 'по ключ-картам'.",
+    "Avoid mixed English-Russian compounds such as 'lifestyle-коллекция'; prefer natural brand phrasing like 'коллекция lifestyle-отелей'.",
+    "For premium toiletries, prefer 'косметические принадлежности премиум-класса' over 'туалетные принадлежности премиум-класса'.",
+    "Avoid stiff passives for arranged services; use 'можно организовать' or 'отель может организовать' when the source says the hotel can arrange a service."
   ].join(" "),
   he: [  
     "SIMPLICITY & HOSPITALITY TONE: Hebrew hospitality language is direct, warm, and natural. Filter out exaggerated English marketing fluff and superlatives that add no factual value (e.g., avoid literal translations like 'לבוקר רגוע ונינוח', 'הבטחת שנת לילה', or 'באותנטיות'). Drop redundant filler words (e.g., 'לטובת האורחים', 'כסטנדרט'). Never use stiff, industrial verbs for room amenities (avoid 'מצוידים', 'מעמיד', 'עומדים לרשותכם'); use simple terms instead ('יש', 'כוללים', 'בחדר תמצאו').",
@@ -409,6 +441,17 @@ private assertSameShape(sourceRows: string[][], resultRows: string[][], label: s
         `${label}: empty-row mismatch at row ${r + 1}. sourceEmpty=${sourceIsEmpty}, resultEmpty=${resultIsEmpty}`
       );
     }
+
+    for (let c = 0; c < sourceWidth; c++) {
+      const sourceCellIsEmpty = String(sourceRows[r]?.[c] ?? "").trim() === "";
+      const resultCellIsEmpty = String(resultRows[r]?.[c] ?? "").trim() === "";
+
+      if (sourceCellIsEmpty !== resultCellIsEmpty) {
+        throw new Error(
+          `${label}: blank-cell mismatch at row ${r + 1}, col ${c + 1}. sourceEmpty=${sourceCellIsEmpty}, resultEmpty=${resultCellIsEmpty}`
+        );
+      }
+    }
   }
 }
 
@@ -454,6 +497,10 @@ private assertSameShape(sourceRows: string[][], resultRows: string[][], label: s
       `- If the source is brief (e.g., "Yes"/"No"), you may expand it slightly ONLY by restating the proposition of the question. Use third person (e.g., "Yes, the hotel offers ..."). Do NOT add qualifiers or new facts.`,
       `- Translate header row: ${translateHeader ? "YES" : "NO"}.`,
       `- PRESERVE the exact 2D matrix structure (same number of rows and columns).`,
+      `- If a source cell is empty/blank, the corresponding output cell MUST stay empty/blank.`,
+      `- ROW COUNT: Input has exactly ${rows.length} rows. Output "rows" MUST contain exactly ${rows.length} rows.`,
+      `- COLUMN COUNT: Every output row MUST contain exactly ${Math.max(...rows.map(r => r.length))} cells.`,
+      `- STRUCTURAL MARKER: If an entire row contains only "${TranslateFromSheetJob.EMPTY_ROW_MARKER}" values, copy that whole row exactly as-is. Do not translate, remove, rewrite, merge, split, duplicate, or move it.`,
       `- **IMPORTANT:** If the source text mentions the hotel name or clearly refers to the hotel as a named entity, ensure the translated text also includes exactly "${hotelName}". Do not shorten it to "the hotel" / "המלון" when the source explicitly names the hotel.`,
       ``,
       `INPUT DATA (JSON):`,
@@ -578,7 +625,13 @@ private reviewPrompt(
  
 
   // === Main Execution Function ===
-  async run(cfg: TranslateSheetConfig): Promise<void> {
+  async run(cfg: TranslateSheetConfig): Promise<TranslateSheetResult> {
+    const result: TranslateSheetResult = {
+      succeededLangs: [],
+      skippedLangs: [],
+      failedLangs: [],
+    };
+
     // 1. Resolve Source Tab
     let sourceTab = cfg.sourceTab && cfg.sourceTab.trim() ? cfg.sourceTab.trim() : undefined;
     if (!sourceTab) {
@@ -596,7 +649,7 @@ private reviewPrompt(
 
     // 2. Read Source Data & Metadata
     const sourceId = await this.sheets.getSheetIdByTitle(cfg.spreadsheetId, sourceTab);
-const MAX_TRANSLATE_ROW = 68; // כולל כותרת
+const MAX_TRANSLATE_ROW = 71; // includes FAQ meta rows
 const rawRows = await this.sheets.readValues(
   cfg.spreadsheetId,
   `${sourceTab}!A1:Z${MAX_TRANSLATE_ROW}`
@@ -635,23 +688,76 @@ const processChunk = async (
   console.log(chalk.yellow(`   ⏳ Processing Part ${partNum}/2 (${chunkRows.length} rows)...`));
 
   const expectedWidth = Math.max(...chunkRows.map(r => r.length));
-  const encodedChunkRows = this.encodeStructuralRows(chunkRows);
+  const modelRowEntries = chunkRows
+    .map((row, sourceIndex) => ({ row, sourceIndex }))
+    .filter(({ row }) => !this.isVisualEmptyRow(row));
+  const modelSourceRows = modelRowEntries.map(({ row }) => row);
+  const skippedEmptyRows = chunkRows.length - modelSourceRows.length;
+
+  if (skippedEmptyRows > 0) {
+    console.log(
+      chalk.gray(`      Preserving ${skippedEmptyRows} empty separator rows outside the AI translation step.`)
+    );
+  }
+
+  const runMatrixStepWithRetry = async (
+    prompt: string,
+    system: string,
+    model: string,
+    label: string,
+    sourceRows: string[][]
+  ): Promise<string[][]> => {
+    const sourceWidth = Math.max(...sourceRows.map(r => r.length));
+
+    const runOnce = async (nextPrompt: string): Promise<string[][]> => {
+      const json = await this.agent.runWithSystem(nextPrompt, system, model);
+      const rawRows = this.parseJsonMatrixOrThrow(json);
+      const decodedRows = this.decodeStructuralRows(rawRows, sourceWidth);
+      this.assertSameShape(sourceRows, decodedRows, label);
+      return decodedRows;
+    };
+
+    try {
+      return await runOnce(prompt);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!/(row count mismatch|col count mismatch|empty-row mismatch)/i.test(message)) {
+        throw error;
+      }
+
+      console.log(
+        chalk.yellow(`⚠️ ${label} shape mismatch; retrying once with stricter structure instructions. ${message}`)
+      );
+
+      const retryPrompt = [
+        prompt,
+        "",
+        "STRICT STRUCTURE RETRY:",
+        `Your previous output was rejected: ${message}`,
+        `Return exactly ${sourceRows.length} rows and exactly ${sourceWidth} cells in every row.`,
+        "Do not add rows, delete rows, merge rows, split rows, duplicate the header, or add extra blank rows.",
+        `If a source row contains only "${TranslateFromSheetJob.EMPTY_ROW_MARKER}" values, copy that marker row exactly as-is.`,
+        `Output ONLY valid JSON in the schema {"rows":[...]}.`,
+      ].join("\n");
+
+      return await runOnce(retryPrompt);
+    }
+  };
 
   // Step A: Draft
   const systemInstr = this.systemInstructions(lang, officialHotelName);
-  const draftPromptStr = this.draftPrompt(lang, encodedChunkRows, translateHeader, officialHotelName);
-const draftResult = await this.agent.runWithSystem(
-  draftPromptStr,
-  systemInstr,
-  DRAFT_MODEL
-);
-  const draftRowsRaw = this.parseJsonMatrixOrThrow(draftResult);
-  const draftRows = this.decodeStructuralRows(draftRowsRaw, expectedWidth);
-  this.assertSameShape(chunkRows, draftRows, `Draft part ${partNum}`);
+  const draftPromptStr = this.draftPrompt(lang, modelSourceRows, translateHeader, officialHotelName);
+  const draftRows = await runMatrixStepWithRetry(
+    draftPromptStr,
+    systemInstr,
+    DRAFT_MODEL,
+    `Draft part ${partNum}`,
+    modelSourceRows
+  );
 
   console.log(chalk.magenta(`      ✨ Polishing Part ${partNum}...`));
 
-  const draftJsonClean = JSON.stringify({ rows: this.encodeStructuralRows(draftRows) });
+  const draftJsonClean = JSON.stringify({ rows: draftRows });
 
   const profile = this.getTerminologyProfile(lang);
 
@@ -688,7 +794,7 @@ const draftResult = await this.agent.runWithSystem(
 
   const polishPromptStr = this.polishPrompt(
     lang,
-    this.encodeStructuralRows(chunkRows),
+    modelSourceRows,
     draftJsonClean,
     officialHotelName,
     translateHeader,
@@ -718,18 +824,31 @@ const germanPolishRules =
 
 const systemInstrPolish = [systemInstr, germanPolishRules].join("\n");
 
-const finalJson = await this.agent.runWithSystem(
+  const finalRows = await runMatrixStepWithRetry(
+    polishPromptStr,
+    systemInstrPolish,
+    POLISH_MODEL,
+    `Polish part ${partNum}`,
+    modelSourceRows
+  );
 
-  polishPromptStr,
+  const finalRowsBySourceIndex = new Map<number, string[]>();
+  modelRowEntries.forEach(({ sourceIndex }, rowIndex) => {
+    finalRowsBySourceIndex.set(sourceIndex, finalRows[rowIndex]);
+  });
 
-  systemInstrPolish,
+  return chunkRows.map((sourceRow, sourceIndex) => {
+    if (this.isVisualEmptyRow(sourceRow)) {
+      return Array.from({ length: expectedWidth }, () => "");
+    }
 
-  POLISH_MODEL
+    const translatedRow = finalRowsBySourceIndex.get(sourceIndex);
+    if (!translatedRow) {
+      throw new Error(`Part ${partNum}: missing translated row for source index ${sourceIndex + 1}`);
+    }
 
-);  const finalRowsRaw = this.parseJsonMatrixOrThrow(finalJson);
-  const finalRows = this.decodeStructuralRows(finalRowsRaw, expectedWidth);
-  this.assertSameShape(chunkRows, finalRows, `Polish part ${partNum}`);
-return finalRows;
+    return translatedRow;
+  });
 };
 
 const existingTabTitles = await this.sheets.getSheetTitles(cfg.spreadsheetId);
@@ -741,6 +860,7 @@ const existingTabTitles = await this.sheets.getSheetTitles(cfg.spreadsheetId);
     console.log(
       chalk.yellow(`⏭️ Skipping ${lang}: target tab already exists: "${newTitle}"`)
     );
+    result.skippedLangs.push(lang);
     continue;
   }
 
@@ -809,15 +929,21 @@ part2Result = await processChunk(part2Input, lang, 2, officialHotelName);       
         // Duplicate the original sheet to preserve formatting/colors
         await this.sheets.duplicateSheet(cfg.spreadsheetId, sourceId, newTitle);
         // Overwrite with translated data
-        await this.sheets.writeValues(cfg.spreadsheetId, `${newTitle}!A1`, finalTranslatedMatrix);
-        existingTabTitles.push(newTitle);
-        console.log(chalk.green(`✅ Success: ${newTitle} created with ${finalTranslatedMatrix.length - 1} items!`));
+	        await this.sheets.writeValues(cfg.spreadsheetId, `${newTitle}!A1`, finalTranslatedMatrix);
+	        existingTabTitles.push(newTitle);
+	        result.succeededLangs.push(lang);
+	        console.log(chalk.green(`✅ Success: ${newTitle} created with ${finalTranslatedMatrix.length - 1} items!`));
 
-      } catch (err) {
-        console.error(chalk.red(`❌ Failed to process language ${lang}:`), err);
-        // Continue to next language, do not crash the whole job
-        continue;
-      }
-    }
-  }
+	      } catch (err) {
+	        console.error(chalk.red(`❌ Failed to process language ${lang}:`), err);
+	        result.failedLangs.push({
+	          lang,
+	          error: err instanceof Error ? err.message : String(err),
+	        });
+	        // Continue to next language, do not crash the whole job
+	        continue;
+	      }
+	    }
+    return result;
+	  }
 }

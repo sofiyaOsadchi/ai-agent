@@ -2,6 +2,7 @@
 import chalk from "chalk";
 import { SheetsService } from "../services/sheets.js";
 import { HOTEL_NAME_HE_MAP } from "./subjobs/hotel-name-hebrew-map.js";
+import { extractQaNumberTokens } from "./subjobs/qa-number-normalization.js";
 
 export type QaLangMasterConfig = {
   spreadsheetId: string;
@@ -306,51 +307,7 @@ private replaceNumberWords(text: string, lang: string): string {
    * - if 24h concept exists, remove standalone "24" (and "7" for 24/7) to avoid EN=[24|24h] vs DE=[24h]
    */
   private extractNumberTokens(s: string, lang: string): string[] {
-let t = this.normalizeTextForNumbers(s, lang);
-    if (!t) return [];
-
-    t = this.convert12hTo24h(t);
-
-    const tokens: string[] = [];
-
-    // Times like 15:00, 06:30
-    const timeMatches = t.match(/\b\d{1,2}:\d{2}\b/g) ?? [];
-    for (const tm of timeMatches) {
-      const [hhRaw, mm] = tm.split(":");
-      const hh = String(parseInt(hhRaw, 10)).padStart(2, "0");
-      tokens.push(`${hh}:${mm}`);
-    }
-
-    // Remove times before scanning generic numbers to avoid "06" and "30" duplicates
-    const tNoTimes = t.replace(/\b\d{1,2}:\d{2}\b/g, " ");
-
-    // General numbers/decimals
-    const numMatches = tNoTimes.match(/\b\d+(?:[.,]\d+)?\b/g) ?? [];
-    for (const nm of numMatches) {
-      const norm = this.normalizePlainNumberToken(nm);
-      if (norm) tokens.push(norm);
-    }
-
-    // Semantic token for 24h concept
-    const has24h = this.detect24hConcept(t, lang);
-    if (has24h) tokens.push("24h");
-
-    // If 24h concept exists, remove standalone "24" token (and "7" if 24/7 is explicitly present)
-    const has24slash7 = /\b24\/7\b/.test(t);
-    const filtered = tokens.filter((x) => {
-      if (!x) return false;
-      if (has24h && x === "24") return false;
-      if (has24slash7 && has24h && x === "7") return false;
-      return true;
-    });
-
-    // De-duplicate while keeping order
-    const seen = new Set<string>();
-    return filtered.filter((x) => {
-      if (seen.has(x)) return false;
-      seen.add(x);
-      return true;
-    });
+    return extractQaNumberTokens(s, lang);
   }
 
   private normalizeHotelForContains(hotel: string): string {
@@ -992,6 +949,12 @@ if (!this.containsHotelName(hotel, cand)) {
 
     const now = new Date().toISOString();
     const totalRows = rows.length - 1;
+    const hotelNameMissingIssues = issues.filter(
+      (it) => it.type === "HOTEL_NAME_MISSING_IN_TARGET_Q" || it.type === "HOTEL_NAME_MISSING_IN_TARGET_A"
+    );
+    const primaryIssues = issues.filter(
+      (it) => it.type !== "HOTEL_NAME_MISSING_IN_TARGET_Q" && it.type !== "HOTEL_NAME_MISSING_IN_TARGET_A"
+    );
 
     const summary: string[][] = [];
     summary.push([`QA - ${lang.toUpperCase()} Master (Deterministic)`]);
@@ -1000,6 +963,8 @@ if (!this.containsHotelName(hotel, cand)) {
     summary.push(["Total rows", String(totalRows)]);
     summary.push(["Rows with no issues", String(okRows)]);
     summary.push(["Issues captured (capped)", String(issues.length)]);
+    summary.push(["Primary issues", String(primaryIssues.length)]);
+    summary.push(["Hotel-name preservation review", String(hotelNameMissingIssues.length)]);
     summary.push([""]);
 
     summary.push(["issues"]);
@@ -1015,7 +980,35 @@ if (!this.containsHotelName(hotel, cand)) {
       "note",
     ]);
 
-    for (const it of issues) {
+    for (const it of primaryIssues) {
+      summary.push([
+        it.severity,
+        it.type,
+        String(it.rowNumber),
+        it.hotel,
+        it.questionEn,
+        it.answerEn,
+        it.questionTarget,
+        it.answerTarget,
+        it.note ?? "",
+      ]);
+    }
+
+    summary.push([""]);
+    summary.push(["hotel_name_preservation_review"]);
+    summary.push([
+      "severity",
+      "type",
+      "row",
+      "hotel",
+      "question_en",
+      "answer_en",
+      `question_${lang}`,
+      `answer_${lang}`,
+      "note",
+    ]);
+
+    for (const it of hotelNameMissingIssues) {
       summary.push([
         it.severity,
         it.type,
