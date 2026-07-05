@@ -468,7 +468,9 @@
   .dir-acc[open] summary{border-bottom:1px solid var(--line-soft);background:var(--card)}
   .dir-acc[open] summary::after{content:"–";color:var(--violet-deep)}
   .dir-copy{padding:14px 16px;color:var(--ink-soft);font-size:13.5px;line-height:1.6}
+  .dir-note{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--muted);font-size:12.5px;line-height:1.5}
   .dir-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .directions-panel .dir-meta{display:none}
   .dir-meta span{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);border:1px solid var(--line);border-radius:999px;background:var(--card);padding:4px 8px}
   .dir-meta span.pending{color:#9A5B18;background:var(--warn-bg);border-color:rgba(217,122,60,.28)}
   .park{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
@@ -476,10 +478,6 @@
   .park .pk .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
   .park .pk .v{font-size:14px;font-weight:600;color:var(--ink);margin-top:4px}
   .parking-copy{margin-top:10px;color:var(--ink-soft);font-size:14px;line-height:1.6}
-  .parking-facts{display:grid;gap:9px;margin-top:14px}
-  .parking-fact{display:flex;justify-content:space-between;gap:16px;border-top:1px solid var(--line-soft);padding-top:9px;font-size:13.5px;color:var(--ink-soft)}
-  .parking-fact:first-child{border-top:0;padding-top:0}
-  .parking-fact b{color:var(--ink);font-weight:600;text-align:right}
 
   /* ---------- 6. cost ---------- */
   .cost-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:18px}
@@ -572,7 +570,7 @@
     .app,.cost-card,.step,.pre-step,.result-step,.orch,.callout,.clean-cost-card,.panel{box-shadow:none}
     .sec-head,h1,h2,h3,h4,.sheet-bar,.map-directions-head,.map-around-head{break-after:avoid-page}
     .step,.pre-step,.result-step,.orch,.callout{break-inside:avoid-page;page-break-inside:avoid}
-    .vchip,.stat,.box,.clean-row,.rstep,.dir-acc,.parking-fact,.sheet-tabs{break-inside:avoid}
+    .vchip,.stat,.box,.clean-row,.rstep,.dir-acc,.sheet-tabs{break-inside:avoid}
     .app,.builder-body,.run-body,.site-grid,.clean-cost-grid,.map-module,.directions-list{break-inside:auto}
     .tbl-scroll{overflow:visible}
     table{min-width:0;font-size:9px}
@@ -580,6 +578,42 @@
     th,td{padding:7px 8px!important}
     .run-right{background:#111827!important}
     a{color:inherit;text-decoration:none}
+    #input{break-before:page;page-break-before:always}
+    #input .app-chrome,#input .app-tabs{display:none!important}
+    #input .app{overflow:visible;border-radius:12px}
+    #input .builder-body{display:block!important}
+    #input .form-col,#input .side-col{padding:13px 15px!important}
+    #input .side-col{border-left:0!important;border-top:1px solid #ddd!important;background:#fbf8f2!important;break-inside:avoid-page;page-break-inside:avoid}
+    #input .field{margin-bottom:10px}
+    #input .field label{font-size:10.5px;margin-bottom:5px}
+    #input .mode-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin-bottom:10px}
+    #input .mode-card{padding:8px 9px;border-radius:8px;break-inside:avoid}
+    #input .mode-card b{font-size:11.5px}
+    #input .mode-card small{font-size:9.5px;line-height:1.25}
+    #input .batch-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+    #input .batch-grid .wide{grid-column:span 2!important}
+    #input .input{padding:8px 9px;font-size:11.5px;border-radius:8px}
+    #input .slider{margin:10px 0 6px}
+    #input .slider-scale{font-size:9px}
+    #input .seg button{font-size:10.5px;padding:6px 9px}
+    #input .chips{gap:5px}
+    #input .chip{font-size:10px;padding:5px 8px}
+    #input .batch-note{padding:9px 10px;margin:10px 0 8px;align-items:center}
+    #input .batch-note b{font-size:12.5px}
+    #input .mini-btn{font-size:9.5px;padding:6px 8px}
+    #input .hotel-list{overflow:visible!important;gap:5px}
+    #input .hotel-row{min-width:0!important;grid-template-columns:18px minmax(140px,1.25fr) minmax(130px,1.1fr) 62px 72px 76px!important;gap:6px;padding:7px 8px;font-size:9.5px;break-inside:avoid-page;page-break-inside:avoid}
+    #input .hotel-row.head{font-size:7.8px}
+    #input .fake-check{width:13px;height:13px;font-size:9px}
+    #input .st{font-size:8.5px;padding:3px 6px;white-space:normal;line-height:1.15}
+    #input .import-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px;margin-top:9px}
+    #input .import-card{padding:8px;font-size:9.5px;line-height:1.3;break-inside:avoid}
+    #input .import-card b{font-size:10.5px}
+    #input .side-col h4{font-size:10px;margin-bottom:8px}
+    #input .sum{font-size:10.5px;padding:5px 0;gap:10px}
+    #input .sum b{white-space:normal;text-align:right;max-width:48%;overflow-wrap:anywhere}
+    #input .run-btn{margin-top:10px;padding:9px;font-size:12px}
+    #input .est-note{font-size:9.5px;margin-top:7px}
     body.pdf-compact{font-size:12px}
     body.pdf-compact .hero{padding:0 0 8px}
     body.pdf-compact .eyebrow,body.pdf-compact .sec-tag{display:none}
@@ -669,8 +703,8 @@
         <div class="pdf-field">
           <label for="pdfDensity">Size</label>
           <select class="pdf-select" id="pdfDensity">
-            <option value="compact" selected>Compact client PDF</option>
-            <option value="balanced">Balanced PDF</option>
+            <option value="balanced" selected>Readable client PDF</option>
+            <option value="compact">Compact / fewer pages</option>
             <option value="detailed">Detailed PDF</option>
           </select>
         </div>
@@ -683,6 +717,7 @@
             <label class="pdf-check"><input type="checkbox" data-pdf-toggle="output" checked>Output</label>
             <label class="pdf-check"><input type="checkbox" data-pdf-toggle="site">On site</label>
             <label class="pdf-check"><input type="checkbox" data-pdf-toggle="cost-model" checked>Cost model</label>
+            <label class="pdf-check"><input type="checkbox" id="pdfOpenAccordions" checked>Open accordions</label>
           </div>
         </div>
         <div class="pdf-actions">
@@ -766,7 +801,7 @@
                 <div class="mini-tags"><span class="mini-tag">Hotel address</span><span class="mini-tag">Access-point categories</span><span class="mini-tag">Google Places</span></div>
               </div>
             </div>
-            <p>The discovery stage identifies the location references guests actually need: airports, main railway stations, ferry or port where relevant, main bus station, nearby public transport, closest motorway and a main nearby highlight. The same categories are applied consistently across the hotel set.</p>
+            <p>The discovery stage identifies the location references guests actually need: airports, main railway stations, ferry or port where relevant, relevant public transport, parking context and a main nearby highlight. The same categories are applied consistently across the hotel set.</p>
             <div class="meta"><span class="tag">Google Places</span><span class="tag">consistent discovery</span><span class="tag">access-point categories</span></div>
           </div>
         </div>
@@ -990,7 +1025,7 @@
           <div class="sum"><span>Walking range</span><b>30 min</b></div>
           <div class="sum"><span>Sections</span><b>4 selected</b></div>
           <div class="sum"><span>Output</span><b>Google Sheet</b></div>
-          <div class="sum"><span>Est. Google calls</span><b>~700–1,300</b></div>
+          <div class="sum"><span>Est. Google usage</span><b>~300–650 units</b></div>
           <div class="sum"><span>Est. Claude calls</span><b>24–40</b></div>
           <button class="run-btn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
@@ -1143,35 +1178,59 @@
             </tr>
             <tr>
               <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_airport</td><td>Munich Airport</td>
-              <td>From Munich Airport, take the S-Bahn toward the city center and continue to München Hauptbahnhof. From the station, follow the short route to Senefelderstraße and the hotel entrance.</td>
-              <td class="mono-cell">38 km</td><td class="mono-cell">~40 min</td>
+              <td>From Munich Airport, take the S1 or S8 S-Bahn to München Hauptbahnhof. From there, continue on foot toward Bayerstraße and Senefelderstraße; the hotel is approximately 100 metres from the station.</td>
+              <td class="mono-cell">38 km</td><td class="mono-cell">~40 min by S-Bahn</td>
               <td><a class="src-link" href="#">Google Routes ↗</a></td><td><a class="src-link" href="#">Airport source ↗</a></td>
               <td><div class="conf"><div class="bar"><i style="width:92%"></i></div>0.92</div></td>
               <td><span class="st st-ok">●&nbsp;Ready</span></td><td>Accordion item for airport arrival.</td>
             </tr>
             <tr>
               <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_railway</td><td>Munich Central Station</td>
-              <td>From München Hauptbahnhof, leave through the south-side exits and continue toward Senefelderstraße. The hotel is a short route from the station area.</td>
-              <td class="mono-cell">450 m</td><td class="mono-cell">7 min walk</td>
+              <td>München Hauptbahnhof is the closest major railway hub. From the station, continue on foot toward Bayerstraße and Senefelderstraße; the hotel is approximately 100 metres away.</td>
+              <td class="mono-cell">100 m</td><td class="mono-cell">2 min walk</td>
               <td><a class="src-link" href="#">Google Routes ↗</a></td><td><a class="src-link" href="#">bahn.de ↗</a></td>
               <td><div class="conf"><div class="bar"><i style="width:95%"></i></div>0.95</div></td>
               <td><span class="st st-ok">●&nbsp;Ready</span></td><td>Accordion item for railway arrival.</td>
             </tr>
             <tr>
-              <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_public_transport</td><td>Public transport</td>
-              <td>The nearest major public transport hub is München Hauptbahnhof, with U-Bahn, S-Bahn, tram and regional connections.</td>
-              <td class="mono-cell">450 m</td><td class="mono-cell">7 min walk</td>
-              <td><a class="src-link" href="#">MVV ↗</a></td><td><a class="src-link" href="#">Google Routes ↗</a></td>
-              <td><div class="conf"><div class="bar"><i style="width:76%"></i></div>0.76</div></td>
-              <td><span class="st st-warn">●&nbsp;Hold</span></td><td>Line list should be confirmed before publishing.</td>
+              <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_tram</td><td>Tram arrivals</td>
+              <td>The closest tram arrival point is Hauptbahnhof Süd on Bayerstraße, served by tram lines 18, 19 and 29. From there, continue a short distance toward Senefelderstraße.</td>
+              <td class="mono-cell">—</td><td class="mono-cell">1–3 min walk</td>
+              <td>City / station source</td><td>Route data</td>
+              <td><div class="conf"><div class="bar"><i style="width:88%"></i></div>0.88</div></td>
+              <td><span class="st st-ok">●&nbsp;Ready</span></td><td>Line list should be rechecked before launch if the station works change.</td>
+            </tr>
+            <tr>
+              <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_u_bahn</td><td>U-Bahn</td>
+              <td>Guests arriving by U-Bahn can use München Hauptbahnhof, served by U1, U2, U4 and U5. From the station, continue on foot toward Bayerstraße and Senefelderstraße.</td>
+              <td class="mono-cell">100 m</td><td class="mono-cell">2 min walk</td>
+              <td>Hotel FAQ</td><td>MVV / station source</td>
+              <td><div class="conf"><div class="bar"><i style="width:94%"></i></div>0.94</div></td>
+              <td><span class="st st-ok">●&nbsp;Ready</span></td><td>FAQ confirms the U-Bahn lines serving the area.</td>
+            </tr>
+            <tr>
+              <td class="pri">München CC</td><td>How to get to</td><td class="pri">direction_s_bahn</td><td>S-Bahn</td>
+              <td>Guests arriving by S-Bahn can use München Hauptbahnhof, served by S1 through S8, including airport connections on the S1 and S8. From the station, continue on foot toward Bayerstraße and Senefelderstraße.</td>
+              <td class="mono-cell">100 m</td><td class="mono-cell">2 min walk</td>
+              <td>Hotel FAQ</td><td>MVV / station source</td>
+              <td><div class="conf"><div class="bar"><i style="width:94%"></i></div>0.94</div></td>
+              <td><span class="st st-ok">●&nbsp;Ready</span></td><td>FAQ confirms S1 through S8 and airport travel on S1 or S8.</td>
             </tr>
             <tr>
               <td class="pri">München CC</td><td>Parking</td><td class="pri">parking_summary</td><td>Parking copy</td>
-              <td>Guests arriving by car can use a public car park near the hotel once the selected parking source is approved.</td>
+              <td>Limited, non-reservable underground parking is available at Leonardo Hotel München City Center. Parking costs €25 per vehicle per day and is payable at reception. A neighbouring railway car park can be used for overflow parking; the overflow car park address and any additional hotel garage entrance should be confirmed by the hotel.</td>
               <td class="mono-cell">—</td><td class="mono-cell">—</td>
-              <td><a class="src-link" href="#">Parking source ↗</a></td><td>Hotel FAQ</td>
-              <td><div class="conf"><div class="bar"><i style="width:68%"></i></div>0.68</div></td>
-              <td><span class="st st-warn">●&nbsp;Hold</span></td><td>Parking name, address and price stay withheld until source confirmation.</td>
+              <td>Hotel FAQ</td><td>Property address</td>
+              <td><div class="conf"><div class="bar"><i style="width:82%"></i></div>0.82</div></td>
+              <td><span class="st st-warn">●&nbsp;Hold</span></td><td>FAQ confirms limited on-site parking, reservation rule, overflow option and daily charge. Overflow address and alternative garage entrance need hotel confirmation.</td>
+            </tr>
+            <tr>
+              <td class="pri">München CC</td><td>How to get to</td><td class="pri">cycling_summary</td><td>Cycling</td>
+              <td>The hotel does not offer bicycle rental, but limited indoor bicycle storage may be arranged on request. Guests can use Radius Tours &amp; Bike Rental inside München Hauptbahnhof near platform 32; DB Call a Bike also operates 24/7 bike sharing across Munich.</td>
+              <td class="mono-cell">100–150 m</td><td class="mono-cell">2–4 min walk</td>
+              <td>Hotel FAQ</td><td>Radius Tours / DB Call a Bike</td>
+              <td><div class="conf"><div class="bar"><i style="width:94%"></i></div>0.94</div></td>
+              <td><span class="st st-ok">●&nbsp;Ready</span></td><td>Hotel bicycle service comes from FAQ; nearby bike rental comes from external source research.</td>
             </tr>
           </tbody>
         </table>
@@ -1216,13 +1275,7 @@
         </div>
         <div class="panel">
           <h4><span class="pin">🅿️</span> Parking details</h4>
-          <p class="parking-copy">Guests arriving by car can use a nearby public car park once the selected parking source is approved.</p>
-          <div class="parking-facts">
-            <div class="parking-fact"><span>Car park</span><b>Pending approved source</b></div>
-            <div class="parking-fact"><span>Address</span><b>Held until verified</b></div>
-            <div class="parking-fact"><span>Charges</span><b>Held until verified</b></div>
-            <div class="parking-fact"><span>Reservation</span><b>Held until verified</b></div>
-          </div>
+          <p class="parking-copy">Limited, non-reservable underground parking is available at Leonardo Hotel München City Center. Parking costs €25 per vehicle per day and is payable at reception. A neighbouring railway car park can be used for overflow parking; the overflow car park address and any additional hotel garage entrance should be confirmed by the hotel.</p>
         </div>
 
         <details class="panel full map-archive">
@@ -1267,7 +1320,6 @@
                     <label class="map-filter f-high"><input type="checkbox" checked> Airport</label>
                     <label class="map-filter"><input type="checkbox" checked> Railway station</label>
                     <label class="map-filter f-transport"><input type="checkbox" checked> Transportation</label>
-                    <label class="map-filter"><input type="checkbox" checked> Bus</label>
                     <label class="map-filter"><input type="checkbox" checked> Tram</label>
                     <label class="map-filter"><input type="checkbox" checked> U-Bahn / S-Bahn</label>
                     <label class="map-filter f-shop"><input type="checkbox" checked> Parking</label>
@@ -1299,76 +1351,56 @@
 
         <div class="panel full directions-panel">
           <h4><span class="pin">🚉</span> How to get to</h4>
-          <p class="directions-intro">Use the accordion below for clear directions from key transport hubs, public transport options and the most relevant nearby landmark.</p>
+          <p class="directions-intro">The hotel address is Senefelderstraße 4, approximately 100 metres from München Hauptbahnhof. Use the accordion below for source-backed arrival information from key transport hubs, public transport options and the most relevant nearby landmark.</p>
           <div class="directions-list">
             <details class="dir-acc" open="">
-              <summary>Munich Airport <span>38 km</span></summary>
+              <summary>Munich Airport <span>~40 min</span></summary>
               <div class="dir-copy">
-                From Munich Airport, take the S-Bahn toward the city center and continue to München Hauptbahnhof. From the station, follow the short route to Senefelderstraße and the hotel entrance.
-                <div class="dir-meta"><span>Airport</span><span>S-Bahn / car</span><span>38 km</span></div>
+                From Munich Airport, take the S1 or S8 S-Bahn to München Hauptbahnhof. From there, continue on foot toward Bayerstraße and Senefelderstraße; the hotel is approximately 100 metres from the station.
+                <div class="dir-meta"><span>Airport</span><span>S1 / S8</span><span>~40 min</span></div>
               </div>
             </details>
             <details class="dir-acc">
-              <summary>Munich Central Station <span>450 m</span></summary>
+              <summary>Munich Central Station <span>100 m</span></summary>
               <div class="dir-copy">
-                From München Hauptbahnhof, leave through the south-side exits and continue toward Senefelderstraße. The hotel is a short route from the station area.
-                <div class="dir-meta"><span>Railway station</span><span>450 m</span><span>City center</span></div>
+                München Hauptbahnhof is the closest major railway hub. From the station, continue on foot toward Bayerstraße and Senefelderstraße; the hotel is approximately 100 metres away.
+                <div class="dir-meta"><span>Railway station</span><span>100 m</span><span>2 min walk</span></div>
               </div>
             </details>
             <details class="dir-acc">
-              <summary>Public Transport <span>450 m</span></summary>
+              <summary>Tram arrivals <span>1–3 min</span></summary>
               <div class="dir-copy">
-                The nearest major public transport hub is München Hauptbahnhof, with U-Bahn, S-Bahn, tram and regional connections. From there, guests can continue toward Senefelderstraße and reach the hotel in a short distance.
-                <div class="dir-meta"><span>Public transport</span><span>U-Bahn / S-Bahn / tram</span><span>450 m</span></div>
+                The closest tram arrival point is Hauptbahnhof Süd on Bayerstraße, served by tram lines 18, 19 and 29. From there, continue a short distance toward Senefelderstraße.
+                <div class="dir-meta"><span>Tram</span><span>Hauptbahnhof Süd</span><span>18 / 19 / 29</span></div>
               </div>
             </details>
             <details class="dir-acc">
-              <summary>Nearest bus stops <span>350 m</span></summary>
+              <summary>U-Bahn arrivals <span>100 m</span></summary>
               <div class="dir-copy">
-                Nearby bus connections are available around Hauptbahnhof and Holzkirchner Bahnhof. Guests should use the stop that best matches their route and continue toward the hotel on Senefelderstraße.
-                <div class="dir-meta"><span>Bus</span><span>Nearest stops</span><span>Source checked</span></div>
+                Guests arriving by U-Bahn can use München Hauptbahnhof, served by U1, U2, U4 and U5. From the station, continue on foot toward Bayerstraße and Senefelderstraße.
+                <div class="dir-meta"><span>U-Bahn</span><span>U1 / U2 / U4 / U5</span><span>100 m</span></div>
               </div>
             </details>
             <details class="dir-acc">
-              <summary>Nearest tram stops <span>400 m</span></summary>
+              <summary>S-Bahn arrivals <span>100 m</span></summary>
               <div class="dir-copy">
-                Tram services stop around München Hauptbahnhof. From the tram stops, continue toward the station area and follow the route to Senefelderstraße.
-                <div class="dir-meta"><span>Tram</span><span>Nearest stop</span><span>400 m</span></div>
+                Guests arriving by S-Bahn can use München Hauptbahnhof, served by S1 through S8, including airport connections on the S1 and S8. From the station, continue on foot toward Bayerstraße and Senefelderstraße.
+                <div class="dir-meta"><span>S-Bahn</span><span>S1-S8</span><span>100 m</span></div>
               </div>
             </details>
-            <details class="dir-acc">
-              <summary>Nearest U-Bahn stops <span>450 m</span></summary>
-              <div class="dir-copy">
-                Guests can use the U-Bahn at München Hauptbahnhof. From the station, take the most convenient exit toward Senefelderstraße and continue to the hotel entrance.
-                <div class="dir-meta"><span>U-Bahn</span><span>Station exit</span><span>450 m</span></div>
-              </div>
-            </details>
-            <details class="dir-acc">
-              <summary>Nearest S-Bahn stops <span>450 m</span></summary>
-              <div class="dir-copy">
-                S-Bahn services are available at München Hauptbahnhof, including airport connections. From the S-Bahn platforms, follow signs toward the main station exits and continue to Senefelderstraße.
-                <div class="dir-meta"><span>S-Bahn</span><span>Airport connection</span><span>450 m</span></div>
-              </div>
-            </details>
-            <details class="dir-acc">
+            <details class="dir-acc" id="cyclingAccordion">
               <summary>Cycling <span>Optional</span></summary>
               <div class="dir-copy">
-                Cycling directions can be included for hotels where bike travel is relevant. When enabled, the copy can mention bike parking, nearby bike rental or safe city cycling routes.
-                <div class="dir-meta"><span class="pending">Optional</span><span>Bike access</span><span>Local source check</span></div>
+                The hotel does not offer bicycle rental, but limited indoor bicycle storage may be arranged on request. Nearby bike rental is available at Radius Tours &amp; Bike Rental inside München Hauptbahnhof near platform 32, around a 2–4 minute walk from the hotel. For bike sharing, DB Call a Bike operates 24/7 across Munich with more than 270 stations.
+                <div class="dir-note">Optional cycling information can be expanded when reliable sources are available. The system can search for nearby bike rental providers, bike-sharing stations and cycling routes, then verify the findings before adding them to the website feed. Cycling content is added only when the information is source-backed.</div>
+                <div class="dir-meta"><span class="pending">Optional</span><span>No hotel bike rental</span><span>Storage on request</span><span>Radius Tours</span><span>DB Call a Bike</span></div>
               </div>
             </details>
             <details class="dir-acc">
-              <summary>Motorway links - Mittlerer Ring <span>3.5 km</span></summary>
+              <summary>Karlsplatz (Stachus) <span>~5 min</span></summary>
               <div class="dir-copy">
-                Guests arriving by car can follow the main road network toward the city center and continue to the hotel drop-off area or nearby parking.
-                <div class="dir-meta"><span>Car</span><span>Closest main road link</span><span>3.5 km</span></div>
-              </div>
-            </details>
-            <details class="dir-acc">
-              <summary>Karlsplatz (Stachus) <span>850 m</span></summary>
-              <div class="dir-copy">
-                Karlsplatz, also known as Stachus, is one of the closest recognizable city landmarks near the hotel. Guests can use it as a simple reference point when finding the hotel from the city center.
-                <div class="dir-meta"><span>Main nearby highlight</span><span>Landmark</span><span>850 m</span></div>
+                Karlsplatz, also known as Stachus, is a useful secondary landmark east of München Hauptbahnhof and a gateway toward the old town pedestrian zone. The primary orientation point for the hotel remains München Hauptbahnhof.
+                <div class="dir-meta"><span>Secondary landmark</span><span>Stachus</span><span>~5 min</span></div>
               </div>
             </details>
           </div>
@@ -1391,7 +1423,7 @@
       <div>
         <div class="sec-num">06 / COST MODEL</div>
         <h2 class="serif">Project cost model for 100 hotels</h2>
-        <p>A working model split into two parts: API usage for the full 100-hotel project, then Carmelon work hours for infrastructure, template setup and per-hotel review handling.</p>
+        <p>A working model split into API usage, Carmelon work hours for infrastructure and per-hotel handling, and a separate translation work estimate for the approved content.</p>
       </div>
       <div class="sec-tag">Working estimate · final after provider selection</div>
     </div>
@@ -1405,20 +1437,20 @@
           </div>
           <div class="clean-row">
             <div><b>Google Places discovery</b></div>
-            <div>270–470 searches</div>
-            <div class="money">$40–$100</div>
-            <div>Nearby / text search for airports, stations, transport hubs, the main landmark and optional local-place research.</div>
+            <div>300–600 search requests, with multiple candidate places returned per request</div>
+            <div class="money">$40–$120</div>
+            <div>Nearby / text search for airports, stations, transport hubs, the main landmark and optional local-place research. Separate category searches are used when quality control is needed.</div>
           </div>
           <div class="clean-row">
             <div><b>Google Place Details <span style="color:var(--muted);font-weight:600">(optional)</span></b></div>
-            <div>Optional · 0–270 detail calls</div>
-            <div class="money">$0–$20</div>
+            <div>Optional · 0–300 detail calls for selected places only</div>
+            <div class="money">$0–$30</div>
             <div>Optional enrichment when search results need stronger metadata, official links or richer source signals.</div>
           </div>
           <div class="clean-row">
             <div><b>Google Routes API</b></div>
             <div>3,300–6,700 Route Matrix elements + selective Compute Routes calls</div>
-            <div class="money">$30–$100</div>
+            <div class="money">$30–$120</div>
             <div>Route Matrix handles scalable distance and duration calculations. Compute Routes can be used selectively for richer route details such as polyline or step-level directions.</div>
           </div>
           <div class="clean-row">
@@ -1434,26 +1466,37 @@
             <div>Drafting, source-grounded rewriting, unsupported-claim checks, exception notes and QA passes.</div>
           </div>
         </div>
+        <p class="clean-note">Google Places estimates count search/detail requests, not every returned place. One search request can return several candidate places; the higher range assumes separate category searches, retries and stronger source selection. Google Routes is counted differently: Route Matrix usage is based on origin × destination elements, so 100 hotels × 33–67 approved access points equals roughly 3,300–6,700 route elements.</p>
       </div>
 
       <div class="clean-cost-card span">
         <h4>API cost summary</h4>
         <div class="cost-total">
-          <div class="box"><span>Google Maps APIs</span><b>$75–$220</b></div>
+          <div class="box"><span>Google Maps APIs</span><b>$75–$270</b></div>
           <div class="box"><span>AI/search + Claude</span><b>$140–$420</b></div>
-          <div class="box"><span>Total API reserve</span><b>$200–$650</b></div>
+          <div class="box"><span>Total API reserve</span><b>$225–$700</b></div>
         </div>
         <p class="clean-note">These are planning reserves, not a provider invoice. Final API cost depends on selected providers, token volume, retries, cache usage, Places field masks and live provider pricing.</p>
       </div>
 
       <div class="clean-cost-card span">
-        <h4>Work-hour summary</h4>
+        <h4>Location build work-hour summary</h4>
         <div class="cost-total">
           <div class="box"><span>Setup</span><b>≈50 h</b></div>
           <div class="box"><span>100-hotel handling</span><b>25–50 h</b></div>
-          <div class="box"><span>Total work</span><b>75–100 h</b></div>
+          <div class="box"><span>Location subtotal</span><b>75–100 h</b></div>
         </div>
-        <p class="clean-note">The handling range is based on 100 hotels × 15–30 minutes per hotel, which equals 1,500–3,000 minutes, or 25–50 hours. After the first run, future batches should mainly reuse the infrastructure and agreed template.</p>
+        <p class="clean-note">The handling range is based on 100 hotels × 15–30 minutes per hotel, which equals 1,500–3,000 minutes, or 25–50 hours. After the first run, future batches should mainly reuse the infrastructure and agreed template. Translation is estimated separately below.</p>
+      </div>
+
+      <div class="clean-cost-card span">
+        <h4>Translation work estimate</h4>
+        <div class="cost-total">
+          <div class="box"><span>Hotel scope</span><b>100</b></div>
+          <div class="box"><span>Languages</span><b>10</b></div>
+          <div class="box"><span>Translation work</span><b>≈85 h</b></div>
+        </div>
+        <p class="clean-note">Translation estimate covers translating the approved location-page content for 100 hotels into 10 languages after the source template and content structure are agreed.</p>
       </div>
     </div>
   </div>
@@ -1484,23 +1527,42 @@
   const pdfMenu = document.getElementById('pdfMenu');
   const pdfDensity = document.getElementById('pdfDensity');
   const pdfToggles = [...document.querySelectorAll('[data-pdf-toggle]')];
+  const pdfOpenAccordions = document.getElementById('pdfOpenAccordions');
   const pdfSections = [...document.querySelectorAll('[data-pdf-section]')];
   const pdfDensityClasses = ['pdf-compact', 'pdf-balanced', 'pdf-detailed'];
 
   function applyPdfSettings(){
     document.body.classList.remove(...pdfDensityClasses);
-    document.body.classList.add(`pdf-${pdfDensity?.value || 'compact'}`);
+    document.body.classList.add(`pdf-${pdfDensity?.value || 'balanced'}`);
     pdfSections.forEach((section) => {
       const toggle = pdfToggles.find((input) => input.dataset.pdfToggle === section.id);
       section.classList.toggle('pdf-hidden', Boolean(toggle && !toggle.checked));
     });
+    if(pdfOpenAccordions?.checked){
+      const activeDetails = pdfSections.flatMap((section) => {
+        if(section.classList.contains('pdf-hidden')) return [];
+        return [...section.querySelectorAll('details.dir-acc')];
+      });
+      activeDetails.forEach((detail) => {
+        if(!detail.dataset.restoreOpen) detail.dataset.restoreOpen = detail.open ? 'true' : 'false';
+        detail.open = true;
+      });
+    }
+  }
+
+  function restorePdfDetails(){
+    document.querySelectorAll('details[data-restore-open]').forEach((detail) => {
+      detail.open = detail.dataset.restoreOpen === 'true';
+      delete detail.dataset.restoreOpen;
+    });
   }
 
   function resetPdfSettings(){
-    if(pdfDensity) pdfDensity.value = 'compact';
+    if(pdfDensity) pdfDensity.value = 'balanced';
     pdfToggles.forEach((input) => {
       input.checked = ['flow', 'input', 'output', 'cost-model'].includes(input.dataset.pdfToggle);
     });
+    if(pdfOpenAccordions) pdfOpenAccordions.checked = true;
     applyPdfSettings();
   }
 
@@ -1511,11 +1573,13 @@
   });
   document.getElementById('resetPdfBtn')?.addEventListener('click', resetPdfSettings);
   window.addEventListener('beforeprint', applyPdfSettings);
-  window.addEventListener('afterprint', () => pdfSections.forEach((section) => section.classList.remove('pdf-hidden')));
+  window.addEventListener('afterprint', () => {
+    pdfSections.forEach((section) => section.classList.remove('pdf-hidden'));
+    restorePdfDetails();
+  });
   document.addEventListener('click', (event) => {
     if(pdfMenu?.open && !pdfMenu.contains(event.target)) pdfMenu.removeAttribute('open');
   });
 </script>
-
-
+<script src="./global-workflow-nav.js"></script>
 </body></html>

@@ -2,11 +2,13 @@
 // New experimental crawler. Do not replace faq-audit-from-web.ts with this file.
 
 import * as cheerio from "cheerio";
+import { SheetsService } from "../services/sheets.js";
 import { validateMetaAndFaqSchema, type QA } from "./subjobs/faq-seo-checks.js";
 
 export type SiteAuditDepth = "homepage" | "site";
 export type SiteAuditRenderMode = "static" | "rendered";
 export type SiteAuditCrawlScope = "site" | "faq-only";
+export type SiteAuditScanProfile = "sample" | "comprehensive";
 export type SiteAuditPageType =
   | "homepage"
   | "hotel"
@@ -26,6 +28,7 @@ export type SiteAiAuditConfig = {
   startUrl: string;
   maxPages?: number;
   maxDepth?: number;
+  scanProfile?: SiteAuditScanProfile;
   renderMode?: SiteAuditRenderMode;
   crawlScope?: SiteAuditCrawlScope;
   includeSitemap?: boolean;
@@ -39,6 +42,8 @@ export type SiteAiAuditConfig = {
   aiModel?: string;
   sameHostOnly?: boolean;
   respectRobots?: boolean;
+  writeGoogleSheet?: boolean;
+  reportTitle?: string;
   acceptLanguage?: string;
   userAgent?: string;
 };
@@ -119,6 +124,10 @@ export type SiteAuditPage = {
     headingCount: number;
     hasCanonical: boolean;
     canonicalMatchesUrl: boolean;
+    canonicalTarget: "self" | "other" | "missing";
+    noindex: boolean;
+    nofollow: boolean;
+    indexableByMeta: boolean;
     hasOpenGraphTitle: boolean;
     hasOpenGraphDescription: boolean;
     hasTwitterCard: boolean;
@@ -275,6 +284,10 @@ export type SiteAiAuditResult = {
     suggestedClientSections: string[];
     error?: string;
   } | null;
+  googleSheet?: {
+    id: string;
+    url: string;
+  };
   recommendations: string[];
   finishedAt: string;
 };
@@ -310,6 +323,8 @@ type ActionIssueGroup = {
 };
 
 const DEFAULT_MAX_PAGES = 25;
+const SAMPLE_MAX_PAGES = 250;
+const COMPREHENSIVE_MAX_PAGES = 500;
 const DEFAULT_MAX_DEPTH = 2;
 const DEFAULT_ACCEPT_LANGUAGE = "en-GB,en;q=0.9";
 const DEFAULT_USER_AGENT =
@@ -383,7 +398,7 @@ export class SiteAiAuditCrawlerJob {
       const actionItems = this.buildActionItems(issues, pages);
       this.logProgress(`scoring: score=${score.total}/100 | issues=${issues.length} | actions=${actionItems.length}`);
 
-      return {
+      const result: SiteAiAuditResult = {
         startedAt,
         startUrl: input.startUrl,
         normalizedStartUrl: start,
@@ -391,6 +406,7 @@ export class SiteAiAuditCrawlerJob {
         config: {
           maxPages: config.maxPages,
           maxDepth: config.maxDepth,
+          scanProfile: config.scanProfile,
           renderMode: config.renderMode,
           crawlScope: config.crawlScope,
           includeSitemap: config.includeSitemap,
@@ -404,6 +420,8 @@ export class SiteAiAuditCrawlerJob {
           aiModel: config.aiModel,
           sameHostOnly: config.sameHostOnly,
           respectRobots: config.respectRobots,
+          writeGoogleSheet: config.writeGoogleSheet,
+          reportTitle: config.reportTitle,
           acceptLanguage: config.acceptLanguage,
           userAgent: config.userAgent,
         },
@@ -419,6 +437,14 @@ export class SiteAiAuditCrawlerJob {
         recommendations: this.buildRecommendations(score, issues, pages),
         finishedAt: new Date().toISOString(),
       };
+
+      if (config.writeGoogleSheet) {
+        this.logProgress("google-sheet: creating audit workbook");
+        result.googleSheet = await this.writeGoogleSheetReport(result, config);
+        this.logProgress(`google-sheet: ${result.googleSheet.url}`);
+      }
+
+      return result;
     } finally {
       await this.closeRenderContext();
     }
@@ -429,10 +455,17 @@ export class SiteAiAuditCrawlerJob {
       throw new Error("Missing startUrl");
     }
 
+    const scanProfile: SiteAuditScanProfile =
+      input.scanProfile === "comprehensive" || Number(input.maxPages ?? DEFAULT_MAX_PAGES) > SAMPLE_MAX_PAGES
+        ? "comprehensive"
+        : "sample";
+    const maxPagesLimit = scanProfile === "comprehensive" ? COMPREHENSIVE_MAX_PAGES : SAMPLE_MAX_PAGES;
+
     return {
       startUrl: input.startUrl,
-      maxPages: Math.max(1, Math.min(250, Number(input.maxPages ?? DEFAULT_MAX_PAGES))),
+      maxPages: Math.max(1, Math.min(maxPagesLimit, Number(input.maxPages ?? DEFAULT_MAX_PAGES))),
       maxDepth: Math.max(0, Math.min(8, Number(input.maxDepth ?? DEFAULT_MAX_DEPTH))),
+      scanProfile,
       renderMode: input.renderMode ?? "static",
       crawlScope: input.crawlScope ?? "site",
       includeSitemap: input.includeSitemap ?? true,
@@ -446,6 +479,8 @@ export class SiteAiAuditCrawlerJob {
       aiModel: input.aiModel || "gpt-5.5",
       sameHostOnly: input.sameHostOnly ?? true,
       respectRobots: input.respectRobots ?? false,
+      writeGoogleSheet: Boolean(input.writeGoogleSheet),
+      reportTitle: input.reportTitle || "",
       acceptLanguage: input.acceptLanguage || DEFAULT_ACCEPT_LANGUAGE,
       userAgent: input.userAgent || DEFAULT_USER_AGENT,
     };
@@ -467,7 +502,10 @@ export class SiteAiAuditCrawlerJob {
     const startHost = new URL(startUrl).host;
     const visitLimit =
       config.crawlScope === "faq-only"
-        ? Math.min(250, Math.max(config.maxPages * 5, config.maxPages))
+        ? Math.min(
+            config.scanProfile === "comprehensive" ? 2500 : 250,
+            Math.max(config.maxPages * 5, config.maxPages)
+          )
         : config.maxPages;
     let linkCandidateUrls = 0;
     let linkSeedUrls = 0;
@@ -2122,6 +2160,308 @@ export class SiteAiAuditCrawlerJob {
       .sort((a, b) => b.urls.length - a.urls.length || a.value.localeCompare(b.value));
   }
 
+  private async writeGoogleSheetReport(
+    result: SiteAiAuditResult,
+    config: Required<SiteAiAuditConfig>
+  ): Promise<{ id: string; url: string }> {
+    const sheets = new SheetsService("info@carmelon.co.il");
+    const title =
+      config.reportTitle ||
+      `Site Audit - ${result.host || "site"} - ${new Date().toISOString().slice(0, 10)}`;
+    const spreadsheetId = await sheets.createSpreadsheet(title);
+    const firstTab = await sheets.getFirstSheetTitle(spreadsheetId);
+    const tabs = ["Summary", "Pages", "Meta", "Schema", "Actions", "Issues", "Links"];
+
+    await sheets.renameSheet(spreadsheetId, firstTab, tabs[0]);
+    for (const tab of tabs.slice(1)) {
+      await sheets.ensureTab(spreadsheetId, tab);
+    }
+
+    await sheets.writeValues(spreadsheetId, this.a1("Summary", "A1"), this.buildSheetSummaryRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Pages", "A1"), this.buildSheetPageRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Meta", "A1"), this.buildSheetMetaRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Schema", "A1"), this.buildSheetSchemaRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Actions", "A1"), this.buildSheetActionRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Issues", "A1"), this.buildSheetIssueRows(result));
+    await sheets.writeValues(spreadsheetId, this.a1("Links", "A1"), this.buildSheetLinkRows(result));
+
+    await Promise.all(tabs.map((tab) => sheets.formatSheetLikeFAQ(spreadsheetId, tab).catch(() => {})));
+
+    return {
+      id: spreadsheetId,
+      url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+    };
+  }
+
+  private buildSheetSummaryRows(result: SiteAiAuditResult): string[][] {
+    const pages = result.pages || [];
+    const readablePages = pages.filter((page) => !this.isExtractionUnreliable(page));
+    const pageCount = String(pages.length);
+    const indexableCount = pages.filter((page) => this.isIndexableByPageSignals(page)).length;
+    const noindexCount = pages.filter((page) => page.metaDiagnostics.noindex).length;
+    const missingCanonicalCount = readablePages.filter((page) => !page.metaDiagnostics.hasCanonical).length;
+    const canonicalOtherCount = readablePages.filter((page) => page.metaDiagnostics.canonicalTarget === "other").length;
+    const jsonLdCount = readablePages.filter((page) => page.jsonLdTypes.length && !page.jsonLdTypes.includes("Invalid JSON-LD")).length;
+
+    return [
+      ["Site Audit Summary", ""],
+      ["Site", result.normalizedStartUrl || result.startUrl],
+      ["Host", result.host],
+      ["Finished at", result.finishedAt],
+      ["Scan profile", result.config.scanProfile],
+      ["Pages checked", pageCount],
+      ["Page budget", String(result.config.maxPages)],
+      ["Candidate URLs", String(result.pageSelectionSummary?.candidateUrls || 0)],
+      ["Sitemap URLs loaded", String(result.sitemap?.urls?.length || 0)],
+      ["Render mode", result.config.renderMode],
+      ["Google index note", "This audit checks indexability signals only. Real Google indexing requires Search Console or live search verification."],
+      ["", ""],
+      ["Score", String(result.score.total)],
+      ["Indexable by page signals", `${indexableCount}/${pageCount}`],
+      ["Noindex / none meta", String(noindexCount)],
+      ["Missing canonical", String(missingCanonicalCount)],
+      ["Canonical points elsewhere", String(canonicalOtherCount)],
+      ["Pages with valid JSON-LD", String(jsonLdCount)],
+      ["Issues", String(result.issues.length)],
+      ["Action items", String(result.actionItems.length)],
+    ];
+  }
+
+  private buildSheetPageRows(result: SiteAiAuditResult): string[][] {
+    return [
+      [
+        "URL",
+        "Final URL",
+        "Status",
+        "Page type",
+        "Indexability signal",
+        "Robots meta",
+        "Canonical",
+        "Canonical target",
+        "Title",
+        "Meta description",
+        "H1",
+        "Word count",
+        "JSON-LD types",
+        "Visible FAQ count",
+        "Schema FAQ count",
+        "Internal links",
+        "External links",
+        "Response ms",
+        "HTML KB",
+        "Main findings",
+      ],
+      ...result.pages.map((page) => [
+        page.url,
+        page.technicalDiagnostics.finalUrl || page.url,
+        String(page.status),
+        page.pageType,
+        this.indexabilityStatus(page),
+        page.robotsMeta,
+        page.canonical,
+        page.metaDiagnostics.canonicalTarget,
+        page.title,
+        page.metaDescription,
+        page.h1,
+        String(page.wordCount),
+        this.joinSheetValues(page.jsonLdTypes),
+        String(page.domFaqCount),
+        String(page.schemaFaqCount),
+        String(page.linkDiagnostics.internalCount),
+        String(page.linkDiagnostics.externalCount),
+        String(page.technicalDiagnostics.responseMs),
+        String(Math.round(page.technicalDiagnostics.htmlBytes / 1024)),
+        this.joinSheetValues(page.issues.map((issue) => issue.title)),
+      ]),
+    ];
+  }
+
+  private buildSheetMetaRows(result: SiteAiAuditResult): string[][] {
+    return [
+      [
+        "URL",
+        "Indexability signal",
+        "Title",
+        "Title length",
+        "Meta description",
+        "Description length",
+        "H1",
+        "H1 count",
+        "H2 count",
+        "Heading count",
+        "Canonical",
+        "Canonical target",
+        "Open Graph title",
+        "Open Graph description",
+        "Twitter card",
+        "Viewport meta",
+      ],
+      ...result.pages.map((page) => [
+        page.url,
+        this.indexabilityStatus(page),
+        page.title,
+        String(page.metaDiagnostics.titleLength),
+        page.metaDescription,
+        String(page.metaDiagnostics.descriptionLength),
+        page.h1,
+        String(page.metaDiagnostics.h1Count),
+        String(page.metaDiagnostics.h2Count),
+        String(page.metaDiagnostics.headingCount),
+        page.canonical,
+        page.metaDiagnostics.canonicalTarget,
+        page.metaDiagnostics.hasOpenGraphTitle ? "Yes" : "No",
+        page.metaDiagnostics.hasOpenGraphDescription ? "Yes" : "No",
+        page.metaDiagnostics.hasTwitterCard ? "Yes" : "No",
+        page.technicalDiagnostics.viewportMeta ? "Yes" : "No",
+      ]),
+    ];
+  }
+
+  private buildSheetSchemaRows(result: SiteAiAuditResult): string[][] {
+    return [
+      [
+        "URL",
+        "Page type",
+        "Schema types",
+        "Schema properties",
+        "Visible FAQ count",
+        "Schema FAQ count",
+        "Visible questions missing from schema",
+        "Schema questions missing from page",
+        "Schema draft candidate",
+        "Suggested schema action",
+      ],
+      ...result.pages.map((page) => {
+        const visibleGap = page.domOnlyQuestions.length;
+        const schemaGap = page.schemaOnlyQuestions.length;
+        const hasFaqGap = visibleGap || schemaGap || (page.domFaqCount > 0 && page.schemaFaqCount === 0);
+        const schemaDraftCandidate =
+          hasFaqGap || (page.jsonLdTypes.length === 0 && this.shouldFlagMissingStructuredData(page));
+
+        return [
+          page.url,
+          page.pageType,
+          this.joinSheetValues(page.jsonLdTypes),
+          this.joinSheetValues(page.jsonLdProperties),
+          String(page.domFaqCount),
+          String(page.schemaFaqCount),
+          this.joinSheetValues(page.domOnlyQuestions),
+          this.joinSheetValues(page.schemaOnlyQuestions),
+          schemaDraftCandidate ? "Yes" : "No",
+          hasFaqGap
+            ? "Create or sync FAQPage JSON-LD with visible page content."
+            : schemaDraftCandidate
+              ? "Review whether this important page needs WebPage, Hotel, Organization, Service or Offer schema."
+              : "No schema action from this sample.",
+        ];
+      }),
+    ];
+  }
+
+  private buildSheetActionRows(result: SiteAiAuditResult): string[][] {
+    return [
+      [
+        "ID",
+        "Priority",
+        "Workstream",
+        "Owner",
+        "Effort",
+        "Impact",
+        "Client visible",
+        "Affected count",
+        "Page type",
+        "Finding",
+        "Why it matters",
+        "Recommended fix",
+        "Affected URLs",
+        "Evidence",
+        "Source issues",
+      ],
+      ...result.actionItems.map((item) => [
+        item.id,
+        item.priority,
+        item.workstream,
+        item.owner,
+        item.effort,
+        item.impact,
+        item.clientVisible ? "Yes" : "No",
+        String(item.affectedCount),
+        item.pageType || "",
+        item.finding,
+        item.whyItMatters,
+        item.recommendedFix,
+        this.joinSheetValues(item.affectedUrls),
+        item.evidence,
+        this.joinSheetValues(item.sourceIssues),
+      ]),
+    ];
+  }
+
+  private buildSheetIssueRows(result: SiteAiAuditResult): string[][] {
+    return [
+      ["Severity", "Category", "URL", "Title", "Detail", "Recommendation"],
+      ...result.issues.map((issue) => [
+        issue.severity,
+        issue.category,
+        issue.pageUrl || "",
+        issue.title,
+        issue.detail,
+        issue.recommendation,
+      ]),
+    ];
+  }
+
+  private buildSheetLinkRows(result: SiteAiAuditResult): string[][] {
+    return [
+      [
+        "URL",
+        "Internal links",
+        "External links",
+        "External domains",
+        "Top external domains",
+        "Mailto links",
+        "Tel links",
+        "Nofollow external links",
+      ],
+      ...result.pages.map((page) => [
+        page.url,
+        String(page.linkDiagnostics.internalCount),
+        String(page.linkDiagnostics.externalCount),
+        String(page.linkDiagnostics.externalDomains.length),
+        this.joinSheetValues(page.linkDiagnostics.externalDomains),
+        String(page.linkDiagnostics.mailtoCount),
+        String(page.linkDiagnostics.telCount),
+        String(page.linkDiagnostics.nofollowExternalCount),
+      ]),
+    ];
+  }
+
+  private indexabilityStatus(page: SiteAuditPage): string {
+    if (page.status <= 0) return "Unknown: fetch failed";
+    if (page.status >= 400) return `Not indexable: HTTP ${page.status}`;
+    if (page.metaDiagnostics.noindex) return "Not indexable: meta robots noindex/none";
+    if (page.metaDiagnostics.canonicalTarget === "other") return "Canonicalized to another URL";
+    return "Eligible by page signals (not confirmed indexed)";
+  }
+
+  private isIndexableByPageSignals(page: SiteAuditPage): boolean {
+    return page.status > 0
+      && page.status < 400
+      && !page.metaDiagnostics.noindex
+      && page.metaDiagnostics.canonicalTarget !== "other";
+  }
+
+  private joinSheetValues(values: unknown[]): string {
+    return values
+      .map((value) => String(value ?? "").replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .join(" | ");
+  }
+
+  private a1(sheetTitle: string, cell: string): string {
+    return `'${sheetTitle.replace(/'/g, "''")}'!${cell}`;
+  }
+
   private dedupeActionItems(items: SiteAuditActionItem[]): SiteAuditActionItem[] {
     const seen = new Set<string>();
     return items.filter((item) => {
@@ -2520,6 +2860,10 @@ export class SiteAiAuditCrawlerJob {
     canonical: string
   ): SiteAuditPage["metaDiagnostics"] {
     const h2Count = $("h2").length;
+    const robotsMeta = this.cleanText($('head meta[name="robots"]').attr("content") || "");
+    const noindex = /noindex|none/i.test(robotsMeta);
+    const nofollow = /nofollow|none/i.test(robotsMeta);
+    const canonicalMatchesUrl = Boolean(canonical) && this.normalizeUrl(canonical) === this.normalizeUrl(pageUrl);
     return {
       titleLength: title.length,
       descriptionLength: metaDescription.length,
@@ -2527,7 +2871,11 @@ export class SiteAiAuditCrawlerJob {
       h2Count,
       headingCount: $("h1, h2, h3, h4, h5, h6").length,
       hasCanonical: Boolean(canonical),
-      canonicalMatchesUrl: Boolean(canonical) && this.normalizeUrl(canonical) === this.normalizeUrl(pageUrl),
+      canonicalMatchesUrl,
+      canonicalTarget: !canonical ? "missing" : canonicalMatchesUrl ? "self" : "other",
+      noindex,
+      nofollow,
+      indexableByMeta: !noindex,
       hasOpenGraphTitle: Boolean(this.cleanText($('head meta[property="og:title"]').attr("content") || "")),
       hasOpenGraphDescription: Boolean(this.cleanText($('head meta[property="og:description"]').attr("content") || "")),
       hasTwitterCard: Boolean(this.cleanText($('head meta[name="twitter:card"]').attr("content") || "")),
@@ -2945,6 +3293,10 @@ export class SiteAiAuditCrawlerJob {
         headingCount: 0,
         hasCanonical: false,
         canonicalMatchesUrl: false,
+        canonicalTarget: "missing",
+        noindex: false,
+        nofollow: false,
+        indexableByMeta: false,
         hasOpenGraphTitle: false,
         hasOpenGraphDescription: false,
         hasTwitterCard: false,
@@ -3247,6 +3599,7 @@ function readCliConfig(argv: string[]): SiteAiAuditConfig | null {
     startUrl: url,
     maxPages: Number(get("--max-pages") || DEFAULT_MAX_PAGES),
     maxDepth: Number(get("--max-depth") || DEFAULT_MAX_DEPTH),
+    scanProfile: has("--comprehensive") ? "comprehensive" : "sample",
     renderMode: has("--render") ? "rendered" : "static",
     crawlScope: has("--faq-only") ? "faq-only" : "site",
     includeSitemap: !has("--no-sitemap"),
@@ -3258,6 +3611,8 @@ function readCliConfig(argv: string[]): SiteAiAuditConfig | null {
     includeLinkAudit: !has("--no-links"),
     sameHostOnly: !has("--allow-external"),
     respectRobots: has("--respect-robots"),
+    writeGoogleSheet: has("--write-sheet"),
+    reportTitle: get("--report-title") || "",
   };
 }
 

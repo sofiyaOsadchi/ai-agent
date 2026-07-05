@@ -1677,7 +1677,7 @@ export class SiteFaqAuditJob {
         issues.push(this.textIssue(meta, item, "replacement-character", "Replacement character was detected.", "Check encoding before publishing."));
       }
 
-      if (/\b(TODO|TBD|lorem ipsum)\b/i.test(question) || /\b(TODO|TBD|lorem ipsum)\b/i.test(answer)) {
+      if (this.hasPlaceholderText(question) || this.hasPlaceholderText(answer)) {
         issues.push(this.textIssue(meta, item, "placeholder-text", "Placeholder text was detected.", "Replace placeholder text with final customer-facing content."));
       }
     }
@@ -1936,8 +1936,19 @@ export class SiteFaqAuditJob {
     return /&(?:#[0-9]+|#x[0-9a-f]+|[a-z]+);/i.test(value);
   }
 
+  private hasPlaceholderText(value: string): boolean {
+    const text = this.cleanText(value);
+    return /\bTODO\b/.test(text)
+      || /\bTBD\b/i.test(text)
+      || /\blorem ipsum\b/i.test(text)
+      || /\bplaceholder\b/i.test(text)
+      || /\bto be (?:added|confirmed|determined)\b/i.test(text);
+  }
+
   private hasUnbalancedDoubleQuotes(value: string): boolean {
-    const normalized = value.replace(/[“”„‟]/g, "\"");
+    const normalized = value
+      .replace(/[“”„‟]/g, "\"")
+      .replace(/(?<=[\u0590-\u05ff])["״](?=[\u0590-\u05ff])/g, "");
     const count = (normalized.match(/"/g) || []).length;
     return count % 2 === 1;
   }

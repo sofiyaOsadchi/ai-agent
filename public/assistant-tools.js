@@ -12,6 +12,9 @@
     russian: "ru",
     chinese: "zh",
     arabic: "ar",
+    greek: "el",
+    el: "el",
+    gr: "el",
     אנגלית: "en",
     עברית: "he",
     גרמנית: "de",
@@ -22,7 +25,8 @@
     פולנית: "pl",
     רוסית: "ru",
     סינית: "zh",
-    ערבית: "ar"
+    ערבית: "ar",
+    יוונית: "el"
   };
 
   function compact(value) {
@@ -135,7 +139,7 @@
       .replace(/(?:בלי|לא)\s+להשתמש\s+(?:במילים|בביטויים|במונחים)?.*$/i, "")
       .replace(/(?:מילים|ביטויים)\s+(?:אסורות|שלא להשתמש בהן|להימנע מהן).*$/i, "")
       .replace(/\b(?:do\s+not\s+use|don't\s+use|avoid\s+these)\b.*$/i, "")
-      .replace(/\s+\b(?:in|to)\s+(?:english|hebrew|german|french|spanish|italian|dutch|polish|russian|chinese|arabic)\b.*$/i, "")
+      .replace(/\s+\b(?:in|to)\s+(?:english|hebrew|german|french|spanish|italian|dutch|polish|russian|chinese|arabic|greek)\b.*$/i, "")
       .split(/\s+(?:for tourists|for audience|for guests|for customers|for visitors|לקהל|קהל|עבור קהל)(?:\s|$)/i)[0]
       .replace(/^(hotel|property|business|product|service|מלון|עסק|מוצר|שירות)\s+/i, "")
       .replace(/[.!?]+$/g, "")
@@ -143,6 +147,57 @@
 
     if (/^(and\s+)?(?:abroad|israel|international|tourists?|guests?|source)$/i.test(cleaned)) return "";
     return cleaned;
+  }
+
+  function titleCaseUrlSubject(value) {
+    const acronyms = {
+      ai: "AI",
+      b2b: "B2B",
+      b2c: "B2C",
+      faq: "FAQ",
+      gb: "GB",
+      js: "JS",
+      nyx: "NYX",
+      seo: "SEO",
+      uk: "UK",
+      us: "US"
+    };
+    return String(value || "")
+      .split(/\s+/)
+      .map((word) => {
+        const lower = word.toLowerCase();
+        if (acronyms[lower]) return acronyms[lower];
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      })
+      .join(" ")
+      .trim();
+  }
+
+  function deriveSubjectFromWebsiteUrl(url) {
+    try {
+      const parsed = new URL(url);
+      const ignoredSegments = new Set([
+        "about", "answers", "en", "faq", "faqs", "fr", "he", "home", "hotel", "hotels",
+        "it", "nl", "pl", "questions", "ru", "schema", "search", "site", "sitemap", "www"
+      ]);
+      const segments = parsed.pathname
+        .split("/")
+        .map((segment) => decodeURIComponent(segment || "").replace(/\.(?:html?|php|aspx?)$/i, ""))
+        .map((segment) => segment.replace(/[-_+]+/g, " ").replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const selected = [...segments].reverse().find((segment) => {
+        const normalized = segment.toLowerCase();
+        return !ignoredSegments.has(normalized) && normalized.length > 1;
+      });
+      const raw = selected || parsed.hostname.replace(/^www\./i, "").split(".")[0].replace(/[-_+]+/g, " ");
+      const cleaned = raw
+        .replace(/\b(?:faq|faqs|questions|answers|schema)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned ? titleCaseUrlSubject(cleaned) : "";
+    } catch {
+      return "";
+    }
   }
 
   function splitForbiddenPhrases(value) {
@@ -196,7 +251,11 @@
       }
     }
 
-    return [];
+    const urlSubject = extractUrls(text)
+      .filter((url) => detectSourceType(url) === "website")
+      .map(deriveSubjectFromWebsiteUrl)
+      .find(Boolean);
+    return urlSubject ? [urlSubject] : [];
   }
 
   function detectWorkflowType(message) {
@@ -298,6 +357,16 @@
         renderMode: "rendered",
         crawlScope: "site",
         includeAiAnalysis: true
+      },
+      "comprehensive-dry": {
+        auditProfile: "comprehensive-dry",
+        maxPages: 500,
+        maxDepth: 3,
+        scanProfile: "comprehensive",
+        renderMode: "static",
+        crawlScope: "site",
+        includeAiAnalysis: false,
+        writeGoogleSheet: true
       }
     };
     return presets[id] || presets["general-fast"];
@@ -638,7 +707,8 @@
         { label: "German", value: "lang:de" },
         { label: "French", value: "lang:fr" },
         { label: "Spanish", value: "lang:es" },
-        { label: "Hebrew", value: "lang:he" }
+        { label: "Hebrew", value: "lang:he" },
+        { label: "Greek", value: "lang:el" }
       ],
       confirmationRules: {
         beforeRun: "Confirm because translation writes tabs back to Google Sheets and spends AI calls.",
@@ -858,31 +928,6 @@
       requiredInputs: [
         { key: "siteUrl", label: "Website URL", question: "Which website should I audit?", type: "url" },
         {
-          key: "auditProfile",
-          label: "Audit type",
-          question: "What kind of site audit should I run?",
-          type: "select",
-          quickReplies: [
-            { label: "Fast general audit", value: "auditprofile:general-fast" },
-            { label: "Full + AI summary", value: "auditprofile:full-ai" },
-            { label: "FAQ/schema focus", value: "auditprofile:faq-schema" },
-            { label: "Rendered JS deep audit", value: "auditprofile:rendered-deep" }
-          ]
-        },
-        {
-          key: "auditFocus",
-          label: "Checks",
-          question: "What should this audit focus on?",
-          type: "select",
-          quickReplies: [
-            { label: "Full AI/search audit", value: "toolfield:auditFocus:full" },
-            { label: "FAQ + schema", value: "toolfield:auditFocus:faq-schema" },
-            { label: "Technical SEO + metadata", value: "toolfield:auditFocus:technical-meta" },
-            { label: "AI answerability", value: "toolfield:auditFocus:answerability" },
-            { label: "Links + trust signals", value: "toolfield:auditFocus:links-trust" }
-          ]
-        },
-        {
           key: "maxPages",
           label: "Page budget",
           question: "How many pages should the crawler inspect deeply?",
@@ -891,21 +936,56 @@
             { label: "Quick · 15 pages", value: "toolfield:maxPages:15" },
             { label: "Standard · 25 pages", value: "toolfield:maxPages:25" },
             { label: "Deep · 50 pages", value: "toolfield:maxPages:50" },
-            { label: "Very deep · 100 pages", value: "toolfield:maxPages:100" }
+            { label: "Very deep · 100 pages", value: "toolfield:maxPages:100" },
+            { label: "Dry crawl · 500 pages", value: "toolfield:maxPages:500" }
+          ]
+        },
+        {
+          key: "renderMode",
+          label: "Reading mode",
+          question: "Should the crawler read static HTML or JS-rendered pages?",
+          type: "select",
+          quickReplies: [
+            { label: "Static HTML", value: "toolfield:renderMode:static" },
+            { label: "JS rendered", value: "toolfield:renderMode:rendered" }
+          ]
+        },
+        {
+          key: "includeAiAnalysis",
+          label: "AI summary",
+          question: "Should the audit include AI analysis and summary?",
+          type: "checkbox",
+          quickReplies: [
+            { label: "With AI summary", value: "toolfield:includeAiAnalysis:true" },
+            { label: "No AI summary", value: "toolfield:includeAiAnalysis:false" }
+          ]
+        },
+        {
+          key: "auditFocus",
+          label: "Checks",
+          question: "Which checks should this audit include?",
+          type: "select",
+          quickReplies: [
+            { label: "Full AI/search audit", value: "toolfield:auditFocus:full" },
+            { label: "FAQ + schema", value: "toolfield:auditFocus:faq-schema" },
+            { label: "Technical SEO + metadata", value: "toolfield:auditFocus:technical-meta" },
+            { label: "AI answerability", value: "toolfield:auditFocus:answerability" },
+            { label: "Links + trust signals", value: "toolfield:auditFocus:links-trust" }
           ]
         }
       ],
       optionalInputs: [
         { key: "maxDepth", label: "Crawl depth", type: "number" },
-        { key: "renderMode", label: "Reading mode", type: "select" },
+        { key: "auditProfile", label: "Audit profile", type: "select" },
         { key: "crawlScope", label: "Scope", type: "select" },
-        { key: "includeAiAnalysis", label: "AI analysis", type: "checkbox" },
+        { key: "writeGoogleSheet", label: "Google Sheet", type: "checkbox", defaultValue: false },
         { key: "acceptLanguage", label: "Site language", type: "select", defaultValue: "en-GB,en;q=0.9" },
         { key: "respectRobots", label: "Respect robots.txt", type: "checkbox", defaultValue: false }
       ],
       quickReplies: [
         { label: "Fast general audit", value: "auditprofile:general-fast" },
         { label: "FAQ/schema focus", value: "auditprofile:faq-schema" },
+        { label: "500-page dry crawl", value: "auditprofile:comprehensive-dry" },
         { label: "Rendered JS deep audit", value: "auditprofile:rendered-deep" },
         { label: "No AI analysis", value: "audit:no-ai" }
       ],
@@ -914,34 +994,38 @@
       },
       infer(message) {
         const text = String(message || "");
-        const profile = /faq|schema|סכמה|שאלות/i.test(text)
-          ? "faq-schema"
-          : (/render|playwright|javascript|js|דפדפן|מרונדר/i.test(text)
-            ? "rendered-deep"
-            : (/ai summary|ai analysis|ניתוח ai|סיכום ai/i.test(text)
-              ? "full-ai"
-              : (/fast|quick|מהיר|זריז/i.test(text) ? "general-fast" : "")));
-        const defaults = profile ? siteAuditProfileDefaults(profile) : {};
         const explicitPages = Number(text.match(/\b(\d{1,3})\s+(?:pages?|עמודים?)\b/i)?.[1]) || "";
-        const focus = /faq|schema|סכמה|שאלות/i.test(text)
-          ? "faq-schema"
-          : (/meta|metadata|technical|seo|מטא|טכני/i.test(text)
-            ? "technical-meta"
-            : (/links?|trust|domains?|קישורים|אמון/i.test(text)
-              ? "links-trust"
-              : (/answerability|answers?|ai readiness|תשובות|מענה/i.test(text) ? "answerability" : "")));
-        return {
+        const requestedAuditChecks = [
+          [/sitemap|site map|מפת אתר/i, "includeSitemap"],
+          [/llms\.?txt|llms|ai file/i, "includeLlmsTxt"],
+          [/faq|שאלות/i, "includeFaqAudit"],
+          [/schema|structured|json-ld|סכמה|סכימה|סכמות/i, "includeStructuredData"],
+          [/answerability|answers?|geo|ai readiness|תשובות|מענה/i, "includeAnswerability"],
+          [/meta|metadata|title|description|seo|מטא|טייטל/i, "includeMetaAudit"],
+          [/links?|trust|domains?|קישורים|אמון/i, "includeLinkAudit"]
+        ].filter(([pattern]) => pattern.test(text)).map(([, id]) => id);
+        const inferred = {
           siteUrl: extractUrl(message),
-          ...defaults,
-          suggestedMaxPages: defaults.maxPages || "",
           maxPages: explicitPages,
-          auditFocus: focus || (profile ? "full" : ""),
-          includeAiAnalysis: /without ai|no ai|בלי ai|ללא ai/i.test(text) ? false : defaults.includeAiAnalysis
+          requestedAuditChecks,
+          auditFocus: requestedAuditChecks.length ? "custom" : "",
+          writeGoogleSheet: /google sheet|sheet|שיט|גוגל שיט|לשיט|לגוגל/i.test(text) ? true : undefined
         };
+        if (/render|playwright|javascript|js|דפדפן|מרונדר/i.test(text)) inferred.renderMode = "rendered";
+        if (/static|html only|סטטי|סטטית/i.test(text)) inferred.renderMode = "static";
+        if (/without ai|no ai|בלי ai|ללא ai/i.test(text)) inferred.includeAiAnalysis = false;
+        if (/ai summary|ai analysis|with ai|ניתוח ai|סיכום ai|עם ai/i.test(text)) inferred.includeAiAnalysis = true;
+        return inferred;
       },
       payloadBuilder(values) {
-        const profileDefaults = siteAuditProfileDefaults(values.auditProfile);
-        const merged = { ...profileDefaults, ...values };
+        const derivedProfile = values.auditProfile ||
+          (values.renderMode === "rendered"
+            ? "rendered-deep"
+            : (Number(values.maxPages) > 250
+              ? "comprehensive-dry"
+              : (values.includeAiAnalysis === true ? "full-ai" : "general-fast")));
+        const profileDefaults = siteAuditProfileDefaults(derivedProfile);
+        const merged = { ...profileDefaults, ...values, auditProfile: derivedProfile };
         const focus = String(merged.auditFocus || "full");
         const focusDefaults = {
           full: { includeSitemap: true, includeLlmsTxt: true, includeFaqAudit: true, includeStructuredData: true, includeAnswerability: true, includeMetaAudit: true, includeLinkAudit: true },
@@ -952,12 +1036,14 @@
         }[focus] || {};
         const customFocus = focus === "custom";
         const checkValue = (key) => merged[key] ?? focusDefaults[key] ?? !customFocus;
+        const maxPages = Number(merged.maxPages) || profileDefaults.maxPages;
         return {
           mode: "site-ai-audit",
           startUrl: merged.siteUrl,
-          auditProfile: merged.auditProfile || "general-fast",
-          maxPages: Number(merged.maxPages) || profileDefaults.maxPages,
+          auditProfile: merged.auditProfile || derivedProfile,
+          maxPages,
           maxDepth: Number(merged.maxDepth) || profileDefaults.maxDepth,
+          scanProfile: maxPages > 250 ? "comprehensive" : (merged.scanProfile || profileDefaults.scanProfile || "sample"),
           renderMode: merged.renderMode || profileDefaults.renderMode,
           crawlScope: merged.crawlScope || profileDefaults.crawlScope,
           auditFocus: focus,
@@ -969,6 +1055,7 @@
           includeMetaAudit: checkValue("includeMetaAudit"),
           includeLinkAudit: checkValue("includeLinkAudit"),
           includeAiAnalysis: merged.includeAiAnalysis === undefined ? profileDefaults.includeAiAnalysis : merged.includeAiAnalysis !== false,
+          writeGoogleSheet: merged.writeGoogleSheet === undefined ? Boolean(profileDefaults.writeGoogleSheet) : merged.writeGoogleSheet === true,
           sameHostOnly: true,
           respectRobots: merged.respectRobots === true,
           acceptLanguage: merged.acceptLanguage || "en-GB,en;q=0.9"
@@ -1209,7 +1296,7 @@
       risk: "writes-to-sheet",
       canRunDirectly: false,
       description: "Run cross-file Sheet operations such as lookup copy, folder-to-master injection, cross-checks, coverage reports, column copy and work-file builds.",
-      intentHints: ["sheet utilities", "vlookup", "lookup copy", "cross check", "coverage report", "copy columns", "folder to master", "work file", "כלי גיליון", "הצלבה", "כיסוי", "להעתיק עמודות"],
+      intentHints: ["sheet utilities", "vlookup", "lookup copy", "cross check", "cross-check", "coverage report", "folder to master", "master file", "work file", "copy columns between", "כלי גיליון", "הצלבה", "בדיקת כיסוי", "דוח כיסוי", "מאסטר", "בין קבצים", "מקובץ אחר"],
       requiredInputs: [
         { key: "instruction", label: "Sheet utility request", question: "What Sheet utility operation should I prepare?", type: "textarea" }
       ],

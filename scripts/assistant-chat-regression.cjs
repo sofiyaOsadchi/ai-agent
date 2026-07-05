@@ -2,6 +2,10 @@ const { chromium } = require("playwright");
 
 const BASE_URL = process.env.ASSISTANT_URL || "http://localhost:3105/assistant-workspace.html";
 
+function pageUrl(path) {
+  return new URL(path, BASE_URL).toString();
+}
+
 function fail(name, message, details = {}) {
   const error = new Error(`${name}: ${message}`);
   error.details = details;
@@ -20,8 +24,8 @@ function expectNoHebrew(name, text) {
   if (/[\u0590-\u05ff]/.test(String(text || ""))) fail(name, "Expected text to stay in English without Hebrew UI strings", { text });
 }
 
-async function setupPage(browser) {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1050 } });
+async function setupPage(browser, viewport = { width: 1440, height: 1050 }, targetUrl = BASE_URL, waitForAssistant = true) {
+  const page = await browser.newPage({ viewport });
   const preflightBodies = [];
   page.__assistantPreflightBodies = preflightBodies;
   page.setDefaultTimeout(7000);
@@ -120,8 +124,8 @@ async function setupPage(browser) {
       body: JSON.stringify({ patch: {}, warnings: [], modelUsed: "stubbed-test-preflight" })
     });
   });
-  await page.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 15000 });
-  await page.waitForSelector("#assistantInput", { state: "visible" });
+  await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
+  if (waitForAssistant) await page.waitForSelector("#assistantInput", { state: "visible" });
   return page;
 }
 
@@ -156,6 +160,17 @@ async function quickText(page) {
   return page.locator("#quickReplies").innerText();
 }
 
+async function openWorkflowNav(page) {
+  await page.locator(".workflow-nav-trigger").click();
+  await page.locator(".workflow-nav-drawer").waitFor({ state: "visible" });
+}
+
+async function searchWorkflowNav(page, query) {
+  await page.locator(".workflow-search-input").fill(query);
+  await page.waitForTimeout(80);
+  return page.locator(".workflow-results").innerText();
+}
+
 async function expectPrimaryReply(page, label) {
   const reply = page.locator("#quickReplies button.quick-reply", { hasText: label }).first();
   await reply.waitFor({ state: "visible" });
@@ -173,6 +188,104 @@ async function userMessageTexts(page) {
   return page.locator("#chatLog .message.user").allTextContents();
 }
 
+async function scenarioWorkflowNavSearchOpensSiteAudit(browser) {
+  const name = "workflow-nav-search-opens-site-audit";
+  const page = await setupPage(browser, { width: 1440, height: 1050 }, pageUrl("/index.html"), false);
+  const closedTrigger = await page.locator(".workflow-nav-trigger").boundingBox();
+  if (!closedTrigger || closedTrigger.x > 8) fail(name, "Workflow trigger should start as a left-edge hamburger handle", { closedTrigger });
+  const triggerText = await page.locator(".workflow-nav-trigger").innerText();
+  if (triggerText.trim()) fail(name, "Workflow hamburger trigger should not be a right-side text button", { triggerText });
+  await openWorkflowNav(page);
+  await page.waitForTimeout(320);
+  const openTrigger = await page.locator(".workflow-nav-trigger").boundingBox();
+  if (!openTrigger || openTrigger.x < 300) fail(name, "Workflow trigger should slide right with the opened drawer", { openTrigger });
+  let results = await searchWorkflowNav(page, "סכמות באתר");
+  const firstTitle = await page.locator(".workflow-menu-parent strong").first().innerText();
+  expectIncludes(name, firstTitle, "AI Site Audit Crawler");
+  expectNotIncludes(name, results, "בדיקת Schema באתר");
+  await page.locator(".workflow-menu-toggle").first().click();
+  results = await page.locator(".workflow-results").innerText();
+  expectIncludes(name, results, "בדיקת Schema באתר");
+  await page.locator(".workflow-menu-link", { hasText: "בדיקת Schema באתר" }).click();
+  await page.waitForURL(/site-ai-audit\.html/, { timeout: 7000 });
+  expectIncludes(name, await page.title(), "AI Site Audit");
+  await page.close();
+}
+
+async function scenarioWorkflowNavGeneralBeforeSheetSubfeatures(browser) {
+  const name = "workflow-nav-general-before-sheet-subfeatures";
+  const page = await setupPage(browser);
+  await openWorkflowNav(page);
+  const fullTitles = await page.locator(".workflow-menu-parent strong").allInnerTexts();
+  const expectedOrder = ["FAQ Workflow Builder", "FAQ Editing Workspace", "AI Translation Engine", "Schema Builder", "Meta Tags Studio"];
+  expectedOrder.forEach((title, index) => {
+    if (fullTitles[index] !== title) fail(name, "Workflow menu should follow the home page feature order", { fullTitles, expectedOrder });
+  });
+  let results = await searchWorkflowNav(page, "edit sheet");
+  const visibleChildren = await page.locator(".workflow-menu-child:visible").count();
+  if (visibleChildren) fail(name, "Workflow menu should show only tool titles until a row is expanded", { visibleChildren });
+  const firstTitle = await page.locator(".workflow-menu-parent strong").first().innerText();
+  expectIncludes(name, firstTitle, "FAQ Editing Workspace");
+  expectNotIncludes(name, results, "Complete Missing Answers");
+  await page.locator(".workflow-menu-toggle").first().click();
+  results = await page.locator(".workflow-results").innerText();
+  expectIncludes(name, results, "Complete Missing Answers");
+  expectIncludes(name, results, "Copy / Replace Columns");
+  expectNotIncludes(name, firstTitle, "Code / Local File Edit");
+  await page.close();
+}
+
+async function scenarioWorkflowNavFuzzyAndEscape(browser) {
+  const name = "workflow-nav-fuzzy-and-escape";
+  const page = await setupPage(browser);
+  await openWorkflowNav(page);
+  let results = await searchWorkflowNav(page, "scema");
+  expectIncludes(name, results, "Schema Builder");
+  results = await searchWorkflowNav(page, "output cell");
+  expectIncludes(name, results, "Schema Builder");
+  expectNotIncludes(name, results, "Schema Output Cell");
+  await page.locator(".workflow-menu-toggle").first().click();
+  expectIncludes(name, await page.locator(".workflow-results").innerText(), "Schema Output Cell");
+  await page.keyboard.press("Escape");
+  await page.locator(".workflow-nav-drawer").waitFor({ state: "hidden" });
+  expectIncludes(name, await chatText(page), "Hi. What would you like to do?");
+  await page.close();
+}
+
+async function scenarioWorkflowNavAskAssistant(browser) {
+  const name = "workflow-nav-ask-assistant";
+  const page = await setupPage(browser, { width: 1440, height: 1050 }, pageUrl("/faq-playground.html"), false);
+  await openWorkflowNav(page);
+  const results = await searchWorkflowNav(page, "glossary");
+  const firstTitle = await page.locator(".workflow-menu-parent strong").first().innerText();
+  expectIncludes(name, firstTitle, "AI Translation Engine");
+  expectNotIncludes(name, results, "Glossary");
+  await page.locator(".workflow-menu-toggle").first().click();
+  expectIncludes(name, await page.locator(".workflow-results").innerText(), "Glossary");
+  const askLink = page.locator(".workflow-menu-link", { hasText: "Glossary" }).first();
+  const href = await askLink.getAttribute("href");
+  expectIncludes(name, href, "translate-demo.html");
+  await askLink.click();
+  await page.waitForURL(/translate-demo\.html/, { timeout: 7000 });
+  await page.close();
+}
+
+async function scenarioWorkflowNavNoResultsAndMobile(browser) {
+  const name = "workflow-nav-no-results-and-mobile";
+  const page = await setupPage(browser, { width: 390, height: 844 });
+  await openWorkflowNav(page);
+  const results = await searchWorkflowNav(page, "qzxqzxqzx");
+  expectIncludes(name, results, "No matching workflow found");
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+  if (overflow) fail(name, "Feature drawer should not create horizontal overflow on mobile", {
+    scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth),
+    innerWidth: await page.evaluate(() => window.innerWidth)
+  });
+  await page.keyboard.press("Escape");
+  await page.locator(".workflow-nav-drawer").waitFor({ state: "hidden" });
+  await page.close();
+}
+
 async function scenarioFaqOpeningUsesProvidedDetails(browser) {
   const name = "faq-opening-uses-provided-details";
   const page = await setupPage(browser);
@@ -186,6 +299,28 @@ async function scenarioFaqOpeningUsesProvidedDetails(browser) {
   expectNotIncludes(name, text, "על מה ה־FAQ");
   expectNotIncludes(name, text, "עדיין אין נושא");
   expectNotIncludes(name, text, "חסר קהל יעד");
+  await page.close();
+}
+
+async function scenarioFaqHotelUrlInfersSubject(browser) {
+  const name = "faq-hotel-url-infers-subject";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות עמוד faq חדש צריכה שאלון למלון https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv");
+  const text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "NYX Hotel Tel Aviv");
+  expectNotIncludes(name, text, "על מה ה־FAQ");
+  expectNotIncludes(name, text, "עדיין אין נושא");
+  await page.close();
+}
+
+async function scenarioFaqExistingPageGapResearch(browser) {
+  const name = "faq-existing-page-gap-research";
+  const page = await setupPage(browser);
+  await send(page, "יש לי עמוד שכבר יש לו faq https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv אני צריכה שתסרוק אותו ותכתוב לי מסמך שיט עם שאלות שלא מופיעות בו");
+  const text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "NYX Hotel Tel Aviv");
+  expectNotIncludes(name, text, "על מה ה־FAQ");
+  expectNotIncludes(name, text, "איזה אתר לבדוק ל־FAQ ול־Schema");
   await page.close();
 }
 
@@ -317,6 +452,25 @@ async function scenarioFaqStyleAndQaMulti(browser) {
   expectIncludes(name, chat, "natural wording real people would use");
   expectIncludes(name, chat, "ADDITIONAL ANSWER GUIDANCE");
   expectIncludes(name, chat, "Answer only with facts supported by approved sources");
+  await page.close();
+}
+
+async function scenarioFaqBalancedSplitEchoesOnce(browser) {
+  const name = "faq-balanced-split-echoes-once";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה לבנות faq");
+  await clickReply(page, "מלון / אירוח");
+  await send(page, "Bachar House");
+  await clickReply(page, "אורחים לפני הזמנה");
+  await clickReply(page, "להמשיך");
+  await clickReply(page, "אנגלית UK");
+  await clickReply(page, "סטנדרטי");
+  await clickReply(page, "להמשיך");
+  expectIncludes(name, await chatText(page), "איך לחלק את 20-30");
+  await clickReply(page, "חלוקה מאוזנת");
+  const users = await userMessageTexts(page);
+  const balancedCount = users.filter((text) => text.trim() === "חלוקה מאוזנת").length;
+  if (balancedCount !== 1) fail(name, "Balanced split should appear as exactly one user bubble", { users, balancedCount });
   await page.close();
 }
 
@@ -547,7 +701,12 @@ async function scenarioSiteAuditChecksMulti(browser) {
   const name = "site-audit-checks-multi";
   const page = await setupPage(browser);
   await send(page, "תעשי אודיט לאתר https://example.com");
-  await clickReply(page, "עמוק עם JS rendered");
+  expectIncludes(name, await chatText(page), "כמה עמודים לבדוק לעומק");
+  await clickReply(page, "עמוק · 50 עמודים");
+  expectIncludes(name, await chatText(page), "איך לקרוא את העמודים");
+  await clickReply(page, "JS rendered");
+  expectIncludes(name, await chatText(page), "להוסיף סיכום/ניתוח AI");
+  await clickReply(page, "בלי AI summary");
   expectIncludes(name, await chatText(page), "מה לבדוק באודיט");
   let replies = await quickText(page);
   expectNotIncludes(name, replies, "✓ FAQ");
@@ -571,7 +730,6 @@ async function scenarioSiteAuditChecksMulti(browser) {
   expectIncludes(name, afterAuditDoneUsers.at(-1), "Schema");
   expectNotIncludes(name, afterAuditDoneUsers.at(-1), "Sitemap");
   expectNotIncludes(name, afterAuditDoneUsers.at(-1), "להמשיך");
-  await clickReply(page, "סטנדרטי");
   const chat = await chatText(page);
   expectIncludes(name, chat, "אודיט האתר מוכן");
   expectIncludes(name, chat, "FAQ");
@@ -592,7 +750,12 @@ async function scenarioSiteAuditAllChecksSend(browser) {
   const page = await setupPage(browser);
   await send(page, "Run an AI site audit and open the report");
   await send(page, "https://www.leonardo-hotels.co.il/");
-  await clickReply(page, "Rendered JS deep audit");
+  expectIncludes(name, await chatText(page), "How many pages should the crawler inspect deeply?");
+  await clickReply(page, "Standard · 25 pages");
+  expectIncludes(name, await chatText(page), "Should the crawler read static HTML or JS-rendered pages?");
+  await clickReply(page, "JS rendered");
+  expectIncludes(name, await chatText(page), "Should the audit include AI analysis and summary?");
+  await clickReply(page, "With AI summary");
   expectIncludes(name, await chatText(page), "What should this audit check?");
 
   let replies = await quickText(page);
@@ -625,7 +788,7 @@ async function scenarioSiteAuditAllChecksSend(browser) {
   expectIncludes(name, afterSendUsers.at(-1), "llms.txt");
   expectIncludes(name, afterSendUsers.at(-1), "FAQ");
   expectNotIncludes(name, afterSendUsers.at(-1), "Continue");
-  expectIncludes(name, await chatText(page), "How many pages should the crawler inspect deeply?");
+  expectIncludes(name, await chatText(page), "Audit ready:");
   await page.close();
 }
 
@@ -633,7 +796,9 @@ async function scenarioSiteAuditChecksRecommendedClearBack(browser) {
   const name = "site-audit-checks-recommended-clear-back";
   const page = await setupPage(browser);
   await send(page, "Run an AI site audit for https://example.com");
-  await clickReply(page, "Rendered JS deep audit");
+  await clickReply(page, "Standard · 25 pages");
+  await clickReply(page, "JS rendered");
+  await clickReply(page, "With AI summary");
   expectIncludes(name, await chatText(page), "What should this audit check?");
 
   const beforeUsers = await userMessageTexts(page);
@@ -651,10 +816,32 @@ async function scenarioSiteAuditChecksRecommendedClearBack(browser) {
 
   await clickReply(page, "Back");
   const text = `${await chatText(page)}\n${await quickText(page)}`;
-  expectIncludes(name, text, "What kind of audit should I run?");
-  expectIncludes(name, text, "Rendered JS deep audit");
+  expectIncludes(name, text, "Should the audit include AI analysis and summary?");
+  expectIncludes(name, text, "With AI summary");
   users = await userMessageTexts(page);
   expectNotIncludes(name, users.join("\n"), "Back");
+  await page.close();
+}
+
+async function scenarioSiteSchemaRequestUsesGeneralAudit(browser) {
+  const name = "site-schema-request-uses-general-audit";
+  const page = await setupPage(browser);
+  await send(page, "אני צריכה לבדוק אם יש סכמות בעמודים באתר של לאונרדו");
+  let text = `${await chatText(page)}\n${await quickText(page)}\n${await panelText(page)}`;
+  expectIncludes(name, text, "AI Site Audit Crawler");
+  expectIncludes(name, text, "איזה אתר לבדוק");
+  expectNotIncludes(name, text, "AI FAQ Audit");
+  expectNotIncludes(name, text, "איזה אתר לבדוק ל־FAQ ול־Schema");
+
+  await send(page, "https://www.leonardo-hotels.com");
+  expectIncludes(name, await chatText(page), "כמה עמודים לבדוק לעומק");
+  await clickReply(page, "סטנדרטי · 25 עמודים");
+  await clickReply(page, "HTML סטטי");
+  await clickReply(page, "בלי AI summary");
+  text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "מה לבדוק באודיט");
+  expectIncludes(name, text, "✓ Schema");
+  expectNotIncludes(name, text, "✓ FAQ");
   await page.close();
 }
 
@@ -1316,6 +1503,46 @@ async function scenarioFaqImplementedQuestionsAuditRoute(browser) {
   await page.close();
 }
 
+async function scenarioTranslatedSheetEditStaysFormatting(browser) {
+  const name = "translated-sheet-edit-stays-formatting";
+  const page = await setupPage(browser);
+  await send(page, "תתקני את התרגום בעמודה D בקובץ https://docs.google.com/spreadsheets/d/1FakeTranslatedEditFake12/edit");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "FAQ Editing Workspace");
+  expectNotIncludes(name, text, "AI Translation Engine");
+  await page.close();
+}
+
+async function scenarioSheetAnswerQaStaysFormatting(browser) {
+  const name = "sheet-answer-qa-stays-formatting";
+  const page = await setupPage(browser);
+  await send(page, "לבדוק את התשובות בעמודה C בגיליון ולתקן אותן https://docs.google.com/spreadsheets/d/1FakeAnswerQaFakeSheet12/edit");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "FAQ Editing Workspace");
+  expectNotIncludes(name, text, "AI FAQ Audit");
+  await page.close();
+}
+
+async function scenarioGeneralAuditWithFaqMentionStaysGeneral(browser) {
+  const name = "general-audit-with-faq-mention-stays-general";
+  const page = await setupPage(browser);
+  await send(page, "Run a full site audit including the FAQ pages of https://www.example-hotel.com");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "AI Site Audit Crawler");
+  expectNotIncludes(name, text, "AI FAQ Audit");
+  await page.close();
+}
+
+async function scenarioCrossFileRequestGoesToUtilities(browser) {
+  const name = "cross-file-request-goes-to-utilities";
+  const page = await setupPage(browser);
+  await send(page, "הצלבה מול מאסטר https://docs.google.com/spreadsheets/d/1FakeMasterCrossCheck12/edit");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "Sheet Utilities");
+  expectNotIncludes(name, text, "FAQ Editing Workspace");
+  await page.close();
+}
+
 async function scenarioSheetUtilitiesRoute(browser) {
   const name = "sheet-utilities-route";
   const page = await setupPage(browser);
@@ -1369,10 +1596,18 @@ async function scenarioClientReportAnalyticsRoute(browser) {
 async function main() {
   const browser = await chromium.launch({ headless: true });
   const scenarios = [
+    scenarioWorkflowNavSearchOpensSiteAudit,
+    scenarioWorkflowNavGeneralBeforeSheetSubfeatures,
+    scenarioWorkflowNavFuzzyAndEscape,
+    scenarioWorkflowNavAskAssistant,
+    scenarioWorkflowNavNoResultsAndMobile,
     scenarioFaqOpeningUsesProvidedDetails,
+    scenarioFaqHotelUrlInfersSubject,
+    scenarioFaqExistingPageGapResearch,
     scenarioFaqAudienceMulti,
     scenarioFaqAudienceCanClearAndGoBack,
     scenarioFaqStyleAndQaMulti,
+    scenarioFaqBalancedSplitEchoesOnce,
     scenarioFaqWordsToAvoidStayGlobal,
     scenarioFaqSourceUrlBack,
     scenarioEnglishLocaleStableAfterGuidance,
@@ -1382,6 +1617,7 @@ async function main() {
     scenarioSiteAuditChecksMulti,
     scenarioSiteAuditAllChecksSend,
     scenarioSiteAuditChecksRecommendedClearBack,
+    scenarioSiteSchemaRequestUsesGeneralAudit,
     scenarioSchemaRemainsSingleChoice,
     scenarioSchemaPreviewSkipsPreflight,
     scenarioSchemaWriteChoiceAndNoDoubleConfirmation,
@@ -1406,6 +1642,10 @@ async function main() {
     scenarioFaqAuditDiscoveryCanSwitchToSiteAudit,
     scenarioFaqImplementationAuditNotCreation,
     scenarioFaqImplementedQuestionsAuditRoute,
+    scenarioTranslatedSheetEditStaysFormatting,
+    scenarioSheetAnswerQaStaysFormatting,
+    scenarioGeneralAuditWithFaqMentionStaysGeneral,
+    scenarioCrossFileRequestGoesToUtilities,
     scenarioSheetUtilitiesRoute,
     scenarioFileDraftRoute,
     scenarioClientReportRoute,

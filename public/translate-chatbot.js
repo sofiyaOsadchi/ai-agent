@@ -11,6 +11,7 @@
     { code: "he", label: "Hebrew" },
     { code: "zh", label: "Chinese" },
     { code: "ar", label: "Arabic" },
+    { code: "el", label: "Greek" },
   ];
 
   const MODEL_OPTIONS = ["o3", "o4-mini", "gpt-5.5", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "anthropic:claude-sonnet-4-6"];

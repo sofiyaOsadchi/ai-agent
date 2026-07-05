@@ -11,6 +11,7 @@
     "snapshot:restore": "node scripts/local-version.mjs restore",
     "snapshot:prune": "node scripts/local-version.mjs prune",
     "start": "node dist/server-demo.js",
+    "faq-from-scratch": "tsx src/index.ts",
     "translate": "MODE=translate tsx src/index.ts",
     "rewrite": "MODE=rewrite tsx src/index.ts",
     "validate-lite": "MODE=validate-lite tsx src/index.ts",

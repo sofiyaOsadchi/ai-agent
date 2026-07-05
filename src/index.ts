@@ -73,7 +73,7 @@ const sheets = new SheetsService("info@carmelon.co.il");
  * רשימת המלונות לעיבוד (נוודא שמות נכונים!)
  */
 const HOTELS = [
- "master Wola",
+ "Leonardo Hotel Torremolinos Costa del Sol",
 
 ];
 
@@ -87,9 +87,9 @@ const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
 ];
 
-const TRANSLATE_FOLDER: string = "https://drive.google.com/drive/folders/1jVm2XQvSDNIHdmPdCvpcDBR0b-1uWUaB?usp=sharing";
+const TRANSLATE_FOLDER: string = "https://drive.google.com/drive/folders/1fnWl6nzAd_dFDUj5ugPpo5tIT2v91h1H?usp=sharing";
 
-const LANGS = ["ru"];
+const LANGS = ["el"];
 
 
 
@@ -266,10 +266,10 @@ const META_SCHEMA_SHEETS: Array<{
 
 // ← מטא+סכימה (תיקייה בגוגל דרייב – ירוץ על כל הגיליונות בתיקייה)
 const META_SCHEMA_FOLDER: string =
-  "https://drive.google.com/drive/folders/13FYczbgqxrQp6lrWCJLEi2ujh_IaUSRS?usp=sharing";
+  "https://drive.google.com/drive/folders/1fnWl6nzAd_dFDUj5ugPpo5tIT2v91h1H?usp=sharing";
 
 const META_SCHEMA_FOLDER_DEFAULTS: Partial<(typeof META_SCHEMA_SHEETS)[number]> = {
-  tab: "Sheet1 – HE",
+  tab: "Sheet1 – EL",
   metaRow: 70,
   metaStartCol: "A",
   schemaCol: "E",
@@ -283,8 +283,8 @@ const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
 
   hotelsFolderId: "1A_lHBYgS5Y0PMH7Fbx6oyLQW7CuP9mue",
 
-  targetLocale: "ar",
-  sourceTabName: "Sheet1 – EN – AR",
+  targetLocale: "ru",
+  sourceTabName: "Sheet1 – RU",
 
   overwriteExisting: false,
   dryRun: false,
@@ -294,7 +294,7 @@ const INJECT_META_SCHEMA_CONFIG: InjectMetaSchemaToMasterConfig = {
 
 // Wrap-P (only column F) - single sheet (no folder)
 const WRAP_P_SHEET: string =
-  "https://docs.google.com/spreadsheets/d/12-xiOpPYhvbtg5R2An0U0dtMvgMGMOV7LfwR3Fd3w6U/edit?usp=sharing";
+  "https://docs.google.com/spreadsheets/d/1adPimSG_U9aCf-O24TN2ZFGJguVSFD4GMjARVTC79PM/edit?usp=sharing";
 
 
 
@@ -313,16 +313,25 @@ const FAQ_AUDIT_STRUCTURE_SHEET_TITLE =
 
 
 
-type SiteLocale = "en" | "he" | "de" | "it" | "es";
+type SiteLocale = "en" | "he" | "de" | "it" | "es" | "ar";
 
-const FAQ_AUDIT_START_URL =
-  process.env.FAQ_AUDIT_START_URL || "https://www.leonardo-hotels.es/netherlands";
+type FaqAuditRunConfig = {
+  url: string;
+  sheetTitle: string;
+  locale: SiteLocale;
+};
 
-const FAQ_AUDIT_SHEET_TITLE =
-  process.env.FAQ_AUDIT_SHEET_TITLE || "Republic of Ireland Hotels FAQ Audit";
+const FAQ_AUDIT_RUNS: FaqAuditRunConfig[] = [
+   {
+     url: "https://www.ar.leonardo-hotels.com/germany",
+     sheetTitle: "Arabic FAQ Audit - Germany",
+     locale: "ar",
+   },
+   
 
-const FAQ_AUDIT_LOCALE =
-  (process.env.FAQ_AUDIT_LOCALE || "es") as SiteLocale;
+   
+
+];
   
 
 
@@ -1084,27 +1093,74 @@ if (META_SCHEMA_FOLDER.trim()) {
    } else if (MODE === "faq-audit") {
   const job = new FaqAuditFromWebJob(agent, sheets);
 
-  const result = await job.run({
-    countryUrl: FAQ_AUDIT_START_URL,
-    sheetTitle: FAQ_AUDIT_SHEET_TITLE,
-    shareResults: true,
-    locale: FAQ_AUDIT_LOCALE,
-  });
+  if (!FAQ_AUDIT_RUNS.length) {
+    throw new Error("FAQ_AUDIT_RUNS is empty. Add at least one { url, sheetTitle, locale } item in src/index.ts.");
+  }
 
-  console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
-  console.log(
-    chalk.green(
-      `🧾 Hotels scanned: ${result.hotelsProcessed} | With FAQ: ${result.hotelsWithFaq} | Hotels with issues: ${result.hotelsWithProblems}`
-    )
-  );
+  const auditResults: Array<{
+    countryUrl: string;
+    sheetTitle: string;
+    locale: SiteLocale;
+    spreadsheetId: string;
+    hotelsProcessed: number;
+    hotelsWithFaq: number;
+    hotelsWithProblems: number;
+  }> = [];
 
-  // לינק ישיר לגיליון + סיכום
-  console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
-  console.log(
-    chalk.green(
-      `🧾 Hotels scanned: ${result.hotelsProcessed} | With FAQ: ${result.hotelsWithFaq} | Hotels with issues: ${result.hotelsWithProblems}`
-    )
-  );
+  for (let i = 0; i < FAQ_AUDIT_RUNS.length; i++) {
+    const { url: countryUrl, sheetTitle, locale } = FAQ_AUDIT_RUNS[i];
+
+    console.log(
+      chalk.cyan(
+        `▶️ FAQ audit ${i + 1}/${FAQ_AUDIT_RUNS.length} | locale=${locale} | ${countryUrl}`
+      )
+    );
+
+    const result = await job.run({
+      countryUrl,
+      sheetTitle,
+      shareResults: true,
+      locale,
+    });
+
+    auditResults.push({
+      countryUrl,
+      sheetTitle,
+      locale,
+      ...result,
+    });
+
+    console.log("📄 Google Sheet:", `https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`);
+    console.log(
+      chalk.green(
+        `🧾 Hotels scanned: ${result.hotelsProcessed} | With FAQ: ${result.hotelsWithFaq} | Hotels with issues: ${result.hotelsWithProblems}`
+      )
+    );
+  }
+
+  if (auditResults.length > 1) {
+    const totals = auditResults.reduce(
+      (acc, result) => ({
+        hotelsProcessed: acc.hotelsProcessed + result.hotelsProcessed,
+        hotelsWithFaq: acc.hotelsWithFaq + result.hotelsWithFaq,
+        hotelsWithProblems: acc.hotelsWithProblems + result.hotelsWithProblems,
+      }),
+      { hotelsProcessed: 0, hotelsWithFaq: 0, hotelsWithProblems: 0 }
+    );
+
+    console.log(chalk.green(`✅ FAQ audit pipeline completed: ${auditResults.length} runs`));
+    console.log(
+      chalk.green(
+        `🧾 Total hotels scanned: ${totals.hotelsProcessed} | With FAQ: ${totals.hotelsWithFaq} | Hotels with issues: ${totals.hotelsWithProblems}`
+      )
+    );
+
+    for (const result of auditResults) {
+      console.log(
+        `• ${result.locale} | ${result.countryUrl} -> https://docs.google.com/spreadsheets/d/${result.spreadsheetId}/edit`
+      );
+    }
+  }
 
 } else if (MODE === "match-hotels") {
   const job = new EnrichHotelDataJob(sheets);
@@ -1850,6 +1906,8 @@ aiMaxRows: 3000,
 
   else {
     await runAllHotelsResearch(agent, sheets, HOTELS);
+    console.log(chalk.green("✅ FAQ-from-scratch completed. Exiting cleanly."));
+    process.exit(0);
   }
 }
 

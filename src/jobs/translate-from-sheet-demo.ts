@@ -161,6 +161,18 @@ const DEFAULT_LANGUAGE_NOTES: Record<LangKey, string> = {
     "تجنّب الإنجليزية داخل الجمل.",
     "اتساق تام في أسماء العلامات.",
   ].join(" "),
+  el: [
+    "Natural, fluent Modern Greek for hotel FAQ content.",
+    "Keep official hotel names and brand names exactly in Latin script; do not transliterate or decline them.",
+    "Use natural Greek FAQ questions such as “Προσφέρει το [Hotel] ...;”, “Υπάρχει ... στο [Hotel];”, “Πόσο απέχει το [Hotel] από ...;”.",
+    "Use the Greek question mark (;).",
+    "Prefer standard hotel terms: δωρεάν Wi-Fi, ρεσεψιόν, check-in, check-out, φύλαξη αποσκευών, υπηρεσία δωματίου, χώρος στάθμευσης, πρωινό σε μπουφέ.",
+    "Avoid literal English word order, stiff corporate phrasing, and marketing filler.",
+    "Use natural Greek category labels with και instead of English ampersands when possible.",
+    "For pet policies, avoid literal trained-dog wording unless formal training is genuinely meant.",
+    "Check gender, number and case agreement carefully.",
+    "Use natural 24-hour Greek hotel time when converting AM/PM values, and format distances naturally in Greek (0.7 km -> 0,7 χλμ.).",
+  ].join(" "),
 };
 
 // === Optional default polish rules (especially useful for DE) ===
@@ -467,6 +479,8 @@ export class TranslateFromSheetDemoJob {
       ru: "Russian",
       en: "English",
       ar: "Arabic",
+      el: "Greek",
+      gr: "Greek",
       nl: "Dutch",
       pl: "Polish",
       zh: "Chinese",
@@ -499,6 +513,9 @@ export class TranslateFromSheetDemoJob {
       chinese: "zh",
       ar: "ar",
       arabic: "ar",
+      el: "el",
+      greek: "el",
+      gr: "el",
     };
     return aliases[key] ?? (key as LangKey);
   }

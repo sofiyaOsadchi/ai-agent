@@ -29,8 +29,14 @@ const CLICK_PAUSE_MS = Number(process.env.FAQ_AUDIT_CLICK_PAUSE_MS ?? "120");
 const LOADMORE_CYCLES = Number(process.env.FAQ_AUDIT_LOADMORE_CYCLES ?? "8");
 const SCROLL_STEPS = Number(process.env.FAQ_AUDIT_SCROLL_STEPS ?? "12");
 const SCROLL_DELTA = Number(process.env.FAQ_AUDIT_SCROLL_DELTA ?? "1400");
+const FAQ_FETCH_FIRST_ATTEMPT_TIMEOUT_MS = Number(
+  process.env.FAQ_AUDIT_FETCH_TIMEOUT_MS ?? "120000"
+);
+const FAQ_FETCH_RETRY_TIMEOUT_MS = Number(
+  process.env.FAQ_AUDIT_FETCH_RETRY_TIMEOUT_MS ?? "180000"
+);
 
-type SiteLocale = "en" | "he" | "de" | "it" | "es";
+type SiteLocale = "en" | "he" | "de" | "it" | "es" | "ar";
 type DiscoveryMode = "auto" | "leonardo";
 
 type SiteConfig = {
@@ -64,8 +70,10 @@ const DEFAULT_FAQ_LINK_KEYWORDS = [
 ];
 
 const DEFAULT_EXCLUDE_URL_PATTERNS = [
+  /\/404(?:\/|$)/i,
   /\/(blog|news|privacy|terms|cookies|contact|about|careers|login|signup|cart|checkout)\/?$/i,
   /\/(brand|advantage|club|loyalty|offers?)\/?$/i,
+  /\/[^/]*(advantage|loyalty)[^/]*(?:\/|$)/i,
   /\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|mp4|webm)$/i,
 ];
 
@@ -137,6 +145,25 @@ const SITE_CONFIG: Record<SiteLocale, SiteConfig> = {
       ...DEFAULT_FAQ_LINK_KEYWORDS,
       "preguntas frecuentes",
       "preguntas y respuestas",
+    ],
+    excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
+  },
+  ar: {
+    locale: "ar",
+    allowedHosts: ["www.leonardo-hotels.com"],
+    acceptLanguage: "ar;q=0.9,en;q=0.8",
+
+    discoveryMode: "auto",
+    maxDiscoveryPages: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_PAGES ?? "120"),
+    maxDiscoveryDepth: Number(process.env.FAQ_AUDIT_DISCOVERY_MAX_DEPTH ?? "3"),
+
+    faqPathCandidates: DEFAULT_FAQ_PATH_CANDIDATES,
+    faqLinkKeywords: [
+      ...DEFAULT_FAQ_LINK_KEYWORDS,
+      "الأسئلة الشائعة",
+      "أسئلة شائعة",
+      "سؤال وجواب",
+      "الأسئلة والأجوبة",
     ],
     excludeUrlPatterns: DEFAULT_EXCLUDE_URL_PATTERNS,
   },
@@ -231,8 +258,14 @@ const summaryRows: string[][] = [summaryHeaders];
 
     let hotelsWithFaq = 0;
     let hotelsWithProblems = 0;
+    const originalHotelsCount = hotels.length;
+    const hotelQueue = [...hotels];
+    const retryState = new Map<string, boolean>();
 
-    for (const h of hotels) {
+    for (let hotelIndex = 0; hotelIndex < hotelQueue.length; hotelIndex++) {
+      const h = hotelQueue[hotelIndex];
+      const hotelKey = `${h.name}||${h.faqUrl ?? ""}`;
+      const isRetry = retryState.get(hotelKey) === true;
       // 1. בדיקת לינק
   if (!h.faqUrl) {
   const row = [
@@ -258,19 +291,31 @@ const summaryRows: string[][] = [summaryHeaders];
 
   continue;
 }
-      hotelsWithFaq++;
+      if (!isRetry) hotelsWithFaq++;
 
       // 2. שליפת תוכן (משתמש בלוגיקה המקורית)
       let html = "";
       let collected: QA[] = [];
       try {
-        console.log(`➡️ START fetch FAQ: ${h.name}`);
-const res = await this.fetchFaqDomAndQAs(h.faqUrl, cfg);
-console.log(`✅ DONE fetch FAQ: ${h.name} | QAs: ${res.qas.length}`);
+        const timeoutMs = isRetry ? FAQ_FETCH_RETRY_TIMEOUT_MS : FAQ_FETCH_FIRST_ATTEMPT_TIMEOUT_MS;
+        const label = isRetry ? "RETRY fetch FAQ" : "START fetch FAQ";
+        console.log(`➡️ ${label}: ${h.name} (${Math.round(timeoutMs / 1000)}s timeout)`);
+	const res = await this.fetchFaqDomAndQAs(h.faqUrl, cfg, timeoutMs);
+	console.log(`✅ DONE fetch FAQ: ${h.name} | QAs: ${res.qas.length}`);
         html = res.html;
         collected = res.qas;
       } catch (e) {
-         console.error("❌ Fetch failed for:", h.name);
+         if (!isRetry) {
+           retryState.set(hotelKey, true);
+           hotelQueue.push(h);
+           console.warn(
+             `⏭️ Fetch failed/timeout for ${h.name}; will retry after first pass with ${Math.round(FAQ_FETCH_RETRY_TIMEOUT_MS / 1000)}s timeout.`
+           );
+           console.warn("   MSG:", errMsg(e));
+           continue;
+         }
+
+         console.error("❌ Fetch failed after retry for:", h.name);
   console.error("   URL:", h.faqUrl);
   console.error("   ERROR:", e);
   console.error("   MSG:", errMsg(e));
@@ -515,7 +560,7 @@ schemaOnlyQuestions || "",
 
     return {
       spreadsheetId,
-      hotelsProcessed: hotels.length,
+      hotelsProcessed: originalHotelsCount,
       hotelsWithFaq,
       hotelsWithProblems,
     };
@@ -706,7 +751,7 @@ private async discoverFaqUrlForPage(pageUrl: string, cfg: SiteConfig): Promise<s
   for (const path of cfg.faqPathCandidates) {
     const candidate = `${pageUrl.replace(/\/$/, "")}${path}`;
 
-    const ok = await this.headOk(candidate);
+    const ok = await this.headOk(candidate, cfg);
     if (ok) {
       console.log(`    • ${candidate} ✅`);
       return candidate;
@@ -747,7 +792,7 @@ private async discoverFaqUrlForPage(pageUrl: string, cfg: SiteConfig): Promise<s
     });
 
     for (const candidate of candidates) {
-      const ok = await this.headOk(candidate);
+      const ok = await this.headOk(candidate, cfg);
       if (ok) {
         console.log(`    • ${candidate} ✅`);
         return candidate;
@@ -764,7 +809,17 @@ private async discoverFaqUrlForPage(pageUrl: string, cfg: SiteConfig): Promise<s
   // איסוף מלונות מעמוד מדינה + וידוא שיוך לעיר (לוגיקה מקורית)
   // -----------------------------------------------------------
 private async collectHotels(countryUrl: string, cfg: SiteConfig): Promise<HotelItem[]> {  
-    const html = await this.fetchText(countryUrl, false, cfg);
+    const normalizedStartUrl = String(countryUrl || "").trim().replace(/[),.;]+$/g, "");
+    const startHotel = this.normalizeHotelBaseUrl(normalizedStartUrl, cfg);
+    let discoveryUrl = normalizedStartUrl;
+    try {
+      const startPath = new URL(normalizedStartUrl).pathname;
+      if (startHotel && /\/faqs?\/?$/i.test(startPath)) {
+        discoveryUrl = startHotel;
+      }
+    } catch { /* keep normalized start URL */ }
+
+    const html = await this.fetchText(discoveryUrl, false, cfg);
     const $ = cheerio.load(html);
 
     let $scope = $("main");
@@ -775,13 +830,14 @@ private async collectHotels(countryUrl: string, cfg: SiteConfig): Promise<HotelI
 
     const hotelLinks = new Set<string>();
     const cityLinks = new Set<string>();
+    if (startHotel) hotelLinks.add(startHotel);
 
     // 1) איסוף לינקים מעמוד המדינה
     $scope.find("a[href]").each((_, el) => {
       const hrefRaw = ($(el).attr("href") || "").trim();
       if (!hrefRaw) return;
 
-      const href = this.makeAbsolute(countryUrl, hrefRaw);
+      const href = this.makeAbsolute(discoveryUrl, hrefRaw);
 try {
   const host = new URL(href).host;
   if (!cfg.allowedHosts.includes(host)) return;
@@ -802,7 +858,7 @@ const baseHotel = this.normalizeHotelBaseUrl(clean, cfg);
         }
 
         if (segs.length === 1) {
-          const countrySeg = new URL(countryUrl).pathname.split("/").filter(Boolean)[0]?.toLowerCase();
+          const countrySeg = new URL(discoveryUrl).pathname.split("/").filter(Boolean)[0]?.toLowerCase();
           if (countrySeg && segs[0].toLowerCase() === countrySeg) return;
           cityLinks.add(clean);
         }
@@ -862,7 +918,7 @@ const baseHotel = this.normalizeHotelBaseUrl(cleanHotel, cfg);
       if (!belongs) continue;
 
       const faqUrlCandidate = `${url}/faq`;
-const ok = await this.headOk(faqUrlCandidate);
+const ok = await this.headOk(faqUrlCandidate, cfg);
 console.log(`    • ${faqUrlCandidate} ${ok ? "✅" : "❌"}`);
 hotels.push({
   name: this.prettyNameFromUrl(url),
@@ -1170,12 +1226,19 @@ private async validateHotelByCities(hotelUrl: string, cities: Set<string>, cfg: 
   // -----------------------------------------------------------
   // DOM-render: פתיחה/איסוף חכם (Playwright) + סטטי (fetch)
   // -----------------------------------------------------------
-private async fetchFaqDomAndQAs(url: string, cfg: SiteConfig): Promise<{ html: string; qas: QA[] }> {
+private async fetchFaqDomAndQAs(
+  url: string,
+  cfg: SiteConfig,
+  timeoutMs = FAQ_FETCH_FIRST_ATTEMPT_TIMEOUT_MS
+): Promise<{ html: string; qas: QA[] }> {
       if (process.env.FAQ_AUDIT_RENDER === "1") {
+      let browser: any;
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const work = (async () => {
       console.log(`   🌐 Opening page: ${url}`);
         const mod: any = await (Function("return import('playwright')")() as Promise<any>);
       const channel = process.env.FAQ_AUDIT_PLAYWRIGHT_CHANNEL;
-      const browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
+      browser = await mod.chromium.launch({ headless: true, ...(channel ? { channel } : {}) });
       const page = await browser.newPage();
 
       // ⬇️ הוספה קריטית
@@ -1413,10 +1476,27 @@ await page.waitForTimeout(250);
       });
 
       const html = await page.content();
-      await browser.close();
 
       const merged = this.dedupeQAs([...visibleQAs, ...accessibleQAs]);
       return { html, qas: merged };
+      })();
+
+      work.catch(() => undefined);
+
+      try {
+        return await Promise.race([
+          work,
+          new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => {
+              void browser?.close().catch(() => {});
+              reject(new Error(`FAQ fetch timed out after ${Math.round(timeoutMs / 1000)}s`));
+            }, timeoutMs);
+          }),
+        ]);
+      } finally {
+        if (timeout) clearTimeout(timeout);
+        await browser?.close().catch(() => {});
+      }
     }
 
     // בלי רינדור — נחזיר רק HTML ונחלץ עם Cheerio
@@ -1511,13 +1591,14 @@ await page.waitForTimeout(250);
     return out;
   }
 
-  private async headOk(url: string): Promise<boolean> {
+  private async headOk(url: string, cfg?: SiteConfig): Promise<boolean> {
+    const headers = { "accept-language": cfg?.acceptLanguage ?? "en-GB,en;q=0.9" };
     try {
-      const r = await fetch(url, { method: "HEAD" });
+      const r = await fetch(url, { method: "HEAD", headers });
       if (r.ok) return true;
     } catch { /* ignore */ }
     try {
-      const r2 = await fetch(url, { method: "GET" });
+      const r2 = await fetch(url, { method: "GET", headers });
       return r2.ok;
     } catch {
       return false;
@@ -1562,7 +1643,9 @@ if (!cfg.allowedHosts.includes(u.host)) return null;
       const hotel = segs[1];
 
       // Guard בסיסי
+      if (/^(404|error|not-found)$/i.test(city)) return null;
       if (/^(reviews|offers?|brand|advantage|club|loyalty)$/i.test(hotel)) return null;
+      if (/(^|-)advantage($|-)|(^|-)loyalty($|-)|advantage-club/i.test(hotel)) return null;
 
       return `${u.origin}/${city}/${hotel}`;
     } catch {

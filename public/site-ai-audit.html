@@ -2897,9 +2897,9 @@
         <div class="setup-intro">
           <div>
             <strong>Recommended first pass is ready</strong>
-            <p>Start with a balanced site sample. Use rendered reading only when the site depends on JavaScript for visible content.</p>
+            <p>Start with a balanced sample. Use the comprehensive crawl when you need a dry inventory across up to 500 pages.</p>
           </div>
-          <span>25 pages · static</span>
+          <span>25-500 pages · static</span>
         </div>
 
         <div class="field">
@@ -2931,8 +2931,8 @@
         <div class="grid-2 number-grid">
           <div class="field control-card">
             <label for="maxPages">Page budget</label>
-            <input id="maxPages" type="number" min="1" max="250" value="25" />
-            <div class="field-help">25 is the usual first-pass sample. Increase only when the site has many templates.</div>
+            <input id="maxPages" type="number" min="1" max="500" value="25" />
+            <div class="field-help">25 is the usual first pass. Use up to 500 for a dry inventory of metadata, canonical, indexability signals and schema.</div>
           </div>
           <div class="field control-card">
             <label for="maxDepth">Crawl depth</label>
@@ -3004,6 +3004,7 @@
               <div class="checks">
                 <label class="check"><input id="includeLlms" type="checkbox" checked /><span class="check-copy"><strong>llms.txt</strong><span>AI content map</span></span></label>
                 <label class="check"><input id="includeAiAnalysis" type="checkbox" /><span class="check-copy"><strong>AI summary</strong><span>Slower narrative layer</span></span></label>
+                <label class="check"><input id="writeGoogleSheet" type="checkbox" /><span class="check-copy"><strong>Google Sheet</strong><span>Export dry crawl tables</span></span></label>
                 <label class="check"><input id="respectRobots" type="checkbox" /><span class="check-copy"><strong>Respect robots.txt</strong><span>Use strict crawl rules</span></span></label>
               </div>
             </div>
@@ -3055,6 +3056,14 @@
                   <button class="export-option" type="button" role="menuitem" onclick="downloadActionItemsCsv(); closeExportMenu();">
                     <span class="export-copy"><strong>Action items</strong><span class="export-description">Prioritized work plan as a spreadsheet</span></span>
                     <span class="export-chip">CSV</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="downloadPagesCsv(); closeExportMenu();">
+                    <span class="export-copy"><strong>Page inventory</strong><span class="export-description">Dry crawl table for meta, canonical and schema checks</span></span>
+                    <span class="export-chip">CSV</span>
+                  </button>
+                  <button class="export-option" type="button" role="menuitem" onclick="openGoogleSheetExport(); closeExportMenu();">
+                    <span class="export-copy"><strong>Google Sheet</strong><span class="export-description">Open the generated audit workbook</span></span>
+                    <span class="export-chip">Sheet</span>
                   </button>
                   <button class="export-option" type="button" role="menuitem" onclick="downloadExecutiveSummary(); closeExportMenu();">
                     <span class="export-copy"><strong>Executive summary</strong><span class="export-description">Short markdown summary</span></span>
@@ -3399,12 +3408,14 @@
 
     function getConfig() {
       const startUrl = document.getElementById("startUrl").value.trim();
+      const maxPages = Number(document.getElementById("maxPages").value || 25);
       rememberStartUrl(startUrl);
 
       return {
         startUrl,
-        maxPages: Number(document.getElementById("maxPages").value || 25),
+        maxPages,
         maxDepth: Number(document.getElementById("maxDepth").value || 2),
+        scanProfile: maxPages > 250 ? "comprehensive" : "sample",
         renderMode: document.getElementById("renderMode").value,
         crawlScope: document.getElementById("crawlScope").value,
         includeSitemap: document.getElementById("includeSitemap").checked,
@@ -3416,6 +3427,7 @@
         includeLinkAudit: document.getElementById("includeLinks").checked,
         includeAiAnalysis: document.getElementById("includeAiAnalysis").checked,
         aiModel: "gpt-5.5",
+        writeGoogleSheet: document.getElementById("writeGoogleSheet").checked,
         respectRobots: document.getElementById("respectRobots").checked,
         acceptLanguage: document.getElementById("acceptLanguage").value.trim() || "en-GB,en;q=0.9"
       };
@@ -3499,6 +3511,7 @@
       ];
 
       if (config.renderMode === "rendered") parts.push("--render");
+      if (config.scanProfile === "comprehensive") parts.push("--comprehensive");
       if (config.crawlScope === "faq-only") parts.push("--faq-only");
       if (!config.includeSitemap) parts.push("--no-sitemap");
       if (!config.includeLlmsTxt) parts.push("--no-llms");
@@ -3507,6 +3520,7 @@
       if (!config.includeAnswerability) parts.push("--no-answerability");
       if (!config.includeMetaAudit) parts.push("--no-meta");
       if (!config.includeLinkAudit) parts.push("--no-links");
+      if (config.writeGoogleSheet) parts.push("--write-sheet");
       if (config.respectRobots) parts.push("--respect-robots");
 
       return parts.join(" ");
@@ -3573,11 +3587,12 @@
     function estimateAuditSeconds(config) {
       const maxPages = Math.max(1, Number(config.maxPages || 25));
       const depth = Math.max(0, Number(config.maxDepth || 2));
-      const renderedMultiplier = config.renderMode === "rendered" ? 5.2 : 2.1;
+      const renderedMultiplier = config.renderMode === "rendered" ? 7.5 : 2.4;
       const scopeMultiplier = config.crawlScope === "faq-only" ? 1.35 : 1;
+      const sheetSeconds = config.writeGoogleSheet ? 35 : 0;
       const aiSeconds = config.includeAiAnalysis ? 90 : 0;
-      const base = config.renderMode === "rendered" ? 42 : 22;
-      return Math.round(Math.min(900, Math.max(25, (base + maxPages * renderedMultiplier + depth * 8) * scopeMultiplier + aiSeconds)));
+      const base = config.renderMode === "rendered" ? 60 : 25;
+      return Math.round(Math.min(7200, Math.max(25, (base + maxPages * renderedMultiplier + depth * 8) * scopeMultiplier + aiSeconds + sheetSeconds)));
     }
 
     function startAuditProgress(config) {
@@ -3784,16 +3799,25 @@
       panel.classList.remove("hidden");
       rerenderReport();
 
-      document.getElementById("output").textContent = [
+      const completionLines = [
         "SITE AI AUDIT COMPLETE",
         `Score: ${result.score?.total ?? "-"} / 100`,
         `Pages crawled: ${pages.length}`,
         `Issues: ${issues.length} | Critical: ${criticals} | Warnings: ${warnings} | Info: ${infos}`,
         `Action items: ${actions.length}`,
+      ];
+
+      if (result.googleSheet?.url) {
+        completionLines.push(`Google Sheet: ${result.googleSheet.url}`);
+      }
+
+      completionLines.push(
         "",
         "An internal working report was created below.",
         "Use the toggles and per-action checkboxes to decide what appears in the client report."
-      ].join("\n");
+      );
+
+      document.getElementById("output").textContent = completionLines.join("\n");
 
       if (!renderingStandaloneReport) {
         panel.scrollIntoView({ block: "start", behavior: "smooth" });
@@ -3849,6 +3873,7 @@
         ${sections.issues ? renderIssuesSection(model) : ""}
 
         ${sections.pages ? `${renderPageMap(model)}
+        ${renderPageInventoryTable(model)}
         <section class="report-block" id="top-pages">
           <h3>Pages to Start With</h3>
           ${pageCards || `<div class="report-empty">No pages with open findings in the current result.</div>`}
@@ -5300,10 +5325,11 @@
         ["Canonical", "Collected", "Includes existence and URL-match checks."],
         ["robots.txt", "Collected", "Checked at site level."],
         ["Meta robots", "Collected", "Checked per page."],
+        ["Indexability signals", "Collected", "Checks status, meta robots and canonical target. This is not Search Console indexing confirmation."],
         ["Sitemap", "Collected", "Also used for page-group mapping."],
         ["H1/H2", "Partial", "H1 is collected and analyzed. H2 is not stored as structured data yet."],
         ["Internal and external links", "Collected", "Includes counts, external domains and mailto/tel."],
-        ["Images and alt text", "Missing", "Image and alt data are not stored yet. This is a recommended expansion step."],
+        ["Images and alt text", "Collected", "Stores image count, missing alt count and lazy-loading count."],
         ["Structured data / JSON-LD", "Collected", "Includes schema types and FAQPage."],
         ["Original HTML content", "Collected", "The crawler analyzes the HTML received in the selected run mode."],
         ["Content after JavaScript", hasRendered ? "Collected" : "Optional", hasRendered ? "Collected through Rendered browser." : "Collected only when Rendered browser mode is selected."],
@@ -5985,6 +6011,72 @@
       `;
     }
 
+    function renderPageInventoryTable(model) {
+      const pages = (model.pages || []).slice(0, 500);
+
+      if (!pages.length) {
+        return "";
+      }
+
+      return `
+        <section class="report-block" id="page-inventory">
+          <h3>Page Inventory</h3>
+          <p>Dry crawl fields for metadata, canonical, indexability signals and schema. Indexability here means page-level crawl signals only, not confirmed Google indexing.</p>
+          <div class="action-table-wrap">
+            <table class="action-table">
+              <thead>
+                <tr>
+                  <th>URL</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Indexability</th>
+                  <th>Title / Meta</th>
+                  <th>Canonical</th>
+                  <th>Schema</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pages.map(renderPageInventoryRow).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderPageInventoryRow(page) {
+      const meta = page.metaDiagnostics || {};
+      const schemaTypes = Array.isArray(page.jsonLdTypes) && page.jsonLdTypes.length ? page.jsonLdTypes.join(", ") : "None";
+      const indexability = getPageIndexabilityStatus(page);
+      const indexabilityTone = /^eligible/i.test(indexability) ? "info" : "warning";
+      const canonicalTarget = getCanonicalTarget(page);
+      const canDraft = Boolean(page.url);
+
+      return `
+        <tr>
+          <td>${renderUrlLink(page.url, displayPageTitle(page, "Page"))}</td>
+          <td>${escapeHtml(pageTypeLabels[page.pageType] || page.pageType || "-")}</td>
+          <td>${escapeHtml(page.status || "-")}</td>
+          <td><span class="severity-pill ${indexabilityTone}">${escapeHtml(indexability)}</span></td>
+          <td>
+            <div class="action-finding">${escapeHtml(page.title || "Missing title")}</div>
+            <div class="action-fix">${escapeHtml(page.metaDescription || "Missing meta description")}</div>
+            <div class="issue-detail">Title ${escapeHtml(meta.titleLength || page.title?.length || 0)} · Description ${escapeHtml(meta.descriptionLength || page.metaDescription?.length || 0)} · H1 ${escapeHtml(meta.h1Count || 0)}</div>
+          </td>
+          <td>
+            <div class="action-fix">${escapeHtml(page.canonical || "Missing canonical")}</div>
+            <span class="count-pill">${escapeHtml(canonicalTarget)}</span>
+          </td>
+          <td>
+            <div class="action-fix">${escapeHtml(schemaTypes)}</div>
+            <div class="issue-detail">Visible FAQ ${escapeHtml(page.domFaqCount || 0)} · Schema FAQ ${escapeHtml(page.schemaFaqCount || 0)}</div>
+          </td>
+          <td>${canDraft ? `<button class="btn small" type="button" onclick="openSchemaDraftDialog('${escapeAttribute(page.url)}')">Schema</button>` : ""}</td>
+        </tr>
+      `;
+    }
+
     function buildClientReportMarkdown(result, options = getReportOptions()) {
       const model = buildReportModel(result);
       const actionPlan = buildActionPlan(result, model.actionItems);
@@ -6583,6 +6675,54 @@
       downloadText(`${buildFileBaseName(lastAuditResult)}-action-items.csv`, csv, "text/csv;charset=utf-8");
     }
 
+    function downloadPagesCsv() {
+      if (!lastAuditResult) return;
+      const rows = [
+        ["URL", "Final URL", "Status", "Page type", "Indexability signal", "Robots meta", "Canonical", "Canonical target", "Title", "Title length", "Meta description", "Description length", "H1", "H1 count", "Word count", "JSON-LD types", "Visible FAQ", "Schema FAQ", "Internal links", "External links", "Response ms", "HTML KB"],
+        ...(lastAuditResult.pages || []).map((page) => {
+          const meta = page.metaDiagnostics || {};
+          const tech = page.technicalDiagnostics || {};
+          const links = page.linkDiagnostics || {};
+          return [
+            page.url || "",
+            tech.finalUrl || page.url || "",
+            page.status || "",
+            page.pageType || "",
+            getPageIndexabilityStatus(page),
+            page.robotsMeta || "",
+            page.canonical || "",
+            getCanonicalTarget(page),
+            page.title || "",
+            meta.titleLength || page.title?.length || 0,
+            page.metaDescription || "",
+            meta.descriptionLength || page.metaDescription?.length || 0,
+            page.h1 || "",
+            meta.h1Count || 0,
+            page.wordCount || 0,
+            (page.jsonLdTypes || []).join(" | "),
+            page.domFaqCount || 0,
+            page.schemaFaqCount || 0,
+            links.internalCount || 0,
+            links.externalCount || 0,
+            tech.responseMs || 0,
+            Math.round(Number(tech.htmlBytes || 0) / 1024)
+          ];
+        })
+      ];
+      const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+      downloadText(`${buildFileBaseName(lastAuditResult)}-page-inventory.csv`, csv, "text/csv;charset=utf-8");
+    }
+
+    function openGoogleSheetExport() {
+      const url = lastAuditResult?.googleSheet?.url;
+      if (!url) {
+        appendOutput("No Google Sheet was created for this run. Enable Google Sheet before running the audit.");
+        return;
+      }
+
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
     async function copyExecutiveSummary() {
       if (!lastExecutiveSummaryMarkdown) return;
       try {
@@ -6772,6 +6912,25 @@
         && !(Array.isArray(page.jsonLdTypes) && page.jsonLdTypes.length);
     }
 
+    function getCanonicalTarget(page) {
+      const meta = page?.metaDiagnostics || {};
+      if (meta.canonicalTarget) return meta.canonicalTarget;
+      if (!page?.canonical) return "missing";
+      return canonicalUrl(page.canonical) === canonicalUrl(page.url) ? "self" : "other";
+    }
+
+    function getPageIndexabilityStatus(page) {
+      const status = Number(page?.status || 0);
+      const robotsMeta = String(page?.robotsMeta || "").toLowerCase();
+      const meta = page?.metaDiagnostics || {};
+
+      if (status <= 0) return "Unknown: fetch failed";
+      if (status >= 400) return `Not indexable: HTTP ${status}`;
+      if (meta.noindex || /noindex|none/.test(robotsMeta)) return "Not indexable: meta robots noindex/none";
+      if (getCanonicalTarget(page) === "other") return "Canonicalized to another URL";
+      return "Eligible by page signals (not confirmed indexed)";
+    }
+
     function uniquePages(pages) {
       const seen = new Set();
       const out = [];
@@ -6807,6 +6966,7 @@
         document.getElementById(id).checked = true;
       });
       document.getElementById("includeAiAnalysis").checked = false;
+      document.getElementById("writeGoogleSheet").checked = false;
       document.getElementById("respectRobots").checked = false;
       updateScopeHint();
       syncScopeCards();
@@ -6844,6 +7004,7 @@
       setCheckboxValue("includeMeta", config.includeMetaAudit);
       setCheckboxValue("includeLinks", config.includeLinkAudit);
       setCheckboxValue("includeAiAnalysis", config.includeAiAnalysis);
+      setCheckboxValue("writeGoogleSheet", config.writeGoogleSheet);
       setCheckboxValue("respectRobots", config.respectRobots);
 
       updateScopeHint();
@@ -6979,5 +7140,6 @@
       if (event.key === "Escape") closeExportMenu();
     });
   </script>
+  <script src="./global-workflow-nav.js"></script>
 </body>
 </html>

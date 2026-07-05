@@ -2820,7 +2820,7 @@
       { code: "it", label: "Italian", flag: "🇮🇹" }, { code: "nl", label: "Dutch", flag: "🇳🇱" },
       { code: "pl", label: "Polish", flag: "🇵🇱" }, { code: "ru", label: "Russian", flag: "🇷🇺" },
       { code: "he", label: "Hebrew", flag: "🇮🇱" }, { code: "zh", label: "Chinese", flag: "🇨🇳" },
-      { code: "ar", label: "Arabic", flag: "🇸🇦" }
+      { code: "ar", label: "Arabic", flag: "🇸🇦" }, { code: "el", label: "Greek", flag: "🇬🇷" }
     ];
 
     const selectedLangs = new Set(["de"]);
@@ -2836,7 +2836,8 @@
       ru: "Formal, neutral Russian. Keep hotel terms consistent.",
       he: "Formal, clear Hebrew. Natural and neutral wording.",
       zh: "简体中文，正式专业、自然流畅。",
-      ar: "عربية فصحى حديثة، رسمية وواضحة."
+      ar: "عربية فصحى حديثة، رسمية وواضحة.",
+      el: "Natural, fluent Modern Greek hotel FAQ style. Keep hotel names in Latin script, use Greek question mark (;), and avoid literal English structure."
     };
 
     const glossaryState = {
@@ -2845,7 +2846,7 @@
       fr: { "Reception": "Réception", "Free Wi-Fi": "Wi-Fi gratuit", "Aparthotel": "Aparthotel", "Serviced apartments": "Appartements avec services" },
       es: { "Reception": "Recepción", "Free Wi-Fi": "Wi-Fi gratuito", "Aparthotel": "Aparthotel", "Serviced apartments": "Apartamentos con servicios" },
       it: { "Reception": "Reception", "Free Wi-Fi": "Wi-Fi gratuito", "Aparthotel": "Aparthotel", "Serviced apartments": "Appartamenti serviti" },
-      nl: {}, pl: {}, ru: {}, he: {}, zh: {}, ar: {}
+      nl: {}, pl: {}, ru: {}, he: {}, zh: {}, ar: {}, el: {}
     };
 
     const termsState = {
@@ -2857,7 +2858,8 @@
       ], examples: [{ draft: "Gibt es im Haus kostenloses WLAN?", polish: "Bietet das Hotel kostenloses WLAN?", note: "Avoid Haus." }] },
       fr: { mappings: [], examples: [] }, es: { mappings: [], examples: [] }, it: { mappings: [], examples: [] },
       nl: { mappings: [], examples: [] }, pl: { mappings: [], examples: [] }, ru: { mappings: [], examples: [] },
-      he: { mappings: [], examples: [] }, zh: { mappings: [], examples: [] }, ar: { mappings: [], examples: [] }
+      he: { mappings: [], examples: [] }, zh: { mappings: [], examples: [] }, ar: { mappings: [], examples: [] },
+      el: { mappings: [], examples: [] }
     };
 
     const MANUAL_PLAN_STORAGE_KEY = "translate-demo-manual-plans-v1";
@@ -5075,5 +5077,6 @@ OUTPUT: return ONLY {"rows":[...]}`;
   </script>
   <script src="/user-profile.js"></script>
   <script src="/translate-chatbot.js"></script>
+  <script src="./global-workflow-nav.js"></script>
 </body>
 </html>

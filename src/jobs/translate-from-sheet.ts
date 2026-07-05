@@ -178,6 +178,20 @@ const LANGUAGE_NOTES: Record<string, string> = {
     "تجنّب الإنجليزية داخل الجمل.",
     "اتساق تام في أسماء العلامات."
   ].join(" "),
+  el: [
+    "Use natural, fluent Modern Greek for hotel FAQ content. It should sound human and native, not translated from English.",
+    "Preserve official hotel names, Leonardo/NYX brand names, room category names, loyalty-program names, URLs, codes and tokens exactly as written in Latin script. Do not transliterate, translate, or decline hotel names.",
+    "Questions must sound like real Greek guest questions. Prefer forms such as “Προσφέρει το [Hotel] ...;”, “Υπάρχει ... στο [Hotel];”, “Πόσο απέχει το [Hotel] από ...;”, “Διαθέτει το [Hotel] ...;”.",
+    "Use the Greek question mark (;) in Greek questions.",
+    "Avoid literal English word order, stiff corporate phrasing, and marketing filler. Remove or simplify phrases like “for guests seeking...” when they do not add factual value.",
+    "For direct yes/no answers, use “Ναι,” or “Όχι,” only when the source is truly affirmative or negative. Do not add “ναι” to conditional or unavailable-service answers.",
+    "Use standard Greek hospitality terms consistently: δωρεάν Wi-Fi, ρεσεψιόν, check-in, check-out, φύλαξη αποσκευών, υπηρεσία δωματίου, χώρος στάθμευσης, πρωινό σε μπουφέ.",
+    "Translate “amenities” as “παροχές” for guest services/features; use “εγκαταστάσεις” only for physical facilities.",
+    "For category names, prefer natural Greek labels such as “Δωμάτια και παροχές” and “Φαγητό και εστίαση”; avoid English ampersands when a Greek “και” label sounds natural.",
+    "For pet policies, avoid literal trained-dog phrasing unless formal training is genuinely meant; prefer practical wording such as “σκύλοι που τηρούν τους κανόνες διαμονής”.",
+    "Check gender, number and case agreement carefully for nouns such as δωμάτιο, υπηρεσία, πισίνα, χώρος, παροχές and εγκαταστάσεις.",
+    "Use monotonic Greek with correct accents. Keep values, prices and distances exact. For distances, use Greek/European formatting when natural (0.7 km -> 0,7 χλμ.). For times, preserve the exact time value but convert AM/PM to natural 24-hour Greek hotel style when unambiguous (3:00 PM -> 15:00, 11:00 AM -> 11:00)."
+  ].join(" "),
 };
 
 LANGUAGE_NOTES["english"] = LANGUAGE_NOTES["en"];
@@ -191,6 +205,8 @@ LANGUAGE_NOTES["russian"] = LANGUAGE_NOTES["ru"];
 LANGUAGE_NOTES["hebrew"]  = LANGUAGE_NOTES["he"];
 LANGUAGE_NOTES["chinese"] = LANGUAGE_NOTES["zh"];
 LANGUAGE_NOTES["arabic"]  = LANGUAGE_NOTES["ar"];
+LANGUAGE_NOTES["greek"]   = LANGUAGE_NOTES["el"];
+LANGUAGE_NOTES["gr"]      = LANGUAGE_NOTES["el"];
 
 export class TranslateFromSheetJob {
   constructor(private agent: AIAgent, private sheets: SheetsService) {}
@@ -219,6 +235,7 @@ export class TranslateFromSheetJob {
     he: "he", hebrew: "he",
     zh: "zh", chinese: "zh",
     ar: "ar", arabic: "ar",
+    el: "el", greek: "el", gr: "el",
   };
 
   return aliases[key] ?? (key as LangKey);

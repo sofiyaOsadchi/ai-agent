@@ -1,7 +1,7 @@
 // terminology-management.ts
 
 export type LangKey =
-    | "en" | "de" | "es" | "nl" | "it" | "fr" | "pl" | "ru" | "he" | "zh" | "ar";
+    | "en" | "de" | "es" | "nl" | "it" | "fr" | "pl" | "ru" | "he" | "zh" | "ar" | "el";
 
 export type TerminologyMapRule = {
   forbidden: string;
@@ -3946,6 +3946,134 @@ export const TERMINOLOGY_MANAGEMENT: TerminologyManagement = {
 
 
     ] },
+
+    el: {
+        mappings: [
+            { forbidden: "ιδιοκτησία", preferred: "ξενοδοχείο / κατάλυμα / χώροι του ξενοδοχείου", reason: "Avoid the real-estate sense of 'property'; Greek hotel FAQ copy should usually say hotel, accommodation or hotel areas depending on context.", tags: ["greek", "hospitality"] },
+            { forbidden: "εγκαταστάσεις καφέ και τσαγιού", preferred: "παροχές για καφέ και τσάι / βραστήρας με καφέ και τσάι", reason: "Literal 'facilities' sounds translated. Use guest-facing amenity wording.", tags: ["greek", "amenities"] },
+            { forbidden: "δωρεάν πρόσβαση", preferred: "δωρεάν χρήση / δωρεάν πρόσβαση", reason: "Use 'χρήση' for facilities such as gym or pool; use 'πρόσβαση' only when access itself is the focus.", tags: ["greek", "amenities"] },
+            { forbidden: "ρεσεψιόν 24 ώρες", preferred: "ρεσεψιόν 24 ώρες το 24ωρο", reason: "More idiomatic Greek hospitality phrasing for 24-hour reception.", tags: ["greek", "front-desk"] },
+            { forbidden: "υπηρεσία θυρωρού", preferred: "υπηρεσία concierge / υπηρεσίες concierge", reason: "In Greek hotel copy, 'concierge' is clearer and more natural than a literal doorman-style translation.", tags: ["greek", "service"] },
+            { forbidden: "αποθήκευση αποσκευών", preferred: "φύλαξη αποσκευών", reason: "Standard Greek hotel term for luggage storage.", tags: ["greek", "luggage"] },
+            { forbidden: "μεταφορά αεροδρομίου", preferred: "μεταφορά από/προς το αεροδρόμιο", reason: "Clarifies direction and sounds more natural in hotel FAQs.", tags: ["greek", "transport"] },
+            { forbidden: "παιδικά κρεβάτια", preferred: "βρεφικές κούνιες", reason: "Use for cots/cribs; 'children's beds' can imply a different bed type.", tags: ["greek", "family"] },
+            { forbidden: "συνδεδεμένα δωμάτια", preferred: "συνδεόμενα δωμάτια", reason: "More natural term for connecting rooms.", tags: ["greek", "rooms"] },
+            { forbidden: "δωμάτια προσβάσιμα σε αναπηρικό αμαξίδιο", preferred: "προσβάσιμα δωμάτια / δωμάτια προσβάσιμα για άτομα με αναπηρία", reason: "Use natural, person-first accessibility language.", tags: ["greek", "accessibility"] },
+            { forbidden: "καλά συμπεριφερόμενα σκυλιά", preferred: "σκύλοι που πληρούν τους κανόνες διαμονής", reason: "Avoid literal pet-policy phrasing that sounds odd in Greek.", tags: ["greek", "pets"] },
+            { forbidden: "χωρίς καπνό", preferred: "μη καπνιζόντων", reason: "For hotel/room policy, 'μη καπνιζόντων' is the standard wording.", tags: ["greek", "policy"] },
+            { forbidden: "ποινή 100%", preferred: "χρέωση 100%", reason: "In booking/cancellation copy, 'χρέωση' is more natural and less punitive than 'penalty'.", tags: ["greek", "booking"] },
+            { forbidden: "δημοτικός φόρος", preferred: "φόρος διαμονής / τοπικός φόρος", reason: "Use traveler-facing tax wording unless a city-specific legal label is required.", tags: ["greek", "tax"] },
+            { forbidden: "για επισκέπτες που αναζητούν", preferred: "άμεση, φυσική διατύπωση χωρίς αυτό το διαφημιστικό συμπλήρωμα", reason: "Marketing filler that should usually be removed or rewritten into a direct factual phrase in Greek questions.", tags: ["greek", "question-style"] },
+            { forbidden: "παρέχει", preferred: "προσφέρει / διαθέτει / υπάρχει", reason: "Do not overuse one verb. Choose the natural Greek verb by context: offers, has, or exists/is available.", tags: ["greek", "style"] },
+            { forbidden: "serviced apartments", preferred: "διαμερίσματα με ξενοδοχειακές υπηρεσίες", reason: "Leaving the English term repeatedly makes Greek FAQ copy sound unfinished; use Greek wording in running text unless it is an official product label that must stay in English.", tags: ["greek", "serviced-apartments"] },
+            { forbidden: "εξυπηρετούμενα διαμερίσματα", preferred: "διαμερίσματα με ξενοδοχειακές υπηρεσίες", reason: "More natural Greek for serviced apartments in guest-facing hospitality copy.", tags: ["greek", "serviced-apartments"] },
+            { forbidden: "εξυπηρετούμενων διαμερισμάτων", preferred: "διαμερισμάτων με ξενοδοχειακές υπηρεσίες", reason: "Catch inflected Greek forms of serviced apartments.", tags: ["greek", "serviced-apartments"] },
+            { forbidden: "σύγχρονων εξυπηρετούμενων διαμερισμάτων", preferred: "σύγχρονων διαμερισμάτων με ξενοδοχειακές υπηρεσίες", reason: "Avoid the literal serviced-apartments calque in inflected running text.", tags: ["greek", "serviced-apartments"] },
+            { forbidden: "υπηρεσίες τύπου ξενοδοχείου", preferred: "ξενοδοχειακές υπηρεσίες", reason: "Shorter and more natural Greek phrasing.", tags: ["greek", "serviced-apartments"] },
+            { forbidden: "παροχές πλυντηρίου", preferred: "δυνατότητα πλυντηρίου / ιδιωτικά πλυντηριοστεγνωτήρια", reason: "Use the specific amenity when the source mentions washer-dryers; avoid generic laundry-facilities wording.", tags: ["greek", "amenities"] },
+            { forbidden: "μονάδες πλυντηριοστεγνωτηρίου", preferred: "πλυντηριοστεγνωτήρια", reason: "Cleaner and more natural Greek for washer-dryers.", tags: ["greek", "amenities"] },
+            { forbidden: "ιδιωτικές μονάδες πλυντηριοστεγνωτηρίου", preferred: "ιδιωτικά πλυντηριοστεγνωτήρια", reason: "Cleaner Greek for private washer-dryers in apartment amenities.", tags: ["greek", "amenities"] },
+            { forbidden: "εταιρική διαμονή", preferred: "επαγγελματική διαμονή", reason: "More natural Greek for business/corporate stays in guest-facing copy.", tags: ["greek", "business"] },
+            { forbidden: "διαμορφωμένο για επαγγελματίες ταξιδιώτες σε επαγγελματική διαμονή", preferred: "κατάλληλο για επαγγελματικά ταξίδια / επαγγελματικές διαμονές", reason: "Avoid a heavy literal structure in Greek questions.", tags: ["greek", "business"] },
+            { forbidden: "δημόσια συγκοινωνία", preferred: "δημόσιες συγκοινωνίες / δημόσια μέσα μεταφοράς", reason: "More idiomatic Greek for public transport directions.", tags: ["greek", "transport"] },
+            { forbidden: "παντοπωλεία", preferred: "καταστήματα τροφίμων / σούπερ μάρκετ", reason: "Panopoleia can sound old-fashioned in modern travel FAQ copy.", tags: ["greek", "location"] },
+            { forbidden: "χώρο στάθμευσης στον χώρο του", preferred: "δικό του χώρο στάθμευσης / χώρο στάθμευσης στο κατάλυμα", reason: "Avoid repetitive literal wording for on-site parking.", tags: ["greek", "parking"] },
+            { forbidden: "ντους με επίπεδη πρόσβαση", preferred: "ντους χωρίς σκαλοπάτι", reason: "More natural accessibility wording for roll-in showers.", tags: ["greek", "accessibility"] },
+            { forbidden: "κωδικός πρόσβασης", preferred: "κωδικός εισόδου", reason: "For door/apartment access, Greek guests expect entry code wording rather than password wording.", tags: ["greek", "access"] },
+            { forbidden: "επιλεγμένη τιμή", preferred: "επιλεγμένος τύπος τιμής", reason: "Cancellation terms depend on the rate plan, not the numeric price.", tags: ["greek", "booking"] },
+            { forbidden: "συνεδρίες καθαριότητας", preferred: "επιπλέον καθαρισμοί", reason: "Cleaning sessions sounds translated; this is the natural hotel-service phrasing.", tags: ["greek", "housekeeping"] },
+            { forbidden: "Πρέπει να είναι εκπαιδευμένοι", preferred: "Πρέπει να τηρούν τους κανόνες διαμονής", reason: "Pet-policy wording should not sound like formal dog training unless the source explicitly says trained.", tags: ["greek", "pets"] },
+            { forbidden: "fitness centres", preferred: "γυμναστήρια", reason: "Translate generic facility terms into Greek unless they are official venue names.", tags: ["greek", "fitness"] },
+            { forbidden: "οικιστική άνεση", preferred: "άνεση διαμερίσματος", reason: "Oikistiki anesi sounds unnatural in Greek hospitality copy.", tags: ["greek", "style"] },
+            { forbidden: "που αναζητούν", preferred: "που θέλουν / που χρειάζονται / omit when it is marketing filler", reason: "Avoid translated marketing phrasing when the question can be direct.", tags: ["greek", "question-style"] },
+            { forbidden: "εκπαιδευμένους σκύλους", preferred: "σκύλους που τηρούν τους κανόνες διαμονής", reason: "Avoid making pet-policy text sound like formal dog-training certification.", tags: ["greek", "pets"] },
+            { forbidden: "εκπαιδευμένοι σκύλοι", preferred: "σκύλοι που τηρούν τους κανόνες διαμονής", reason: "Use natural pet-policy wording rather than literal trained-dogs wording.", tags: ["greek", "pets"] },
+            { forbidden: "εκπαιδευμένα σκυλιά", preferred: "σκύλοι που τηρούν τους κανόνες διαμονής", reason: "Use the standard Greek hospitality wording for dog policies.", tags: ["greek", "pets"] },
+            { forbidden: "δίσκο καλωσορίσματος", preferred: "σετ καλωσορίσματος", reason: "Welcome tray sounds literal in Greek; welcome set is smoother for amenities.", tags: ["greek", "amenities"] },
+            { forbidden: "προϊόντα περιποίησης premium", preferred: "προϊόντα περιποίησης υψηλής ποιότητας", reason: "Avoid unnecessary English adjective in Greek guest-facing copy.", tags: ["greek", "amenities"] },
+            { forbidden: "premium χειροποίητα προϊόντα περιποίησης", preferred: "χειροποίητα προϊόντα περιποίησης υψηλής ποιότητας", reason: "Keep the meaning while avoiding an English adjective in Greek copy.", tags: ["greek", "amenities"] },
+            { forbidden: "μαγειρικά σκεύη, σκεύη κουζίνας και σερβίτσια", preferred: "μαγειρικά σκεύη και σερβίτσια", reason: "Avoid repetitive kitchenware phrasing when the natural Greek wording can be shorter.", tags: ["greek", "amenities"] },
+            { forbidden: "λειτουργεί με δυνατότητα προετοιμασίας γευμάτων", preferred: "διαθέτει μικρή κουζίνα για προετοιμασία γευμάτων / είναι κατάλυμα self-catering", reason: "The literal sentence structure is understandable but not idiomatic Greek.", tags: ["greek", "food"] },
+            { forbidden: "0.7 km", preferred: "0,7 χλμ.", reason: "Greek hotel copy should preserve the value but use decimal comma and Greek unit abbreviation.", tags: ["greek", "distance"] },
+            { forbidden: " km", preferred: " χλμ.", reason: "Use Greek unit abbreviation for kilometres while preserving the value.", tags: ["greek", "distance"] },
+            { forbidden: "Δωμάτια & Παροχές", preferred: "Δωμάτια και παροχές", reason: "Use natural Greek category labels consistently instead of English ampersand style.", tags: ["greek", "categories"] },
+            { forbidden: "Δωμάτια & παροχές", preferred: "Δωμάτια και παροχές", reason: "Use one consistent Greek category label.", tags: ["greek", "categories"] },
+            { forbidden: "Φαγητό & Ποτό", preferred: "Φαγητό και ποτό", reason: "Use natural Greek category labels consistently.", tags: ["greek", "categories"] },
+            { forbidden: "Φαγητό & Εστίαση", preferred: "Φαγητό και εστίαση", reason: "Use natural Greek category labels consistently.", tags: ["greek", "categories"] },
+            { forbidden: "Check-in & Check-out", preferred: "Check-in και check-out", reason: "Use a natural Greek connective in category labels.", tags: ["greek", "categories"] },
+            { forbidden: "Κρατήσεις & Πολιτικές", preferred: "Κρατήσεις και πολιτικές", reason: "Use natural Greek category labels consistently.", tags: ["greek", "categories"] },
+            { forbidden: "Αξιοθέατα & Δραστηριότητες", preferred: "Αξιοθέατα και δραστηριότητες", reason: "Use natural Greek category labels consistently.", tags: ["greek", "categories"] },
+            { forbidden: "ανεξάρτητη οικιστική άνεση", preferred: "άνεση ανεξάρτητου διαμερίσματος", reason: "Avoid an unnatural literal phrase for apartment-style comfort.", tags: ["greek", "style"] }
+        ],
+        examples: [
+            {
+                draft: "Παρέχει το Leonardo Hotel δωρεάν Wi-Fi σε όλη την ιδιοκτησία;",
+                polish: "Προσφέρει το Leonardo Hotel δωρεάν Wi-Fi σε όλους τους χώρους του ξενοδοχείου;",
+                note: "Use a natural Greek question and avoid the real-estate meaning of property.",
+                tags: ["greek", "question-style", "amenities"]
+            },
+            {
+                draft: "Υπάρχουν εγκαταστάσεις καφέ και τσαγιού στα δωμάτια;",
+                polish: "Υπάρχουν παροχές για καφέ και τσάι στα δωμάτια;",
+                note: "Amenities should not be translated with a stiff 'facilities' calque.",
+                tags: ["greek", "amenities"]
+            },
+            {
+                draft: "Το ξενοδοχείο έχει δωμάτια προσβάσιμα σε αναπηρικό αμαξίδιο;",
+                polish: "Διαθέτει το ξενοδοχείο προσβάσιμα δωμάτια για άτομα με αναπηρία;",
+                note: "Keep accessibility wording natural and respectful.",
+                tags: ["greek", "accessibility"]
+            },
+            {
+                draft: "Προσφέρει το ξενοδοχείο σουίτες για επισκέπτες που αναζητούν περισσότερο χώρο και άνεση;",
+                polish: "Διαθέτει το ξενοδοχείο σουίτες με περισσότερο χώρο;",
+                note: "Remove translated marketing filler from questions while preserving the factual intent.",
+                tags: ["greek", "question-style"]
+            },
+            {
+                draft: "Το check-in ξεκινά στις 3:00 PM και το check-out πρέπει να ολοκληρωθεί έως τις 11:00 AM.",
+                polish: "Το check-in ξεκινά στις 15:00 και το check-out πρέπει να ολοκληρωθεί έως τις 11:00.",
+                note: "Use natural 24-hour hotel time in Greek while preserving the same time value.",
+                tags: ["greek", "time-format"]
+            },
+            {
+                draft: "Πότε θα λάβω τον κωδικό πρόσβασης και τι γίνεται αν δεν λειτουργεί στην πόρτα;",
+                polish: "Πότε θα λάβω τον κωδικό εισόδου και τι γίνεται αν δεν λειτουργεί στην πόρτα;",
+                note: "Door/apartment access should use entry-code wording, not password wording.",
+                tags: ["greek", "access"]
+            },
+            {
+                draft: "Το master St. Paul’s προσφέρει εξυπηρετούμενα διαμερίσματα με υπηρεσίες τύπου ξενοδοχείου.",
+                polish: "Το master St. Paul’s προσφέρει διαμερίσματα με ξενοδοχειακές υπηρεσίες.",
+                note: "Use natural Greek wording for serviced apartments and avoid literal hotel-style phrasing.",
+                tags: ["greek", "serviced-apartments"]
+            },
+            {
+                draft: "Είναι το master St. Paul’s διαμορφωμένο για επαγγελματίες ταξιδιώτες σε επαγγελματική διαμονή στο Λονδίνο;",
+                polish: "Είναι το master St. Paul’s κατάλληλο για επαγγελματικά ταξίδια στο Λονδίνο;",
+                note: "Keep business-travel questions direct and natural.",
+                tags: ["greek", "business"]
+            },
+            {
+                draft: "Το master Mirabell απέχει 0.7 km από τον σιδηροδρομικό σταθμό.",
+                polish: "Το master Mirabell απέχει 0,7 χλμ. από τον σιδηροδρομικό σταθμό.",
+                note: "Preserve distance values but use Greek decimal comma and unit abbreviation.",
+                tags: ["greek", "distance"]
+            },
+            {
+                draft: "Στο master Mirabell επιτρέπονται εκπαιδευμένοι σκύλοι με επιπλέον χρέωση.",
+                polish: "Στο master Mirabell επιτρέπονται σκύλοι που τηρούν τους κανόνες διαμονής, με επιπλέον χρέωση.",
+                note: "Dog-policy text should sound practical and natural, not like formal training certification.",
+                tags: ["greek", "pets"]
+            },
+            {
+                draft: "Το διαμέρισμα λειτουργεί με δυνατότητα προετοιμασίας γευμάτων.",
+                polish: "Το διαμέρισμα διαθέτει μικρή κουζίνα για προετοιμασία γευμάτων.",
+                note: "Avoid literal self-catering sentence structures when a direct amenity description sounds better.",
+                tags: ["greek", "food"]
+            }
+        ]
+    },
 };
 
 const MASTER_ST_PAULS_TERMINOLOGY: Pick<TerminologyManagement, "es" | "it" | "fr" | "he"> = {
