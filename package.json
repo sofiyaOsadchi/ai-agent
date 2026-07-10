@@ -34,6 +34,8 @@
     "faq-petal-israel": "cross-env MODE=faq-petal-israel tsx src/index.ts",
     "translate-demo": "cross-env MODE=translate-demo tsx src/index.ts",
     "demo-ui": "tsx watch src/server-demo.ts",
+    "mcp:workflows": "tsx src/mcp/server.ts",
+    "mcp:smoke": "node scripts/mcp-smoke-test.cjs",
     "qa-lang-master": "cross-env MODE=qa-lang-master tsx src/index.ts",
     "qa-master-triage": "MODE=qa-master-triage tsx src/index.ts",
     "qa-master-apply-fixes": "MODE=qa-master-apply-fixes tsx src/index.ts",

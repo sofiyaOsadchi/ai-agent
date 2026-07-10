@@ -1543,6 +1543,130 @@ async function scenarioCrossFileRequestGoesToUtilities(browser) {
   await page.close();
 }
 
+async function scenarioRevisionAfterRunFeedback(browser) {
+  const name = "revision-after-run-feedback";
+  const page = await setupPage(browser);
+  await send(page, "תערוך את הגיליון לפי הערות הלקוחה https://docs.google.com/spreadsheets/d/reg-revision-test/edit");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.__assistantSocketHandlers?.done?.());
+  await page.waitForTimeout(300);
+  await send(page, "לא התייחסת לכל ההערות של הלקוחה ובהערה הראשונה לא נכתבה תשובה מחליפה טובה ומלאה");
+  const text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "משוב על הריצה הקודמת");
+  expectIncludes(name, text, "לסרוק את כל ההערות מחדש");
+  expectNotIncludes(name, text, "הוספתי את זה כהנחיה לכלי");
+  await clickReply(page, "לסרוק את כל ההערות מחדש");
+  const planText = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, planText, "dry-run");
+  expectIncludes(name, planText, "אותו גיליון");
+  expectIncludes(name, planText, "לבדוק בלי לכתוב");
+  await page.close();
+}
+
+async function scenarioRevisionKeepsSameSheetInPayload(browser) {
+  const name = "revision-keeps-same-sheet";
+  const page = await setupPage(browser);
+  await send(page, "תערוך את הגיליון לפי הערות הלקוחה https://docs.google.com/spreadsheets/d/reg-revision-sheet/edit");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.__assistantSocketHandlers?.done?.());
+  await page.waitForTimeout(300);
+  await send(page, "פספסת כמה שורות והתשובה לא טובה בהערה הראשונה");
+  await clickReply(page, "לתקן רק שורות בעייתיות");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "reg-revision-sheet");
+  expectIncludes(name, text, "שורות בעייתיות");
+  await page.close();
+}
+
+async function scenarioScanThenExtendFaqPlan(browser) {
+  const name = "scan-then-extend-faq-plan";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה שתסרוק את כל השאלות שבעמוד הזה ואז תכתוב לי שאלות חדשות שלא קיימות בו https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv");
+  const text = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, text, "שתי משימות");
+  expectIncludes(name, text, "שלב 1");
+  expectNotIncludes(name, text, "למי זה מיועד");
+  await page.close();
+}
+
+async function scenarioScanThenExtendFaqRequiresAuditOutput(browser) {
+  const name = "scan-then-extend-faq-requires-audit-output";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה שתסרוק את כל השאלות שבעמוד הזה ואז תכתוב לי שאלות חדשות שלא קיימות בו https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.__assistantSocketHandlers?.done?.());
+  await page.waitForTimeout(300);
+  const text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "לא אפתח את שלב 2");
+  expectNotIncludes(name, text, "כן, להמשיך לשלב 2");
+  await page.close();
+}
+
+async function scenarioScanThenExtendFaqFollowUp(browser) {
+  const name = "scan-then-extend-faq-followup";
+  const page = await setupPage(browser);
+  await send(page, "אני רוצה שתסרוק את כל השאלות שבעמוד הזה ואז תכתוב לי שאלות חדשות שלא קיימות בו https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv");
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const handlers = window.__assistantSocketHandlers || {};
+    const result = {
+      startedAt: "2026-07-06T07:00:00.000Z",
+      finishedAt: "2026-07-06T07:00:01.000Z",
+      startUrl: "https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv",
+      selectedUrls: ["https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv"],
+      pages: [
+        {
+          url: "https://www.leonardo-hotels.com/tel-aviv/nyx-hotel-tel-aviv",
+          title: "NYX Hotel Tel Aviv",
+          visibleQuestions: ["Existing question?"],
+          schemaQuestions: [],
+        }
+      ],
+      summary: {
+        pagesChecked: 1,
+        totalVisibleQuestions: 1,
+        totalSchemaQuestions: 0,
+        pagesWithMismatch: 0,
+        pagesMissingSchema: 0,
+        pagesMissingVisibleFaq: 0
+      }
+    };
+    handlers.log?.("SITE_FAQ_AUDIT_RESULT_JSON_START");
+    JSON.stringify(result, null, 2).split("\n").forEach((line) => handlers.log?.(line));
+    handlers.log?.("SITE_FAQ_AUDIT_RESULT_JSON_END");
+    handlers.done?.();
+  });
+  await page.waitForTimeout(300);
+  const text = `${await chatText(page)}\n${await quickText(page)}`;
+  expectIncludes(name, text, "שלב 2");
+  expectIncludes(name, text, "כן, להמשיך לשלב 2");
+  await clickReply(page, "כן, להמשיך לשלב 2");
+  const followText = `${await panelText(page)}\n${await chatText(page)}`;
+  expectIncludes(name, followText, "FAQ");
+  await page.close();
+}
+
+async function scenarioApplyClientNotesAsksNotesLocation(browser) {
+  const name = "apply-client-notes-clarifying-question";
+  const page = await setupPage(browser);
+  await send(page, "תערוך לפי הערות הלקוח https://docs.google.com/spreadsheets/d/reg-notes-test/edit");
+  await page.waitForTimeout(500);
+  const text = await chatText(page);
+  expectIncludes(name, text, "כדי שההרצה תהיה מדויקת");
+  await page.close();
+}
+
+async function scenarioReadyStatePivotGoesToAssistant(browser) {
+  const name = "ready-state-pivot-goes-to-assistant";
+  const page = await setupPage(browser);
+  await send(page, "תערוך את הגיליון לפי הערות הלקוחה https://docs.google.com/spreadsheets/d/reg-pivot-test/edit");
+  await page.waitForTimeout(300);
+  await send(page, "רגע, זה לא מה שביקשתי, אני צריכה משהו אחר לגמרי מהסוכן");
+  const text = await chatText(page);
+  expectNotIncludes(name, text, "הוספתי את זה כהנחיה לכלי");
+  await page.close();
+}
+
 async function scenarioSheetUtilitiesRoute(browser) {
   const name = "sheet-utilities-route";
   const page = await setupPage(browser);
@@ -1646,6 +1770,13 @@ async function main() {
     scenarioSheetAnswerQaStaysFormatting,
     scenarioGeneralAuditWithFaqMentionStaysGeneral,
     scenarioCrossFileRequestGoesToUtilities,
+    scenarioRevisionAfterRunFeedback,
+    scenarioRevisionKeepsSameSheetInPayload,
+    scenarioScanThenExtendFaqPlan,
+    scenarioScanThenExtendFaqRequiresAuditOutput,
+    scenarioScanThenExtendFaqFollowUp,
+    scenarioApplyClientNotesAsksNotesLocation,
+    scenarioReadyStatePivotGoesToAssistant,
     scenarioSheetUtilitiesRoute,
     scenarioFileDraftRoute,
     scenarioClientReportRoute,

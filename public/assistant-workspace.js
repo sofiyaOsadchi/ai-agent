@@ -316,12 +316,16 @@
       activeStep: "idle",
       collectedInputs: {},
       missingInputs: [],
+      workflowPrepare: null,
+      workflowPrepareAskedTaskTypes: {},
       sources: [],
       pendingQuestion: null,
       readyToRun: false,
       lastPayload: null,
       lastRun: null,
       lastResult: null,
+      revision: null,
+      pendingFollowUpTask: null,
       liveRunConfirmed: false,
       runConfirmed: false,
       outputs: [],
@@ -2597,6 +2601,7 @@
     };
     if (targetUrl) recordSource(targetUrl, "FAQ Editing Workspace edit target", "design-formatting");
     updateToolMissingInputs();
+    refreshWorkflowPrepare(tool, { userRequest: text }).finally(() => renderWorkspace());
     advanceToolFlow(hasHebrew(text)
       ? "קלטתי. זו עריכת Google Sheet על הקובץ שנוצר, לא FAQ חדש. מתחילה בבדיקה בלי לכתוב לגיליון."
       : "Got it. This is a Google Sheet edit on the generated file, not a new FAQ. I’ll start with a dry run.");
@@ -2762,6 +2767,9 @@
     state.runConfirmed = false;
     recordSourcesFromText(text, `${tool.title} input`);
     updateToolMissingInputs();
+    if (tool.id === "design-formatting") {
+      refreshWorkflowPrepare(tool, { userRequest: text }).finally(() => renderWorkspace());
+    }
 
     advanceToolFlow();
     return true;
@@ -2797,9 +2805,76 @@
     if (tool.id === "site-ai-faq-audit" && !state.missingInputs.length && !hasFaqAuditDiscovery()) {
       state.missingInputs = ["discoveryMapped"];
     }
+    registryMissingInputKeys(tool).forEach((key) => {
+      if (!state.missingInputs.includes(key)) state.missingInputs.push(key);
+    });
     state.readyToRun = state.missingInputs.length === 0;
     state.lastPayload = state.readyToRun ? buildToolPayload(tool, state.collectedInputs) : null;
     if (state.lastPayload) rememberToolPayload(tool.id, state.lastPayload, state.collectedInputs);
+  }
+
+  function registryMissingInputKeys(tool) {
+    const prepare = state.workflowPrepare;
+    if (!tool || !prepare || prepare.toolId !== tool.id || prepare.ready) return [];
+    const validation = prepare.result?.validation || {};
+    const missing = new Set();
+
+    (validation.missingFields || []).forEach((field) => {
+      const mapped = registryFieldToToolInputKey(tool, field);
+      if (mapped) missing.add(mapped);
+    });
+
+    (validation.missingFieldGroups || []).forEach((message) => {
+      const mapped = registryFieldGroupToToolInputKey(tool, message);
+      if (mapped) missing.add(mapped);
+    });
+
+    return Array.from(missing).filter((key) => {
+      if (key === "discoveryMapped") return true;
+      return (tool.requiredInputs || []).some((field) => field.key === key);
+    });
+  }
+
+  function registryFieldToToolInputKey(tool, fieldKey) {
+    const direct = (tool.requiredInputs || []).some((field) => field.key === fieldKey);
+    if (direct) return fieldKey;
+
+    const map = {
+      "translate-demo": {
+        spreadsheetId: "sourceUrl",
+        sourceFolderId: "sourceUrl"
+      },
+      "schema-builder": {
+        targetId: "sourceUrl"
+      },
+      "site-ai-audit": {
+        startUrl: "siteUrl"
+      },
+      "site-ai-faq-audit": {
+        startUrl: "siteUrl"
+      },
+      "design-formatting": {
+        targetId: "targetUrl",
+        operation: "instruction"
+      },
+      "client-reports": {
+        spreadsheetId: "spreadsheetId"
+      }
+    };
+
+    return map[tool.id]?.[fieldKey] || "";
+  }
+
+  function registryFieldGroupToToolInputKey(tool, message) {
+    const text = String(message || "");
+
+    if (tool.id === "translate-demo" && /spreadsheetId|sourceFolderId/i.test(text)) return "sourceUrl";
+    if (tool.id === "meta-tags" && /spreadsheetId|folderId|pageList/i.test(text)) return "pageList";
+    if (tool.id === "schema-builder" && /targetId|source/i.test(text)) return "sourceUrl";
+    if ((tool.id === "site-ai-audit" || tool.id === "site-ai-faq-audit") && /startUrl|url/i.test(text)) return "siteUrl";
+    if (tool.id === "design-formatting" && /operation|instruction/i.test(text)) return "instruction";
+
+    return "";
   }
 
   function fieldHasValue(value) {
@@ -3733,6 +3808,82 @@
     return { mode: tool.mode, ...values };
   }
 
+  function shouldUseWorkflowPrepare(tool) {
+    return Boolean(tool?.id && tool.id !== "file-draft" && tool.id !== "faq-playground");
+  }
+
+  async function refreshWorkflowPrepare(tool, options = {}) {
+    if (!shouldUseWorkflowPrepare(tool)) {
+      state.workflowPrepare = null;
+      return null;
+    }
+
+    let payload;
+    try {
+      payload = options.payload || buildToolPayload(tool, state.collectedInputs);
+    } catch (error) {
+      logLine(`Workflow prepare skipped: ${error.message || error}`, "warn");
+      return null;
+    }
+
+    try {
+      const response = await fetch("/api/workflows/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflowId: tool.id,
+          payload,
+          userRequest: options.userRequest || state.messages.filter((message) => message.role === "user").slice(-1)[0]?.text || "",
+          requireRunnable: true
+        })
+      });
+
+      if (!response.ok) {
+        logLine(`Workflow prepare skipped: ${response.status}`, "warn");
+        return null;
+      }
+
+      const result = await response.json();
+      state.workflowPrepare = {
+        toolId: tool.id,
+        result,
+        checkedAt: Date.now()
+      };
+
+      if (result?.detectedTask?.taskType) {
+        logLine(`Workflow prepare detected task type: ${result.detectedTask.taskType}.`);
+        const instructionText = compact(state.collectedInputs.instruction || state.collectedInputs.instructions || "");
+        const instructionWords = instructionText.split(/\s+/).filter(Boolean).length;
+        const firstQuestion = (result.suggestedQuestions || [])[0];
+        const taskTypeKey = `${tool.id}:${result.detectedTask.taskType}`;
+        if (
+          firstQuestion &&
+          instructionText &&
+          instructionWords < 10 &&
+          state.step !== "revisionScope" &&
+          !state.workflowPrepareAskedTaskTypes[taskTypeKey]
+        ) {
+          state.workflowPrepareAskedTaskTypes[taskTypeKey] = true;
+          bot(prefersHebrew()
+            ? `כדי שההרצה תהיה מדויקת (${result.detectedTask.label}): ${firstQuestion}`
+            : `To make this run precise (${result.detectedTask.label}): ${firstQuestion}`);
+        }
+      }
+
+      const missing = registryMissingInputKeys(tool);
+      if (missing.length) {
+        logLine(`Workflow prepare needs: ${missing.join(", ")}`, "warn");
+      } else {
+        logLine(`Workflow prepare ready for ${tool.id}.`, "ok");
+      }
+
+      return result;
+    } catch (error) {
+      logLine(`Workflow prepare skipped: ${error.message || error}`, "warn");
+      return null;
+    }
+  }
+
   function smartRouterTools() {
     return (manifest.tools || []).map((tool) => ({
       id: tool.id,
@@ -3987,7 +4138,7 @@
     finishFileTask();
   }
 
-  function startToolFromSmart(tool, values = {}, reply = "", text = "") {
+  async function startToolFromSmart(tool, values = {}, reply = "", text = "") {
     if (!tool) return false;
     if (tool.id === "faq-playground") {
       startFaqFromSmart(values, reply, text);
@@ -4016,6 +4167,7 @@
     state.lastPayload = null;
     state.liveRunConfirmed = false;
     recordSourcesFromText(text, `${tool.title} smart route`);
+    await refreshWorkflowPrepare(tool, { userRequest: text });
     updateToolMissingInputs();
     advanceToolFlow();
     return true;
@@ -4056,7 +4208,7 @@
         return Boolean(result.reply);
       }
       logLine(`Smart router chose ${tool.title} (${result.modelUsed || "assistant-chat"}).`, "ok");
-      return startToolFromSmart(tool, action.values || {}, result.reply || "", text);
+      return await startToolFromSmart(tool, action.values || {}, result.reply || "", text);
     } catch (error) {
       logLine(`Smart router skipped: ${error.message || error}`, "warn");
       return false;
@@ -4091,7 +4243,7 @@
         const tool = getTool(action.toolId);
         if (tool) {
           logLine(`Assistant brain chose ${tool.title} (${result.modelUsed || "assistant-chat"}).`, "ok");
-          return startToolFromSmart(tool, action.values || {}, result.reply || "", text);
+          return await startToolFromSmart(tool, action.values || {}, result.reply || "", text);
         }
       }
       if (result.reply) {
@@ -5147,6 +5299,38 @@
       return true;
     }
 
+    if (value === "revise:rescan" || value === "revise:problem-rows") {
+      if (!state.revision) return true;
+      state.revision.scope = value === "revise:rescan" ? "rescan" : "problem-rows";
+      finalizeRevisionPlan("");
+      return true;
+    }
+    if (value === "revise:detail") {
+      if (!state.revision) return true;
+      state.revision.scope = "detail";
+      state.step = "revisionScope";
+      bot(prefersHebrew()
+        ? "כתבי בדיוק אילו הערות או שורות לא טופלו ומה צריך להשתנות בהן."
+        : "Describe exactly which notes or rows were not handled and what should change in them.");
+      return true;
+    }
+    if (value === "followup:start") {
+      const followUp = state.pendingFollowUpTask;
+      state.pendingFollowUpTask = null;
+      if (!followUp) return true;
+      const guidance = prefersHebrew()
+        ? `${followUp.request}\nחשוב: ליצור רק שאלות חדשות שלא מופיעות בסריקת העמוד האחרונה (תוצאת ה-FAQ audit).`
+        : `${followUp.request}\nImportant: create only NEW questions that do not appear in the latest FAQ audit scan of the page.`;
+      return startTool(followUp.toolId, guidance);
+    }
+    if (value === "followup:skip") {
+      state.pendingFollowUpTask = null;
+      bot(prefersHebrew()
+        ? "בסדר, עצרתי אחרי שלב 1. אפשר להמשיך לשלב 2 מתי שתרצי."
+        : "Okay, stopping after step 1. We can continue to step 2 whenever you want.");
+      return true;
+    }
+
     if (value.startsWith("route:")) {
       const routedText = state.pendingRouteText || "";
       state.pendingRouteText = "";
@@ -6134,6 +6318,203 @@
     return false;
   }
 
+  function isRunFeedbackText(text) {
+    const clean = compact(text);
+    if (!clean || clean.length < 6) return false;
+    if (isRunRequest(clean) || isPayloadRequest(clean) || isDryRunRequest(clean) || isLiveRunConfirmation(clean)) return false;
+    const negativeHe = /לא\s+(?:התייחס|התייחסת|התיחסת|טיפלת|טופל|טופלו|עשית|ביצעת|כתבת|כתבה|נכתב|נכתבה|החלפת|הוחלף|עדכנת|עודכן|תיקנת|תוקן)|פספסת|דילגת|שכחת|התשוב(?:ה|ות)\s+לא|לא\s+טוב(?:ה|ות|ים)?|לא\s+מלא(?:ה|ות)?|לא\s+נכונ|עדיין\s+לא|שוב\s+לא|חסר(?:ה|ות|ים)?\s/;
+    const negativeEn = /did\s?n[o']?t\s+(?:handle|apply|address|update|replace|fix|write|cover|do)|missed|skipped|ignored|not\s+(?:all|good|complete|full|addressed|handled|written)|wrong|still\s+(?:missing|not|empty)/i;
+    const referencesRun = /הער(?:ה|ות)|תשוב|שור(?:ה|ות)|עמוד(?:ה|ות)?|ריצה|הרצה|תוצא|פלט|גיליון|note|answer|row|column|run|result|output|sheet/i;
+    return (negativeHe.test(clean) || negativeEn.test(clean)) && referencesRun.test(clean);
+  }
+
+  function lastRunValuesSnapshot() {
+    const run = state.lastRun || {};
+    const payload = run.payload || {};
+    const memory = state.taskMemory || {};
+    return {
+      toolId: run.toolId || "",
+      targetUrl: compact(state.collectedInputs.targetUrl || payload.targetId || memory.lastSheet?.url || ""),
+      tabName: compact(state.collectedInputs.tabName || payload.tabName || memory.lastSheet?.tabName || ""),
+      instruction: compact(state.collectedInputs.instruction || payload.assistantInstruction || payload?.operation?.instruction || ""),
+      payload
+    };
+  }
+
+  function startRevisionFlow(text) {
+    const run = state.lastRun;
+    if (!run?.toolId) return false;
+    const tool = getTool(run.toolId);
+    if (!tool) return false;
+    const snapshot = lastRunValuesSnapshot();
+    state.mode = "tool";
+    state.activeToolId = tool.id;
+    state.activeIntent = tool.id;
+    state.activeStep = "collecting";
+    state.step = "revisionScope";
+    state.readyToRun = false;
+    state.runConfirmed = false;
+    state.liveRunConfirmed = false;
+    state.revision = {
+      toolId: tool.id,
+      feedback: [compact(text)],
+      baseline: snapshot,
+      scope: ""
+    };
+    if (snapshot.targetUrl) state.collectedInputs.targetUrl = snapshot.targetUrl;
+    if (snapshot.tabName) state.collectedInputs.tabName = snapshot.tabName;
+    state.collectedInputs.dryRun = true;
+    const he = prefersHebrew();
+    bot(he
+      ? `הבנתי - זה משוב על הריצה הקודמת של ${tool.title}, לא בקשה חדשה. אני שומרת את אותו גיליון ולשונית, ולא כותבת כלום לפני שנבנה תיקון מסודר.\nמה היקף התיקון?`
+      : `Got it - this is feedback on the previous ${tool.title} run, not a new request. I am keeping the same Sheet and tab, and I will not write anything before we build a proper revision.\nWhat is the scope of the fix?`);
+    setQuickReplies(he ? [
+      { label: "לסרוק את כל ההערות מחדש", value: "revise:rescan" },
+      { label: "לתקן רק שורות בעייתיות", value: "revise:problem-rows" },
+      { label: "אפרט מה לתקן", value: "revise:detail" }
+    ] : [
+      { label: "Re-scan all client notes", value: "revise:rescan" },
+      { label: "Fix only problematic rows", value: "revise:problem-rows" },
+      { label: "I will specify what to fix", value: "revise:detail" }
+    ]);
+    renderWorkspace();
+    return true;
+  }
+
+  function buildRevisionInstruction() {
+    const revision = state.revision || {};
+    const baseline = revision.baseline || {};
+    const scopeLine = revision.scope === "rescan"
+      ? "Re-scan ALL client notes/comments in the sheet and verify each one was fully applied. Reprocess every row whose note was not fully handled."
+      : revision.scope === "problem-rows"
+        ? "Only update rows the user flagged as problematic or where the previous output is missing or partial. Do not touch rows that were already handled correctly."
+        : "Apply the user's revision details below exactly.";
+    const feedback = (revision.feedback || []).filter(Boolean).map((item) => `- ${item}`).join("\n");
+    return [
+      baseline.instruction ? `ORIGINAL TASK:\n${baseline.instruction}` : "",
+      "REVISION OF PREVIOUS RUN - the previous output was reviewed by the user and is not acceptable as-is.",
+      feedback ? `USER FEEDBACK ON PREVIOUS RUN:\n${feedback}` : "",
+      `REVISION SCOPE: ${scopeLine}`,
+      "Requirements: write full replacement answers (never placeholders), address every client note explicitly, and keep rows/columns that were already correct unchanged."
+    ].filter(Boolean).join("\n\n");
+  }
+
+  function finalizeRevisionPlan(extraDetail) {
+    const revision = state.revision;
+    if (!revision) return false;
+    const detail = compact(extraDetail || "");
+    if (detail) revision.feedback.push(detail);
+    const tool = getTool(revision.toolId);
+    if (!tool) {
+      state.revision = null;
+      return false;
+    }
+    const instruction = buildRevisionInstruction();
+    state.collectedInputs.instruction = instruction;
+    state.collectedInputs.instructions = instruction;
+    state.collectedInputs.dryRun = true;
+    state.liveRunConfirmed = false;
+    state.runConfirmed = false;
+    updateToolMissingInputs();
+    if (!state.readyToRun) {
+      state.step = "tool";
+      advanceToolFlow(prefersHebrew()
+        ? "לפני תוכנית התיקון חסר לי עוד פרט טכני מהמשימה המקורית."
+        : "Before preparing the revision plan, I still need one technical detail from the original task.");
+      return true;
+    }
+    state.lastPayload = buildToolPayload(tool, state.collectedInputs);
+    rememberToolPayload(tool.id, state.lastPayload, state.collectedInputs);
+    state.step = "ready";
+    const he = prefersHebrew();
+    const scopeLabel = revision.scope === "rescan"
+      ? (he ? "סריקה מחדש של כל ההערות" : "re-scan of all client notes")
+      : revision.scope === "problem-rows"
+        ? (he ? "תיקון שורות בעייתיות בלבד" : "fixing only the flagged rows")
+        : (he ? "תיקון לפי הפירוט שלך" : "your detailed fixes");
+    bot(he
+      ? `בניתי תוכנית תיקון: ${scopeLabel}, על אותו גיליון ולשונית, במצב dry-run בלי כתיבה. נריץ תצוגה מקדימה, ורק אחרי שהתוצאה נראית טוב - אישור כתיבה אמיתית.`
+      : `Revision plan ready: ${scopeLabel}, same Sheet and tab, in dry-run mode with no writes. Run the preview first; approve a live write only after the preview looks right.`);
+    setQuickReplies(he ? [
+      { label: "לבדוק בלי לכתוב", value: "format:dry-run", primary: true },
+      { label: "בדיקה מקדימה", value: "format:preview" },
+      { label: "לפתוח את העורך", value: "open-tool" }
+    ] : [
+      { label: "Run dry run here", value: "format:dry-run", primary: true },
+      { label: "Preview mode", value: "format:preview" },
+      { label: "Open editor", value: "open-tool" }
+    ]);
+    renderWorkspace();
+    return true;
+  }
+
+  function hasUsableFaqAuditOutput() {
+    return Boolean(state.outputs.find((item) => item.source === "SITE_FAQ_AUDIT" && item.url));
+  }
+
+  function proposeFollowUpTask() {
+    const followUp = state.pendingFollowUpTask;
+    if (!followUp) return;
+    const tool = getTool(followUp.toolId);
+    if (!tool) {
+      state.pendingFollowUpTask = null;
+      return;
+    }
+    if (followUp.requiresOutputSource === "SITE_FAQ_AUDIT" && !hasUsableFaqAuditOutput()) {
+      state.pendingFollowUpTask = null;
+      bot(prefersHebrew()
+        ? "לא אפתח את שלב 2 עדיין, כי אין לי תוצאת FAQ audit תקינה לבסס עליה שאלות חדשות."
+        : "I will not open step 2 yet because there is no usable FAQ audit result to base new questions on.");
+      return;
+    }
+    const he = prefersHebrew();
+    bot(he
+      ? `שלב 1 בתוכנית הסתיים. שלב 2: ${tool.title} - ${followUp.noteHe || ""} להמשיך?`
+      : `Step 1 of the plan is done. Step 2: ${tool.title} - ${followUp.noteEn || ""} Continue?`);
+    setQuickReplies(he ? [
+      { label: "כן, להמשיך לשלב 2", value: "followup:start", primary: true },
+      { label: "לא עכשיו", value: "followup:skip" }
+    ] : [
+      { label: "Yes, continue to step 2", value: "followup:start", primary: true },
+      { label: "Not now", value: "followup:skip" }
+    ]);
+  }
+
+  function isScanThenExtendFaqIntent(text) {
+    const clean = compact(text);
+    if (!extractUrl(clean)) return false;
+    const scanVerb = /לסרוק|תסרוק|תסרקי|סרקי|סריקה|תבדוק מה יש|לבדוק מה יש|scan|crawl|review (?:the )?page|check (?:the )?page/i.test(clean);
+    const mentionsQuestions = /שאל(?:ה|ות)|questions?|faq/i.test(clean);
+    const wantsNew = /חדש(?:ה|ות|ים)?|שלא\s+קיימ|שאין\s|נוספ(?:ת|ות)|להוסיף|תוסיפי|extra|additional|new\s+questions?|missing|not\s+(?:already\s+)?(?:on|in|there|exist)/i.test(clean);
+    return scanVerb && mentionsQuestions && wantsNew;
+  }
+
+  function startScanThenExtendFaqPlan(text) {
+    const url = extractUrl(text);
+    if (!url) return false;
+    state.pendingFollowUpTask = {
+      afterToolId: "site-ai-faq-audit",
+      toolId: "faq-playground",
+      request: compact(text),
+      requiresOutputSource: "SITE_FAQ_AUDIT",
+      noteHe: "יצירת שאלות חדשות שלא מופיעות בעמוד, על בסיס תוצאת הסריקה.",
+      noteEn: "creating new questions that do not already exist on the page, based on the scan output."
+    };
+    const he = prefersHebrew();
+    bot(he
+      ? "יש כאן שתי משימות, אז בניתי תוכנית בשני שלבים:\n1. סריקת השאלות הקיימות בעמוד (FAQ audit).\n2. יצירת שאלות חדשות שלא קיימות בעמוד, על בסיס הסריקה.\nמתחילה בשלב 1."
+      : "This request contains two tasks, so I built a two-step plan:\n1. Scan the existing questions on the page (FAQ audit).\n2. Create new questions that do not exist on the page, based on the scan output.\nStarting step 1.");
+    startTool("site-ai-faq-audit", text);
+    return true;
+  }
+
+  function looksLikeMidTaskPivot(text) {
+    const clean = compact(text);
+    const wordCount = clean.split(/\s+/).filter(Boolean).length;
+    if (wordCount < 6) return false;
+    return /\?|במקום זה|בעצם|זה לא מה ש|לא לזה התכוונתי|תשכחי מזה|תעזבי|עזבי|רגע,|actually|instead|never mind|that'?s not what|not what i meant|forget (?:it|that)/i.test(clean);
+  }
+
   function appendToolInstruction(clean) {
     const key = state.activeToolId === "design-formatting" ? "instruction" : "instructions";
     const items = [state.collectedInputs[key], clean]
@@ -6392,6 +6773,21 @@
       }
     }
 
+    if (state.step === "revisionScope" && state.revision) {
+      state.revision.scope = state.revision.scope || "detail";
+      finalizeRevisionPlan(clean);
+      return;
+    }
+
+    if (state.lastRun && !state.running && isRunFeedbackText(clean)) {
+      if (startRevisionFlow(clean)) return;
+    }
+
+    if (state.step === "idle" && isScanThenExtendFaqIntent(clean) && startScanThenExtendFaqPlan(clean)) {
+      renderWorkspace();
+      return;
+    }
+
     if (handlePlannedAssistantCommands(clean)) {
       renderWorkspace();
       return;
@@ -6595,6 +6991,14 @@
         state.liveRunConfirmed = false;
         updateToolMissingInputs();
         askDesignFormattingLiveConfirmation();
+        return;
+      }
+      if (state.lastRun && isRunFeedbackText(clean)) {
+        startRevisionFlow(clean);
+        return;
+      }
+      if (looksLikeMidTaskPivot(clean) && await tryGeneralAssistant(clean)) {
+        renderWorkspace();
         return;
       }
       appendToolInstruction(clean);
@@ -7210,6 +7614,22 @@
         blockUnsafeColumnTransfer(plannedPayload);
         return;
       }
+    }
+    const prepared = await refreshWorkflowPrepare(tool, { payload: plannedPayload });
+    if (prepared && prepared.ready === false) {
+      updateToolMissingInputs();
+      const missingField = firstMissingField(tool);
+      if (missingField) {
+        advanceToolFlow(prefersHebrew()
+          ? "חסר לי עוד פרט לפי חוזה ה־workflow לפני שאפשר להמשיך."
+          : "The workflow contract needs one more detail before I can continue.");
+        return;
+      }
+      bot(prefersHebrew()
+        ? "ה־workflow עדיין לא מוכן להרצה לפי ה־registry. אצטרך עוד פרט לפני שממשיכים."
+        : "The workflow is not ready according to the registry yet. I need one more detail before continuing.");
+      setGenericReadyReplies(tool);
+      return;
     }
     if (tool.id === "design-formatting" && plannedPayload?.dryRun === false && !state.liveRunConfirmed) {
       askDesignFormattingLiveConfirmation();
@@ -7995,6 +8415,13 @@
             : `${tool?.title || "The workflow"} finished. Parsed links and result markers were saved in Generated outputs when available.`);
         }
         if (tool && !(tool.id === "site-ai-faq-audit" && completedPayload?.mode === "site-ai-discovery")) setGenericReadyReplies(tool);
+      }
+      if (
+        state.pendingFollowUpTask &&
+        (!state.pendingFollowUpTask.afterToolId || state.pendingFollowUpTask.afterToolId === completedToolId) &&
+        !(completedToolId === "site-ai-faq-audit" && completedPayload?.mode === "site-ai-discovery")
+      ) {
+        proposeFollowUpTask();
       }
       renderToolStrip();
     });

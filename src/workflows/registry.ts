@@ -59,6 +59,21 @@ export type WorkflowRequiredOneOf = {
   message: string;
 };
 
+export type WorkflowTaskType = {
+  id: string;
+  label: string;
+  matchHints: readonly string[];
+  clarifyingQuestions: readonly string[];
+  payloadHints?: Readonly<Record<string, unknown>>;
+};
+
+export type WorkflowRevisionPolicy = {
+  keepFields: readonly string[];
+  defaultDryRun: boolean;
+  askBeforeWrite: boolean;
+  feedbackHints: readonly string[];
+};
+
 export type WorkflowDefaultPolicy = {
   allowRunFromDemo: boolean;
   allowDirectRunFromAssistant: boolean;
@@ -79,6 +94,8 @@ export type WorkflowDefinition = {
   requiredFields: readonly WorkflowField[];
   optionalFields: readonly WorkflowField[];
   requiredOneOf?: readonly WorkflowRequiredOneOf[];
+  taskTypes?: readonly WorkflowTaskType[];
+  revisionPolicy?: WorkflowRevisionPolicy;
   payloadStrategy: WorkflowPayloadStrategy;
   dynamicEnv: DynamicEnvMapping;
   riskLevel: WorkflowRiskLevel;
@@ -252,6 +269,73 @@ export const WORKFLOW_REGISTRY = [
     riskLevel: "writes_to_sheet",
     defaultPolicy: CONFIRM_DRY_RUN_POLICY,
     supportsDryRun: true,
+    taskTypes: [
+      {
+        id: "apply_client_notes",
+        label: "Apply client notes/comments to the sheet",
+        matchHints: ["הערות הלקוח", "הערות לקוח", "הערות לקוחה", "לפי ההערות", "client notes", "client comments", "apply notes"],
+        clarifyingQuestions: [
+          "Where are the client notes: sheet comments, a dedicated column, or a separate document?",
+          "Should every row with a note be reprocessed, or only specific rows?",
+          "Should replacement answers fully overwrite the old text, or be added alongside it?",
+        ],
+        payloadHints: { dryRun: true },
+      },
+      {
+        id: "clean_column",
+        label: "Clean or normalize a column",
+        matchHints: ["לנקות", "להסיר קישורים", "clean column", "remove links", "remove sources", "normalize"],
+        clarifyingQuestions: [
+          "Which column should be cleaned, and what exactly counts as content to remove?",
+        ],
+        payloadHints: { dryRun: true },
+      },
+      {
+        id: "research_missing_answers",
+        label: "Research and fill missing answers",
+        matchHints: ["תשובות חסרות", "להשלים תשובות", "למלא תשובות", "missing answers", "complete answers", "fill answers", "source-backed"],
+        clarifyingQuestions: [
+          "Which column holds the answers, and how is a missing answer marked: empty cell, [VERIFY], or placeholder text?",
+          "Which source URL or domain should answers be based on?",
+        ],
+        payloadHints: { dryRun: true },
+      },
+      {
+        id: "answers_qa",
+        label: "QA existing answers",
+        matchHints: ["לבדוק את התשובות", "בדיקת תשובות", "QA", "verify answers", "check answers"],
+        clarifyingQuestions: [
+          "Which checks should run: factual accuracy against a source, tone/clarity, duplicates, or completeness?",
+          "Should the QA output be written to a new column or only reported?",
+        ],
+        payloadHints: { dryRun: true },
+      },
+      {
+        id: "column_transfer",
+        label: "Move/copy/replace column content",
+        matchHints: ["להעביר עמודה", "להעתיק עמודה", "להחליף עמודה", "copy column", "move column", "replace column"],
+        clarifyingQuestions: [
+          "Which source column and which target column, and should existing target values be overwritten?",
+        ],
+        payloadHints: { operationType: "replace_column_when_value", dryRun: true },
+      },
+      {
+        id: "revision_after_run",
+        label: "Revision of a previous run based on user feedback",
+        matchHints: ["לא התייחסת", "לא טופל", "התשובה לא טובה", "פספסת", "missed", "didn't apply", "not all notes"],
+        clarifyingQuestions: [
+          "Which notes or rows were not handled correctly?",
+          "Should all client notes be re-scanned, or only the flagged rows be fixed?",
+        ],
+        payloadHints: { dryRun: true },
+      },
+    ],
+    revisionPolicy: {
+      keepFields: ["targetId", "tabName", "sourceType"],
+      defaultDryRun: true,
+      askBeforeWrite: true,
+      feedbackHints: ["לא התייחסת", "לא טופל", "פספסת", "התשובה לא טובה", "missed", "not all", "didn't"],
+    },
     notes: [
       "Direct chat runs should default to dryRun=true.",
       "Live writes need explicit confirmation.",

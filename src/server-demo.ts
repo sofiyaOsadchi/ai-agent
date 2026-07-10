@@ -31,6 +31,14 @@ import { updateUserDisplayName } from "./users/user.service.js";
 import planRoutes from "./plans/plan.routes.js";
 import runRoutes from "./runs/run.routes.js";
 import { createRun, updateRun } from "./runs/run.service.js";
+import {
+  getWorkflowById,
+  listRunnableWorkflows,
+  listWorkflows,
+  validateWorkflowPayload,
+  type WorkflowDefinition,
+} from "./workflows/registry.js";
+import { prepareWorkflowRun } from "./mcp/workflow-adapter.js";
 
 loadEnv();
 
@@ -45,6 +53,42 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 const publicPath = path.join(__dirname, "..", "public");
+
+function workflowSummary(workflow: WorkflowDefinition) {
+  return {
+    id: workflow.id,
+    title: workflow.title,
+    description: workflow.description,
+    mode: workflow.mode,
+    category: workflow.category,
+    status: workflow.status,
+    riskLevel: workflow.riskLevel,
+    supportsDryRun: workflow.supportsDryRun,
+    requiredFields: workflow.requiredFields,
+    requiredOneOf: workflow.requiredOneOf || [],
+    optionalFields: workflow.optionalFields,
+    defaultPolicy: workflow.defaultPolicy,
+  };
+}
+
+function assistantWorkflowRegistrySnapshot() {
+  return listWorkflows()
+    .filter((workflow) => workflow.status !== "internal")
+    .map((workflow) => ({
+      id: workflow.id,
+      title: workflow.title,
+      mode: workflow.mode,
+      category: workflow.category,
+      status: workflow.status,
+      riskLevel: workflow.riskLevel,
+      supportsDryRun: workflow.supportsDryRun,
+      requiredFields: workflow.requiredFields.map((field) => field.key),
+      requiredOneOf: (workflow.requiredOneOf || []).map((group) => group.keys),
+      preferWorkspace: workflow.defaultPolicy.preferWorkspace,
+      allowDirectRunFromAssistant: workflow.defaultPolicy.allowDirectRunFromAssistant,
+      requiresConfirmation: workflow.defaultPolicy.requiresConfirmation,
+    }));
+}
 
 function slugifyReportPart(value: string): string {
   return String(value || "site-audit")
@@ -177,6 +221,62 @@ app.use((req, res, next) => {
 });
 app.use(express.static(publicPath));
 app.use(express.json());
+
+app.get("/api/workflows", (_req, res) => {
+  const workflows = listWorkflows().map(workflowSummary);
+  res.json({
+    count: workflows.length,
+    workflows,
+  });
+});
+
+app.get("/api/workflows/runnable", (_req, res) => {
+  const workflows = listRunnableWorkflows().map(workflowSummary);
+  res.json({
+    count: workflows.length,
+    workflows,
+  });
+});
+
+app.get("/api/workflows/:workflowId", (req, res) => {
+  const workflow = getWorkflowById(String(req.params.workflowId || ""));
+
+  if (!workflow) {
+    res.status(404).json({ error: "Unknown workflow." });
+    return;
+  }
+
+  res.json(workflowSummary(workflow));
+});
+
+app.post("/api/workflows/validate", (req, res) => {
+  const workflowId = String(req.body?.workflowId || "").trim();
+
+  if (!workflowId) {
+    res.status(400).json({ error: "Missing workflowId." });
+    return;
+  }
+
+  res.json(validateWorkflowPayload(workflowId, req.body?.payload));
+});
+
+app.post("/api/workflows/prepare", (req, res) => {
+  const workflowId = String(req.body?.workflowId || "").trim();
+
+  if (!workflowId) {
+    res.status(400).json({ error: "Missing workflowId." });
+    return;
+  }
+
+  res.json(prepareWorkflowRun(
+    workflowId,
+    req.body?.payload,
+    {
+      userRequest: typeof req.body?.userRequest === "string" ? req.body.userRequest : "",
+      requireRunnable: req.body?.requireRunnable === true,
+    }
+  ));
+});
 
 app.get("/api/analytics/accounts", (_req, res) => {
   try {
@@ -573,19 +673,100 @@ app.post("/api/translate-demo/generate-resources", async (req, res) => {
 
 app.post("/api/translate-demo/source-text", async (req, res) => {
   try {
+    const sourceType = String(req.body?.sourceType || "sheet") === "folder" ? "folder" : "sheet";
     const spreadsheetId = String(req.body?.spreadsheetId || "").trim();
-    if (!spreadsheetId) {
+    const sourceFolderId = String(req.body?.sourceFolderId || "").trim();
+
+    if (sourceType === "sheet" && !spreadsheetId) {
       res.status(400).json({ error: "Missing spreadsheet ID." });
+      return;
+    }
+    if (sourceType === "folder" && !sourceFolderId) {
+      res.status(400).json({ error: "Missing source folder ID." });
       return;
     }
 
     const sourceRange = String(req.body?.sourceRange || "A1:Z68").trim() || "A1:Z68";
+    const requestedSourceTab = String(req.body?.sourceTab || "").trim();
     const sheets = new SheetsService();
-    const sourceTab = String(req.body?.sourceTab || "").trim() || await sheets.getFirstSheetTitle(spreadsheetId);
-    const values = await sheets.readValues(spreadsheetId, `${sourceTab}!${sourceRange}`);
-    const text = values.map((row) => (row || []).map((cell) => String(cell || "")).join("\t")).join("\n");
 
-    res.json({ sourceTab, sourceRange, rows: values.length, text });
+    const readSheetText = async (targetSpreadsheetId: string) => {
+      const title = await sheets.getSpreadsheetTitle(targetSpreadsheetId).catch(() => targetSpreadsheetId);
+      let sourceTab = requestedSourceTab || await sheets.getFirstSheetTitle(targetSpreadsheetId);
+      let values: string[][];
+
+      try {
+        values = await sheets.readValues(targetSpreadsheetId, `${sourceTab}!${sourceRange}`);
+      } catch (error) {
+        if (!requestedSourceTab) throw error;
+        const fallbackTab = await sheets.getFirstSheetTitle(targetSpreadsheetId);
+        if (fallbackTab === sourceTab) throw error;
+        sourceTab = fallbackTab;
+        values = await sheets.readValues(targetSpreadsheetId, `${sourceTab}!${sourceRange}`);
+      }
+
+      const text = values.map((row) => (row || []).map((cell) => String(cell || "")).join("\t")).join("\n");
+      return { title, sourceTab, values, text };
+    };
+
+    if (sourceType === "folder") {
+      const spreadsheetIds = await sheets.listSpreadsheetIdsInFolderRecursive(sourceFolderId);
+      if (spreadsheetIds.length === 0) {
+        res.status(404).json({ error: "No Google Sheets files found in this folder." });
+        return;
+      }
+
+      const chunks: string[] = [];
+      const failedSheets: string[] = [];
+      let rows = 0;
+      let readSheets = 0;
+      const maxSheets = 10;
+
+      for (const targetSpreadsheetId of spreadsheetIds.slice(0, maxSheets)) {
+        try {
+          const sheetText = await readSheetText(targetSpreadsheetId);
+          readSheets += 1;
+          rows += sheetText.values.length;
+          chunks.push([
+            `# ${sheetText.title}`,
+            `${sheetText.sourceTab}!${sourceRange}`,
+            sheetText.text,
+          ].join("\n"));
+        } catch (error: any) {
+          failedSheets.push(`${targetSpreadsheetId}: ${error?.message || "read failed"}`);
+        }
+      }
+
+      if (!readSheets) {
+        res.status(500).json({ error: `Could not read any Sheets in this folder. ${failedSheets[0] || ""}`.trim() });
+        return;
+      }
+
+      res.json({
+        sourceType,
+        sourceFolderId,
+        sourceTab: requestedSourceTab || "first tab",
+        sourceRange,
+        rows,
+        sheets: readSheets,
+        totalSheets: spreadsheetIds.length,
+        skippedSheets: Math.max(0, spreadsheetIds.length - readSheets),
+        failedSheets,
+        text: chunks.join("\n\n").slice(0, 70000),
+      });
+      return;
+    }
+
+    const sheetText = await readSheetText(spreadsheetId);
+
+    res.json({
+      sourceType,
+      spreadsheetId,
+      sourceTab: sheetText.sourceTab,
+      sourceRange,
+      rows: sheetText.values.length,
+      text: sheetText.text,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error?.message || "Failed to read source sheet text." });
   }
@@ -638,6 +819,8 @@ function assistantSystemPrompt(): string {
     "Use activeAction.taskMemory for follow-ups and pronouns. Hebrew phrases like 'זה', 'שם', 'אותו', 'עכשיו' and English phrases like 'it', 'that', 'there', 'now' often refer to the last tool/source/operation/output columns.",
     "Do not create duplicate actions for the same workflow just because the user answered a follow-up question.",
     "Never invent a tool id. Use only tool ids from the registry.",
+    "The input also includes workflowRegistry from src/workflows/registry.ts. Treat it as the current contract for workflow ids, modes, required fields, risk level, dry-run support, and workspace policy.",
+    "If tools and workflowRegistry overlap, use tool ids from tools for UI actions, but use workflowRegistry to understand missing inputs, safety level, and whether the workflow should open in a workspace first.",
     "ROUTING MATRIX - follow these rules before anything else:",
     "1. FAQ CREATION ('build FAQ', 'תבנה FAQ למלון', 'שאלות ותשובות לאורחים') -> faq-playground. Required: subjects, workflowType, audience. Hotel/property FAQ means workflowType='hotel'. Never route creation requests to site-ai-faq-audit or schema-builder.",
     "2. FAQ/SCHEMA IMPLEMENTATION AUDIT ('check if FAQ schema is implemented', 'audit FAQPage JSON-LD', 'לבדוק אם ה-FAQ מוטמע באתר') -> site-ai-faq-audit. Required: siteUrl. Optional: sourceInput when a Sheet/folder is given for comparison. Use this only when the user explicitly asks about FAQ/FAQPage implementation, visible FAQ vs schema, or FAQ schema.",
@@ -650,6 +833,8 @@ function assistantSystemPrompt(): string {
     "9. CLIENT REPORTS ('client dashboard', 'monthly performance report', 'GA4 report', 'דוח לקוח') -> client-reports.",
     "10. LOCAL FILE/CODE ('change public/index.html', 'fix this JS file') -> file-draft, ONLY for local repo files. If the message contains a Google Sheet or Drive link, or refers to a previously generated Sheet, NEVER choose file-draft.",
     "FOLLOW-UPS: short messages like 'now put it in column C', 'לא C, ל-F', 'עכשיו ל-F' continue the ACTIVE design-formatting task with operationType='replace_column_when_value' and taskMemory columns. Never open a new workflow for them. 'run it'/'תריצי' means continue the active ready task, actions: [].",
+    "REVISION AFTER A RUN: if activeAction.lastRun exists and the user complains about the previous output ('לא התייחסת לכל ההערות', 'התשובה לא טובה', 'לא נכתבה תשובה מחליפה', 'you missed rows', 'not all notes were applied'), treat it as a REVISION of the previous run - not a new task and not a write confirmation. Keep the same toolId, Sheet, tab, and columns from activeAction. Build values.instruction as: the original instruction + a 'REVISION OF PREVIOUS RUN' block quoting the user's feedback + explicit requirements (address every client note, write full replacement answers, keep correct rows unchanged). Set values.dryRun=true and intent='revise'. In reply, summarize what will be fixed and ask at most ONE focused question (for example: which notes were not handled, or whether to re-scan all notes). Never ask for a write confirmation in the same turn as revision feedback.",
+    "MULTI-STEP PLANS: if one message contains two dependent goals (for example 'scan the questions on this page, then write new questions that do not exist there'), never drop either goal and never route the whole request to a single creation tool. Return the FIRST step as the action (for example site-ai-faq-audit with siteUrl) and describe the full plan in reply, stating that step 2 (for example faq-playground restricted to questions absent from the scan) starts after step 1 finishes. Set intent='plan'.",
     "MISSING FIELDS: when routing is confident, ask ONLY for the single next missing required field of that tool in reply, and list the remaining ones in missing. Never ask about optional fields unless the user raised them. Do not run or write before required fields and explicit confirmations are collected.",
     "URL CLASSIFICATION: docs.google.com/spreadsheets -> sourceUrl/targetUrl/spreadsheetId depending on the tool; drive.google.com/drive/folders -> sourceUrl/folder flow; any other http(s) URL -> siteUrl (audits) or pageList (meta-tags).",
     "Protected files: .env, credentials, package.json. Do not suggest direct edits to them; say the user should handle those manually.",
@@ -672,6 +857,7 @@ function assistantSystemPrompt(): string {
     "    { \"toolId\": \"registered-tool-id\", \"values\": { \"fieldKey\": \"value\" }, \"confidence\": 0.0, \"reason\": \"short reason\" }",
     "  ],",
     "  \"missing\": [\"field name\"],",
+    "  \"intent\": \"route|continue|revise|plan|clarify|answer\",",
     "  \"complexity\": \"simple|complex\"",
     "}",
     "Use actions: [] for a pure general answer."
@@ -710,7 +896,8 @@ app.post("/api/assistant-chat", async (req, res) => {
             message,
             history,
             tools,
-            activeAction
+            activeAction,
+            workflowRegistry: assistantWorkflowRegistrySnapshot()
           })
         }
       ]

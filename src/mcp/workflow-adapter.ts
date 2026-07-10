@@ -156,6 +156,30 @@ const TOOL_INPUTS = {
     required: ["workflowId"],
     additionalProperties: false,
   },
+  prepareRun: {
+    type: "object",
+    properties: {
+      workflowId: {
+        type: "string",
+        description: "Workflow id from the registry.",
+      },
+      payload: {
+        type: "object",
+        description: "Candidate dynamic payload. Must be complete before prepare is marked ready.",
+        additionalProperties: true,
+      },
+      userRequest: {
+        type: "string",
+        description: "Original user request, if available.",
+      },
+      requireRunnable: {
+        type: "boolean",
+        description: "When true, only prepare workflows allowed to run from the demo layer.",
+      },
+    },
+    required: ["workflowId", "payload"],
+    additionalProperties: false,
+  },
 } satisfies Record<string, JsonSchema>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -348,6 +372,200 @@ function getNextAction(workflow: WorkflowDefinition, validation: WorkflowPayload
   return "ready_for_future_runner";
 }
 
+function buildPreparedPayloadData(workflow: WorkflowDefinition, payload: Record<string, unknown>): Record<string, unknown> {
+  if (workflow.payloadStrategy === "faq_playground_tasks_or_legacy") {
+    if (Array.isArray(payload.tasks)) {
+      return {
+        subjects: payload.subjects,
+        tasks: payload.tasks,
+        faqDemand: payload.faqDemand,
+      };
+    }
+
+    return {
+      hotels: payload.hotels,
+      prompts: payload.prompts,
+      steps: payload.steps,
+    };
+  }
+
+  return payload;
+}
+
+function joinStringArray(value: unknown): string {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).join(",")
+    : "";
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return "";
+}
+
+function buildDynamicEnvPreview(
+  workflow: WorkflowDefinition,
+  payload: Record<string, unknown>,
+  payloadData: Record<string, unknown>
+): Record<string, string> {
+  const base = {
+    MODE: workflow.mode,
+    DYNAMIC_PAYLOAD: JSON.stringify(payloadData),
+  };
+
+  if (workflow.mode === "client-reports") {
+    return {
+      ...base,
+      DYNAMIC_TARGET_ID: firstString(payload.spreadsheetId),
+      DYNAMIC_INPUT_TYPE: firstString(payload.sourceType) || "sheet",
+      DYNAMIC_LANGS: "",
+    };
+  }
+
+  if (workflow.mode === "client-reports-edit") {
+    return {
+      ...base,
+      DYNAMIC_TARGET_ID: "",
+      DYNAMIC_INPUT_TYPE: "none",
+      DYNAMIC_LANGS: "",
+    };
+  }
+
+  if (workflow.mode === "meta-tags") {
+    return {
+      ...base,
+      DYNAMIC_TARGET_ID: firstString(payload.spreadsheetId, payload.folderId),
+      DYNAMIC_INPUT_TYPE: firstString(payload.sourceType) || "manual",
+      DYNAMIC_LANGS: firstString(payload.language),
+    };
+  }
+
+  if (workflow.mode === "translate-demo") {
+    return {
+      ...base,
+      DYNAMIC_TARGET_ID: firstString(payload.spreadsheetId, payload.sourceFolderId),
+      DYNAMIC_INPUT_TYPE: firstString(payload.sourceType) || "sheet",
+      DYNAMIC_LANGS: joinStringArray(payload.targetLangs),
+    };
+  }
+
+  if (workflow.mode === "design-formatting") {
+    return {
+      ...base,
+      DYNAMIC_TARGET_ID: firstString(payload.targetId),
+      DYNAMIC_INPUT_TYPE: firstString(payload.sourceType) || "sheet",
+      DYNAMIC_LANGS: "",
+    };
+  }
+
+  return {
+    ...base,
+    DYNAMIC_TARGET_ID: firstString(payload.targetId),
+    DYNAMIC_INPUT_TYPE: firstString(payload.inputType, payload.sourceType) || "sheet",
+    DYNAMIC_LANGS: firstString(payload.langs),
+  };
+}
+
+export function detectWorkflowTaskType(
+  workflow: WorkflowDefinition,
+  userRequest: string
+): { taskType: string; label: string; clarifyingQuestions: string[]; payloadHints: Record<string, unknown> } | null {
+  const request = String(userRequest || "").toLowerCase();
+  if (!request || !workflow.taskTypes?.length) return null;
+
+  let best: { score: number; taskType: (typeof workflow.taskTypes)[number] } | null = null;
+  for (const taskType of workflow.taskTypes) {
+    const score = taskType.matchHints.reduce(
+      (total, hint) => total + (request.includes(hint.toLowerCase()) ? 1 : 0),
+      0
+    );
+    if (score > 0 && (!best || score > best.score)) best = { score, taskType };
+  }
+
+  if (!best) return null;
+  return {
+    taskType: best.taskType.id,
+    label: best.taskType.label,
+    clarifyingQuestions: [...best.taskType.clarifyingQuestions],
+    payloadHints: { ...(best.taskType.payloadHints || {}) },
+  };
+}
+
+export function prepareWorkflowRun(
+  workflowId: string,
+  rawPayload: unknown,
+  options: {
+    userRequest?: string;
+    requireRunnable?: boolean;
+  } = {}
+) {
+  const workflow = getWorkflowById(workflowId);
+
+  if (!workflow) {
+    return {
+      workflowId,
+      ready: false,
+      runnerAvailable: false,
+      validation: validateWorkflowPayload(workflowId, rawPayload),
+      errors: [`Unknown workflow: ${workflowId}`],
+    };
+  }
+
+  const payload = isRecord(rawPayload) ? rawPayload : {};
+  const validation = validateWorkflowPayload(workflowId, payload);
+  const missingQuestions = buildMissingQuestions(workflow, validation);
+  const canPrepareFromRegistry =
+    workflow.status !== "needs_review" &&
+    workflow.defaultPolicy.allowRunFromDemo &&
+    (!options.requireRunnable || listRunnableWorkflows().some((candidate) => candidate.id === workflow.id));
+  const payloadData = buildPreparedPayloadData(workflow, payload);
+  const dynamicEnvPreview = buildDynamicEnvPreview(workflow, payload, payloadData);
+  const ready = validation.valid && canPrepareFromRegistry;
+  const detectedTask = detectWorkflowTaskType(workflow, options.userRequest || "");
+
+  return {
+    workflow: summarizeWorkflow(workflow),
+    userRequest: options.userRequest || "",
+    detectedTask,
+    suggestedQuestions: detectedTask ? detectedTask.clarifyingQuestions : [],
+    ready,
+    runnerAvailable: false,
+    nextAction: ready ? getNextAction(workflow, validation) : "collect_missing_inputs",
+    validation,
+    missingQuestions,
+    preparedRun: {
+      mode: workflow.mode,
+      payloadData,
+      dynamicEnvPreview,
+      spawnPreview: {
+        command: "npx",
+        args: ["tsx", "src/index.ts"],
+        disabled: true,
+        reason: "MCP prepare-only contract. No runner is exposed yet.",
+      },
+    },
+    safetyGates: {
+      riskLevel: workflow.riskLevel,
+      supportsDryRun: workflow.supportsDryRun,
+      defaultDryRun: workflow.defaultPolicy.defaultDryRun,
+      requiresConfirmation: workflow.defaultPolicy.requiresConfirmation,
+      preferWorkspace: workflow.defaultPolicy.preferWorkspace,
+      allowDirectRunFromAssistant: workflow.defaultPolicy.allowDirectRunFromAssistant,
+      exposeToExternalAiByDefault: workflow.defaultPolicy.exposeToExternalAiByDefault,
+      canPrepareFromRegistry,
+      canRunNow: false,
+      blockedReason: ready
+        ? "Runner is intentionally disabled at the MCP layer."
+        : "Payload is incomplete, workflow is not runnable from the registry, or workflow needs review.",
+    },
+  };
+}
+
 export function listMcpTools(): McpTool[] {
   return [
     {
@@ -385,6 +603,16 @@ export function listMcpTools(): McpTool[] {
       title: "Plan workflow run",
       description: "Create a read-only execution plan: missing inputs, safety policy, next action, and dynamic env mapping.",
       inputSchema: TOOL_INPUTS.planRun,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+      },
+    },
+    {
+      name: "prepare_workflow_run",
+      title: "Prepare workflow run",
+      description: "Prepare a read-only run contract: MODE, payload, env preview, missing inputs, and safety gates. This never runs jobs.",
+      inputSchema: TOOL_INPUTS.prepareRun,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -460,6 +688,20 @@ export function callMcpTool(name: string, args: unknown): McpToolResult {
       },
       runnerAvailable: false,
     });
+  }
+
+  if (name === "prepare_workflow_run") {
+    const workflowId = asString(input.workflowId);
+    if (!workflowId) return errorResult("workflowId is required.");
+
+    return resultFromJson(prepareWorkflowRun(
+      workflowId,
+      input.payload,
+      {
+        userRequest: asString(input.userRequest) || "",
+        requireRunnable: input.requireRunnable === true,
+      }
+    ));
   }
 
   return errorResult(`Unknown tool: ${name}`);
