@@ -87,9 +87,9 @@ const SHEETS: Array<{ spreadsheet: string; tab?: string }> = [
 
 ];
 
-const TRANSLATE_FOLDER: string = "https://drive.google.com/drive/folders/1fnWl6nzAd_dFDUj5ugPpo5tIT2v91h1H?usp=sharing";
+const TRANSLATE_FOLDER: string = "https://drive.google.com/drive/folders/1gm8IQdX_tmkSRYx8Tuf3sN2N2KwmiO3x?usp=sharing";
 
-const LANGS = ["el"];
+const LANGS = ["FR"];
 
 
 
